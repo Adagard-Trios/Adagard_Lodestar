@@ -1,0 +1,132 @@
+/* ==========================================================================
+   Waypoint Lodestar — Design tokens
+   One token system, four role modes. Product name lives in --product-name
+   (and in plain text on pages — find/replace "Waypoint Lodestar" to rename).
+   ========================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  /* ---------- Brand ---------- */
+  --brand-950: #0A0F2E;   /* Lodestar night navy */
+  --brand-900: #141B4D;
+  --brand-700: #2A3590;
+  --brand-600: #3B4CCA;   /* primary action (light modes) */
+  --brand-500: #5566E0;
+  --brand-100: #E0E4FF;
+  --brand-50:  #EEF0FF;
+  --star-500:  #F5B83D;   /* Lodestar amber — the "guiding star" signal */
+  --star-400:  #FFCB5C;
+  --star-100:  #FFF3D6;
+
+  /* ---------- Neutrals (slate) ---------- */
+  --n-0:   #FFFFFF;
+  --n-25:  #FAFBFC;
+  --n-50:  #F4F6F9;
+  --n-100: #E9ECF2;
+  --n-200: #D8DDE6;
+  --n-300: #BCC3D0;
+  --n-400: #8F98AA;
+  --n-500: #667085;
+  --n-600: #4A5467;
+  --n-700: #344054;
+  --n-800: #1D2433;
+  --n-900: #0F1422;
+
+  /* ---------- Order status semantics (identical in every role) ---------- */
+  --st-received-fg: #344054;  --st-received-bg: #EEF1F5;  --st-received-bd: #C9D0DB;
+  --st-planned-fg:  #3B4CCA;  --st-planned-bg:  #EEF0FF;  --st-planned-bd:  #C3CAFA;
+  --st-loaded-fg:   #6D28D9;  --st-loaded-bg:   #F3EEFF;  --st-loaded-bd:   #D8C8FB;
+  --st-enroute-fg:  #0369A1;  --st-enroute-bg:  #E6F4FC;  --st-enroute-bd:  #B3DDF3;
+  --st-delivered-fg:#047857;  --st-delivered-bg:#E8F8F0;  --st-delivered-bd:#A9E3C8;
+  --st-deferred-fg: #B45309;  --st-deferred-bg: #FFF6E5;  --st-deferred-bd: #F6D08A;
+  --st-exception-fg:#B42318;  --st-exception-bg:#FEF0EE;  --st-exception-bd:#F7B9B1;
+  --st-offline-fg:  #57534E;  --st-offline-bg:  #F3F2F0;  --st-offline-bd:  #A8A29E;
+
+  /* ---------- Temperature ---------- */
+  --chilled-fg: #0E7490;  --chilled-bg: #E3F8FC;  --chilled-bd: #9EE3F0;
+  --ambient-fg: #57534E;  --ambient-bg: #F3F2F0;  --ambient-bd: #D6D3D1;
+
+  /* ---------- Brands of Waypoint Group ---------- */
+  --fresh: #15803D;  --fresh-bg: #E7F6EC;
+  --style: #BE185D;  --style-bg: #FCE8F1;
+  --tech:  #1F2937;  --tech-bg:  #E8EAEE;
+
+  /* ---------- Feedback ---------- */
+  --ok: #047857; --warn: #B45309; --danger: #B42318; --info: #0369A1;
+
+  /* ---------- Type ---------- */
+  --font-ui: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --fs-display: 64px; --fs-h1: 44px; --fs-h2: 32px; --fs-h3: 24px; --fs-h4: 20px;
+  --fs-body-lg: 18px; --fs-body: 16px; --fs-sm: 14px; --fs-xs: 13px; --fs-2xs: 12px; --fs-3xs: 11px;
+
+  /* ---------- Space / radius / elevation ---------- */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px; --s-12: 48px; --s-16: 64px;
+  --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px; --r-pill: 999px;
+  --shadow-1: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
+  --shadow-2: 0 4px 12px rgba(16,24,40,.08), 0 2px 4px rgba(16,24,40,.05);
+  --shadow-3: 0 20px 40px rgba(16,24,40,.14), 0 6px 12px rgba(16,24,40,.06);
+
+  /* ---------- Board (presentation canvas) ---------- */
+  --board-bg: #E6E9F0;
+  --board-ink: #0F1422;
+}
+
+/* ==========================================================================
+   Role modes — applied on a .frame
+   ========================================================================== */
+
+/* Dispatcher — light, dense, desktop */
+.mode-dispatcher {
+  --surface: #FFFFFF; --surface-2: #F7F8FB; --surface-3: #EEF1F6;
+  --line: #E3E7EE; --line-strong: #CDD3DE;
+  --text: #0F1422; --text-2: #4A5467; --text-3: #636C80; /* was #7A8395 (3.81:1, failed AA) */
+  --primary: var(--brand-600); --primary-ink: #FFFFFF;
+  --ui-fs: 13px; --row-h: 36px; --tap: 32px;
+}
+
+/* Loader — light, high contrast, big targets (dock tablet / phone, gloves, glare) */
+.mode-loader {
+  --surface: #FFFFFF; --surface-2: #F4F6F9; --surface-3: #E9ECF2;
+  --line: #D8DDE6; --line-strong: #8F98AA;
+  --text: #0A0F1A; --text-2: #344054; --text-3: #4A5467;
+  --primary: var(--brand-900); --primary-ink: #FFFFFF;
+  --ui-fs: 18px; --row-h: 64px; --tap: 56px;
+}
+
+/* Driver — dark "night-run" (3:30–8 AM Fresh runs), one thumb, used when stopped */
+.mode-driver {
+  --surface: #0B1020; --surface-2: #141B2E; --surface-3: #1D2640;
+  --line: #28314A; --line-strong: #3B4666;
+  --text: #F2F4FA; --text-2: #B5BDD1; --text-3: #7F89A3;
+  --primary: var(--star-500); --primary-ink: #111522;
+  --ui-fs: 17px; --row-h: 64px; --tap: 56px;
+  /* status tints tuned for dark */
+  --st-delivered-bg: #0F3326; --st-delivered-fg: #5EE0A8; --st-delivered-bd: #1C5C43;
+  --st-enroute-bg:   #0C2A40; --st-enroute-fg:   #6CC4F5; --st-enroute-bd:   #1A4B6B;
+  --st-deferred-bg:  #3A2708; --st-deferred-fg:  #FFC266; --st-deferred-bd:  #6B4A12;
+  --st-exception-bg: #3D1210; --st-exception-fg: #FF8A7A; --st-exception-bd: #6E231D;
+  --st-offline-bg:   #2A2724; --st-offline-fg:   #D6CFC7; --st-offline-bd:   #57534E;
+  --st-planned-bg:   #1B2150; --st-planned-fg:   #A9B4FF; --st-planned-bd:   #333D8A;
+  --st-loaded-bg:    #2A1B4F; --st-loaded-fg:    #C9B0FF; --st-loaded-bd:    #45307A;
+  --st-received-bg:  #1D2433; --st-received-fg:  #C4CBD8; --st-received-bd:  #344054;
+  --chilled-bg: #08323B; --chilled-fg: #67E3F9; --chilled-bd: #135463;
+  --ambient-bg: #24221F; --ambient-fg: #D6D3D1; --ambient-bd: #44403C;
+}
+/* Driver — daylight variant (same layout, light surfaces, extra contrast) */
+.mode-driver-day {
+  --surface: #FFFFFF; --surface-2: #F4F6F9; --surface-3: #E9ECF2;
+  --line: #D8DDE6; --line-strong: #8F98AA;
+  --text: #0A0F1A; --text-2: #344054; --text-3: #4A5467;
+  --primary: var(--brand-900); --primary-ink: #FFFFFF;
+  --ui-fs: 17px; --row-h: 64px; --tap: 56px;
+}
+
+/* Store manager — light, friendly, low density (counter desktop + phone) */
+.mode-store {
+  --surface: #FFFFFF; --surface-2: #F7F8FB; --surface-3: #EEF1F6;
+  --line: #E3E7EE; --line-strong: #CDD3DE;
+  --text: #101828; --text-2: #475467; --text-3: #636C80; /* was #7A8395 (3.81:1, failed AA) */
+  --primary: var(--brand-600); --primary-ink: #FFFFFF;
+  --ui-fs: 15px; --row-h: 52px; --tap: 44px;
+}

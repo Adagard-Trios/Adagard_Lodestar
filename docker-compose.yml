@@ -1,0 +1,199 @@
+version: "3.9"
+
+# =============================================================================
+# Waypoint Lodestar — Docker Compose
+# One system, four faces.  Run: docker compose up --build
+# DB is external — set DATABASE_URL in .env
+# =============================================================================
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  networks:
+    - lodestar
+  env_file:
+    - .env
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # 0. DB migration init (runs prisma migrate deploy once, then exits)
+  # ---------------------------------------------------------------------------
+  migrate:
+    <<: *service-defaults
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.migrate
+    depends_on: []
+    networks:
+      - lodestar
+
+  # ---------------------------------------------------------------------------
+  # 1. Auth service  :3001
+  # ---------------------------------------------------------------------------
+  auth:
+    <<: *service-defaults
+    build:
+      context: ./backend
+      dockerfile: apps/auth/Dockerfile
+    environment:
+      PORT: 3001
+    expose:
+      - "3001"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # ---------------------------------------------------------------------------
+  # 2. Orders service  :3002
+  # ---------------------------------------------------------------------------
+  orders:
+    <<: *service-defaults
+    build:
+      context: ./backend
+      dockerfile: apps/orders/Dockerfile
+    environment:
+      PORT: 3002
+    expose:
+      - "3002"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # ---------------------------------------------------------------------------
+  # 3. Planning service  :3003
+  # ---------------------------------------------------------------------------
+  planning:
+    <<: *service-defaults
+    build:
+      context: ./backend
+      dockerfile: apps/planning/Dockerfile
+    environment:
+      PORT: 3003
+    expose:
+      - "3003"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # ---------------------------------------------------------------------------
+  # 4. Fleet service  :3004
+  # ---------------------------------------------------------------------------
+  fleet:
+    <<: *service-defaults
+    build:
+      context: ./backend
+      dockerfile: apps/fleet/Dockerfile
+    environment:
+      PORT: 3004
+    expose:
+      - "3004"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # ---------------------------------------------------------------------------
+  # 5. Outlets service  :3005
+  # ---------------------------------------------------------------------------
+  outlets:
+    <<: *service-defaults
+    build:
+      context: ./backend
+      dockerfile: apps/outlets/Dockerfile
+    environment:
+      PORT: 3005
+    expose:
+      - "3005"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # ---------------------------------------------------------------------------
+  # 6. Trips service  :3006
+  # ---------------------------------------------------------------------------
+  trips:
+    <<: *service-defaults
+    build:
+      context: ./backend
+      dockerfile: apps/trips/Dockerfile
+    environment:
+      PORT: 3006
+      AUTH_SERVICE_URL: http://auth:3001
+      ORDERS_SERVICE_URL: http://orders:3002
+    expose:
+      - "3006"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # ---------------------------------------------------------------------------
+  # 7. Offline Sync service  :3007
+  # ---------------------------------------------------------------------------
+  sync:
+    <<: *service-defaults
+    build:
+      context: ./backend
+      dockerfile: apps/sync/Dockerfile
+    environment:
+      PORT: 3007
+      TRIPS_SERVICE_URL: http://trips:3006
+      ORDERS_SERVICE_URL: http://orders:3002
+    expose:
+      - "3007"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # ---------------------------------------------------------------------------
+  # 8. Notifications service (WebSocket + SMS)  :3008
+  # ---------------------------------------------------------------------------
+  notifications:
+    <<: *service-defaults
+    build:
+      context: ./backend
+      dockerfile: apps/notifications/Dockerfile
+    environment:
+      PORT: 3008
+    expose:
+      - "3008"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # ---------------------------------------------------------------------------
+  # 9. Nginx API Gateway  :8080
+  # ---------------------------------------------------------------------------
+  gateway:
+    <<: *service-defaults
+    build:
+      context: ./backend/apps/gateway
+    ports:
+      - "8080:80"
+    depends_on:
+      - auth
+      - orders
+      - planning
+      - fleet
+      - outlets
+      - trips
+      - sync
+      - notifications
+
+  # ---------------------------------------------------------------------------
+  # 10. Next.js Frontend (Dispatcher + Store + Admin)  :3000
+  # ---------------------------------------------------------------------------
+  frontend:
+    <<: *service-defaults
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      NEXT_PUBLIC_WS_URL: ws://localhost:8080
+    depends_on:
+      - gateway
+
+networks:
+  lodestar:
+    driver: bridge

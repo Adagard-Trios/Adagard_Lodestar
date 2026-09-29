@@ -1,0 +1,372 @@
+// =============================================================================
+// Waypoint Lodestar — Prisma Schema
+// "Every order, one thread."  Team Adagard · Tech-Triathlon 2026
+//
+// Data grounded in: district_travel.csv, outlets.csv, vehicles.csv,
+// service_allowance.csv, calendar.csv, deliveries_train.csv
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Enumerations
+// ─────────────────────────────────────────────────────────────
+
+enum Role {
+  DISPATCHER
+  LOADER
+  DRIVER
+  STORE_MANAGER
+  ADMIN
+}
+
+enum Depot {
+  PELIYAGODA
+  KANDY
+}
+
+enum Brand {
+  FRESH
+  STYLE
+  TECH
+}
+
+enum TempClass {
+  CHILLED
+  AMBIENT
+}
+
+enum DockType {
+  REAR_DOCK
+  STREET
+  MALL_BAY
+}
+
+enum ParkingType {
+  NORMAL
+  VAN_ONLY
+  MALL_DOCK
+}
+
+enum VehicleType {
+  TRUCK
+  VAN
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  WORKSHOP
+  ENROUTE
+}
+
+enum OrderStatus {
+  RECEIVED
+  PLANNED
+  LOADED
+  ENROUTE
+  DELIVERED
+  DEFERRED
+  EXCEPTION
+}
+
+enum TripStatus {
+  PLANNED
+  LOADING
+  ENROUTE
+  COMPLETE
+}
+
+enum NotificationChannel {
+  PUSH
+  SMS
+  WEBSOCKET
+}
+
+enum DeferralReason {
+  CAP_REEFER
+  CAP_TIME
+  ACCESS
+  WINDOW
+  FUEL
+  VEH_DOWN
+}
+
+// ─────────────────────────────────────────────────────────────
+// Core entities
+// ─────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role
+  depot        Depot?
+  outletId     String?
+  outlet       Outlet?  @relation(fields: [outletId], references: [id])
+  phone        String?
+  refreshToken String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  driverTrips   Trip[]         @relation("DriverTrips")
+  loadRecords   LoadRecord[]
+  notifications Notification[]
+  offlineEvents OfflineEvent[]
+}
+
+model Outlet {
+  id          String      @id // OUT001..OUT120
+  name        String
+  brand       Brand
+  district    String
+  depot       Depot
+  dockType    DockType
+  parking     ParkingType
+  windowOpen  String      // "05:30" HH:mm
+  windowClose String      // "08:00" HH:mm
+  address     String?
+  accessNote  String?     // e.g. "Rear dock · enter via Lawson St service lane"
+  lat         Float?
+  lng         Float?
+  isActive    Boolean     @default(true)
+
+  // Relations
+  users     User[]
+  orders    Order[]
+  tripStops TripStop[]
+}
+
+model Vehicle {
+  id           String        @id // VEH001..VEH060
+  depot        Depot
+  type         VehicleType
+  tempClass    TempClass
+  capacityKg   Float
+  capacityM3   Float
+  kmPerLitre   Float
+  weeklyLFuel  Int           // weekly fuel quota in litres
+  usedLThisWeek Int          @default(0)
+  status       VehicleStatus @default(AVAILABLE)
+  workshopNote String?
+
+  // Relations
+  trips       Trip[]
+  loadRecords LoadRecord[]
+}
+
+model Order {
+  id                String      @id // ORD0104216 format
+  outletId          String
+  outlet            Outlet      @relation(fields: [outletId], references: [id])
+  runDate           DateTime    // Scheduled delivery date (Tue 7 Apr 2026)
+  orderedAt         DateTime    // When placed (Mon 6 Apr 2:38 PM)
+  brand             Brand
+  tempClass         TempClass
+  units             Int
+  kg                Float
+  m3                Float
+  status            OrderStatus @default(RECEIVED)
+  deferredYesterday Boolean     @default(false)
+  daysSince         Int         @default(0)
+  deferralScore     Int?
+  notes             String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  // Relations
+  tripStop    TripStop?
+  deferralLog DeferralLog?
+  lineItems   OrderLineItem[]
+}
+
+model OrderLineItem {
+  id        String    @id @default(cuid())
+  orderId   String
+  order     Order     @relation(fields: [orderId], references: [id])
+  name      String    // "Samba rice 5 kg"
+  qty       Int
+  kg        Float
+  tempClass TempClass
+}
+
+model Trip {
+  id            String     @id @default(cuid())
+  vehicleId     String
+  vehicle       Vehicle    @relation(fields: [vehicleId], references: [id])
+  driverId      String?
+  driver        User?      @relation("DriverTrips", fields: [driverId], references: [id])
+  depot         Depot
+  runDate       DateTime
+  brand         Brand
+  district      String
+  status        TripStatus @default(PLANNED)
+  planVersion   Int        @default(1) // increments on each re-plan
+  tripNumber    Int        @default(1) // Trip 1, Trip 2 for same vehicle
+  departTime    DateTime?
+  returnTime    DateTime?
+  planMinutes   Int?
+  actualMinutes Int?
+  sealNumber    String?
+  reeferTempC   Float?
+  bay           String?    // loading bay code e.g. "K2", "P5"
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  // Relations
+  stops         TripStop[]
+  loadRecord    LoadRecord?
+  notifications Notification[]
+  offlineEvents OfflineEvent[]
+}
+
+model TripStop {
+  id                  String      @id @default(cuid())
+  tripId              String
+  trip                Trip        @relation(fields: [tripId], references: [id])
+  orderId             String      @unique
+  order               Order       @relation(fields: [orderId], references: [id])
+  outletId            String
+  outlet              Outlet      @relation(fields: [outletId], references: [id])
+  stopSeq             Int         // 1, 2, 3…
+  etaPlan             DateTime?   // free-flow plan ETA (shown on plan board)
+  etaModel            DateTime?   // ML model ETA (shown to driver/store/live ops)
+  etaModelBandEarly   DateTime?
+  etaModelBandLate    DateTime?
+  lateRiskPct         Int?        // 0–100
+  serviceMinPredicted Int?        // ML predicted service duration
+  arrivalActual       DateTime?
+  leaveActual         DateTime?
+  status              OrderStatus @default(PLANNED)
+
+  // POD
+  pod POD?
+}
+
+model POD {
+  id             String    @id @default(cuid())
+  tripStopId     String    @unique
+  tripStop       TripStop  @relation(fields: [tripStopId], references: [id])
+  unitsDelivered Int
+  unitsOrdered   Int
+  photoUrl       String?
+  receiverName   String?
+  signature      String?   // base64 SVG or URL
+  exceptions     Json?     // [{type, description, photoUrl}]
+  creditNoteId   String?   // e.g., CN-2604-0441
+  savedOffline   Boolean   @default(false)
+  savedAt        DateTime  @default(now())
+  syncedAt       DateTime?
+  createdAt      DateTime  @default(now())
+}
+
+model LoadRecord {
+  id           String    @id @default(cuid())
+  tripId       String    @unique
+  trip         Trip      @relation(fields: [tripId], references: [id])
+  vehicleId    String
+  vehicle      Vehicle   @relation(fields: [vehicleId], references: [id])
+  loaderId     String
+  loader       User      @relation(fields: [loaderId], references: [id])
+  bay          String
+  sealNumber   String?
+  reeferTempC  Float?
+  loadedAt     DateTime?
+  releasedAt   DateTime?
+  shortfalls   Json?     // [{item, qtyOrdered, qtyLoaded, reason}]
+  notes        String?
+}
+
+// ─────────────────────────────────────────────────────────────
+// Offline / sync
+// ─────────────────────────────────────────────────────────────
+
+model OfflineEvent {
+  id               String    @id @default(cuid())
+  driverId         String
+  driver           User      @relation(fields: [driverId], references: [id])
+  tripId           String?
+  trip             Trip?     @relation(fields: [tripId], references: [id])
+  eventType        String    // ARRIVAL | LEAVE | POD_SAVE | PHOTO | STATUS_CHANGE
+  payload          Json
+  savedAt          DateTime  // when it was saved on device
+  syncedAt         DateTime?
+  conflictResolved Boolean   @default(false)
+  conflictNote     String?   // "field evidence wins; correction to OUT108"
+}
+
+// ─────────────────────────────────────────────────────────────
+// Planning support
+// ─────────────────────────────────────────────────────────────
+
+model DeferralLog {
+  id              String         @id @default(cuid())
+  orderId         String         @unique
+  order           Order          @relation(fields: [orderId], references: [id])
+  reason          DeferralReason
+  score           Int
+  resolvedBy      String?        // dispatcher user id
+  notes           String?
+  rescheduledDate DateTime?
+  isProvisional   Boolean        @default(false) // set during blackout
+  createdAt       DateTime       @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────
+// Notifications
+// ─────────────────────────────────────────────────────────────
+
+model Notification {
+  id          String              @id @default(cuid())
+  recipientId String
+  recipient   User                @relation(fields: [recipientId], references: [id])
+  tripId      String?
+  trip        Trip?               @relation(fields: [tripId], references: [id])
+  type        String
+  // DEFERRAL_SUGGESTED | BLACKOUT_DETECTED | SIGNAL_BACK | POD_MATCHED |
+  // SHORTFALL_ACK | REEFER_FAIL | CREDIT_NOTE_ISSUED
+  channel     NotificationChannel
+  payload     Json
+  sentAt      DateTime            @default(now())
+  readAt      DateTime?
+}
+
+// ─────────────────────────────────────────────────────────────
+// Reference / lookup tables (from CSVs)
+// ─────────────────────────────────────────────────────────────
+
+model Calendar {
+  date          DateTime @id
+  isOperating   Boolean
+  isPayday      Boolean  @default(false)
+  festivalRamp  Float    @default(0)
+  monsoon       Int      @default(0) // 0 or 1
+  festivalName  String?
+  note          String?
+}
+
+model DistrictTravel {
+  district       String @id
+  depot          Depot
+  roadClass      String // urban | suburban | highway | hill
+  depotToDistMin Int
+  interStopMin   Int
+  distKm         Float?
+}
+
+model ServiceAllowance {
+  brand    Brand
+  dockType DockType
+  minutes  Int
+
+  @@id([brand, dockType])
+}
