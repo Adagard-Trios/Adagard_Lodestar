@@ -1,0 +1,91 @@
+// The 4:00 PM order cut-off (Asia/Colombo): an order for a run date must be placed before 16:00 on
+// the day before. Stores are held to it; dispatch may log a late phone order (DSP-10) with a reason,
+// which planning flags. An order saved on a store phone before the cut-off but synced after it (no
+// signal) still counts, within a grace window, because the store did order in time.
+import { ODataError } from '@lodestar/odata';
+import { businessDate, isBeforeOrderCutoff, nextOrderableRunDate, orderCutoffFor, toBusinessDate } from '@lodestar/platform';
+import { Roles } from '@lodestar/security';
+
+export interface CutoffSettings {
+  /** ENFORCE_ORDER_CUTOFF (default true) */
+  enforce: boolean;
+  /** ORDER_OFFLINE_GRACE_HOURS (default 6): how late an order saved offline before the cut-off may arrive */
+  graceHours: number;
+}
+
+export function cutoffSettings(env: NodeJS.ProcessEnv = process.env): CutoffSettings {
+  const off = /^(false|0|no|off)$/i.test((env.ENFORCE_ORDER_CUTOFF ?? '').trim());
+  const grace = Number(env.ORDER_OFFLINE_GRACE_HOURS);
+  return { enforce: !off, graceHours: Number.isFinite(grace) && grace >= 0 ? grace : 6 };
+}
+
+export interface CutoffInput {
+  roles: string[];
+  runDate: string | Date;
+  /** server receipt time */
+  now: Date;
+  /** when the phone saved the order (client clock), if sent */
+  clientOrderedAt?: string | Date | null;
+  lateReason?: string | null;
+}
+
+export interface CutoffDecision {
+  orderedAt: Date;
+  latePhone: boolean;
+  lateReason: string | null;
+}
+
+/** a run date as YYYY-MM-DD */
+const day = (d: string | Date) => toBusinessDate(d);
+
+/** Decide whether an order may be placed now, and with which orderedAt and late flags. */
+export function decideCutoff(input: CutoffInput, settings: CutoffSettings): CutoffDecision {
+  const { roles, runDate, now } = input;
+  const reason = (input.lateReason ?? '').trim();
+  const clientAt = input.clientOrderedAt ? new Date(input.clientOrderedAt) : null;
+  if (clientAt && Number.isNaN(clientAt.getTime())) throw ODataError.badRequest('orderedAt must be an ISO date-time', 'orderedAt');
+
+  const cutoff = orderCutoffFor(runDate);
+  // a phone clock ahead of the server is not trusted; anything later than "now" falls back to now
+  const savedAt = clientAt && clientAt.getTime() <= now.getTime() ? clientAt : null;
+
+  if (!settings.enforce || isBeforeOrderCutoff(runDate, now)) {
+    return { orderedAt: savedAt ?? now, latePhone: false, lateReason: null };
+  }
+
+  // saved on the phone before the cut-off, arrived within the grace window: it was ordered in time
+  const graceEnd = cutoff.getTime() + settings.graceHours * 3_600_000;
+  if (savedAt && savedAt.getTime() < cutoff.getTime() && now.getTime() <= graceEnd) {
+    return { orderedAt: savedAt, latePhone: false, lateReason: null };
+  }
+
+  const dispatch = roles.includes(Roles.Dispatcher) || roles.includes(Roles.Admin);
+  if (dispatch) {
+    if (!reason) {
+      throw ODataError.unprocessable(
+        'LateReasonRequired',
+        `Orders for ${day(runDate)} closed at 4:00 PM on ${businessDate(cutoff)}. A late phone order needs lateReason.`,
+        'lateReason',
+      );
+    }
+    return { orderedAt: now, latePhone: true, lateReason: reason.slice(0, 500) };
+  }
+
+  throw ODataError.unprocessable(
+    'OrderCutoffPassed',
+    `Orders for ${day(runDate)} closed at 4:00 PM on ${businessDate(cutoff)}. The next run you can order for is ${nextOrderableRunDate(now)}; ` +
+      'for anything urgent, call dispatch.',
+    'runDate',
+  );
+}
+
+/** A store may only change an order (or move it to another run) before the cut-off of both run dates. */
+export function assertStoreMayEdit(roles: string[], currentRunDate: string | Date, newRunDate: string | Date | undefined, now: Date, settings: CutoffSettings) {
+  if (!settings.enforce) return;
+  if (roles.includes(Roles.Dispatcher) || roles.includes(Roles.Admin) || roles.includes(Roles.Service)) return;
+  for (const rd of [currentRunDate, newRunDate]) {
+    if (rd !== undefined && !isBeforeOrderCutoff(rd, now)) {
+      throw ODataError.unprocessable('OrderCutoffPassed', `Orders for ${day(rd)} closed at 4:00 PM on ${businessDate(orderCutoffFor(rd))}; this order can no longer be changed.`, 'runDate');
+    }
+  }
+}

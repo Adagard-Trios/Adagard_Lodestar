@@ -257,6 +257,8 @@ model Order {
   daysSince         Int         @default(0)
   deferralScore     Int?
   notes             String?
+  latePhone         Boolean     @default(false) // logged by dispatch after the 4:00 PM cut-off (DSP-10)
+  lateReason        String?
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 

@@ -176,6 +176,8 @@
         <Property Name="daysSince" Type="Edm.Int32" Nullable="false"/>
         <Property Name="deferralScore" Type="Edm.Int32"/>
         <Property Name="notes" Type="Edm.String"/>
+        <Property Name="latePhone" Type="Edm.Boolean" Nullable="false"/>
+        <Property Name="lateReason" Type="Edm.String"/>
         <Property Name="createdAt" Type="Edm.DateTimeOffset" Nullable="false"/>
         <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
         <Property Name="unitsReceived" Type="Edm.Int32"/>

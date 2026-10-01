@@ -28,7 +28,7 @@ export default function ScreenSm14ReviewAndSubmit() {
     if (!claims || !draft) return true; // design preview: follow the prototype
     if (!outlet) throw new Error('Store details not loaded yet. Open Today once with signal.');
     if (!orders) throw new Error('Add at least one line');
-    if (!remaining) throw new Error(`Orders for ${dayLabel(runDate)} are closed`);
+    if (!remaining) { openScreen('sm-23-orders-closed'); return false; } // past 4:00 PM: the design's "Orders closed"
     for (const group of [dry, chilled]) {
       const lines = toOrderLines(group);
       if (lines.length) await placeOrder(outlet, runDate, lines, draft.notes);

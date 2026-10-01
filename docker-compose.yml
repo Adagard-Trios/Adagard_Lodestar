@@ -166,6 +166,8 @@ services:
       PORT: 3002
       OIDC_CLIENT_ID: svc-orders
       OIDC_CLIENT_SECRET: ${SVC_ORDERS_SECRET:-svc-orders-dev-only}
+      ENFORCE_ORDER_CUTOFF: ${ENFORCE_ORDER_CUTOFF:-true}
+      ORDER_OFFLINE_GRACE_HOURS: ${ORDER_OFFLINE_GRACE_HOURS:-6}
 
   planning:
     <<: *service

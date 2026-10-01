@@ -96,6 +96,15 @@ The graph (`backend/apps/agent`), one run per depot and run date:
   - `POST /ask {runId, question}`: the "Ask the planning agent" panel (DSP-39/40); it may propose an edit as a new draft.
 - `planning` exposes these to clients as the OData entity set `AgentRuns`.
 
+## 4b. Order cut-off
+
+An order for a run date must be placed before **4:00 PM Asia/Colombo on the day before**. The orders service enforces this; the apps only mirror it.
+
+- **Store managers:** after the cut-off, `POST Orders` returns 422 `OrderCutoffPassed`, naming the next run they can order for. Editing an order (or moving it to another run) is refused the same way. The field app opens SM-23 "Orders closed".
+- **Offline stores:** an order saved on the phone before the cut-off still counts if it syncs within `ORDER_OFFLINE_GRACE_HOURS` (default 6). The app sends the time it was saved as `orderedAt`. A phone clock ahead of the server is ignored.
+- **Dispatch:** a dispatcher (or admin) may log a late phone order (DSP-10) with a `lateReason`. Without one the order is refused with 422 `LateReasonRequired`. The order is stored with `latePhone = true`.
+- **Switch:** `ENFORCE_ORDER_CUTOFF=false` turns the cut-off off, for demos on past scenario dates.
+
 ## 5. Data and seeding
 
 - The competition CSVs are **never committed**. The rules forbid redistributing the datasets.

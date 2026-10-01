@@ -4,6 +4,7 @@ import { EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, Oper
 import { canAccessDepot, canAccessOutlet, HUMAN_ROLES, isPrivileged, Roles } from '@lodestar/security';
 import { OrderStatus, TempClass } from '@prisma/client';
 import { CANCELLABLE_STATUSES, EDITABLE_STATUSES, OrdersService } from './orders.service';
+import { assertStoreMayEdit, cutoffSettings, decideCutoff } from './order-cutoff';
 
 /** Row filters shared by Orders and (through `order`) OrderLineItems. */
 const orderAbac = {
@@ -41,7 +42,8 @@ function validateLineItems(raw: unknown): LineItemInput[] {
   abac: orderAbac,
   navigation: ['outlet', 'lineItems', 'tripStop', 'deferralLog'],
   search: ['id', 'notes', 'outlet/name'],
-  insertable: ['id', 'outletId', 'runDate', 'brand', 'tempClass', 'units', 'kg', 'm3', 'notes', 'lineItems'],
+  // orderedAt: when the phone saved it (honoured for the cut-off only within the offline grace window)
+  insertable: ['id', 'outletId', 'runDate', 'brand', 'tempClass', 'units', 'kg', 'm3', 'notes', 'lineItems', 'orderedAt', 'lateReason'],
   updatable: ['runDate', 'units', 'kg', 'm3', 'notes'],
   defaultOrderBy: 'runDate desc,id',
   // A store's queued order is replayed after a blackout: Idempotency-Key keeps it single.
@@ -68,21 +70,29 @@ export class OrdersSet extends ODataEntitySet {
       if (!allowed) throw ODataError.forbidden('You cannot place orders for this outlet', 'outletId');
     }
     const lineItems = data.lineItems !== undefined ? validateLineItems(data.lineItems) : undefined;
+    // 4:00 PM cut-off (Asia/Colombo) the day before the run
+    const cutoff = decideCutoff(
+      { roles: p.roles, runDate: data.runDate, now: new Date(), clientOrderedAt: data.orderedAt, lateReason: data.lateReason },
+      cutoffSettings(),
+    );
     return {
       ...data,
       id: data.id ?? (await this.orders.nextOrderId()),
-      orderedAt: new Date(),
+      orderedAt: cutoff.orderedAt,
+      latePhone: cutoff.latePhone,
+      lateReason: cutoff.lateReason,
       status: OrderStatus.RECEIVED,
       lineItems: lineItems ? { create: lineItems } : undefined,
     };
   }
 
   async beforeUpdate(patch: Record<string, any>, current: any, ctx: WriteContext) {
-    // Stores may only edit orders that planning has not picked up yet.
+    // Stores may only edit orders that planning has not picked up yet, and only before the cut-off.
     if (!isPrivileged(ctx.principal) && !ctx.principal.roles.includes(Roles.Dispatcher)) {
       if (!EDITABLE_STATUSES.includes(current.status)) {
         throw ODataError.conflict(`Order ${current.id} is ${current.status} and can no longer be edited`);
       }
+      assertStoreMayEdit(ctx.principal.roles, current.runDate, patch.runDate, new Date(), cutoffSettings());
     }
     return patch;
   }

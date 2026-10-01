@@ -1,5 +1,6 @@
 import { anything, capture, instance, mock, verify, when } from 'ts-mockito';
 import { ODataError } from '@lodestar/odata';
+import { nextOrderableRunDate } from '@lodestar/platform';
 import { personas } from '../../../libs/security/test/principals';
 import { OrdersService } from './orders.service';
 import { OrdersSet } from './orders.sets';
@@ -21,7 +22,8 @@ describe('OrdersSet', () => {
     when(orders.nextOrderId()).thenResolve('ORD0104300');
   });
 
-  const body = { outletId: 'OUT106', runDate: new Date('2026-04-08'), brand: 'FRESH', tempClass: 'CHILLED', units: 4, kg: 20, m3: 0.2 };
+  // a run date still open for orders today (the 4:00 PM cut-off is covered in order-cutoff.spec.ts)
+  const body = { outletId: 'OUT106', runDate: new Date(nextOrderableRunDate()), brand: 'FRESH', tempClass: 'CHILLED', units: 4, kg: 20, m3: 0.2 };
 
   describe('beforeCreate (ABAC on writes)', () => {
     it('lets a store manager order for her own outlet and fills server-side fields', async () => {

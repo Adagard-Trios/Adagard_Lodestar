@@ -185,7 +185,9 @@ export class SyncEngine {
           return { status: 'synced' };
         }
         case 'ORDER': {
-          await this.client.create('Orders', p.order, idem);
+          // orderedAt = when the store saved it: an order saved before the 4:00 PM cut-off and sent
+          // later (no signal) still counts, within the server's grace window
+          await this.client.create('Orders', { ...p.order, orderedAt: item.savedAt }, idem);
           return { status: 'synced' };
         }
         default:
