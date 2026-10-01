@@ -93,7 +93,7 @@ Specs:
 ### Playwright (full stack)
 
 ```bash
-docker compose up -d --build                     # gateway https://localhost:8443, Keycloak http://localhost:8180, mobile-web http://localhost:8082
+docker compose up -d --build                     # gateway https://localhost:8443, Keycloak http://localhost:8180, field app https://localhost:8443/field/
 cd tests/e2e
 npm ci && npx playwright install --with-deps chromium firefox webkit
 npm test                 # everything; @stack specs skip if the stack is down
@@ -110,7 +110,7 @@ npm run test:stack -- --project=web-chromium specs/ui/web-live.spec.ts          
 |---|---|---|
 | `E2E_BASE_URL` | `https://localhost:8443` | gateway (OData at `/odata/v4`) |
 | `E2E_WEB_URL` | `E2E_BASE_URL` | desk website |
-| `E2E_MOBILE_URL` | `http://localhost:8082` | Expo web export |
+| `E2E_MOBILE_URL` | `<E2E_BASE_URL>/field/` | Expo web export (keep the trailing slash) |
 | `E2E_KEYCLOAK_URL`, `E2E_REALM`, `E2E_ISSUER` | `http://localhost:8180`, `lodestar`, `<keycloak>/realms/lodestar` | identity |
 | `E2E_CLIENT_ID`, `E2E_CLIENT_SECRET`, `E2E_REDIRECT_URI`, `E2E_AUTH_MODE` | `lodestar-web`, none, `https://localhost:8443/`, `auto` | token acquisition (`password`, `code` or `auto`) |
 | `E2E_PASSWORD`, `E2E_PASSWORD_ADMIN`, `E2E_USER_<ROLE>` | realm dev defaults | persona credentials |
@@ -121,77 +121,98 @@ npm run test:stack -- --project=web-chromium specs/ui/web-live.spec.ts          
 
 Tags: full-stack specs carry `@stack` (`--grep @stack` / `--grep-invert @stack`). Reports go to `tests/e2e/reports/html` (HTML) and `reports/junit.xml`.
 
-### SonarQube
+### Design conformance
 
 ```bash
-docker compose --profile qa up -d sonarqube      # http://localhost:9000 (admin/admin on first start)
-# produce coverage first: frontend `npm run test:cov`, backend `npm run test:cov`, agent `pytest` (writes coverage.xml)
-docker run --rm --network host -e SONAR_HOST_URL=http://localhost:9000 -e SONAR_TOKEN=<token> \
-  -v "$PWD:/usr/src" sonarsource/sonar-scanner-cli
+node tools/qa/design-baselines.mjs                    # 1. baselines from Designing/pages P1–P6 (local only; needs Google Fonts)
+cd tests/e2e && npx playwright test --project=visual   # 2. live screens vs baselines (needs the stack); report in tests/visual/report/
 ```
 
-Coverage is read from:
-- `frontend/coverage/lcov.info`
-- `backend/coverage/lcov.info`
-- `backend/apps/agent/coverage.xml`
+Step 1 renders every screen frame with Playwright's Chromium and writes `tests/visual/baselines/<ID>.png` + `<ID>.json` (ids drawn twice get a suffix, e.g. `SM-02--deliveries-desktop`): the frame's screen area (phone status bar / home indicator and desktop browser bar cropped, as the apps run under real OS and browser chrome) and its key elements, i.e. every element with its own text (boxed by the text) and every control (button, link, input, ARIA role), keyed by `kind|rendered text#occurrence`, with box and computed styles. `tokens.json` holds the style guide's CSS custom properties per role mode and the design palette. Frames without a screen id (component sheets) are listed in `index.json` and in the report as excluded.
+
+Step 2 opens each screen as its persona (one Keycloak sign-in per app, in the same tab) at the baseline's viewport, with the clock frozen at `E2E_DEMO_DATE` 10:00 Asia/Colombo, and checks:
+
+| Check | Threshold |
+|---|---|
+| every static key element present, box (x, y, w, h) | within **2 px** |
+| token-driven styles: text colour, typeface, weight, size; control background, radius, padding, gap | **exactly equal** |
+| screenshot vs baseline, masked | at most **1 %** of unmasked pixels differ (a pixel differs when a channel is off by more than **25/255**) |
+| style-guide tokens vs desk CSS (computed in the live app); field app colour literals vs the design palette, its fonts vs the design typefaces | **exactly equal** |
+
+Masks: elements whose text has a digit, a weekday or a month name (times, dates, ids, counts, quantities) on either side are painted out of both images (+2 px) and never position-matched. A screen whose route renders the generated static mock (desk page without `LiveSwitch`, field key not in `LIVE`) is **not implemented** and fails; one that differs is **drifted** (live capture + diff image in the report). Results: `tests/visual/report/index.html` and `report.json`. No retries (verdicts are deterministic); thresholds are not to be raised to get green.
+
+### SonarQube (local)
+
+```bash
+docker compose --profile qa up -d sonarqube             # http://localhost:9000, admin/admin on first start
+# My Account → Security → generate a token, then:
+export SONAR_TOKEN=<token>
+SONAR_HOST_URL=http://localhost:9000 tools/qa/sonar-gate.sh   # creates the "Lodestar" gate and selects it
+tools/qa/gate.sh --no-stack                             # suites with coverage, then the scan, waiting for the gate
+```
+
+Coverage is read from `frontend/coverage/lcov.info`, `mobile/coverage/lcov.info`, `backend/coverage/lcov.info` and `backend/apps/agent/coverage.xml`. Generated screens (`frontend/screens`, the generated `page.tsx` routes, `mobile/src/screens`), `Designing/`, `data/` and every CSV are excluded (`sonar-project.properties`).
+
+## The gate
+
+One command runs everything CI runs, in the same order:
+
+```bash
+tools/qa/gate.sh              # lint, typecheck, unit suites, integration, fresh compose stack + Playwright, Sonar
+tools/qa/gate.sh --no-stack   # without rebuilding the stack
+tools/qa/gate.sh --no-sonar   # without the Sonar stage
+```
+
+It prints PASS/FAIL per stage and exits non-zero if any stage failed. The full-stack stage runs `docker compose down -v` first, so the seed is fresh. `tools/qa/wait-stack.sh` waits until the seed has finished, every container is healthy and the gateway serves the start page, `$metadata` and Keycloak.
+
+### Quality gate "Lodestar"
+
+| Condition (new code) | Fails when |
+|---|---|
+| Bugs | > 0 |
+| Vulnerabilities | > 0 |
+| Blocker issues | > 0 |
+| Critical issues | > 0 |
+| Coverage | < 80 % |
+| Duplicated lines | > 3 % |
+
+`tools/qa/sonar-gate.sh` creates it on a local SonarQube or on SonarQube Cloud (with `SONAR_ORGANIZATION`).
 
 ## CI/CD flow
 
 ```
-feature branch ──PR──▶ CircleCI (pr-checks) ──merge──▶ main ──▶ Jenkins ──GitOps commit──▶ deploy/k8s/overlays/dev ──▶ Argo CD ──▶ AKS dev
+PR ──▶ CircleCI pr-checks: lint · typecheck · unit suites ∥ · integration · Sonar gate · full stack (2 shards)
+main ─▶ CircleCI main: the same ─▶ images → ghcr.io (SHA tag) ─▶ tag bump in deploy/k8s/overlays/demo [skip ci]
+                                 ─▶ Argo CD syncs the demo VM's k3s ─▶ smoke test of the public URL as the four roles
 ```
 
-### CircleCI: pull requests (`.circleci/config.yml`)
+Jenkins (`Jenkinsfile`) is not on the live path any more; it is kept for reference only.
 
-The `pr-checks` workflow runs on every branch except `main`. Enable "Only build pull requests" in the project settings.
+### CircleCI jobs (`.circleci/config.yml`)
 
-| Area | Jobs |
+| Stage | Jobs |
 |---|---|
-| Frontend | `frontend-lint`, `frontend-typecheck`, `frontend-jest` (JUnit and lcov), `frontend-build`, then `frontend-cypress`, which serves the built `.next` with `next start` and runs the whole Cypress suite |
-| Mobile | `mobile-typecheck` |
-| Backend | `backend-lint`, `backend-typecheck`, `backend-jest` |
-| Agent | `agent-pytest` (Python 3.12, JUnit, `coverage.xml`) |
-| Tools | `screengen-check` (`node --check` on `tools/screengen/*.js`) |
+| Lint and typecheck | `frontend-lint`, `frontend-typecheck`, `backend-lint`, `backend-typecheck`, `mobile-typecheck`, `screengen-check` |
+| Unit suites (parallel, with coverage) | `frontend-jest`, `mobile-jest`, `backend-jest`, `agent-pytest`, `frontend-build` → `frontend-cypress` |
+| Integration | `backend-integration`: OData endpoints against a Postgres service container (`npm run test:int`) |
+| Sonar | `sonar`: SonarQube Cloud scan with every suite's coverage, `sonar.qualitygate.wait=true` |
+| Full stack | `full-stack` (machine executor, 2 shards): `docker compose up --build` on synthetic data, `tools/qa/wait-stack.sh`, then Playwright projects `api`, `web-chromium`, `mobile-web`, `flows`, `clicks`, `visual` |
+| Deliver (main only) | `images` requires every job above; then `gitops-bump`, then `smoke-public` |
 
-Caching:
-- npm through the `circleci/node` orb.
-- pip through the `circleci/python` orb.
-- The Cypress binary (`~/.cache/Cypress`) and the Next build cache.
+Artifacts: coverage per workspace, the Playwright HTML report, traces and screenshots of failures (`playwright-traces`), the design-conformance report with diff images, and the stack logs when a job fails.
 
-### Jenkins: `main` (`Jenkinsfile`)
+Expected time per run (free plan, 30,000 credits a month): about 90 credit-minutes for a pull request (≈ 900 credits: the two full-stack shards are ~50 of them) and about 110 on `main`, so roughly 25–30 runs a month. Wall-clock time is about 30 minutes, set by the full-stack shards.
 
-1. Checkout. GitOps commits (`[gitops]`) are recognised and not rebuilt.
-2. Unit suites in parallel:
-   - frontend: lint, typecheck, Jest, build
-   - mobile: typecheck
-   - backend: lint, typecheck, Jest
-   - agent: pytest
-   - screengen: syntax check
-3. `docker compose up -d --build --wait`, then wait for the gateway and Keycloak.
-4. Playwright, with `E2E_REQUIRE_STACK=1`. Publishes the JUnit results and the HTML report.
-5. SonarQube scan with `waitForQualityGate abortPipeline: true`.
-6. Build an image for every service, tagged `dev-<sha7>`.
-7. Trivy scan: HIGH or CRITICAL findings fail the build.
-8. Push to ACR, then `cosign sign` on the pushed digest.
-9. `terraform plan` for `infra/terraform/envs/dev`, a manual `input` approval, then `apply`.
-10. `kustomize edit set image` in `deploy/k8s/overlays/dev`, committed as `[gitops] [skip ci]` and pushed to the branch Argo CD tracks.
-11. Always: `docker compose down -v`.
+Caching: npm per workspace (`circleci/node` orb), pip, the Cypress binary, the Next build cache and the Playwright browsers. Docker layer caching is left off: it costs 200 credits per job, more than the build time it saves here.
 
-Jenkins credentials are passed as parameters. Every id below is a placeholder to create.
+### Setting up the credentials (owner only)
 
-| Parameter (default id) | Kind | Used for |
-|---|---|---|
-| `ACR_CREDENTIALS_ID` (`acr-push`) | username/password | `docker login` to ACR |
-| `AZURE_SP_CREDENTIALS_ID` (`azure-sp-dev`) | Azure service principal | Terraform `ARM_*` |
-| `TF_BACKEND_CREDENTIALS_ID` (`tf-backend-dev-hcl`) | secret file | `backend.hcl` |
-| `TF_VARS_CREDENTIALS_ID` (`tf-vars-dev`) | secret file | `terraform.tfvars` |
-| `COSIGN_KEY_CREDENTIALS_ID` (`cosign-key`) | secret file | cosign private key |
-| `COSIGN_PASSWORD_CREDENTIALS_ID` (`cosign-password`) | secret text | cosign key password |
-| `GIT_CREDENTIALS_ID` (`github-gitops`) | username/PAT | pushing the GitOps commit |
-| `SONARQUBE_SERVER` (`sonarqube`) | Jenkins SonarQube server entry, with its token | scan + quality gate |
+1. **SonarQube Cloud**: sign in at sonarcloud.io with GitHub, import the repository (free for public repositories), note the organization key and project key. Run `SONAR_HOST_URL=https://sonarcloud.io SONAR_TOKEN=<token> SONAR_ORGANIZATION=<org> SONAR_PROJECT_KEY=<key> tools/qa/sonar-gate.sh`. Turn off "Automatic Analysis" for the project (CI analysis replaces it).
+2. **CircleCI**: set up the project from the GitHub repository using the existing `.circleci/config.yml`. Organization Settings → Contexts:
+   - `sonarcloud`: `SONAR_TOKEN`, `SONAR_ORGANIZATION`, `SONAR_PROJECT_KEY`
+   - `ghcr`: `GHCR_USER` and `GHCR_TOKEN` (a GitHub token with `write:packages`)
+   - `smoke`: nothing secret today (the demo personas' passwords are public in the README); kept for later
+3. **Deploy key** for the tag bump: `ssh-keygen -t ed25519 -f lodestar-ci -N ""`; add `lodestar-ci.pub` to the GitHub repository as a deploy key **with write access**; add the private key in CircleCI → Project Settings → SSH Keys (host `github.com`); put its fingerprint in the `deploy-key-fingerprint` pipeline parameter.
+4. Set the `public-url` pipeline parameter once the demo URL is live.
 
-### Argo CD: delivery
-
-Argo CD watches `deploy/k8s` (app-of-apps in `deploy/argocd`):
-- `dev` auto-syncs with self-heal, so the Jenkins tag bump rolls out without anyone touching the cluster.
-- `prod` syncs manually.
+If SonarQube Cloud is not wanted, the `sonar` job can instead start `sonarqube:community` as a service container and scan against it.

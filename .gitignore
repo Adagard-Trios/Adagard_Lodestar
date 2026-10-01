@@ -29,3 +29,6 @@ data/
 
 # Test coverage output
 coverage/
+
+# backend integration coverage
+backend/coverage-int/

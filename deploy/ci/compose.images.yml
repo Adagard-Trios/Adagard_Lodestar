@@ -1,0 +1,17 @@
+# Names the 14 built images for the registry (CI `images` job): REGISTRY/lodestar-<service>:TAG.
+# docker compose -f docker-compose.yml -f deploy/ci/compose.images.yml build && ... push
+services:
+  migrate:       { image: "${REGISTRY}/lodestar-migrate:${TAG}" }
+  auth:          { image: "${REGISTRY}/lodestar-auth:${TAG}" }
+  orders:        { image: "${REGISTRY}/lodestar-orders:${TAG}" }
+  planning:      { image: "${REGISTRY}/lodestar-planning:${TAG}" }
+  fleet:         { image: "${REGISTRY}/lodestar-fleet:${TAG}" }
+  outlets:       { image: "${REGISTRY}/lodestar-outlets:${TAG}" }
+  trips:         { image: "${REGISTRY}/lodestar-trips:${TAG}" }
+  sync:          { image: "${REGISTRY}/lodestar-sync:${TAG}" }
+  notifications: { image: "${REGISTRY}/lodestar-notifications:${TAG}" }
+  audit:         { image: "${REGISTRY}/lodestar-audit:${TAG}" }
+  agent:         { image: "${REGISTRY}/lodestar-agent:${TAG}" }
+  gateway:       { image: "${REGISTRY}/lodestar-gateway:${TAG}", build: { args: { GIT_SHA: "${TAG}" } } }
+  frontend:      { image: "${REGISTRY}/lodestar-frontend:${TAG}" }
+  mobile-web:    { image: "${REGISTRY}/lodestar-mobile-web:${TAG}" }

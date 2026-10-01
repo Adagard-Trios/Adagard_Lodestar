@@ -1,7 +1,23 @@
-# Waypoint Lodestar · pull-request checks (PLATFORM.md §7).
-# Fast feedback on every PR / feature branch: lint, typecheck, unit tests, build and Cypress.
-# main is built by Jenkins (Jenkinsfile): full stack + Playwright, SonarQube gate, images, Terraform, GitOps.
-# Project setting: enable "Only build pull requests" so feature branches build once a PR is open.
+# Waypoint Lodestar · the quality gate (docs/QA.md "The gate").
+#
+#   pull requests   lint + typecheck · every unit suite in parallel · backend integration (real Postgres)
+#                   · SonarQube Cloud scan that waits for the quality gate
+#                   · full stack (`docker compose up`) + Playwright: cross-role flows, every click,
+#                     design conformance, API · sharded over 2 machines
+#   main            the same jobs; then images → ghcr.io (tag = commit SHA) → Argo CD tag bump in
+#                   deploy/k8s/overlays/demo ([skip ci]) → smoke test of the public URL as the four roles.
+#                   Every deploy step requires every check above.
+#
+# Credentials are project settings, never in this file: context `sonarcloud` (SONAR_TOKEN, SONAR_ORGANIZATION, SONAR_PROJECT_KEY),
+# context `ghcr` (GHCR_USER, GHCR_TOKEN), an SSH deploy key with write access (fingerprint below),
+# context `smoke` (SMOKE_PASSWORD_* for the four personas). docs/QA.md lists the setup steps.
+#
+# Expected minutes per run (free plan, 30,000 credits/month):
+#   unit + lint jobs   ~11 jobs × 2–4 min (docker medium, 10 credits/min) ............ ~35 min
+#   sonar              ~3 min
+#   full stack         2 shards × ~25 min (machine medium, 10 credits/min) ............. ~50 min
+#   main only          images ~15 min (machine) + bump 1 min + smoke ~4 min ........... ~20 min
+#   ≈ 90 credit-minutes per PR run (~900 credits), ≈ 110 on main (~1,100 credits).
 version: 2.1
 
 orbs:
@@ -11,10 +27,19 @@ orbs:
 parameters:
   node-image:
     type: string
-    default: cimg/node:lts
+    default: cimg/node:22.12
   python-image:
     type: string
     default: cimg/python:3.12
+  registry:
+    type: string
+    default: ghcr.io/adagard-trios
+  public-url:
+    type: string
+    default: ""            # set once the demo VM is live (README "Live demo"); empty skips the smoke job's checks
+  deploy-key-fingerprint:
+    type: string
+    default: "SHA256:replace-with-the-deploy-key-fingerprint"
 
 executors:
   node:
@@ -25,6 +50,18 @@ executors:
       CI: "true"
       NEXT_TELEMETRY_DISABLED: "1"
       CYPRESS_INSTALL_BINARY: "0"  # only the Cypress job downloads the binary
+  node-postgres:
+    docker:
+      - image: << pipeline.parameters.node-image >>
+      - image: cimg/postgres:16.4
+        environment:
+          POSTGRES_USER: lodestar
+          POSTGRES_PASSWORD: lodestar-ci
+          POSTGRES_DB: lodestar_test
+    resource_class: medium
+    environment:
+      CI: "true"
+      DATABASE_URL: postgresql://lodestar:lodestar-ci@localhost:5432/lodestar_test
   cypress:
     docker:
       - image: cypress/browsers:latest
@@ -37,36 +74,47 @@ executors:
     docker:
       - image: << pipeline.parameters.python-image >>
     resource_class: medium
+  stack:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: medium
+    environment:
+      CI: "true"
 
 commands:
   frontend-deps:
-    description: Install frontend packages (npm ci, cached on package-lock.json)
     steps:
       - node/install-packages:
           app-dir: frontend
           pkg-manager: npm
-  backend-deps:
-    description: Install backend packages (npm ci when a lockfile exists, cached on it or package.json)
+  mobile-deps:
     steps:
+      - node/install-packages:
+          app-dir: mobile
+          pkg-manager: npm
+  backend-deps:
+    steps:
+      - node/install-packages:
+          app-dir: backend
+          pkg-manager: npm
       - run:
-          name: Lockfile checksum source
-          command: |
-            cd backend
-            if [ -f package-lock.json ]; then cp package-lock.json /tmp/backend-deps-key; else cp package.json /tmp/backend-deps-key; fi
+          name: prisma generate
+          command: cd backend && npx prisma generate
+  e2e-deps:
+    steps:
+      - node/install-packages:
+          app-dir: tests/e2e
+          pkg-manager: npm
       - restore_cache:
           keys:
-            - backend-npm-v1-{{ checksum "/tmp/backend-deps-key" }}
-            - backend-npm-v1-
+            - pw-browsers-v1-{{ checksum "tests/e2e/package-lock.json" }}
       - run:
-          name: npm install (backend)
-          command: |
-            cd backend
-            if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
-            if [ -f prisma/schema.prisma ]; then npx prisma generate; fi
+          name: Playwright Chromium
+          command: cd tests/e2e && npx playwright install --with-deps chromium
       - save_cache:
-          key: backend-npm-v1-{{ checksum "/tmp/backend-deps-key" }}
+          key: pw-browsers-v1-{{ checksum "tests/e2e/package-lock.json" }}
           paths:
-            - ~/.npm
+            - ~/.cache/ms-playwright
 
 jobs:
   # ------------------------------------------------------------------ frontend
@@ -85,7 +133,7 @@ jobs:
       - checkout
       - frontend-deps
       - run:
-          name: tsc (app, Jest and Cypress projects)
+          name: tsc (app, Jest, Cypress)
           command: cd frontend && npm run typecheck
 
   frontend-jest:
@@ -96,15 +144,9 @@ jobs:
       - run:
           name: Jest with coverage
           command: cd frontend && npx jest --ci --coverage
-      - store_test_results:
-          path: frontend/reports/junit
-      - store_artifacts:
-          path: frontend/coverage
-          destination: frontend-coverage
-      - persist_to_workspace:
-          root: .
-          paths:
-            - frontend/coverage/lcov.info
+      - store_test_results: { path: frontend/reports/junit }
+      - store_artifacts: { path: frontend/coverage, destination: coverage/frontend }
+      - persist_to_workspace: { root: ., paths: [frontend/coverage/lcov.info] }
 
   frontend-build:
     executor: node
@@ -120,20 +162,14 @@ jobs:
           command: cd frontend && npm run build
       - save_cache:
           key: next-cache-v1-{{ .Branch }}-{{ checksum "frontend/package-lock.json" }}-{{ epoch }}
-          paths:
-            - frontend/.next/cache
-      - persist_to_workspace:
-          root: .
-          paths:
-            - frontend/.next
+          paths: [frontend/.next/cache]
+      - persist_to_workspace: { root: ., paths: [frontend/.next] }
 
   frontend-cypress:
     executor: cypress
-    parallelism: 1
     steps:
       - checkout
-      - attach_workspace:
-          at: .
+      - attach_workspace: { at: . }
       - restore_cache:
           keys:
             - cypress-v1-{{ checksum "frontend/package-lock.json" }}
@@ -143,34 +179,37 @@ jobs:
           command: cd frontend && npm ci && npx cypress install && npx cypress verify
       - save_cache:
           key: cypress-v1-{{ checksum "frontend/package-lock.json" }}
-          paths:
-            - ~/.npm
-            - ~/.cache/Cypress
+          paths: [~/.npm, ~/.cache/Cypress]
       - run:
           name: Cypress against the built site (next start)
           command: |
             cd frontend
             npx start-server-and-test "npx next start -p 3000" http://localhost:3000 \
               "npx cypress run --e2e --browser electron --reporter junit --reporter-options mochaFile=reports/cypress/results-[hash].xml"
-          environment:
-            CYPRESS_BASE_URL: http://localhost:3000
-      - store_test_results:
-          path: frontend/reports/cypress
-      - store_artifacts:
-          path: frontend/cypress/screenshots
-          destination: cypress-screenshots
+          environment: { CYPRESS_BASE_URL: http://localhost:3000 }
+      - store_test_results: { path: frontend/reports/cypress }
+      - store_artifacts: { path: frontend/cypress/screenshots, destination: cypress-screenshots }
 
   # ------------------------------------------------------------------ mobile
   mobile-typecheck:
     executor: node
     steps:
       - checkout
-      - node/install-packages:
-          app-dir: mobile
-          pkg-manager: npm
+      - mobile-deps
       - run:
           name: tsc (Expo app)
           command: cd mobile && npx tsc --noEmit
+
+  mobile-jest:
+    executor: node
+    steps:
+      - checkout
+      - mobile-deps
+      - run:
+          name: Jest with coverage
+          command: cd mobile && npx jest --ci --coverage --coverageReporters=lcov --coverageReporters=text-summary
+      - store_artifacts: { path: mobile/coverage, destination: coverage/mobile }
+      - persist_to_workspace: { root: ., paths: [mobile/coverage/lcov.info] }
 
   # ------------------------------------------------------------------ backend (NestJS)
   backend-lint:
@@ -189,7 +228,7 @@ jobs:
       - backend-deps
       - run:
           name: tsc
-          command: cd backend && (npm run typecheck --if-present || npx tsc --noEmit -p tsconfig.json)
+          command: cd backend && npm run typecheck
 
   backend-jest:
     executor: node
@@ -203,17 +242,23 @@ jobs:
             REPORTERS=""
             if [ -d node_modules/jest-junit ]; then REPORTERS="--reporters=default --reporters=jest-junit"; fi
             npx jest --ci --coverage $REPORTERS
-          environment:
-            JEST_JUNIT_OUTPUT_DIR: reports/junit
-      - store_test_results:
-          path: backend/reports/junit
-      - store_artifacts:
-          path: backend/coverage
-          destination: backend-coverage
-      - persist_to_workspace:
-          root: .
-          paths:
-            - backend/coverage/lcov.info
+          environment: { JEST_JUNIT_OUTPUT_DIR: reports/junit }
+      - store_test_results: { path: backend/reports/junit }
+      - store_artifacts: { path: backend/coverage, destination: coverage/backend }
+      - persist_to_workspace: { root: ., paths: [backend/coverage/lcov.info] }
+
+  backend-integration:
+    executor: node-postgres
+    steps:
+      - checkout
+      - backend-deps
+      - run:
+          name: Wait for Postgres
+          command: timeout 120 bash -c 'until (echo > /dev/tcp/localhost/5432) 2>/dev/null; do sleep 1; done'
+      - run:
+          name: OData integration tests against Postgres (global setup applies the migrations)
+          command: cd backend && npm run test:int -- --ci --coverage --coverageDirectory=coverage-int
+      - store_artifacts: { path: backend/coverage-int, destination: coverage/backend-integration }
 
   # ------------------------------------------------------------------ planning agent (Python)
   agent-pytest:
@@ -225,19 +270,14 @@ jobs:
           pkg-manager: pip
           pip-dependency-file: requirements-dev.txt
       - run:
-          name: pytest (+ mockito), coverage.xml
+          name: pytest with coverage.xml
           command: |
             cd backend/apps/agent
             mkdir -p reports
             python -m pytest --junitxml=reports/pytest.xml --cov=lodestar_agent --cov-report=xml:coverage.xml
-      - store_test_results:
-          path: backend/apps/agent/reports
-      - store_artifacts:
-          path: backend/apps/agent/coverage.xml
-      - persist_to_workspace:
-          root: .
-          paths:
-            - backend/apps/agent/coverage.xml
+      - store_test_results: { path: backend/apps/agent/reports }
+      - store_artifacts: { path: backend/apps/agent/coverage.xml, destination: coverage/agent/coverage.xml }
+      - persist_to_workspace: { root: ., paths: [backend/apps/agent/coverage.xml, backend/apps/agent/reports/pytest.xml] }
 
   # ------------------------------------------------------------------ tools
   screengen-check:
@@ -248,10 +288,111 @@ jobs:
           name: node --check tools/screengen/*.js
           command: |
             status=0
-            for f in tools/screengen/*.js; do
-              node --check "$f" && echo "ok  $f" || { echo "BAD $f"; status=1; }
-            done
+            for f in tools/screengen/*.js; do node --check "$f" || status=1; done
             exit $status
+
+  # ------------------------------------------------------------------ SonarQube Cloud
+  sonar:
+    executor: node
+    steps:
+      - checkout
+      - attach_workspace: { at: . }
+      - run:
+          # waits for the quality gate (docs/QA.md): no new bugs/vulnerabilities, no new blocker/critical
+          # issues, coverage on new code ≥ 80 %, duplication on new code < 3 %. Fails the job when it fails.
+          name: Sonar scan (SonarQube Cloud) + quality gate
+          command: |
+            npx -y sonarqube-scanner@4               -Dsonar.host.url=https://sonarcloud.io               -Dsonar.organization="$SONAR_ORGANIZATION"               -Dsonar.projectKey="$SONAR_PROJECT_KEY"               -Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=600               ${CIRCLE_PULL_REQUEST:+-Dsonar.pullrequest.key=${CIRCLE_PULL_REQUEST##*/} -Dsonar.pullrequest.branch=$CIRCLE_BRANCH -Dsonar.pullrequest.base=main}
+
+  # ------------------------------------------------------------------ full stack + Playwright
+  full-stack:
+    executor: stack
+    parallelism: 2
+    steps:
+      - checkout
+      - run:
+          name: Compose up (synthetic data, no CSVs in CI)
+          command: |
+            cp .env.example .env
+            docker compose up -d --build
+            tools/qa/wait-stack.sh 900
+      - run:
+          name: Node 22 for Playwright
+          command: |
+            curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - >/dev/null
+            sudo apt-get install -y nodejs >/dev/null
+      - e2e-deps
+      - run:
+          name: Playwright shard $((CIRCLE_NODE_INDEX + 1)) of $CIRCLE_NODE_TOTAL
+          command: |
+            cd tests/e2e
+            npx playwright test --project=api --project=web-chromium --project=mobile-web \
+              --project=flows --project=clicks --project=visual \
+              --shard=$((CIRCLE_NODE_INDEX + 1))/$CIRCLE_NODE_TOTAL
+          environment:
+            E2E_REQUIRE_STACK: "1"
+            E2E_KEYCLOAK_URL: https://localhost:8443/auth
+            E2E_ISSUER: https://localhost:8443/auth/realms/lodestar
+            NODE_TLS_REJECT_UNAUTHORIZED: "0"
+            E2E_AGENT_CLIENT_SECRET: svc-agent-dev-only
+      - run:
+          name: Stack logs on failure
+          when: on_fail
+          command: docker compose logs --no-color --tail=300 > stack-logs.txt
+      - store_test_results: { path: tests/e2e/reports/junit.xml }
+      - store_artifacts: { path: tests/e2e/reports/html, destination: playwright-report }
+      - store_artifacts: { path: tests/e2e/test-results, destination: playwright-traces }
+      - store_artifacts: { path: tests/visual/report, destination: design-conformance }
+      - store_artifacts: { path: stack-logs.txt }
+
+  # ------------------------------------------------------------------ main: deliver
+  images:
+    executor: stack
+    steps:
+      - checkout
+      - run:
+          name: Build and push the 14 images (tag = commit SHA)
+          command: |
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            export REGISTRY=<< pipeline.parameters.registry >> TAG=$CIRCLE_SHA1
+            docker compose -f docker-compose.yml -f deploy/ci/compose.images.yml build
+            docker compose -f docker-compose.yml -f deploy/ci/compose.images.yml push
+
+  gitops-bump:
+    executor: node
+    steps:
+      - add_ssh_keys:
+          fingerprints: [<< pipeline.parameters.deploy-key-fingerprint >>]
+      - checkout
+      - run:
+          name: kustomize edit set image → overlays/demo, commit [skip ci]
+          command: |
+            curl -fsSL "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash -s 5.4.3 /tmp
+            cd deploy/k8s/overlays/demo
+            for s in auth orders planning fleet outlets trips sync notifications audit agent gateway frontend mobile-web migrate; do
+              /tmp/kustomize edit set image "lodestar/$s=<< pipeline.parameters.registry >>/lodestar-$s:$CIRCLE_SHA1"
+            done
+            git config user.name "circleci" && git config user.email "ci@users.noreply.github.com"
+            git commit -am "deploy: demo → ${CIRCLE_SHA1:0:7} [skip ci]" && git push origin HEAD:main
+
+  smoke-public:
+    executor: node
+    steps:
+      - checkout
+      - e2e-deps
+      - run:
+          name: Wait until the public URL serves this commit, then sign in as the four roles
+          command: |
+            URL="<< pipeline.parameters.public-url >>"
+            if [ -z "$URL" ]; then echo "public-url not set yet: nothing to smoke"; exit 0; fi
+            for i in $(seq 1 90); do
+              v=$(curl -fsS "$URL/version" || true)
+              [ "$v" = "$CIRCLE_SHA1" ] && break
+              sleep 10
+            done
+            [ "$v" = "$CIRCLE_SHA1" ] || { echo "the cluster never served $CIRCLE_SHA1 (last: $v)"; exit 1; }
+            cd tests/e2e && E2E_BASE_URL="$URL" E2E_REQUIRE_STACK=1 npx playwright test specs/ui/web-start.spec.ts --project=web-chromium --project=mobile-web
+      - store_artifacts: { path: tests/e2e/reports/html, destination: smoke-report }
 
 workflows:
   pr-checks:
@@ -259,20 +400,57 @@ workflows:
       not:
         equal: [main, << pipeline.git.branch >>]
     jobs:
-      - screengen-check: &pr-only
-          filters:
-            branches:
-              ignore: main
-      - frontend-lint: *pr-only
-      - frontend-typecheck: *pr-only
-      - frontend-jest: *pr-only
-      - frontend-build: *pr-only
-      - frontend-cypress:
-          <<: *pr-only
+      - screengen-check
+      - frontend-lint
+      - frontend-typecheck
+      - frontend-jest
+      - frontend-build
+      - frontend-cypress: { requires: [frontend-build] }
+      - mobile-typecheck
+      - mobile-jest
+      - backend-lint
+      - backend-typecheck
+      - backend-jest
+      - backend-integration
+      - agent-pytest
+      - sonar:
+          context: sonarcloud
+          requires: [frontend-jest, mobile-jest, backend-jest, agent-pytest]
+      - full-stack:
+          requires: [frontend-lint, frontend-typecheck, backend-lint, backend-typecheck, mobile-typecheck]
+
+  main:
+    when:
+      equal: [main, << pipeline.git.branch >>]
+    jobs:
+      - screengen-check
+      - frontend-lint
+      - frontend-typecheck
+      - frontend-jest
+      - frontend-build
+      - frontend-cypress: { requires: [frontend-build] }
+      - mobile-typecheck
+      - mobile-jest
+      - backend-lint
+      - backend-typecheck
+      - backend-jest
+      - backend-integration
+      - agent-pytest
+      - sonar:
+          context: sonarcloud
+          requires: [frontend-jest, mobile-jest, backend-jest, agent-pytest]
+      - full-stack:
+          requires: [frontend-lint, frontend-typecheck, backend-lint, backend-typecheck, mobile-typecheck]
+      - images:
+          context: ghcr
           requires:
-            - frontend-build
-      - mobile-typecheck: *pr-only
-      - backend-lint: *pr-only
-      - backend-typecheck: *pr-only
-      - backend-jest: *pr-only
-      - agent-pytest: *pr-only
+            - screengen-check
+            - frontend-cypress
+            - mobile-jest
+            - backend-jest
+            - backend-integration
+            - agent-pytest
+            - sonar
+            - full-stack
+      - gitops-bump: { requires: [images] }
+      - smoke-public: { context: smoke, requires: [gitops-bump] }

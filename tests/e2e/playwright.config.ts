@@ -58,5 +58,24 @@ export default defineConfig({
       testMatch: 'ui/mobile-*.spec.ts',
       use: { ...devices['Pixel 7'], channel, baseURL: MOBILE_URL },
     },
+    // Cross-role flows (Designing 04–07b, 08/P5): each role in its own browser context; driver and loader at 390×844.
+    {
+      name: 'flows',
+      testMatch: 'flows/**/*.spec.ts',
+      fullyParallel: false,
+      use: { ...devices['Desktop Chrome'], channel, baseURL: WEB_URL, viewport: { width: 1440, height: 900 } },
+    },
+    // Every designed click (links.json) and every interactive control on every route, per role.
+    {
+      name: 'clicks',
+      testMatch: 'clicks/**/*.spec.ts',
+      use: { ...devices['Desktop Chrome'], channel, baseURL: WEB_URL, viewport: { width: 1440, height: 900 } },
+    },
+    // Design conformance against tests/visual/baselines (frozen clock, masked dynamic regions).
+    {
+      name: 'visual',
+      testMatch: 'visual/**/*.spec.ts',
+      use: { ...devices['Desktop Chrome'], channel, baseURL: WEB_URL, viewport: { width: 1440, height: 900 } },
+    },
   ],
 });

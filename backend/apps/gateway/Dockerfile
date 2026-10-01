@@ -13,6 +13,9 @@ COPY nginx.conf /etc/nginx/nginx.conf
 COPY conf.d/ /etc/nginx/conf.d/
 COPY docker-entrypoint.d/10-dev-cert.sh /docker-entrypoint.d/10-dev-cert.sh
 COPY odata/ /usr/share/nginx/odata/
+# The commit this image was built from (CI passes GIT_SHA; served at /version).
+ARG GIT_SHA=dev
+RUN printf '%s' "$GIT_SHA" > /usr/share/nginx/version.txt
 
 # Normalise line endings (Windows checkouts) and make config read-only for uid 101.
 RUN sed -i 's/\r$//' /docker-entrypoint.d/10-dev-cert.sh /etc/nginx/nginx.conf /etc/nginx/conf.d/* \
