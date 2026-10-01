@@ -27,7 +27,8 @@
     "lint:fix": "eslint \"{apps,libs,prisma,tools}/**/*.ts\" --fix",
     "test": "jest",
     "test:cov": "jest --coverage",
-    "gen:gateway": "ts-node -r tsconfig-paths/register --transpile-only tools/gateway-odata.ts"
+    "gen:gateway": "ts-node -r tsconfig-paths/register --transpile-only tools/gateway-odata.ts",
+    "test:int": "jest -c jest.integration.config.js --runInBand"
   },
   "prisma": {
     "seed": "ts-node --transpile-only prisma/seed.ts"

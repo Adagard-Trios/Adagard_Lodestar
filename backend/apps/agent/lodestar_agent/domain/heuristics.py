@@ -82,8 +82,10 @@ def order_score(order: Mapping[str, Any], outlet: Mapping[str, Any], next_run_wi
 
 
 def order_is_protected(order: Mapping[str, Any], outlet: Mapping[str, Any], score: int) -> bool:
+    """Never defer an outlet two days running (as PlanningService does): skipped yesterday means protected today."""
     return (
-        is_protected(score)
+        bool(order.get("deferredYesterday"))
+        or is_protected(score)
         or is_protected(int(order.get("deferralScore") or 0))
         or bool(outlet.get("protected"))
     )
