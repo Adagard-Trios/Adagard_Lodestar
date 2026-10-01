@@ -5,6 +5,7 @@
   "monorepo": true,
   "root": "apps/auth",
   "compilerOptions": {
+    "webpack": true,
     "tsConfigPath": "apps/auth/tsconfig.app.json"
   },
   "projects": {
@@ -80,6 +81,15 @@
         "tsConfigPath": "apps/notifications/tsconfig.app.json"
       }
     },
+    "audit": {
+      "type": "application",
+      "root": "apps/audit",
+      "entryFile": "main",
+      "sourceRoot": "apps/audit/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/audit/tsconfig.app.json"
+      }
+    },
     "prisma-lib": {
       "type": "library",
       "root": "libs/prisma",
@@ -87,6 +97,33 @@
       "sourceRoot": "libs/prisma/src",
       "compilerOptions": {
         "tsConfigPath": "libs/prisma/tsconfig.lib.json"
+      }
+    },
+    "odata-lib": {
+      "type": "library",
+      "root": "libs/odata",
+      "entryFile": "index",
+      "sourceRoot": "libs/odata/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/odata/tsconfig.lib.json"
+      }
+    },
+    "security-lib": {
+      "type": "library",
+      "root": "libs/security",
+      "entryFile": "index",
+      "sourceRoot": "libs/security/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/security/tsconfig.lib.json"
+      }
+    },
+    "platform-lib": {
+      "type": "library",
+      "root": "libs/platform",
+      "entryFile": "index",
+      "sourceRoot": "libs/platform/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/platform/tsconfig.lib.json"
       }
     }
   }

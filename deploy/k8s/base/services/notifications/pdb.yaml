@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: notifications
+  labels:
+    app: notifications
+    app.kubernetes.io/name: notifications
+    app.kubernetes.io/part-of: lodestar
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: notifications

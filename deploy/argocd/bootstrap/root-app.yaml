@@ -1,0 +1,46 @@
+# App-of-apps root, as installed by Terraform (infra/terraform/modules/argocd,
+# helm chart argocd-apps). Kept here for a manual bootstrap or disaster
+# recovery:
+#   kubectl apply -f deploy/argocd/bootstrap/root-app.yaml      (dev)
+# For prod, change `dev` to `prod` in the Application name and path.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: lodestar-bootstrap
+  namespace: argocd
+spec:
+  description: Bootstrap - root app-of-apps only
+  sourceRepos:
+    - https://github.com/Adagard-Trios/Tech-Triathlon.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: argocd
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - group: argoproj.io
+      kind: Application
+    - group: argoproj.io
+      kind: AppProject
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: lodestar-root-dev
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: lodestar-bootstrap
+  source:
+    repoURL: https://github.com/Adagard-Trios/Tech-Triathlon.git
+    targetRevision: main
+    path: deploy/argocd/envs/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - PruneLast=true

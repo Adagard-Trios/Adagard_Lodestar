@@ -24,15 +24,18 @@ export class CapacityService {
   }
 
   async getChilledDemand(depot: Depot, runDate: Date) {
-    const startOf = new Date(runDate.toDateString());
-    const endOf   = new Date(new Date(runDate).setDate(runDate.getDate() + 1));
+    // Run dates are stored as UTC midnight; use a UTC day window (not server-local).
+    const startOf = new Date(runDate);
+    startOf.setUTCHours(0, 0, 0, 0);
+    const endOf = new Date(startOf);
+    endOf.setUTCDate(endOf.getUTCDate() + 1);
 
     const agg = await this.prisma.order.aggregate({
       where: {
         runDate: { gte: startOf, lt: endOf },
         tempClass: TempClass.CHILLED,
         outlet: { depot },
-        status: { notIn: ['DEFERRED', 'EXCEPTION'] as any },
+        status: { notIn: ['DEFERRED', 'EXCEPTION', 'CANCELLED'] as any },
       },
       _sum: { m3: true, kg: true },
       _count: { id: true },

@@ -22,3 +22,10 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
+
+# Competition datasets: never commit (booklet terms forbid redistribution)
+data/
+*.csv
+
+# Test coverage output
+coverage/

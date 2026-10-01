@@ -1,0 +1,16 @@
+# Sidecar injection for the AKS Istio add-on is enabled with the revision
+# label istio.io/rev=<asm-x-y>. This is the add-on's equivalent of
+# istio-injection=enabled; the add-on's webhook ignores namespaces that carry
+# istio-injection, so that label must NOT be set here.
+# Pod Security: baseline enforced (istio-init needs NET_ADMIN/NET_RAW),
+# restricted in warn/audit mode.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lodestar
+  labels:
+    istio.io/rev: ISTIO_REVISION
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted
+    app.kubernetes.io/part-of: lodestar

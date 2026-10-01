@@ -1,72 +1,102 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
-import * as bcrypt from 'bcryptjs';
-import { Role } from '@prisma/client';
+import { ODataError } from '@lodestar/odata';
+import { DevicePostureService, Principal } from '@lodestar/security';
+import { DeviceStatus, Role } from '@prisma/client';
+import { KeycloakAdminClient } from './keycloak-admin.client';
 
+/** Directory role (Prisma enum) → realm role (token). */
+export const REALM_ROLE: Record<Role, string> = {
+  DISPATCHER: 'dispatcher',
+  LOADER: 'loader',
+  DRIVER: 'driver',
+  STORE_MANAGER: 'store_manager',
+  ADMIN: 'admin',
+};
+
+/**
+ * Auth service: session helpers (/Me), the user directory mirrored from the
+ * identity provider, and the field-device registry (device posture).
+ * Credentials never live here — Keycloak (Entra ID on Azure) owns them.
+ */
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
-    private prisma: PrismaService,
-    private jwtService: JwtService,
+    private readonly prisma: PrismaService,
+    private readonly keycloak: KeycloakAdminClient,
+    private readonly posture: DevicePostureService,
   ) {}
 
-  async validateUser(email: string, password: string) {
-    const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user || !user.isActive) throw new UnauthorizedException('Invalid credentials');
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) throw new UnauthorizedException('Invalid credentials');
-    const { passwordHash, refreshToken, ...safe } = user;
-    return safe;
-  }
-
-  async login(user: any) {
-    const payload = { sub: user.id, email: user.email, role: user.role, depot: user.depot };
-    const accessToken = this.jwtService.sign(payload);
-    const refreshToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_REFRESH_SECRET || 'refresh-secret',
-      expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
-    });
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { refreshToken: await bcrypt.hash(refreshToken, 10) },
-    });
-    return { accessToken, refreshToken, user };
-  }
-
-  async refresh(userId: string, refreshToken: string) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user?.refreshToken) throw new UnauthorizedException();
-    const match = await bcrypt.compare(refreshToken, user.refreshToken);
-    if (!match) throw new UnauthorizedException();
-    const { passwordHash, refreshToken: _rt, ...safe } = user;
-    return this.login(safe);
-  }
-
-  async logout(userId: string) {
-    await this.prisma.user.update({ where: { id: userId }, data: { refreshToken: null } });
-    return { message: 'Logged out' };
-  }
-
-  async me(userId: string) {
+  /** Who am I: token claims plus the directory row (if any). */
+  async me(p: Principal) {
     const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { outlet: true },
+      where: { id: p.sub },
+      select: { id: true, email: true, name: true, role: true, depot: true, outletId: true, phone: true, isActive: true },
     });
-    if (!user) throw new UnauthorizedException();
-    const { passwordHash, refreshToken, ...safe } = user;
-    return safe;
+    return {
+      sub: p.sub,
+      name: p.name ?? user?.name ?? null,
+      email: p.email ?? user?.email ?? null,
+      roles: p.roles,
+      depots: p.depots,
+      outletId: p.outletId ?? null,
+      vehicleId: p.vehicleId ?? null,
+      deviceId: p.deviceId ?? null,
+      clientId: p.clientId ?? null,
+      user,
+    };
   }
 
-  async getUsers(depot?: string, role?: Role) {
-    return this.prisma.user.findMany({
-      where: {
-        ...(depot ? { depot: depot as any } : {}),
-        ...(role  ? { role } : {}),
-        isActive: true,
-      },
-      select: { id: true, email: true, name: true, role: true, depot: true, outletId: true, phone: true },
-      orderBy: { name: 'asc' },
+  /** ADM-04: create the identity first, then the directory row with the same id. */
+  async createIdentity(data: Record<string, any>): Promise<string> {
+    if (!this.keycloak.configured) {
+      if (!data.id) throw ODataError.badRequest('id (the identity provider subject) is required when no identity admin API is configured', 'id');
+      return data.id;
+    }
+    const [firstName, ...rest] = String(data.name).split(' ');
+    const attributes: Record<string, string[]> = {};
+    if (data.depot) attributes.depot = [data.depot];
+    if (data.outletId) attributes.outlet_id = [data.outletId];
+    return this.keycloak.createUser({
+      email: data.email,
+      firstName,
+      lastName: rest.join(' '),
+      role: REALM_ROLE[data.role as Role],
+      attributes,
     });
+  }
+
+  async setIdentityEnabled(userId: string, enabled: boolean) {
+    if (this.keycloak.configured) await this.keycloak.setEnabled(userId, enabled);
+  }
+
+  /**
+   * ADM-07 lost phone: disable the device (field tokens bound to it stop
+   * working at the next posture check) and end the user's sessions.
+   */
+  async revokeDevice(deviceId: string, revokedBy: string, reason?: string) {
+    const device = await this.prisma.device.update({
+      where: { id: deviceId },
+      data: { status: DeviceStatus.REVOKED, revokedAt: new Date(), revokedBy, revokeReason: reason ?? 'Reported lost' },
+    });
+    this.posture.invalidate(deviceId);
+    let sessionsRevoked = false;
+    try {
+      sessionsRevoked = this.keycloak.configured ? await this.keycloak.logoutUser(device.userId) : false;
+    } catch (err) {
+      this.logger.warn(`Could not end sessions of ${device.userId}: ${(err as Error).message}`);
+    }
+    return { ...device, sessionsRevoked };
+  }
+
+  async activateDevice(deviceId: string) {
+    const device = await this.prisma.device.update({
+      where: { id: deviceId },
+      data: { status: DeviceStatus.ACTIVE, revokedAt: null, revokedBy: null, revokeReason: null },
+    });
+    this.posture.invalidate(deviceId);
+    return device;
   }
 }

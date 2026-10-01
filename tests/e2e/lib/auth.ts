@@ -1,0 +1,132 @@
+// Keycloak helpers: tokens via the OAuth2 password grant (API tests) and the hosted login page (UI tests).
+import { expect, request, type APIRequestContext, type Page } from '@playwright/test';
+import { createHash, randomBytes } from 'node:crypto';
+import { AUTH_MODE, CLIENT_ID, CLIENT_SECRET, KEYCLOAK_URL, PERSONAS, REALM, REDIRECT_URI, TOKEN_URL, type Persona, type PersonaKey } from './env';
+
+export type TokenSet = { access_token: string; refresh_token?: string; expires_in: number; token_type: string };
+
+const cache = new Map<string, { token: TokenSet; until: number }>();
+
+/** Password grant for a persona. Tokens are cached per worker until 30 s before expiry. */
+export async function tokenFor(who: PersonaKey | Persona, ctx?: APIRequestContext): Promise<string> {
+  const p = typeof who === 'string' ? PERSONAS[who] : who;
+  const hit = cache.get(p.username);
+  if (hit && hit.until > Date.now()) return hit.token.access_token;
+
+  const own = !ctx;
+  const api = ctx ?? (await request.newContext({ ignoreHTTPSErrors: true }));
+  try {
+    let token: TokenSet | undefined;
+    let passwordError = '';
+    if (AUTH_MODE !== 'code') {
+      const r = await passwordGrant(api, p);
+      if ('access_token' in r) token = r;
+      else passwordError = r.error;
+    }
+    if (!token && AUTH_MODE !== 'password') token = await authCodeLogin(p);
+    if (!token) throw new Error(`password grant for ${p.username} failed: ${passwordError}`);
+    cache.set(p.username, { token, until: Date.now() + (token.expires_in - 30) * 1000 });
+    return token.access_token;
+  } finally {
+    if (own) await api.dispose();
+  }
+}
+
+async function passwordGrant(api: APIRequestContext, p: Persona): Promise<TokenSet | { error: string }> {
+  const form: Record<string, string> = { grant_type: 'password', client_id: CLIENT_ID, username: p.username, password: p.password, scope: 'openid' };
+  if (CLIENT_SECRET) form.client_secret = CLIENT_SECRET;
+  const res = await api.post(TOKEN_URL, { form, failOnStatusCode: false });
+  if (res.ok()) return (await res.json()) as TokenSet;
+  return { error: `${res.status()} ${await res.text()}` };
+}
+
+/**
+ * Authorization code + PKCE through Keycloak's hosted login form, over HTTP (no browser). This is what the
+ * web app does, so it works with the realm as shipped (public client, direct access grants off).
+ */
+export async function authCodeLogin(p: Persona): Promise<TokenSet> {
+  const jar = await request.newContext({ ignoreHTTPSErrors: true });
+  try {
+    const verifier = randomBytes(32).toString('base64url');
+    const challenge = createHash('sha256').update(verifier).digest('base64url');
+    const auth = new URL(`${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/auth`);
+    auth.search = new URLSearchParams({
+      client_id: CLIENT_ID, redirect_uri: REDIRECT_URI, response_type: 'code', scope: 'openid',
+      state: randomBytes(8).toString('hex'), code_challenge: challenge, code_challenge_method: 'S256',
+    }).toString();
+
+    const page = await jar.get(auth.toString());
+    if (!page.ok()) throw new Error(`login page: ${page.status()}`);
+    const html = await page.text();
+    const action = html.match(/<form[^>]+id="kc-form-login"[^>]+action="([^"]+)"/)?.[1] ?? html.match(/action="([^"]*login-actions\/authenticate[^"]*)"/)?.[1];
+    if (!action) throw new Error('Keycloak login form not found');
+
+    const submit = await jar.post(action.replace(/&amp;/g, '&'), {
+      form: { username: p.username, password: p.password, credentialId: '' },
+      maxRedirects: 0, failOnStatusCode: false,
+    });
+    const location = submit.headers()['location'];
+    const code = location && new URL(location, REDIRECT_URI).searchParams.get('code');
+    if (!code) throw new Error(`login for ${p.username} did not redirect with a code (HTTP ${submit.status()})`);
+
+    const form: Record<string, string> = { grant_type: 'authorization_code', client_id: CLIENT_ID, code, redirect_uri: REDIRECT_URI, code_verifier: verifier };
+    if (CLIENT_SECRET) form.client_secret = CLIENT_SECRET;
+    const res = await jar.post(TOKEN_URL, { form, failOnStatusCode: false });
+    if (!res.ok()) throw new Error(`code exchange for ${p.username} failed: ${res.status()} ${await res.text()}`);
+    return (await res.json()) as TokenSet;
+  } finally {
+    await jar.dispose();
+  }
+}
+
+export function decodeJwt(token: string): { header: Record<string, unknown>; payload: Record<string, unknown> } {
+  const [h, p] = token.split('.');
+  const dec = (s: string) => JSON.parse(Buffer.from(s, 'base64url').toString('utf8'));
+  return { header: dec(h), payload: dec(p) };
+}
+
+/** Same header and signature, payload changed: a correctly-verifying service must reject it. */
+export function tamper(token: string, patch: Record<string, unknown>): string {
+  const [h, p, s] = token.split('.');
+  const payload = { ...JSON.parse(Buffer.from(p, 'base64url').toString('utf8')), ...patch };
+  return [h, Buffer.from(JSON.stringify(payload)).toString('base64url'), s].join('.');
+}
+
+/** An unsigned token (alg "none"), the classic JWT downgrade attack. */
+export function unsigned(token: string): string {
+  const [, p] = token.split('.');
+  const h = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
+  return `${h}.${p}.`;
+}
+
+/**
+ * An expired token. Prefer a real one captured from Keycloak (E2E_EXPIRED_TOKEN): its signature is valid,
+ * so only the `exp` check can reject it. Without one, back-date `exp` on a fresh token (the signature then
+ * also breaks, so this proves rejection but not specifically the expiry check).
+ */
+export async function expiredToken(ctx?: APIRequestContext): Promise<{ token: string; genuine: boolean }> {
+  const captured = process.env.E2E_EXPIRED_TOKEN;
+  if (captured) return { token: captured, genuine: true };
+  const fresh = await tokenFor('dispatcher', ctx);
+  const past = Math.floor(Date.now() / 1000) - 3600;
+  return { token: tamper(fresh, { exp: past, iat: past - 300 }), genuine: false };
+}
+
+/** Sign in through the Keycloak hosted login page (UI flows). Assumes the app redirects to Keycloak. */
+export async function loginViaUi(page: Page, who: PersonaKey | Persona) {
+  const p = typeof who === 'string' ? PERSONAS[who] : who;
+  await page.waitForURL(/\/realms\/.+\/protocol\/openid-connect\/auth|\/login-actions\//, { timeout: 30_000 });
+  await page.locator('#username').fill(p.username);
+  await page.locator('#password').fill(p.password);
+  await page.locator('#kc-login').click();
+  await expect(page).not.toHaveURL(/\/realms\//, { timeout: 30_000 });
+}
+
+export const bearer = (token: string) => ({ Authorization: `Bearer ${token}` });
+
+/** OAuth2 client-credentials token for a service identity (svc-agent, svc-planning, …). */
+export async function serviceToken(clientId: string, clientSecret: string, ctx: APIRequestContext): Promise<string> {
+  const res = await ctx.post(TOKEN_URL, { form: { grant_type: 'client_credentials', client_id: clientId, client_secret: clientSecret } });
+  if (!res.ok()) throw new Error(`client credentials for ${clientId} failed: ${res.status()} ${await res.text()}`);
+  return ((await res.json()) as TokenSet).access_token;
+}

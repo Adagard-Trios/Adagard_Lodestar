@@ -1,0 +1,218 @@
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '@lodestar/prisma';
+import { EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, OperationContext, WriteContext } from '@lodestar/odata';
+import { canAccessDepot, HUMAN_ROLES, isPrivileged, Roles } from '@lodestar/security';
+import { Depot } from '@prisma/client';
+import { TripsService } from './trips.service';
+
+const tripDepot = (depots: string[]) => ({ depot: { in: depots } });
+const tripVehicle = (vehicleId: string) => ({ vehicleId });
+
+/**
+ * Trips: dispatchers/loaders see their depots, a driver the trips of the
+ * vehicle in their token, a store manager trips that stop at their outlet.
+ */
+@Injectable()
+@EntitySet({
+  name: 'Trips',
+  model: 'Trip',
+  read: [...HUMAN_ROLES, Roles.Service],
+  update: [Roles.Dispatcher, Roles.Admin],
+  abac: {
+    depot: tripDepot,
+    vehicle: tripVehicle,
+    outlet: (outletId) => ({ stops: { some: { outletId } } }),
+  },
+  navigation: ['vehicle', 'driver', 'stops', 'loadRecord', 'plan'],
+  search: ['id', 'district', 'vehicleId', 'sealNumber'],
+  updatable: ['driverId', 'bay', 'departTime', 'planMinutes', 'tripNumber'],
+  defaultOrderBy: 'runDate desc,brand,district,tripNumber',
+})
+export class TripsSet extends ODataEntitySet {
+  constructor(
+    prisma: PrismaService,
+    private readonly trips: TripsService,
+  ) {
+    super(prisma);
+  }
+
+  /** POST Trips('…')/Lodestar.SetStatus {status, departTime?} */
+  @ODataAction({
+    name: 'SetStatus',
+    binding: 'entity',
+    roles: [Roles.Dispatcher, Roles.Loader, Roles.Driver, Roles.Admin],
+    params: { status: { type: 'Lodestar.TripStatus', required: true }, departTime: 'Edm.DateTimeOffset' },
+    returns: 'Lodestar.Trip',
+  })
+  setStatus(ctx: OperationContext) {
+    return this.trips.updateStatus(ctx.entity.id, ctx.entity.status, ctx.params.status, ctx.params.departTime);
+  }
+
+  /** POST Trips('…')/Lodestar.Release {sealNumber, reeferTempC?} — loader hands the trip to the driver. */
+  @ODataAction({
+    name: 'Release',
+    binding: 'entity',
+    roles: [Roles.Loader, Roles.Dispatcher],
+    params: { sealNumber: { type: 'Edm.String', required: true }, reeferTempC: 'Edm.Double' },
+    returns: 'Lodestar.Trip',
+  })
+  release(ctx: OperationContext) {
+    if (typeof ctx.params.sealNumber !== 'string' || !ctx.params.sealNumber.trim()) {
+      throw ODataError.badRequest('sealNumber is required', 'sealNumber');
+    }
+    return this.trips.release(ctx.entity.id, ctx.params.sealNumber, ctx.params.reeferTempC);
+  }
+
+  /** GET Trips/Lodestar.BayQueue(depot='KANDY',runDate=2026-04-07) */
+  @ODataFunction({
+    name: 'BayQueue',
+    binding: 'collection',
+    roles: [Roles.Loader, Roles.Dispatcher, Roles.Admin],
+    params: { depot: { type: 'Lodestar.Depot', required: true }, runDate: { type: 'Edm.Date', required: true } },
+    returns: 'Edm.Untyped',
+  })
+  bayQueue(ctx: OperationContext) {
+    if (!canAccessDepot(ctx.principal, ctx.params.depot)) throw ODataError.forbidden(`Not your depot`, 'depot');
+    return this.trips.getBayQueue(ctx.params.depot as Depot, ctx.params.runDate, ctx.rowFilter);
+  }
+}
+
+/** Trip stops, scoped through their trip (store managers: their outlet's stops). */
+@Injectable()
+@EntitySet({
+  name: 'TripStops',
+  model: 'TripStop',
+  read: [...HUMAN_ROLES, Roles.Service],
+  abac: {
+    depot: (d) => ({ trip: { is: tripDepot(d) } }),
+    vehicle: (v) => ({ trip: { is: tripVehicle(v) } }),
+    outlet: (outletId) => ({ outletId }),
+  },
+  navigation: ['trip', 'order', 'outlet', 'pod'],
+  defaultOrderBy: 'tripId,stopSeq',
+})
+export class TripStopsSet extends ODataEntitySet {
+  constructor(
+    prisma: PrismaService,
+    private readonly trips: TripsService,
+  ) {
+    super(prisma);
+  }
+
+  /** POST TripStops('…')/Lodestar.Arrive {time?} */
+  @ODataAction({
+    name: 'Arrive',
+    binding: 'entity',
+    roles: [Roles.Driver, Roles.Dispatcher],
+    params: { time: 'Edm.DateTimeOffset' },
+    returns: 'Lodestar.TripStop',
+  })
+  arrive(ctx: OperationContext) {
+    return this.trips.arrive(ctx.entity.id, ctx.params.time ?? new Date());
+  }
+
+  /** POST TripStops('…')/Lodestar.CompleteStop — POD + delivered (DRV screens). */
+  @ODataAction({
+    name: 'CompleteStop',
+    binding: 'entity',
+    roles: [Roles.Driver, Roles.Dispatcher],
+    params: {
+      unitsDelivered: { type: 'Edm.Int32', required: true },
+      unitsOrdered: { type: 'Edm.Int32', required: true },
+      receiverName: 'Edm.String',
+      photoUrl: 'Edm.String',
+      signature: 'Edm.String',
+      exceptions: 'Collection(Edm.Untyped)',
+      creditNoteId: 'Edm.String',
+      savedOffline: 'Edm.Boolean',
+      arrivalActual: 'Edm.DateTimeOffset',
+      leaveActual: 'Edm.DateTimeOffset',
+    },
+    returns: 'Lodestar.TripStop',
+  })
+  completeStop(ctx: OperationContext) {
+    return this.trips.completeStop(ctx.entity.id, ctx.entity.orderId, ctx.params as any);
+  }
+
+  /** POST TripStops('…')/Lodestar.UpdateLateRisk {lateRiskPct} */
+  @ODataAction({
+    name: 'UpdateLateRisk',
+    binding: 'entity',
+    roles: [Roles.Dispatcher, Roles.Service],
+    params: { lateRiskPct: { type: 'Edm.Int32', required: true } },
+    returns: 'Lodestar.TripStop',
+  })
+  updateLateRisk(ctx: OperationContext) {
+    const pct = ctx.params.lateRiskPct as number;
+    if (!Number.isInteger(pct) || pct < 0 || pct > 100) throw ODataError.badRequest('lateRiskPct must be 0–100', 'lateRiskPct');
+    return this.trips.updateLateRisk(ctx.entity.id, pct);
+  }
+}
+
+/** Proofs of delivery (read-only; written by CompleteStop and offline sync). */
+@Injectable()
+@EntitySet({
+  name: 'PODs',
+  model: 'POD',
+  read: [...HUMAN_ROLES, Roles.Service],
+  abac: {
+    depot: (d) => ({ tripStop: { is: { trip: { is: tripDepot(d) } } } }),
+    vehicle: (v) => ({ tripStop: { is: { trip: { is: tripVehicle(v) } } } }),
+    outlet: (outletId) => ({ tripStop: { is: { outletId } } }),
+  },
+  navigation: ['tripStop'],
+  search: ['receiverName', 'creditNoteId'],
+  hidden: ['signature'],
+  defaultOrderBy: 'savedAt desc',
+})
+export class PODsSet extends ODataEntitySet {
+  constructor(prisma: PrismaService) {
+    super(prisma);
+  }
+}
+
+/** Load records (LDR screens): loaders record the load, shortfalls and release. */
+@Injectable()
+@EntitySet({
+  name: 'LoadRecords',
+  model: 'LoadRecord',
+  read: [Roles.Loader, Roles.Dispatcher, Roles.Driver, Roles.Admin, Roles.Service],
+  create: [Roles.Loader, Roles.Dispatcher],
+  abac: {
+    depot: (d) => ({ trip: { is: tripDepot(d) } }),
+    vehicle: (v) => ({ vehicleId: v }),
+  },
+  navigation: ['trip', 'vehicle', 'loader'],
+  insertable: ['tripId', 'bay', 'reeferTempC', 'shortfalls', 'notes'],
+  defaultOrderBy: 'loadedAt desc',
+})
+export class LoadRecordsSet extends ODataEntitySet {
+  constructor(
+    prisma: PrismaService,
+    private readonly trips: TripsService,
+  ) {
+    super(prisma);
+  }
+
+  /** The loader is the caller; the vehicle comes from the trip; the trip must be in the caller's depots. */
+  async beforeCreate(data: Record<string, any>, ctx: WriteContext) {
+    if (!data.tripId || !data.bay) throw ODataError.badRequest('tripId and bay are required');
+    const trip = await this.prisma.trip.findUnique({ where: { id: data.tripId }, select: { vehicleId: true, depot: true } });
+    if (!trip || (!isPrivileged(ctx.principal) && !canAccessDepot(ctx.principal, trip.depot))) {
+      throw ODataError.notFound(`Trip ${data.tripId} was not found`);
+    }
+    return { ...data, vehicleId: trip.vehicleId, loaderId: ctx.principal.sub, loadedAt: new Date() };
+  }
+
+  /** POST LoadRecords('…')/Lodestar.RecordShortfalls {shortfalls: [{item, qtyOrdered, qtyLoaded, reason}]} */
+  @ODataAction({
+    name: 'RecordShortfalls',
+    binding: 'entity',
+    roles: [Roles.Loader, Roles.Dispatcher],
+    params: { shortfalls: { type: 'Collection(Edm.Untyped)', required: true } },
+    returns: 'Lodestar.LoadRecord',
+  })
+  recordShortfalls(ctx: OperationContext) {
+    return this.trips.updateShortfalls(ctx.entity.tripId, ctx.params.shortfalls);
+  }
+}

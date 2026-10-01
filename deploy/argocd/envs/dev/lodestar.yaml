@@ -1,0 +1,51 @@
+# Child application for dev: automated sync with prune and self-heal.
+# Every Jenkins tag bump on main (deploy/k8s/overlays/dev) rolls out on its own.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: lodestar-dev
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/part-of: lodestar
+    lodestar.io/environment: dev
+spec:
+  project: lodestar-dev
+  source:
+    repoURL: https://github.com/Adagard-Trios/Tech-Triathlon.git
+    targetRevision: main
+    path: deploy/k8s/overlays/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: lodestar
+  revisionHistoryLimit: 10
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+      - PrunePropagationPolicy=foreground
+    # The namespace exists before the PreSync migrate hook runs, already
+    # labelled for sidecar injection by the AKS Istio add-on revision.
+    managedNamespaceMetadata:
+      labels:
+        istio.io/rev: asm-1-26
+        pod-security.kubernetes.io/enforce: baseline
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+  ignoreDifferences:
+    # Replica counts are owned by the HPAs.
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas

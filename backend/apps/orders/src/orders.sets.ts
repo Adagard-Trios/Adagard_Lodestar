@@ -1,0 +1,191 @@
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '@lodestar/prisma';
+import { EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, OperationContext, WriteContext } from '@lodestar/odata';
+import { canAccessDepot, canAccessOutlet, HUMAN_ROLES, isPrivileged, Roles } from '@lodestar/security';
+import { OrderStatus, TempClass } from '@prisma/client';
+import { CANCELLABLE_STATUSES, EDITABLE_STATUSES, OrdersService } from './orders.service';
+
+/** Row filters shared by Orders and (through `order`) OrderLineItems. */
+const orderAbac = {
+  depot: (depots: string[]) => ({ outlet: { is: { depot: { in: depots } } } }),
+  outlet: (outletId: string) => ({ outletId }),
+  vehicle: (vehicleId: string) => ({ tripStop: { is: { trip: { is: { vehicleId } } } } }),
+};
+
+interface LineItemInput {
+  name: string;
+  qty: number;
+  kg: number;
+  tempClass: TempClass;
+}
+
+function validateLineItems(raw: unknown): LineItemInput[] {
+  if (!Array.isArray(raw)) throw ODataError.badRequest('lineItems must be an array', 'lineItems');
+  return raw.map((li, i) => {
+    const ok =
+      li && typeof li.name === 'string' && Number.isInteger(li.qty) && li.qty > 0 &&
+      typeof li.kg === 'number' && li.kg >= 0 && Object.values(TempClass).includes(li.tempClass);
+    if (!ok) throw ODataError.badRequest(`lineItems[${i}] needs name, qty (>0), kg and tempClass`, 'lineItems');
+    return { name: li.name, qty: li.qty, kg: li.kg, tempClass: li.tempClass };
+  });
+}
+
+/** Orders: store managers place and edit their own; dispatch moves them through statuses. */
+@Injectable()
+@EntitySet({
+  name: 'Orders',
+  model: 'Order',
+  read: [...HUMAN_ROLES, Roles.Service],
+  create: [Roles.StoreManager, Roles.Dispatcher, Roles.Admin],
+  update: [Roles.StoreManager, Roles.Dispatcher, Roles.Admin],
+  abac: orderAbac,
+  navigation: ['outlet', 'lineItems', 'tripStop', 'deferralLog'],
+  search: ['id', 'notes', 'outlet/name'],
+  insertable: ['id', 'outletId', 'runDate', 'brand', 'tempClass', 'units', 'kg', 'm3', 'notes', 'lineItems'],
+  updatable: ['runDate', 'units', 'kg', 'm3', 'notes'],
+  defaultOrderBy: 'runDate desc,id',
+})
+export class OrdersSet extends ODataEntitySet {
+  constructor(
+    prisma: PrismaService,
+    private readonly orders: OrdersService,
+  ) {
+    super(prisma);
+  }
+
+  async beforeCreate(data: Record<string, any>, ctx: WriteContext) {
+    for (const f of ['outletId', 'runDate', 'brand', 'tempClass', 'units', 'kg', 'm3']) {
+      if (data[f] === undefined) throw ODataError.badRequest(`${f} is required`, f);
+    }
+    // A store manager orders for the outlet in their token; a dispatcher for outlets of their depots.
+    const p = ctx.principal;
+    if (!isPrivileged(p)) {
+      const outlet = await this.prisma.outlet.findUnique({ where: { id: data.outletId }, select: { depot: true } });
+      const allowed =
+        canAccessOutlet(p, data.outletId) || (p.roles.includes(Roles.Dispatcher) && !!outlet && canAccessDepot(p, outlet.depot));
+      if (!allowed) throw ODataError.forbidden('You cannot place orders for this outlet', 'outletId');
+    }
+    const lineItems = data.lineItems !== undefined ? validateLineItems(data.lineItems) : undefined;
+    return {
+      ...data,
+      id: data.id ?? (await this.orders.nextOrderId()),
+      orderedAt: new Date(),
+      status: OrderStatus.RECEIVED,
+      lineItems: lineItems ? { create: lineItems } : undefined,
+    };
+  }
+
+  async beforeUpdate(patch: Record<string, any>, current: any, ctx: WriteContext) {
+    // Stores may only edit orders that planning has not picked up yet.
+    if (!isPrivileged(ctx.principal) && !ctx.principal.roles.includes(Roles.Dispatcher)) {
+      if (!EDITABLE_STATUSES.includes(current.status)) {
+        throw ODataError.conflict(`Order ${current.id} is ${current.status} and can no longer be edited`);
+      }
+    }
+    return patch;
+  }
+
+  /** POST Orders('…')/Lodestar.SetStatus {status, notes?} */
+  @ODataAction({
+    name: 'SetStatus',
+    binding: 'entity',
+    roles: [Roles.Dispatcher, Roles.Loader, Roles.Driver, Roles.Admin, Roles.Service],
+    params: { status: { type: 'Lodestar.OrderStatus', required: true }, notes: 'Edm.String' },
+    returns: 'Lodestar.Order',
+  })
+  setStatus(ctx: OperationContext) {
+    return this.orders.updateStatus(ctx.entity.id, ctx.params.status, ctx.params.notes);
+  }
+
+  /** POST Orders('…')/Lodestar.Cancel {reason?} — orders are cancelled, never deleted. */
+  @ODataAction({
+    name: 'Cancel',
+    binding: 'entity',
+    roles: [Roles.StoreManager, Roles.Dispatcher, Roles.Admin],
+    params: { reason: 'Edm.String' },
+    returns: 'Lodestar.Order',
+  })
+  async cancel(ctx: OperationContext) {
+    if (!CANCELLABLE_STATUSES.includes(ctx.entity.status)) {
+      throw ODataError.conflict(`Order ${ctx.entity.id} is ${ctx.entity.status} and cannot be cancelled`);
+    }
+    return this.orders.cancel(ctx.entity.id, ctx.params.reason);
+  }
+
+  /** GET Orders/Lodestar.Summary(runDate=2026-04-07) */
+  @ODataFunction({
+    name: 'Summary',
+    binding: 'collection',
+    roles: [Roles.Dispatcher, Roles.Admin, Roles.Service],
+    params: { runDate: { type: 'Edm.Date', required: true } },
+    returns: 'Lodestar.OrdersSummary',
+  })
+  summary(ctx: OperationContext) {
+    return this.orders.getSummary(ctx.params.runDate, ctx.rowFilter);
+  }
+
+  /** GET Orders/Lodestar.DeferralSuggestions(runDate=2026-04-07) */
+  @ODataFunction({
+    name: 'DeferralSuggestions',
+    binding: 'collection',
+    roles: [Roles.Dispatcher, Roles.Admin, Roles.Service],
+    params: { runDate: { type: 'Edm.Date', required: true } },
+    returns: 'Collection(Lodestar.Order)',
+  })
+  deferralSuggestions(ctx: OperationContext) {
+    return this.orders.getDeferralSuggestions(ctx.params.runDate, ctx.rowFilter);
+  }
+}
+
+/** Order lines; scoped through their order. */
+@Injectable()
+@EntitySet({
+  name: 'OrderLineItems',
+  model: 'OrderLineItem',
+  read: [...HUMAN_ROLES, Roles.Service],
+  create: [Roles.StoreManager, Roles.Admin],
+  update: [Roles.StoreManager, Roles.Admin],
+  abac: {
+    depot: (d) => ({ order: { is: orderAbac.depot(d) } }),
+    outlet: (o) => ({ order: { is: orderAbac.outlet(o) } }),
+    vehicle: (v) => ({ order: { is: orderAbac.vehicle(v) } }),
+  },
+  navigation: ['order'],
+  search: ['name'],
+  insertable: ['orderId', 'name', 'qty', 'kg', 'tempClass'],
+  updatable: ['name', 'qty', 'kg'],
+})
+export class OrderLineItemsSet extends ODataEntitySet {
+  constructor(prisma: PrismaService) {
+    super(prisma);
+  }
+
+  private async editableOrder(orderId: string, ctx: WriteContext) {
+    const order = await this.prisma.order.findUnique({ where: { id: orderId }, select: { id: true, outletId: true, status: true } });
+    if (!order || !canAccessOutlet(ctx.principal, order.outletId)) throw ODataError.notFound(`Order ${orderId} was not found`);
+    if (!EDITABLE_STATUSES.includes(order.status)) throw ODataError.conflict(`Order ${orderId} can no longer be edited`);
+    return order;
+  }
+
+  async beforeCreate(data: Record<string, any>, ctx: WriteContext) {
+    if (!data.orderId) throw ODataError.badRequest('orderId is required', 'orderId');
+    await this.editableOrder(data.orderId, ctx);
+    return data;
+  }
+
+  async beforeUpdate(patch: Record<string, any>, current: any, ctx: WriteContext) {
+    await this.editableOrder(current.orderId, ctx);
+    return patch;
+  }
+}
+
+export const ORDERS_SUMMARY_TYPE = {
+  runDate: 'Edm.Date',
+  total: 'Edm.Int32',
+  byStatus: 'Edm.Untyped',
+  chilledM3: 'Edm.Double',
+  chilledKg: 'Edm.Double',
+  chilledOrders: 'Edm.Int32',
+  deferred: 'Edm.Int32',
+  delivered: 'Edm.Int32',
+};

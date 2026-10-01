@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: orders
+  labels:
+    app: orders
+    app.kubernetes.io/name: orders
+    app.kubernetes.io/part-of: lodestar
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: orders

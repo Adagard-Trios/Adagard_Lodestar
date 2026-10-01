@@ -1,0 +1,30 @@
+# Shared, non-secret settings for every backend service (PLATFORM.md section 2).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lodestar-common
+  labels:
+    app.kubernetes.io/part-of: lodestar
+data:
+  NODE_ENV: production
+  LOG_LEVEL: info
+  AUTH_PROVIDER: entra
+  OIDC_ISSUER: https://login.microsoftonline.com/TENANT_ID/v2.0
+  OIDC_JWKS_URI: https://login.microsoftonline.com/TENANT_ID/discovery/v2.0/keys
+  OIDC_TOKEN_URL: https://login.microsoftonline.com/TENANT_ID/oauth2/v2.0/token
+  OIDC_AUDIENCE: API_CLIENT_ID
+  SVC_TOKEN_SCOPE: api://API_CLIENT_ID/.default
+  SVC_TOKEN_REFRESH_SKEW_SECONDS: '60'
+  PUBLIC_WEB_URL: https://WEB_HOST
+  ODATA_MAX_TOP: '500'
+  RUN_SEED: 'false'
+  AUTH_SERVICE_URL: http://auth.lodestar.svc.cluster.local:3001
+  ORDERS_SERVICE_URL: http://orders.lodestar.svc.cluster.local:3002
+  PLANNING_SERVICE_URL: http://planning.lodestar.svc.cluster.local:3003
+  FLEET_SERVICE_URL: http://fleet.lodestar.svc.cluster.local:3004
+  OUTLETS_SERVICE_URL: http://outlets.lodestar.svc.cluster.local:3005
+  TRIPS_SERVICE_URL: http://trips.lodestar.svc.cluster.local:3006
+  SYNC_SERVICE_URL: http://sync.lodestar.svc.cluster.local:3007
+  NOTIFICATIONS_SERVICE_URL: http://notifications.lodestar.svc.cluster.local:3008
+  AUDIT_SERVICE_URL: http://audit.lodestar.svc.cluster.local:3009
+  AGENT_SERVICE_URL: http://agent.lodestar.svc.cluster.local:8000

@@ -1,0 +1,99 @@
+# dev overlay. Jenkins bumps image tags here (GitOps commit), e.g.
+#   cd deploy/k8s/overlays/dev
+#   kustomize edit set image lodestar/orders=crlodestardevadg01.azurecr.io/lodestar/orders:<git-sha>
+# Argo CD application lodestar-dev syncs this path.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../base
+- azure-wiring
+components:
+- ../../components/azure-wiring
+labels:
+- pairs:
+    lodestar.io/environment: dev
+  includeSelectors: false
+images:
+- name: lodestar/auth
+  newName: crlodestardevadg01.azurecr.io/lodestar/auth
+  newTag: dev-0000000
+- name: lodestar/orders
+  newName: crlodestardevadg01.azurecr.io/lodestar/orders
+  newTag: dev-0000000
+- name: lodestar/planning
+  newName: crlodestardevadg01.azurecr.io/lodestar/planning
+  newTag: dev-0000000
+- name: lodestar/fleet
+  newName: crlodestardevadg01.azurecr.io/lodestar/fleet
+  newTag: dev-0000000
+- name: lodestar/outlets
+  newName: crlodestardevadg01.azurecr.io/lodestar/outlets
+  newTag: dev-0000000
+- name: lodestar/trips
+  newName: crlodestardevadg01.azurecr.io/lodestar/trips
+  newTag: dev-0000000
+- name: lodestar/sync
+  newName: crlodestardevadg01.azurecr.io/lodestar/sync
+  newTag: dev-0000000
+- name: lodestar/notifications
+  newName: crlodestardevadg01.azurecr.io/lodestar/notifications
+  newTag: dev-0000000
+- name: lodestar/audit
+  newName: crlodestardevadg01.azurecr.io/lodestar/audit
+  newTag: dev-0000000
+- name: lodestar/agent
+  newName: crlodestardevadg01.azurecr.io/lodestar/agent
+  newTag: dev-0000000
+- name: lodestar/frontend
+  newName: crlodestardevadg01.azurecr.io/lodestar/frontend
+  newTag: dev-0000000
+- name: lodestar/mobile-web
+  newName: crlodestardevadg01.azurecr.io/lodestar/mobile-web
+  newTag: dev-0000000
+- name: lodestar/migrate
+  newName: crlodestardevadg01.azurecr.io/lodestar/migrate
+  newTag: dev-0000000
+- name: lodestar/postgres-client
+  newName: crlodestardevadg01.azurecr.io/mirror/postgres
+  newTag: 16-alpine
+- name: registry.k8s.io/pause
+  newName: crlodestardevadg01.azurecr.io/mirror/pause
+  newTag: '3.10'
+replicas:
+- name: auth
+  count: 1
+- name: orders
+  count: 1
+- name: planning
+  count: 1
+- name: fleet
+  count: 1
+- name: outlets
+  count: 1
+- name: trips
+  count: 1
+- name: sync
+  count: 1
+- name: notifications
+  count: 1
+- name: audit
+  count: 1
+- name: agent
+  count: 1
+- name: frontend
+  count: 1
+- name: mobile-web
+  count: 1
+patches:
+- target:
+    kind: HorizontalPodAutoscaler
+  patch: "- op: replace\n  path: /spec/minReplicas\n  value: 1\n- op: replace\n  path: /spec/maxReplicas\n  value: 3\n"
+- target:
+    kind: Deployment
+    labelSelector: app.kubernetes.io/part-of=lodestar,app notin (mobile-web,lodestar-ingress-tls)
+  patch: "- op: replace\n  path: /spec/template/spec/containers/0/resources\n  value:\n    requests:\n      cpu: 50m\n   \
+    \   memory: 128Mi\n    limits:\n      cpu: 500m\n      memory: 512Mi\n"
+- target:
+    kind: ConfigMap
+    name: lodestar-common
+  patch: "- op: replace\n  path: /data/LOG_LEVEL\n  value: debug\n- op: replace\n  path: /data/RUN_SEED\n  value: 'true'\n"

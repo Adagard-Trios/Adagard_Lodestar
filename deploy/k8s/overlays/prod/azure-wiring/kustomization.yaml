@@ -1,0 +1,11 @@
+# Source ConfigMap for components/azure-wiring; local-config, never applied to the cluster.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+configMapGenerator:
+- name: azure-wiring
+  envs:
+  - azure.env
+  options:
+    disableNameSuffixHash: true
+    annotations:
+      config.kubernetes.io/local-config: 'true'

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sync-config
+  labels:
+    app: sync
+    app.kubernetes.io/name: sync
+    app.kubernetes.io/part-of: lodestar
+data:
+  SERVICE_NAME: sync
+  PORT: '3007'
+  DB_SCHEMA: sync

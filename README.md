@@ -15,13 +15,35 @@ One system with four faces:
 
 | Folder | Contents |
 |---|---|
-| `frontend/` | Web app (Next.js) |
-| `mobile/` | Mobile app (Expo) |
-| `backend/` | API (NestJS, planned) |
+| `frontend/` | Desk faces on the web (Next.js): Lodestar Store desk, Lodestar Plan, Lodestar Admin |
+| `mobile/` | Field app (Expo, native iOS/Android plus a browser build): Store, Plan on-call, Dock phone and tablet, Run |
+| `backend/` | OData v4 microservices (NestJS + Prisma), gateway (NGINX), Keycloak realm, planning agent (`apps/agent`, Python + LangGraph) |
+| `tools/screengen/` | Turns the design boards into the website and app screens |
+| `tests/e2e/` | Full-stack Playwright tests |
+| `infra/terraform/` | Azure (AKS, Postgres, Key Vault, Front Door, Entra ID) |
+| `deploy/` | Kubernetes (Kustomize + Istio) and Argo CD |
+| `docs/` | Architecture contract (`docs/architecture/PLATFORM.md`), QA, AI disclosure |
 
 ## Setup
 
-_To be completed in the Hackathon build: `docker compose up`, `.env.example`, seeded accounts, and the judge walkthrough._
+Needs Docker Desktop (with Compose v2).
+
+```bash
+cp .env.example .env         # optional: dev defaults are built in
+docker compose up --build
+```
+
+| Open | What |
+|---|---|
+| https://localhost:8443 | Desk faces. The browser warns about the dev certificate the first time. |
+| https://localhost:8443/odata/v4/ | OData service document (send a bearer token) |
+| http://localhost:8082 | Field app in the browser |
+| http://localhost:8180/auth | Keycloak admin (dev only) |
+
+- **Sign in** as a persona: `fathima` (store manager), `nilanthi` (dispatcher), `kasun` (loader), `ruwan` (driver) or `admin`. Passwords come from `.env` (`LODESTAR_DEMO_PASSWORD`, `LODESTAR_ADMIN_PASSWORD`).
+- **Competition data** is never committed. To seed with it, put the CSVs in `./data/` (see `backend/prisma/DATA.md`). Without them, a small synthetic dataset is used.
+- **Quality stack:** `docker compose --profile qa up sonarqube`. See `docs/QA.md`.
+- **Architecture:** read `docs/architecture/PLATFORM.md`. It covers zero trust, OData conventions, the LangGraph planning agent (mock model for now), CI/CD (CircleCI on PRs, Jenkins on main, Argo CD to AKS) and Azure.
 
 ## Departures from the Designathon design
 

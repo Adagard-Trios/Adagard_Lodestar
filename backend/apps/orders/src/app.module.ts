@@ -1,11 +1,18 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from '@lodestar/prisma';
-import { OrdersController } from './orders.controller';
+import { ODataModule } from '@lodestar/odata';
+import { PlatformModule } from '@lodestar/platform';
 import { OrdersService } from './orders.service';
+import { OrderLineItemsSet, ORDERS_SUMMARY_TYPE, OrdersSet } from './orders.sets';
 
 @Module({
-  imports: [PrismaModule],
-  controllers: [OrdersController],
-  providers: [OrdersService],
+  imports: [
+    PlatformModule.forService('orders'),
+    ODataModule.forRoot({
+      service: 'orders',
+      entitySets: [OrdersSet, OrderLineItemsSet],
+      providers: [OrdersService],
+      complexTypes: { OrdersSummary: ORDERS_SUMMARY_TYPE },
+    }),
+  ],
 })
 export class AppModule {}

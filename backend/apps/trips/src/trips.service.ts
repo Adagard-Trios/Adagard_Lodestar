@@ -1,96 +1,45 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
-import { TripStatus, OrderStatus, Depot } from '@prisma/client';
+import { ODataError } from '@lodestar/odata';
+import { Depot, OrderStatus, Prisma, TripStatus } from '@prisma/client';
+
+export function dayRange(runDate: string) {
+  const start = new Date(`${runDate.slice(0, 10)}T00:00:00.000Z`);
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 1);
+  return { start, end };
+}
+
+export interface PodInput {
+  unitsDelivered: number;
+  unitsOrdered: number;
+  photoUrl?: string;
+  receiverName?: string;
+  signature?: string;
+  exceptions?: unknown[];
+  creditNoteId?: string;
+  savedOffline?: boolean;
+  arrivalActual?: Date;
+  leaveActual?: Date;
+}
+
+/** Allowed trip status moves: planned → loading → enroute → complete. */
+const NEXT_TRIP_STATUS: Record<TripStatus, TripStatus[]> = {
+  PLANNED: [TripStatus.LOADING, TripStatus.ENROUTE],
+  LOADING: [TripStatus.ENROUTE, TripStatus.PLANNED],
+  ENROUTE: [TripStatus.COMPLETE],
+  COMPLETE: [],
+};
 
 @Injectable()
 export class TripsService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(params: { depot?: Depot; driverId?: string; runDate?: string; status?: TripStatus }) {
-    const { depot, driverId, runDate, status } = params;
-    const date = runDate ? new Date(runDate) : new Date('2026-04-07');
-    const startOf = new Date(date.toDateString());
-    const endOf   = new Date(new Date(date).setDate(date.getDate() + 1));
-
+  /** Loader: trips of a depot and run date in bay order (bay queue). */
+  async getBayQueue(depot: Depot, runDate: string, scope?: Prisma.TripWhereInput) {
+    const { start, end } = dayRange(runDate);
     return this.prisma.trip.findMany({
-      where: {
-        runDate: { gte: startOf, lt: endOf },
-        ...(depot    ? { depot }    : {}),
-        ...(driverId ? { driverId } : {}),
-        ...(status   ? { status }   : {}),
-      },
-      include: {
-        vehicle: true,
-        driver: { select: { id: true, name: true, phone: true } },
-        stops: {
-          include: {
-            outlet: true,
-            order: { select: { id: true, units: true, kg: true, m3: true, tempClass: true, status: true } },
-            pod: true,
-          },
-          orderBy: { stopSeq: 'asc' },
-        },
-        loadRecord: { include: { loader: { select: { id: true, name: true } } } },
-      },
-      orderBy: [{ brand: 'asc' }, { district: 'asc' }, { tripNumber: 'asc' }],
-    });
-  }
-
-  async findOne(id: string) {
-    const trip = await this.prisma.trip.findUnique({
-      where: { id },
-      include: {
-        vehicle: true,
-        driver: { select: { id: true, name: true, phone: true } },
-        stops: {
-          include: { outlet: true, order: { include: { lineItems: true } }, pod: true },
-          orderBy: { stopSeq: 'asc' },
-        },
-        loadRecord: { include: { loader: { select: { id: true, name: true } } } },
-        offlineEvents: { orderBy: { savedAt: 'asc' } },
-      },
-    });
-    if (!trip) throw new NotFoundException(`Trip ${id} not found`);
-
-    // Compute totals
-    const totalKg = trip.stops.reduce((s, st) => s + (st.order?.kg ?? 0), 0);
-    const totalM3 = trip.stops.reduce((s, st) => s + (st.order?.m3 ?? 0), 0);
-    const loadPct = trip.vehicle ? Math.round((totalKg / trip.vehicle.capacityKg) * 100) : 0;
-
-    return { ...trip, totalKg, totalM3, loadPct };
-  }
-
-  /** Driver: get active trip for today */
-  async getDriverTrip(driverId: string, runDate?: string) {
-    const date = runDate ? new Date(runDate) : new Date('2026-04-07');
-    const startOf = new Date(date.toDateString());
-    const endOf   = new Date(new Date(date).setDate(date.getDate() + 1));
-
-    const trip = await this.prisma.trip.findFirst({
-      where: { driverId, runDate: { gte: startOf, lt: endOf } },
-      include: {
-        vehicle: true,
-        stops: {
-          include: { outlet: true, order: { include: { lineItems: true } }, pod: true },
-          orderBy: { stopSeq: 'asc' },
-        },
-      },
-    });
-    if (!trip) return null;
-
-    const totalKg = trip.stops.reduce((s, st) => s + (st.order?.kg ?? 0), 0);
-    const totalM3 = trip.stops.reduce((s, st) => s + (st.order?.m3 ?? 0), 0);
-    return { ...trip, totalKg, totalM3 };
-  }
-
-  /** Loader: get trips for a bay (by depot, runDate) */
-  async getBayQueue(depot: Depot, runDate?: string) {
-    const date = runDate ? new Date(runDate) : new Date('2026-04-07');
-    const startOf = new Date(date.toDateString());
-    const endOf   = new Date(new Date(date).setDate(date.getDate() + 1));
-
-    return this.prisma.trip.findMany({
-      where: { depot, runDate: { gte: startOf, lt: endOf } },
+      where: { AND: [{ depot, runDate: { gte: start, lt: end } }, scope ?? {}] },
       include: {
         vehicle: true,
         driver: { select: { id: true, name: true } },
@@ -101,43 +50,84 @@ export class TripsService {
     });
   }
 
-  async updateStatus(id: string, status: TripStatus, departTime?: Date) {
+  async updateStatus(id: string, current: TripStatus, status: TripStatus, departTime?: Date) {
+    if (current !== status && !NEXT_TRIP_STATUS[current].includes(status)) {
+      throw ODataError.conflict(`A ${current} trip cannot move to ${status}`);
+    }
     return this.prisma.trip.update({
       where: { id },
-      data: { status, ...(departTime ? { departTime } : {}) },
-    });
-  }
-
-  async updateStopStatus(stopId: string, status: OrderStatus, arrivalActual?: Date, leaveActual?: Date) {
-    return this.prisma.tripStop.update({
-      where: { id: stopId },
       data: {
         status,
-        ...(arrivalActual ? { arrivalActual } : {}),
-        ...(leaveActual   ? { leaveActual }   : {}),
+        ...(departTime ? { departTime } : {}),
+        ...(status === TripStatus.COMPLETE ? { returnTime: new Date() } : {}),
       },
     });
   }
 
-  async savePOD(stopId: string, data: {
-    unitsDelivered: number;
-    unitsOrdered: number;
-    photoUrl?: string;
-    receiverName?: string;
-    signature?: string;
-    exceptions?: any[];
-    creditNoteId?: string;
-    savedOffline?: boolean;
-  }) {
-    return this.prisma.pOD.upsert({
-      where: { tripStopId: stopId },
-      update: { ...data, syncedAt: data.savedOffline ? undefined : new Date() },
-      create: { tripStopId: stopId, ...data, savedAt: new Date() },
+  /** Loader releases a loaded trip: seal, reefer temperature, departure. */
+  async release(tripId: string, sealNumber: string, reeferTempC?: number) {
+    return this.prisma.$transaction(async (tx) => {
+      const trip = await tx.trip.findUnique({ where: { id: tripId }, select: { status: true } });
+      if (!trip || !NEXT_TRIP_STATUS[trip.status].includes(TripStatus.ENROUTE)) {
+        throw ODataError.conflict(`A ${trip?.status ?? 'missing'} trip cannot be released`);
+      }
+      const record = await tx.loadRecord.findUnique({ where: { tripId } });
+      if (!record) throw ODataError.conflict('The trip has no load record yet; record the load first');
+      const now = new Date();
+      await tx.loadRecord.update({
+        where: { tripId },
+        data: { sealNumber, releasedAt: now, ...(reeferTempC !== undefined ? { reeferTempC } : {}) },
+      });
+      return tx.trip.update({
+        where: { id: tripId },
+        data: {
+          status: TripStatus.ENROUTE,
+          sealNumber,
+          departTime: now,
+          ...(reeferTempC !== undefined ? { reeferTempC } : {}),
+        },
+      });
+    });
+  }
+
+  async arrive(stopId: string, at: Date) {
+    return this.prisma.tripStop.update({
+      where: { id: stopId },
+      data: { arrivalActual: at, status: OrderStatus.ENROUTE },
+    });
+  }
+
+  /** Driver completes a stop: POD saved, stop and order delivered. */
+  async completeStop(stopId: string, orderId: string, pod: PodInput) {
+    const { arrivalActual, leaveActual, ...podData } = pod;
+    if (!Number.isInteger(podData.unitsDelivered) || !Number.isInteger(podData.unitsOrdered) || podData.unitsDelivered < 0 || podData.unitsDelivered > podData.unitsOrdered) {
+      throw ODataError.badRequest('unitsDelivered must be between 0 and unitsOrdered', 'unitsDelivered');
+    }
+    const data = { ...podData, exceptions: (podData.exceptions ?? undefined) as Prisma.InputJsonValue };
+    return this.prisma.$transaction(async (tx) => {
+      await tx.pOD.upsert({
+        where: { tripStopId: stopId },
+        update: { ...data, syncedAt: podData.savedOffline ? undefined : new Date() },
+        create: { tripStopId: stopId, ...data, savedAt: new Date() },
+      });
+      await tx.order.update({ where: { id: orderId }, data: { status: OrderStatus.DELIVERED } });
+      return tx.tripStop.update({
+        where: { id: stopId },
+        data: {
+          status: OrderStatus.DELIVERED,
+          ...(arrivalActual ? { arrivalActual } : {}),
+          leaveActual: leaveActual ?? new Date(),
+        },
+      });
     });
   }
 
   /** Blackout: update late risk for a stop (DSP-A1) */
   async updateLateRisk(stopId: string, lateRiskPct: number) {
     return this.prisma.tripStop.update({ where: { id: stopId }, data: { lateRiskPct } });
+  }
+
+  async updateShortfalls(tripId: string, shortfalls: unknown[]) {
+    return this.prisma.loadRecord.update({ where: { tripId }, data: { shortfalls: shortfalls as Prisma.InputJsonValue } });
   }
 }

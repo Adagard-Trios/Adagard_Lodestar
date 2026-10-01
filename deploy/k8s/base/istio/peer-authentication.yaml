@@ -1,0 +1,9 @@
+# Mesh-wide STRICT mTLS for the lodestar namespace: plaintext is refused.
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: lodestar
+spec:
+  mtls:
+    mode: STRICT

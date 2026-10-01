@@ -1,0 +1,99 @@
+# prod overlay. Jenkins bumps image tags here (GitOps commit), e.g.
+#   cd deploy/k8s/overlays/prod
+#   kustomize edit set image lodestar/orders=crlodestarprodadg01.azurecr.io/lodestar/orders:<git-sha>
+# Argo CD application lodestar-prod syncs this path.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../base
+- azure-wiring
+components:
+- ../../components/azure-wiring
+labels:
+- pairs:
+    lodestar.io/environment: prod
+  includeSelectors: false
+images:
+- name: lodestar/auth
+  newName: crlodestarprodadg01.azurecr.io/lodestar/auth
+  newTag: 1.0.0
+- name: lodestar/orders
+  newName: crlodestarprodadg01.azurecr.io/lodestar/orders
+  newTag: 1.0.0
+- name: lodestar/planning
+  newName: crlodestarprodadg01.azurecr.io/lodestar/planning
+  newTag: 1.0.0
+- name: lodestar/fleet
+  newName: crlodestarprodadg01.azurecr.io/lodestar/fleet
+  newTag: 1.0.0
+- name: lodestar/outlets
+  newName: crlodestarprodadg01.azurecr.io/lodestar/outlets
+  newTag: 1.0.0
+- name: lodestar/trips
+  newName: crlodestarprodadg01.azurecr.io/lodestar/trips
+  newTag: 1.0.0
+- name: lodestar/sync
+  newName: crlodestarprodadg01.azurecr.io/lodestar/sync
+  newTag: 1.0.0
+- name: lodestar/notifications
+  newName: crlodestarprodadg01.azurecr.io/lodestar/notifications
+  newTag: 1.0.0
+- name: lodestar/audit
+  newName: crlodestarprodadg01.azurecr.io/lodestar/audit
+  newTag: 1.0.0
+- name: lodestar/agent
+  newName: crlodestarprodadg01.azurecr.io/lodestar/agent
+  newTag: 1.0.0
+- name: lodestar/frontend
+  newName: crlodestarprodadg01.azurecr.io/lodestar/frontend
+  newTag: 1.0.0
+- name: lodestar/mobile-web
+  newName: crlodestarprodadg01.azurecr.io/lodestar/mobile-web
+  newTag: 1.0.0
+- name: lodestar/migrate
+  newName: crlodestarprodadg01.azurecr.io/lodestar/migrate
+  newTag: 1.0.0
+- name: lodestar/postgres-client
+  newName: crlodestarprodadg01.azurecr.io/mirror/postgres
+  newTag: 16-alpine
+- name: registry.k8s.io/pause
+  newName: crlodestarprodadg01.azurecr.io/mirror/pause
+  newTag: '3.10'
+replicas:
+- name: auth
+  count: 3
+- name: orders
+  count: 3
+- name: planning
+  count: 3
+- name: fleet
+  count: 3
+- name: outlets
+  count: 3
+- name: trips
+  count: 3
+- name: sync
+  count: 3
+- name: notifications
+  count: 3
+- name: audit
+  count: 1
+- name: agent
+  count: 3
+- name: frontend
+  count: 3
+- name: mobile-web
+  count: 3
+patches:
+- target:
+    kind: HorizontalPodAutoscaler
+  patch: "- op: replace\n  path: /spec/minReplicas\n  value: 3\n- op: replace\n  path: /spec/maxReplicas\n  value: 10\n"
+- target:
+    kind: Deployment
+    labelSelector: app.kubernetes.io/part-of=lodestar,app notin (mobile-web,lodestar-ingress-tls)
+  patch: "- op: replace\n  path: /spec/template/spec/containers/0/resources\n  value:\n    requests:\n      cpu: 250m\n  \
+    \    memory: 384Mi\n    limits:\n      cpu: '1'\n      memory: 768Mi\n"
+- target:
+    kind: ConfigMap
+    name: lodestar-common
+  patch: "- op: replace\n  path: /data/LOG_LEVEL\n  value: info\n- op: replace\n  path: /data/RUN_SEED\n  value: 'false'\n"

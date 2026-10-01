@@ -1,56 +1,48 @@
+import Link from "next/link";
+import { FACES, FLOWS } from "@/screens";
+
+const LOGO: Record<string, string> = { store: "#047857", plan: "#3B4CCA", admin: "#334155" };
+
 export default function Home() {
   return (
-    <div className="board">
-      <div className="page-head">
-        <div className="page-head__left">
-          <div className="page-head__eyebrow">Waypoint Group</div>
-          <h1 className="page-head__title">Waypoint Lodestar</h1>
-          <p className="page-head__lede">Select an interface to continue</p>
-        </div>
-      </div>
-      
-      <h2 style={{marginTop: "32px", fontSize: "20px", fontWeight: 800}}>Live Functional Apps</h2>
-      <div className="row" style={{marginTop: "16px"}}>
-        <a href="/dispatcher/plan" className="rationale rationale--desktop" style={{textDecoration: 'none'}}>
-          <div className="rationale__title">Dispatcher (DSP)</div>
-          <div className="rationale__body">Plan board, live ops, and fleet management for Peliyagoda/Kandy depots.</div>
-        </a>
-      </div>
-      <div className="row">
-        <a href="/store" className="rationale rationale--desktop" style={{textDecoration: 'none'}}>
-          <div className="rationale__title">Store Manager (STR)</div>
-          <div className="rationale__body">Order placement and ETA tracking for Outlet managers.</div>
-        </a>
-      </div>
-      <div className="row">
-        <a href="/admin" className="rationale rationale--desktop" style={{textDecoration: 'none'}}>
-          <div className="rationale__title">Admin Console (ADM)</div>
-          <div className="rationale__body">System health, fleet, and outlet management portal.</div>
-        </a>
+    <main style={{ minHeight: "100vh", padding: "56px 64px 80px", background: "#F4F6FA", fontFamily: "Inter, system-ui, sans-serif", color: "#0A0F1A" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 36 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#5B6475" }}>Waypoint Group</span>
+        <h1 style={{ fontFamily: "'Plus Jakarta Sans', Inter, sans-serif", fontSize: 40, fontWeight: 800, letterSpacing: "-0.03em", margin: 0 }}>Waypoint Lodestar</h1>
+        <p style={{ fontSize: 16, color: "#4A5467", margin: 0 }}>Every order, one thread. The desk faces run here; Lodestar Dock and Lodestar Run are in the mobile app.</p>
       </div>
 
-      <h2 style={{marginTop: "48px", fontSize: "20px", fontWeight: 800}}>Figma Complete UI Prototypes (180+ Screens)</h2>
-      <p style={{marginTop: "8px", color: "var(--text-3)", fontSize: "14px"}}>All static screens generated directly from Figma exports.</p>
-      <div className="row" style={{marginTop: "16px", flexWrap: "wrap", gap: "16px"}}>
-        <a href="/prototypes/p1-screens-store" className="rationale" style={{textDecoration: 'none', padding: "16px"}}>
-          <div className="rationale__title" style={{fontSize: "14px"}}>P1: Store Manager (42)</div>
-        </a>
-        <a href="/prototypes/p2-screens-dispatcher" className="rationale" style={{textDecoration: 'none', padding: "16px"}}>
-          <div className="rationale__title" style={{fontSize: "14px"}}>P2: Dispatcher (40)</div>
-        </a>
-        <a href="/prototypes/p3-screens-loader" className="rationale" style={{textDecoration: 'none', padding: "16px"}}>
-          <div className="rationale__title" style={{fontSize: "14px"}}>P3: Loader (32)</div>
-        </a>
-        <a href="/prototypes/p4-screens-driver" className="rationale" style={{textDecoration: 'none', padding: "16px"}}>
-          <div className="rationale__title" style={{fontSize: "14px"}}>P4: Driver (42)</div>
-        </a>
-        <a href="/prototypes/p5-screens-degradation" className="rationale" style={{textDecoration: 'none', padding: "16px"}}>
-          <div className="rationale__title" style={{fontSize: "14px"}}>P5: Degradation (11)</div>
-        </a>
-        <a href="/prototypes/p6-screens-admin" className="rationale" style={{textDecoration: 'none', padding: "16px"}}>
-          <div className="rationale__title" style={{fontSize: "14px"}}>P6: Admin (20)</div>
-        </a>
+      {FLOWS.length > 0 && (
+        <section style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 36 }}>
+          {FLOWS.map(f => (
+            <Link key={f.name} href={f.href} style={{ padding: "10px 16px", borderRadius: 999, background: "#141B4D", color: "#fff", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>
+              Start: {f.name}
+            </Link>
+          ))}
+        </section>
+      )}
+
+      <div style={{ display: "flex", gap: 24, alignItems: "flex-start", flexWrap: "wrap" }}>
+        {Object.entries(FACES).map(([app, face]) => (
+          <section key={app} style={{ flex: "1 1 360px", display: "flex", flexDirection: "column", gap: 14, padding: 24, borderRadius: 18, background: "#fff", border: "1px solid #E3E7EF" }}>
+            <Link href={face.start} style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none", color: "inherit" }}>
+              <span style={{ width: 36, height: 36, borderRadius: 10, background: LOGO[app] ?? "#141B4D" }} />
+              <span style={{ fontSize: 20, fontWeight: 800 }}>{face.title}</span>
+              <span style={{ marginLeft: "auto", fontSize: 13, fontWeight: 700, color: "#3B4CCA" }}>Open →</span>
+            </Link>
+            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+              {face.screens.map(s => (
+                <li key={s.href}>
+                  <Link href={s.href} style={{ display: "flex", gap: 10, padding: "6px 8px", borderRadius: 8, textDecoration: "none", color: "#1D2433", fontSize: 14 }}>
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, color: "#5B6475", minWidth: 64 }}>{s.id}</span>
+                    {s.name.replace(/^\S+\s/, "")}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
       </div>
-    </div>
+    </main>
   );
 }

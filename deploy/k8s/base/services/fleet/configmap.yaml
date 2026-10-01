@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fleet-config
+  labels:
+    app: fleet
+    app.kubernetes.io/name: fleet
+    app.kubernetes.io/part-of: lodestar
+data:
+  SERVICE_NAME: fleet
+  PORT: '3004'
+  DB_SCHEMA: fleet

@@ -1,0 +1,30 @@
+# Base for every environment. Placeholders in CAPITALS (TENANT_ID,
+# KEYVAULT_NAME, CLIENT_ID_*, WEB_HOST, ...) are filled from the overlay's
+# azure-wiring ConfigMap by components/azure-wiring (values come from
+# `terraform output -raw kustomize_azure_env`).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+labels:
+- pairs:
+    app.kubernetes.io/part-of: lodestar
+    app.kubernetes.io/managed-by: argocd
+  includeSelectors: false
+resources:
+- namespace.yaml
+- common
+- network-policies
+- istio
+- ingress
+- jobs
+- services/auth
+- services/orders
+- services/planning
+- services/fleet
+- services/outlets
+- services/trips
+- services/sync
+- services/notifications
+- services/audit
+- services/agent
+- services/frontend
+- services/mobile-web

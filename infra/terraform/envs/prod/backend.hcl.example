@@ -1,0 +1,7 @@
+# cp backend.hcl.example backend.hcl && terraform init -backend-config=backend.hcl
+# Values: terraform -chdir=../../bootstrap output backend_hcl
+resource_group_name  = "rg-lodestar-tfstate"
+storage_account_name = "stlodestartf<suffix>"
+container_name       = "tfstate-prod"
+key                  = "lodestar-prod.tfstate"
+use_azuread_auth     = true

@@ -1,0 +1,21 @@
+[project]
+name = "lodestar-agent"
+version = "0.1.0"
+description = "Waypoint Lodestar planning agent (LangGraph). Drafts plans; never publishes."
+requires-python = ">=3.12"
+
+[tool.setuptools.packages.find]
+include = ["lodestar_agent*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --cov=lodestar_agent --cov-report=term-missing --cov-report=xml:coverage.xml"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.coverage.run]
+branch = true
+source = ["lodestar_agent"]
+
+[tool.coverage.report]
+skip_covered = false
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:"]

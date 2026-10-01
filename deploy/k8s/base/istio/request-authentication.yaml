@@ -1,0 +1,20 @@
+# Validates Entra ID access tokens (issuer, audience lodestar-api, signature via
+# JWKS, expiry). Invalid tokens are rejected; AuthorizationPolicies then
+# require a valid token (requestPrincipals) on every API call. Services still
+# verify the token themselves (PLATFORM.md section 2.1).
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata:
+  name: entra-jwt
+  namespace: lodestar
+spec:
+  jwtRules:
+  - issuer: https://login.microsoftonline.com/TENANT_ID/v2.0
+    jwksUri: https://login.microsoftonline.com/TENANT_ID/discovery/v2.0/keys
+    audiences:
+    - API_CLIENT_ID
+    - api://API_CLIENT_ID
+    forwardOriginalToken: true
+    outputClaimToHeaders:
+    - header: x-jwt-oid
+      claim: oid

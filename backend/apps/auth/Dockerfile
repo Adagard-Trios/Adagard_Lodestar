@@ -1,16 +1,41 @@
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npx prisma generate
-RUN npm run build auth
+# syntax=docker/dockerfile:1.7
+# =============================================================================
+# Waypoint Lodestar — auth service (NestJS, port 3001)
+# Build context: backend/   (docker build -f apps/auth/Dockerfile backend)
+# Multi-stage: full install + build → production deps only → minimal runtime.
+# Runs as uid 1000 (non-root) with a read-only root filesystem: nothing is written at
+# runtime (the Prisma engine and the bundle are read-only; logs go to stdout).
+# =============================================================================
 
-FROM node:20-alpine
+# ---- 1. build: install everything, generate Prisma client, bundle the app ----
+FROM node:22-alpine AS build
+RUN apk add --no-cache openssl
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
-COPY --from=builder /app/dist/apps/auth ./dist/apps/auth
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY tsconfig.json nest-cli.json ./
+COPY prisma/schema.prisma ./prisma/schema.prisma
+RUN npx prisma generate
+COPY libs ./libs
+COPY apps/auth ./apps/auth
+RUN npx nest build auth
+
+# ---- 2. deps: production dependencies only (no dev tooling in the image) ----
+FROM node:22-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund && npm cache clean --force
+
+# ---- 3. runtime ----
+FROM node:22-alpine AS runtime
+RUN apk add --no-cache openssl
+ENV NODE_ENV=production     PORT=3001
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build /app/dist/apps/auth ./dist
+# uid/gid 1000 = the image's "node" user (numeric, so runAsNonRoot can verify it)
+USER 1000:1000
 EXPOSE 3001
-CMD ["node", "dist/apps/auth/main"]
+HEALTHCHECK --interval=15s --timeout=3s --start-period=20s --retries=3   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3001)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+CMD ["node", "dist/main.js"]

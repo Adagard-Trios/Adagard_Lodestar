@@ -1,0 +1,35 @@
+# cp terraform.tfvars.example terraform.tfvars (gitignored). IDs only, no secrets.
+# subscription_id = "00000000-0000-0000-0000-000000000000" # or export ARM_SUBSCRIPTION_ID
+unique_suffix  = "adg01"
+location       = "southeastasia"
+web_hostname   = "app.lodestar.example.com"
+field_hostname = "field.lodestar.example.com"
+
+deployer_ip_ranges = [
+  # "203.0.113.10/32", # Jenkins egress
+]
+
+platform_admin_group_object_ids = [
+  # "<lodestar-platform-admins group object id>",
+]
+db_admin_group_object_id = null # "<lodestar-db-admins group object id>"
+
+role_group_object_ids = {
+  # store_manager = "<group id>"
+  # dispatcher    = "<group id>"
+  # loader        = "<group id>"
+  # driver        = "<group id>"
+  # admin         = "<group id>"
+}
+
+ci_principal_object_id = null # "<Jenkins service principal object id>"
+
+# Second apply, after Argo CD created the ingress Private Link Service:
+frontdoor_origin_enabled = false
+ingress_internal_ip      = "10.40.7.250"
+
+enable_openai = false
+
+# prod runs a private AKS API: run Terraform from a Jenkins agent inside the
+# VNet (or a peered hub) with kubelogin_mode = "workloadidentity" or "spn".
+kubelogin_mode = "workloadidentity"

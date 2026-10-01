@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: mobile-web
+  labels:
+    app: mobile-web
+    app.kubernetes.io/name: mobile-web
+    app.kubernetes.io/part-of: lodestar
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: mobile-web

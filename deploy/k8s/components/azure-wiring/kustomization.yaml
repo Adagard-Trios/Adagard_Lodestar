@@ -1,0 +1,369 @@
+# Fills the CAPITALISED placeholders in base/ from the ConfigMap `azure-wiring`
+# that each overlay generates from azure-wiring/azure.env (Terraform output
+# `kustomize_azure_env`). All values are non-secret identifiers.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+replacements:
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.TENANT_ID
+  targets:
+  - select:
+      kind: SecretProviderClass
+    fieldPaths:
+    - spec.parameters.tenantId
+  - select:
+      kind: ServiceAccount
+    fieldPaths:
+    - metadata.annotations.[azure.workload.identity/tenant-id]
+    reject:
+    - name: frontend
+    - name: mobile-web
+  - select:
+      kind: ConfigMap
+      name: lodestar-common
+    fieldPaths:
+    - data.OIDC_ISSUER
+    - data.OIDC_JWKS_URI
+    - data.OIDC_TOKEN_URL
+    options:
+      delimiter: /
+      index: 3
+  - select:
+      kind: RequestAuthentication
+      name: entra-jwt
+    fieldPaths:
+    - spec.jwtRules.0.issuer
+    - spec.jwtRules.0.jwksUri
+    options:
+      delimiter: /
+      index: 3
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.KEYVAULT_NAME
+  targets:
+  - select:
+      kind: SecretProviderClass
+    fieldPaths:
+    - spec.parameters.keyvaultName
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.API_CLIENT_ID
+  targets:
+  - select:
+      kind: ConfigMap
+      name: lodestar-common
+    fieldPaths:
+    - data.OIDC_AUDIENCE
+  - select:
+      kind: ConfigMap
+      name: lodestar-common
+    fieldPaths:
+    - data.SVC_TOKEN_SCOPE
+    options:
+      delimiter: /
+      index: 2
+  - select:
+      kind: RequestAuthentication
+      name: entra-jwt
+    fieldPaths:
+    - spec.jwtRules.0.audiences.0
+  - select:
+      kind: RequestAuthentication
+      name: entra-jwt
+    fieldPaths:
+    - spec.jwtRules.0.audiences.1
+    options:
+      delimiter: /
+      index: 2
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.WEB_HOST
+  targets:
+  - select:
+      kind: ConfigMap
+      name: lodestar-common
+    fieldPaths:
+    - data.PUBLIC_WEB_URL
+    options:
+      delimiter: /
+      index: 2
+  - select:
+      kind: Gateway
+      name: lodestar
+    fieldPaths:
+    - spec.servers.0.hosts.0
+  - select:
+      kind: VirtualService
+      name: lodestar-web
+    fieldPaths:
+    - spec.hosts.0
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.FIELD_HOST
+  targets:
+  - select:
+      kind: Gateway
+      name: lodestar
+    fieldPaths:
+    - spec.servers.0.hosts.1
+  - select:
+      kind: VirtualService
+      name: lodestar-field
+    fieldPaths:
+    - spec.hosts.0
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.ISTIO_REVISION
+  targets:
+  - select:
+      kind: Namespace
+      name: lodestar
+    fieldPaths:
+    - metadata.labels.[istio.io/rev]
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.FRONTDOOR_ID
+  targets:
+  - select:
+      kind: AuthorizationPolicy
+      name: require-frontdoor
+    fieldPaths:
+    - spec.rules.0.when.0.notValues.0
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.AKS_USER_SUBNET
+  targets:
+  - select:
+      kind: Service
+      name: lodestar-ingress-pls
+    fieldPaths:
+    - metadata.annotations.[service.beta.kubernetes.io/azure-load-balancer-internal-subnet]
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.INGRESS_INTERNAL_IP
+  targets:
+  - select:
+      kind: Service
+      name: lodestar-ingress-pls
+    fieldPaths:
+    - metadata.annotations.[service.beta.kubernetes.io/azure-load-balancer-ipv4]
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.PRIVATE_LINK_SUBNET
+  targets:
+  - select:
+      kind: Service
+      name: lodestar-ingress-pls
+    fieldPaths:
+    - metadata.annotations.[service.beta.kubernetes.io/azure-pls-ip-configuration-subnet]
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.POSTGRES_CIDR
+  targets:
+  - select:
+      kind: NetworkPolicy
+      name: allow-postgres-egress
+    fieldPaths:
+    - spec.egress.0.to.0.ipBlock.cidr
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.PRIVATE_ENDPOINT_CIDR
+  targets:
+  - select:
+      kind: NetworkPolicy
+      name: allow-https-egress
+    fieldPaths:
+    - spec.egress.1.to.0.ipBlock.cidr
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.CLIENT_ID_AUTH
+  targets:
+  - select:
+      kind: ServiceAccount
+      name: auth
+    fieldPaths:
+    - metadata.annotations.[azure.workload.identity/client-id]
+  - select:
+      kind: SecretProviderClass
+      name: auth
+    fieldPaths:
+    - spec.parameters.clientID
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.CLIENT_ID_ORDERS
+  targets:
+  - select:
+      kind: ServiceAccount
+      name: orders
+    fieldPaths:
+    - metadata.annotations.[azure.workload.identity/client-id]
+  - select:
+      kind: SecretProviderClass
+      name: orders
+    fieldPaths:
+    - spec.parameters.clientID
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.CLIENT_ID_PLANNING
+  targets:
+  - select:
+      kind: ServiceAccount
+      name: planning
+    fieldPaths:
+    - metadata.annotations.[azure.workload.identity/client-id]
+  - select:
+      kind: SecretProviderClass
+      name: planning
+    fieldPaths:
+    - spec.parameters.clientID
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.CLIENT_ID_FLEET
+  targets:
+  - select:
+      kind: ServiceAccount
+      name: fleet
+    fieldPaths:
+    - metadata.annotations.[azure.workload.identity/client-id]
+  - select:
+      kind: SecretProviderClass
+      name: fleet
+    fieldPaths:
+    - spec.parameters.clientID
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.CLIENT_ID_OUTLETS
+  targets:
+  - select:
+      kind: ServiceAccount
+      name: outlets
+    fieldPaths:
+    - metadata.annotations.[azure.workload.identity/client-id]
+  - select:
+      kind: SecretProviderClass
+      name: outlets
+    fieldPaths:
+    - spec.parameters.clientID
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.CLIENT_ID_TRIPS
+  targets:
+  - select:
+      kind: ServiceAccount
+      name: trips
+    fieldPaths:
+    - metadata.annotations.[azure.workload.identity/client-id]
+  - select:
+      kind: SecretProviderClass
+      name: trips
+    fieldPaths:
+    - spec.parameters.clientID
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.CLIENT_ID_SYNC
+  targets:
+  - select:
+      kind: ServiceAccount
+      name: sync
+    fieldPaths:
+    - metadata.annotations.[azure.workload.identity/client-id]
+  - select:
+      kind: SecretProviderClass
+      name: sync
+    fieldPaths:
+    - spec.parameters.clientID
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.CLIENT_ID_NOTIFICATIONS
+  targets:
+  - select:
+      kind: ServiceAccount
+      name: notifications
+    fieldPaths:
+    - metadata.annotations.[azure.workload.identity/client-id]
+  - select:
+      kind: SecretProviderClass
+      name: notifications
+    fieldPaths:
+    - spec.parameters.clientID
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.CLIENT_ID_AUDIT
+  targets:
+  - select:
+      kind: ServiceAccount
+      name: audit
+    fieldPaths:
+    - metadata.annotations.[azure.workload.identity/client-id]
+  - select:
+      kind: SecretProviderClass
+      name: audit
+    fieldPaths:
+    - spec.parameters.clientID
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.CLIENT_ID_AGENT
+  targets:
+  - select:
+      kind: ServiceAccount
+      name: agent
+    fieldPaths:
+    - metadata.annotations.[azure.workload.identity/client-id]
+  - select:
+      kind: SecretProviderClass
+      name: agent
+    fieldPaths:
+    - spec.parameters.clientID
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.CLIENT_ID_MIGRATE
+  targets:
+  - select:
+      kind: ServiceAccount
+      name: migrate
+    fieldPaths:
+    - metadata.annotations.[azure.workload.identity/client-id]
+  - select:
+      kind: SecretProviderClass
+      name: migrate
+    fieldPaths:
+    - spec.parameters.clientID
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.CLIENT_ID_INGRESS_TLS
+  targets:
+  - select:
+      kind: ServiceAccount
+      name: lodestar-ingress-tls
+    fieldPaths:
+    - metadata.annotations.[azure.workload.identity/client-id]
+  - select:
+      kind: SecretProviderClass
+      name: lodestar-ingress-tls
+    fieldPaths:
+    - spec.parameters.clientID

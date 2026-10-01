@@ -1,0 +1,70 @@
+# Restricted AppProject for the prod cluster, with sync windows.
+# Times are Asia/Colombo. Depots load and dispatch in the early morning, so
+# nothing syncs then, even manually; releases happen in the weekday window.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: lodestar-prod
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Waypoint Lodestar - prod
+  sourceRepos:
+    - https://github.com/Adagard-Trios/Tech-Triathlon.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: lodestar
+    - server: https://kubernetes.default.svc
+      namespace: aks-istio-ingress
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - { group: "", kind: ConfigMap }
+    - { group: "", kind: Service }
+    - { group: "", kind: ServiceAccount }
+    - { group: apps, kind: Deployment }
+    - { group: batch, kind: Job }
+    - { group: autoscaling, kind: HorizontalPodAutoscaler }
+    - { group: policy, kind: PodDisruptionBudget }
+    - { group: networking.k8s.io, kind: NetworkPolicy }
+    - { group: secrets-store.csi.x-k8s.io, kind: SecretProviderClass }
+    - { group: security.istio.io, kind: PeerAuthentication }
+    - { group: security.istio.io, kind: RequestAuthentication }
+    - { group: security.istio.io, kind: AuthorizationPolicy }
+    - { group: networking.istio.io, kind: Gateway }
+    - { group: networking.istio.io, kind: VirtualService }
+    - { group: networking.istio.io, kind: DestinationRule }
+  orphanedResources:
+    warn: true
+  syncWindows:
+    # Release window: Mon-Thu 10:00-16:00. Manual sync allowed inside it.
+    - kind: allow
+      schedule: "0 10 * * 1-4"
+      duration: 6h
+      timeZone: Asia/Colombo
+      applications:
+        - lodestar-prod
+      manualSync: true
+    # Freeze during loading and dispatch (04:00-08:00 daily), no exceptions.
+    - kind: deny
+      schedule: "0 4 * * *"
+      duration: 4h
+      timeZone: Asia/Colombo
+      applications:
+        - lodestar-prod
+      manualSync: false
+  roles:
+    - name: release-managers
+      description: May sync prod inside the release window.
+      policies:
+        - p, proj:lodestar-prod:release-managers, applications, get, lodestar-prod/*, allow
+        - p, proj:lodestar-prod:release-managers, applications, sync, lodestar-prod/*, allow
+      groups:
+        - lodestar-release-managers # Entra group object ID once Argo CD SSO is wired
+    - name: viewers
+      policies:
+        - p, proj:lodestar-prod:viewers, applications, get, lodestar-prod/*, allow
+      groups:
+        - lodestar-developers

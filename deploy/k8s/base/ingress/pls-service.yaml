@@ -1,0 +1,32 @@
+# Second Service in front of the add-on's internal ingress pods that asks AKS to
+# create a Private Link Service (Front Door Premium origin). Its name must
+# match var.ingress_pls_name in Terraform. targetPort must equal the add-on
+# gateway Service's targetPort for 443
+# (kubectl -n aks-istio-ingress get svc aks-istio-ingressgateway-internal -o yaml).
+apiVersion: v1
+kind: Service
+metadata:
+  name: lodestar-ingress-pls
+  namespace: aks-istio-ingress
+  labels:
+    app.kubernetes.io/part-of: lodestar
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: 'true'
+    service.beta.kubernetes.io/azure-load-balancer-internal-subnet: AKS_USER_SUBNET
+    service.beta.kubernetes.io/azure-load-balancer-ipv4: INGRESS_INTERNAL_IP
+    service.beta.kubernetes.io/azure-pls-create: 'true'
+    service.beta.kubernetes.io/azure-pls-name: pls-lodestar-ingress
+    service.beta.kubernetes.io/azure-pls-ip-configuration-subnet: PRIVATE_LINK_SUBNET
+    service.beta.kubernetes.io/azure-pls-ip-configuration-ip-address-count: '1'
+    service.beta.kubernetes.io/azure-pls-proxy-protocol: 'false'
+    service.beta.kubernetes.io/azure-pls-visibility: '*'
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  selector:
+    istio: aks-istio-ingressgateway-internal
+  ports:
+  - name: https
+    port: 443
+    targetPort: 443
+    protocol: TCP

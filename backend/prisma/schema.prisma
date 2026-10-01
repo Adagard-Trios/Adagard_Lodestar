@@ -2,17 +2,22 @@
 // Waypoint Lodestar — Prisma Schema
 // "Every order, one thread."  Team Adagard · Tech-Triathlon 2026
 //
-// Data grounded in: district_travel.csv, outlets.csv, vehicles.csv,
-// service_allowance.csv, calendar.csv, deliveries_train.csv
+// Reference tables are loaded at seed time from DATA_DIR (see prisma/DATA.md).
+// No dataset values live in this repository.
 // =============================================================================
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
+// One PostgreSQL schema per owning service (PLATFORM.md §1). Cross-schema
+// foreign keys keep referential integrity inside the one database; the agent's
+// checkpoints live in the separate "agent" schema, which Prisma does not manage.
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  schemas  = ["auth", "orders", "planning", "fleet", "outlets", "trips", "sync", "notifications", "audit"]
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -25,45 +30,61 @@ enum Role {
   DRIVER
   STORE_MANAGER
   ADMIN
+
+  @@schema("auth")
 }
 
 enum Depot {
   PELIYAGODA
   KANDY
+
+  @@schema("outlets")
 }
 
 enum Brand {
   FRESH
   STYLE
   TECH
+
+  @@schema("outlets")
 }
 
 enum TempClass {
   CHILLED
   AMBIENT
+
+  @@schema("orders")
 }
 
 enum DockType {
   REAR_DOCK
   STREET
   MALL_BAY
+
+  @@schema("outlets")
 }
 
 enum ParkingType {
   NORMAL
   VAN_ONLY
   MALL_DOCK
+
+  @@schema("outlets")
 }
 
 enum VehicleType {
   TRUCK
   VAN
+
+  @@schema("fleet")
 }
 
 enum VehicleStatus {
   AVAILABLE
   WORKSHOP
   ENROUTE
+
+  @@schema("fleet")
 }
 
 enum OrderStatus {
@@ -74,6 +95,9 @@ enum OrderStatus {
   DELIVERED
   DEFERRED
   EXCEPTION
+  CANCELLED
+
+  @@schema("orders")
 }
 
 enum TripStatus {
@@ -81,12 +105,52 @@ enum TripStatus {
   LOADING
   ENROUTE
   COMPLETE
+
+  @@schema("trips")
 }
 
 enum NotificationChannel {
   PUSH
   SMS
   WEBSOCKET
+
+  @@schema("notifications")
+}
+
+enum DeferralStatus {
+  SUGGESTED
+  CONFIRMED
+  DISMISSED
+  REVERSED
+
+  @@schema("planning")
+}
+
+enum PlanStatus {
+  DRAFT
+  NEEDS_APPROVAL
+  APPROVED
+  PUBLISHED
+  REJECTED
+  SUPERSEDED
+
+  @@schema("planning")
+}
+
+enum PlanSource {
+  MANUAL
+  AUTOPLAN
+  AGENT
+
+  @@schema("planning")
+}
+
+enum DeviceStatus {
+  PENDING
+  ACTIVE
+  REVOKED
+
+  @@schema("auth")
 }
 
 enum DeferralReason {
@@ -96,17 +160,20 @@ enum DeferralReason {
   WINDOW
   FUEL
   VEH_DOWN
+
+  @@schema("planning")
 }
 
 // ─────────────────────────────────────────────────────────────
 // Core entities
 // ─────────────────────────────────────────────────────────────
 
+/// Directory mirror of identity (Keycloak) users. `id` is the Keycloak subject (`sub`).
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
   name         String
-  passwordHash String
+  passwordHash String? // legacy; credentials live in Keycloak
   role         Role
   depot        Depot?
   outletId     String?
@@ -122,6 +189,9 @@ model User {
   loadRecords   LoadRecord[]
   notifications Notification[]
   offlineEvents OfflineEvent[]
+  devices       Device[]
+
+  @@schema("auth")
 }
 
 model Outlet {
@@ -132,44 +202,50 @@ model Outlet {
   depot       Depot
   dockType    DockType
   parking     ParkingType
-  windowOpen  String      // "05:30" HH:mm
-  windowClose String      // "08:00" HH:mm
+  windowOpen  String // "05:30" HH:mm
+  windowClose String // "08:00" HH:mm
   address     String?
-  accessNote  String?     // e.g. "Rear dock · enter via Lawson St service lane"
+  accessNote  String? // e.g. "Rear dock · enter via Lawson St service lane"
   lat         Float?
   lng         Float?
   isActive    Boolean     @default(true)
+  updatedAt   DateTime    @default(now()) @updatedAt
 
   // Relations
   users     User[]
   orders    Order[]
   tripStops TripStop[]
+
+  @@schema("outlets")
 }
 
 model Vehicle {
-  id           String        @id // VEH001..VEH060
-  depot        Depot
-  type         VehicleType
-  tempClass    TempClass
-  capacityKg   Float
-  capacityM3   Float
-  kmPerLitre   Float
-  weeklyLFuel  Int           // weekly fuel quota in litres
-  usedLThisWeek Int          @default(0)
-  status       VehicleStatus @default(AVAILABLE)
-  workshopNote String?
+  id            String        @id // VEH001..VEH060
+  depot         Depot
+  type          VehicleType
+  tempClass     TempClass
+  capacityKg    Float
+  capacityM3    Float
+  kmPerLitre    Float
+  weeklyLFuel   Int // weekly fuel quota in litres
+  usedLThisWeek Int           @default(0)
+  status        VehicleStatus @default(AVAILABLE)
+  workshopNote  String?
+  updatedAt     DateTime      @default(now()) @updatedAt
 
   // Relations
   trips       Trip[]
   loadRecords LoadRecord[]
+
+  @@schema("fleet")
 }
 
 model Order {
   id                String      @id // ORD0104216 format
   outletId          String
   outlet            Outlet      @relation(fields: [outletId], references: [id])
-  runDate           DateTime    // Scheduled delivery date (Tue 7 Apr 2026)
-  orderedAt         DateTime    // When placed (Mon 6 Apr 2:38 PM)
+  runDate           DateTime // Scheduled delivery date (Tue 7 Apr 2026)
+  orderedAt         DateTime // When placed (Mon 6 Apr 2:38 PM)
   brand             Brand
   tempClass         TempClass
   units             Int
@@ -187,16 +263,21 @@ model Order {
   tripStop    TripStop?
   deferralLog DeferralLog?
   lineItems   OrderLineItem[]
+
+  @@schema("orders")
 }
 
 model OrderLineItem {
   id        String    @id @default(cuid())
   orderId   String
   order     Order     @relation(fields: [orderId], references: [id])
-  name      String    // "Samba rice 5 kg"
+  name      String // "Samba rice 5 kg"
   qty       Int
   kg        Float
   tempClass TempClass
+  updatedAt DateTime  @default(now()) @updatedAt
+
+  @@schema("orders")
 }
 
 model Trip {
@@ -218,7 +299,9 @@ model Trip {
   actualMinutes Int?
   sealNumber    String?
   reeferTempC   Float?
-  bay           String?    // loading bay code e.g. "K2", "P5"
+  bay           String? // loading bay code e.g. "K2", "P5"
+  planId        String?
+  plan          Plan?      @relation(fields: [planId], references: [id])
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
@@ -227,6 +310,8 @@ model Trip {
   loadRecord    LoadRecord?
   notifications Notification[]
   offlineEvents OfflineEvent[]
+
+  @@schema("trips")
 }
 
 model TripStop {
@@ -237,19 +322,22 @@ model TripStop {
   order               Order       @relation(fields: [orderId], references: [id])
   outletId            String
   outlet              Outlet      @relation(fields: [outletId], references: [id])
-  stopSeq             Int         // 1, 2, 3…
-  etaPlan             DateTime?   // free-flow plan ETA (shown on plan board)
-  etaModel            DateTime?   // ML model ETA (shown to driver/store/live ops)
+  stopSeq             Int // 1, 2, 3…
+  etaPlan             DateTime? // free-flow plan ETA (shown on plan board)
+  etaModel            DateTime? // ML model ETA (shown to driver/store/live ops)
   etaModelBandEarly   DateTime?
   etaModelBandLate    DateTime?
-  lateRiskPct         Int?        // 0–100
-  serviceMinPredicted Int?        // ML predicted service duration
+  lateRiskPct         Int? // 0–100
+  serviceMinPredicted Int? // ML predicted service duration
   arrivalActual       DateTime?
   leaveActual         DateTime?
   status              OrderStatus @default(PLANNED)
+  updatedAt           DateTime    @default(now()) @updatedAt
 
   // POD
   pod POD?
+
+  @@schema("trips")
 }
 
 model POD {
@@ -260,30 +348,35 @@ model POD {
   unitsOrdered   Int
   photoUrl       String?
   receiverName   String?
-  signature      String?   // base64 SVG or URL
-  exceptions     Json?     // [{type, description, photoUrl}]
-  creditNoteId   String?   // e.g., CN-2604-0441
+  signature      String? // base64 SVG or URL
+  exceptions     Json? // [{type, description, photoUrl}]
+  creditNoteId   String? // e.g., CN-2604-0441
   savedOffline   Boolean   @default(false)
   savedAt        DateTime  @default(now())
   syncedAt       DateTime?
   createdAt      DateTime  @default(now())
+
+  @@schema("trips")
 }
 
 model LoadRecord {
-  id           String    @id @default(cuid())
-  tripId       String    @unique
-  trip         Trip      @relation(fields: [tripId], references: [id])
-  vehicleId    String
-  vehicle      Vehicle   @relation(fields: [vehicleId], references: [id])
-  loaderId     String
-  loader       User      @relation(fields: [loaderId], references: [id])
-  bay          String
-  sealNumber   String?
-  reeferTempC  Float?
-  loadedAt     DateTime?
-  releasedAt   DateTime?
-  shortfalls   Json?     // [{item, qtyOrdered, qtyLoaded, reason}]
-  notes        String?
+  id          String    @id @default(cuid())
+  tripId      String    @unique
+  trip        Trip      @relation(fields: [tripId], references: [id])
+  vehicleId   String
+  vehicle     Vehicle   @relation(fields: [vehicleId], references: [id])
+  loaderId    String
+  loader      User      @relation(fields: [loaderId], references: [id])
+  bay         String
+  sealNumber  String?
+  reeferTempC Float?
+  loadedAt    DateTime?
+  releasedAt  DateTime?
+  shortfalls  Json? // [{item, qtyOrdered, qtyLoaded, reason}]
+  notes       String?
+  updatedAt   DateTime  @default(now()) @updatedAt
+
+  @@schema("trips")
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -296,12 +389,14 @@ model OfflineEvent {
   driver           User      @relation(fields: [driverId], references: [id])
   tripId           String?
   trip             Trip?     @relation(fields: [tripId], references: [id])
-  eventType        String    // ARRIVAL | LEAVE | POD_SAVE | PHOTO | STATUS_CHANGE
+  eventType        String // ARRIVAL | LEAVE | POD_SAVE | PHOTO | STATUS_CHANGE
   payload          Json
-  savedAt          DateTime  // when it was saved on device
+  savedAt          DateTime // when it was saved on device
   syncedAt         DateTime?
   conflictResolved Boolean   @default(false)
-  conflictNote     String?   // "field evidence wins; correction to OUT108"
+  conflictNote     String? // "field evidence wins; correction to OUT108"
+
+  @@schema("sync")
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -314,11 +409,18 @@ model DeferralLog {
   order           Order          @relation(fields: [orderId], references: [id])
   reason          DeferralReason
   score           Int
-  resolvedBy      String?        // dispatcher user id
+  resolvedBy      String? // dispatcher user id
   notes           String?
   rescheduledDate DateTime?
   isProvisional   Boolean        @default(false) // set during blackout
+  status          DeferralStatus @default(CONFIRMED)
+  confirmedAt     DateTime?
+  planId          String?
+  plan            Plan?          @relation(fields: [planId], references: [id])
   createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @default(now()) @updatedAt
+
+  @@schema("planning")
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -338,6 +440,9 @@ model Notification {
   payload     Json
   sentAt      DateTime            @default(now())
   readAt      DateTime?
+  updatedAt   DateTime            @default(now()) @updatedAt
+
+  @@schema("notifications")
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -345,28 +450,137 @@ model Notification {
 // ─────────────────────────────────────────────────────────────
 
 model Calendar {
-  date          DateTime @id
-  isOperating   Boolean
-  isPayday      Boolean  @default(false)
-  festivalRamp  Float    @default(0)
-  monsoon       Int      @default(0) // 0 or 1
-  festivalName  String?
-  note          String?
+  date         DateTime @id
+  isOperating  Boolean
+  isPayday     Boolean  @default(false)
+  festivalRamp Float    @default(0)
+  monsoon      Int      @default(0) // 0 or 1
+  festivalName String?
+  note         String?
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  @@schema("outlets")
 }
 
 model DistrictTravel {
-  district       String @id
+  district       String   @id
   depot          Depot
   roadClass      String // urban | suburban | highway | hill
   depotToDistMin Int
   interStopMin   Int
   distKm         Float?
+  updatedAt      DateTime @default(now()) @updatedAt
+
+  @@schema("outlets")
 }
 
 model ServiceAllowance {
-  brand    Brand
-  dockType DockType
-  minutes  Int
+  brand     Brand
+  dockType  DockType
+  minutes   Int
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@id([brand, dockType])
+  @@schema("outlets")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Plans (planning service) and agent runs
+// ─────────────────────────────────────────────────────────────
+
+/// A versioned dispatch plan for one depot and run date, e.g. PLG-2026-04-07-v3.
+/// Drafts come from people, the auto-planner or the planning agent;
+/// only a human dispatcher can approve (publish) one.
+model Plan {
+  id          String     @id // PLG-2026-04-07-v3
+  depot       Depot
+  runDate     DateTime
+  version     Int
+  status      PlanStatus @default(DRAFT)
+  source      PlanSource @default(MANUAL)
+  summary     Json? // capacity picture, counts, rule checks
+  explanation String? // "What it did / what it checked" (DSP-02)
+  agentRunId  String?
+  createdBy   String? // subject of the creator (user or service client)
+  approvedBy  String?
+  approvedAt  DateTime?
+  publishedAt DateTime?
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @default(now()) @updatedAt
+
+  trips     Trip[]
+  deferrals DeferralLog[]
+
+  @@unique([depot, runDate, version])
+  @@schema("planning")
+}
+
+/// Reference row for a planning-agent run. The run itself lives in the agent
+/// service (LangGraph checkpoints); this row makes runs listable and scoped.
+model AgentRun {
+  id           String    @id // run id issued by the agent service
+  depot        Depot
+  runDate      DateTime
+  status       String // RUNNING | NEEDS_APPROVAL | APPROVED | REJECTED | FAILED ...
+  requestedBy  String
+  planId       String?
+  decision     String? // approve | edit | reject
+  decidedBy    String?
+  detail       Json? // last snapshot returned by the agent
+  lastSyncedAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now()) @updatedAt
+
+  @@index([depot, runDate])
+  @@schema("planning")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Devices (auth service): field-app device posture
+// ─────────────────────────────────────────────────────────────
+
+model Device {
+  id           String       @id // device_id claim, e.g. DEV-RB-01
+  userId       String
+  user         User         @relation(fields: [userId], references: [id])
+  label        String?
+  platform     String? // android | ios | web
+  model        String?
+  status       DeviceStatus @default(PENDING)
+  registeredAt DateTime     @default(now())
+  lastSeenAt   DateTime?
+  revokedAt    DateTime?
+  revokedBy    String?
+  revokeReason String?
+  updatedAt    DateTime     @default(now()) @updatedAt
+
+  @@index([userId])
+  @@schema("auth")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Audit (audit service): append-only, hash chained
+// ─────────────────────────────────────────────────────────────
+
+/// One audit entry. hash = sha256(prevHash + canonicalJson(entry fields)).
+/// UPDATE and DELETE are rejected by a database trigger.
+model AuditEntry {
+  seq        Int      @id @default(autoincrement())
+  at         DateTime
+  actor      String // token subject
+  actorRoles String[]
+  client     String // azp: the calling client (lodestar-web, svc-planning, ...)
+  service    String // the service that performed the write
+  action     String // e.g. Plans.Approve, Orders.Create
+  entitySet  String?
+  entityKey  String?
+  outcome    String   @default("SUCCESS")
+  payload    Json?
+  prevHash   String
+  hash       String   @unique
+
+  @@index([entitySet, entityKey])
+  @@index([at])
+  @@schema("audit")
 }

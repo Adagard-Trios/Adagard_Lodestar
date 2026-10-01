@@ -6,6 +6,7 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "target": "ES2021",
     "sourceMap": true,
     "outDir": "./dist",
@@ -17,8 +18,13 @@
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
+    "resolveJsonModule": true,
     "paths": {
-      "@lodestar/prisma": ["libs/prisma/src/index.ts"]
+      "@lodestar/prisma": ["libs/prisma/src/index.ts"],
+      "@lodestar/odata": ["libs/odata/src/index.ts"],
+      "@lodestar/security": ["libs/security/src/index.ts"],
+      "@lodestar/platform": ["libs/platform/src/index.ts"]
     }
-  }
+  },
+  "exclude": ["node_modules", "dist", "coverage", "apps/agent"]
 }

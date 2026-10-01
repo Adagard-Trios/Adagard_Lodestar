@@ -1,11 +1,4 @@
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { bootstrapService } from '@lodestar/platform';
 import { AppModule } from './app.module';
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.enableCors();
-  await app.listen(process.env.PORT || 3007);
-  console.log(`Sync service running on port ${process.env.PORT || 3007}`);
-}
-bootstrap();
+
+bootstrapService(AppModule, 'Sync', 3007);

@@ -1,0 +1,3 @@
+# Origins allowed to call the OData API cross-origin (exact match, no wildcards).
+# One line per origin: "<origin>" $http_origin;  Mount over this file to change it.
+"http://localhost:8082" $http_origin;

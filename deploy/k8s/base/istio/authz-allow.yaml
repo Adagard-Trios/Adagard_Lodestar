@@ -1,0 +1,437 @@
+# Who may call whom (caller -> callee edges). Mirrors the app roles granted to
+# each workload identity in infra/terraform/modules/platform (api_roles).
+#   ingress gateway  -> every exposed service (JWT required on /odata/v4/*)
+#   planning         -> agent, orders, fleet, outlets, trips, auth, notifications
+#   agent            -> orders, fleet, outlets (read), audit
+#   trips            -> auth, orders, fleet, outlets, notifications
+#   sync             -> trips, orders, auth, notifications
+#   everything       -> audit
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-auth
+  namespace: lodestar
+  labels:
+    app: auth
+    app.kubernetes.io/name: auth
+    app.kubernetes.io/part-of: lodestar
+spec:
+  selector:
+    matchLabels:
+      app: auth
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/aks-istio-ingress/sa/aks-istio-ingressgateway-internal
+        requestPrincipals:
+        - '*'
+    to:
+    - operation:
+        paths:
+        - /odata/v4/*
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/lodestar/sa/planning
+        - cluster.local/ns/lodestar/sa/trips
+        - cluster.local/ns/lodestar/sa/sync
+        - cluster.local/ns/lodestar/sa/notifications
+        requestPrincipals:
+        - '*'
+    to:
+    - operation:
+        notPaths:
+        - /health
+        - /ready
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-orders
+  namespace: lodestar
+  labels:
+    app: orders
+    app.kubernetes.io/name: orders
+    app.kubernetes.io/part-of: lodestar
+spec:
+  selector:
+    matchLabels:
+      app: orders
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/aks-istio-ingress/sa/aks-istio-ingressgateway-internal
+        requestPrincipals:
+        - '*'
+    to:
+    - operation:
+        paths:
+        - /odata/v4/*
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/lodestar/sa/planning
+        - cluster.local/ns/lodestar/sa/agent
+        - cluster.local/ns/lodestar/sa/trips
+        - cluster.local/ns/lodestar/sa/sync
+        requestPrincipals:
+        - '*'
+    to:
+    - operation:
+        notPaths:
+        - /health
+        - /ready
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-planning
+  namespace: lodestar
+  labels:
+    app: planning
+    app.kubernetes.io/name: planning
+    app.kubernetes.io/part-of: lodestar
+spec:
+  selector:
+    matchLabels:
+      app: planning
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/aks-istio-ingress/sa/aks-istio-ingressgateway-internal
+        requestPrincipals:
+        - '*'
+    to:
+    - operation:
+        paths:
+        - /odata/v4/*
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-fleet
+  namespace: lodestar
+  labels:
+    app: fleet
+    app.kubernetes.io/name: fleet
+    app.kubernetes.io/part-of: lodestar
+spec:
+  selector:
+    matchLabels:
+      app: fleet
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/aks-istio-ingress/sa/aks-istio-ingressgateway-internal
+        requestPrincipals:
+        - '*'
+    to:
+    - operation:
+        paths:
+        - /odata/v4/*
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/lodestar/sa/planning
+        - cluster.local/ns/lodestar/sa/agent
+        - cluster.local/ns/lodestar/sa/trips
+        requestPrincipals:
+        - '*'
+    to:
+    - operation:
+        notPaths:
+        - /health
+        - /ready
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-outlets
+  namespace: lodestar
+  labels:
+    app: outlets
+    app.kubernetes.io/name: outlets
+    app.kubernetes.io/part-of: lodestar
+spec:
+  selector:
+    matchLabels:
+      app: outlets
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/aks-istio-ingress/sa/aks-istio-ingressgateway-internal
+        requestPrincipals:
+        - '*'
+    to:
+    - operation:
+        paths:
+        - /odata/v4/*
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/lodestar/sa/orders
+        - cluster.local/ns/lodestar/sa/planning
+        - cluster.local/ns/lodestar/sa/agent
+        - cluster.local/ns/lodestar/sa/trips
+        requestPrincipals:
+        - '*'
+    to:
+    - operation:
+        notPaths:
+        - /health
+        - /ready
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-trips
+  namespace: lodestar
+  labels:
+    app: trips
+    app.kubernetes.io/name: trips
+    app.kubernetes.io/part-of: lodestar
+spec:
+  selector:
+    matchLabels:
+      app: trips
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/aks-istio-ingress/sa/aks-istio-ingressgateway-internal
+        requestPrincipals:
+        - '*'
+    to:
+    - operation:
+        paths:
+        - /odata/v4/*
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/lodestar/sa/planning
+        - cluster.local/ns/lodestar/sa/sync
+        requestPrincipals:
+        - '*'
+    to:
+    - operation:
+        notPaths:
+        - /health
+        - /ready
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-sync
+  namespace: lodestar
+  labels:
+    app: sync
+    app.kubernetes.io/name: sync
+    app.kubernetes.io/part-of: lodestar
+spec:
+  selector:
+    matchLabels:
+      app: sync
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/aks-istio-ingress/sa/aks-istio-ingressgateway-internal
+        requestPrincipals:
+        - '*'
+    to:
+    - operation:
+        paths:
+        - /odata/v4/*
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-notifications
+  namespace: lodestar
+  labels:
+    app: notifications
+    app.kubernetes.io/name: notifications
+    app.kubernetes.io/part-of: lodestar
+spec:
+  selector:
+    matchLabels:
+      app: notifications
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/aks-istio-ingress/sa/aks-istio-ingressgateway-internal
+        requestPrincipals:
+        - '*'
+    to:
+    - operation:
+        paths:
+        - /odata/v4/*
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/aks-istio-ingress/sa/aks-istio-ingressgateway-internal
+    to:
+    - operation:
+        paths:
+        - /ws/*
+        - /ws
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/lodestar/sa/auth
+        - cluster.local/ns/lodestar/sa/orders
+        - cluster.local/ns/lodestar/sa/planning
+        - cluster.local/ns/lodestar/sa/fleet
+        - cluster.local/ns/lodestar/sa/trips
+        - cluster.local/ns/lodestar/sa/sync
+        requestPrincipals:
+        - '*'
+    to:
+    - operation:
+        notPaths:
+        - /health
+        - /ready
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-audit
+  namespace: lodestar
+  labels:
+    app: audit
+    app.kubernetes.io/name: audit
+    app.kubernetes.io/part-of: lodestar
+spec:
+  selector:
+    matchLabels:
+      app: audit
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/aks-istio-ingress/sa/aks-istio-ingressgateway-internal
+        requestPrincipals:
+        - '*'
+    to:
+    - operation:
+        paths:
+        - /odata/v4/*
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/lodestar/sa/auth
+        - cluster.local/ns/lodestar/sa/orders
+        - cluster.local/ns/lodestar/sa/planning
+        - cluster.local/ns/lodestar/sa/fleet
+        - cluster.local/ns/lodestar/sa/outlets
+        - cluster.local/ns/lodestar/sa/trips
+        - cluster.local/ns/lodestar/sa/sync
+        - cluster.local/ns/lodestar/sa/notifications
+        - cluster.local/ns/lodestar/sa/agent
+        requestPrincipals:
+        - '*'
+    to:
+    - operation:
+        notPaths:
+        - /health
+        - /ready
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-agent
+  namespace: lodestar
+  labels:
+    app: agent
+    app.kubernetes.io/name: agent
+    app.kubernetes.io/part-of: lodestar
+spec:
+  selector:
+    matchLabels:
+      app: agent
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/lodestar/sa/planning
+        requestPrincipals:
+        - '*'
+    to:
+    - operation:
+        notPaths:
+        - /health
+        - /ready
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-frontend
+  namespace: lodestar
+  labels:
+    app: frontend
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: lodestar
+spec:
+  selector:
+    matchLabels:
+      app: frontend
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/aks-istio-ingress/sa/aks-istio-ingressgateway-internal
+    to:
+    - operation:
+        methods:
+        - GET
+        - HEAD
+        - POST
+        notPaths:
+        - /health
+        - /ready
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-mobile-web
+  namespace: lodestar
+  labels:
+    app: mobile-web
+    app.kubernetes.io/name: mobile-web
+    app.kubernetes.io/part-of: lodestar
+spec:
+  selector:
+    matchLabels:
+      app: mobile-web
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/aks-istio-ingress/sa/aks-istio-ingressgateway-internal
+    to:
+    - operation:
+        methods:
+        - GET
+        - HEAD
+        - POST
+        notPaths:
+        - /health
+        - /ready

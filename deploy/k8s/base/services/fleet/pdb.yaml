@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: fleet
+  labels:
+    app: fleet
+    app.kubernetes.io/name: fleet
+    app.kubernetes.io/part-of: lodestar
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: fleet

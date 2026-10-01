@@ -1,0 +1,7 @@
+# Default deny: an empty ALLOW-less policy denies every request in the namespace.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: deny-all
+  namespace: lodestar
+spec: {}

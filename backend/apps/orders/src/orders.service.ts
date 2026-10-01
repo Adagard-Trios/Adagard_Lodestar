@@ -1,146 +1,96 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
-import { OrderStatus, Brand, TempClass, Depot } from '@prisma/client';
+import { Prisma, OrderStatus, TempClass } from '@prisma/client';
+
+/** Day window [start, end) in UTC for a run date given as YYYY-MM-DD. */
+export function dayRange(runDate: string | Date) {
+  const start = new Date(typeof runDate === 'string' ? `${runDate.slice(0, 10)}T00:00:00.000Z` : runDate);
+  start.setUTCHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 1);
+  return { start, end };
+}
+
+/** Orders that may still be changed by their store (before planning picks them up). */
+export const EDITABLE_STATUSES: OrderStatus[] = [OrderStatus.RECEIVED];
+/** Orders that may still be cancelled. */
+export const CANCELLABLE_STATUSES: OrderStatus[] = [OrderStatus.RECEIVED, OrderStatus.PLANNED];
 
 @Injectable()
 export class OrdersService {
   constructor(private prisma: PrismaService) {}
 
-  /** List orders for a run date (defaults to today). Supports filters. */
-  async findAll(params: {
-    runDate?: string;
-    status?: OrderStatus;
-    depot?: Depot;
-    brand?: Brand;
-    tempClass?: TempClass;
-    outletId?: string;
-  }) {
-    const { runDate, status, depot, brand, tempClass, outletId } = params;
-    const dateFilter = runDate ? new Date(runDate) : new Date('2026-04-07'); // default hero day
-
-    return this.prisma.order.findMany({
-      where: {
-        runDate: {
-          gte: new Date(dateFilter.toDateString()),
-          lt: new Date(new Date(dateFilter).setDate(dateFilter.getDate() + 1)),
-        },
-        ...(status    ? { status }    : {}),
-        ...(brand     ? { brand }     : {}),
-        ...(tempClass ? { tempClass } : {}),
-        ...(outletId  ? { outletId }  : {}),
-        ...(depot ? { outlet: { depot } } : {}),
-      },
-      include: {
-        outlet: {
-          select: { id: true, name: true, brand: true, district: true, depot: true,
-                    dockType: true, parking: true, windowOpen: true, windowClose: true, accessNote: true },
-        },
-        lineItems: true,
-        tripStop: {
-          include: {
-            trip: { select: { id: true, vehicleId: true, status: true, planVersion: true } },
-            pod: true,
-          },
-        },
-        deferralLog: true,
-      },
-      orderBy: [{ status: 'asc' }, { outlet: { district: 'asc' } }],
-    });
-  }
-
-  /** Summary stats for the plan board (DSP-01) */
-  async getSummary(runDate?: string) {
-    const date = runDate ? new Date(runDate) : new Date('2026-04-07');
-    const startOf = new Date(date.toDateString());
-    const endOf = new Date(new Date(date).setDate(date.getDate() + 1));
+  /** Summary stats for the plan board (DSP-01), limited to what the caller may see. */
+  async getSummary(runDate: string, scope?: Prisma.OrderWhereInput) {
+    const { start, end } = dayRange(runDate);
+    const where: Prisma.OrderWhereInput = { AND: [{ runDate: { gte: start, lt: end } }, scope ?? {}] };
 
     const [total, byStatus, chilled, deferred] = await Promise.all([
-      this.prisma.order.count({ where: { runDate: { gte: startOf, lt: endOf } } }),
-      this.prisma.order.groupBy({
-        by: ['status'],
-        where: { runDate: { gte: startOf, lt: endOf } },
-        _count: { id: true },
-      }),
+      this.prisma.order.count({ where }),
+      this.prisma.order.groupBy({ by: ['status'], where, _count: { id: true } }),
       this.prisma.order.aggregate({
-        where: { runDate: { gte: startOf, lt: endOf }, tempClass: TempClass.CHILLED },
+        where: { AND: [where, { tempClass: TempClass.CHILLED }] },
         _sum: { m3: true, kg: true },
         _count: { id: true },
       }),
-      this.prisma.order.count({
-        where: { runDate: { gte: startOf, lt: endOf }, status: OrderStatus.DEFERRED },
-      }),
+      this.prisma.order.count({ where: { AND: [where, { status: OrderStatus.DEFERRED }] } }),
     ]);
 
     return {
-      runDate: date.toISOString().split('T')[0],
+      runDate: start.toISOString().slice(0, 10),
       total,
-      byStatus: byStatus.reduce((acc, s) => ({ ...acc, [s.status]: s._count.id }), {}),
+      byStatus: byStatus.reduce((acc, s) => ({ ...acc, [s.status]: s._count.id }), {} as Record<string, number>),
       chilledM3: chilled._sum.m3 ?? 0,
       chilledKg: chilled._sum.kg ?? 0,
       chilledOrders: chilled._count.id,
       deferred,
-      delivered: (byStatus.find(s => s.status === 'DELIVERED')?._count.id) ?? 0,
+      delivered: byStatus.find((s) => s.status === OrderStatus.DELIVERED)?._count.id ?? 0,
     };
   }
 
-  async findOne(id: string) {
-    const order = await this.prisma.order.findUnique({
-      where: { id },
-      include: {
-        outlet: true,
-        lineItems: true,
-        tripStop: { include: { trip: true, pod: true } },
-        deferralLog: true,
+  /** Lowest-scoring unprotected orders of a run date: the deferral candidates. */
+  getDeferralSuggestions(runDate: string, scope?: Prisma.OrderWhereInput) {
+    const { start, end } = dayRange(runDate);
+    return this.prisma.order.findMany({
+      where: {
+        AND: [
+          { runDate: { gte: start, lt: end } },
+          { status: { in: [OrderStatus.RECEIVED, OrderStatus.PLANNED] } },
+          { deferralScore: { gt: 0, lt: 91 } }, // score < 91 means not protected
+          scope ?? {},
+        ],
       },
+      orderBy: { deferralScore: 'asc' },
+      take: 10,
     });
-    if (!order) throw new NotFoundException(`Order ${id} not found`);
-    return order;
   }
 
   /** Status transition: planned → loaded → enroute → delivered / deferred / exception */
   async updateStatus(id: string, status: OrderStatus, notes?: string) {
-    const order = await this.findOne(id);
+    const order = await this.prisma.order.findUnique({ where: { id } });
+    if (!order) throw new NotFoundException(`Order ${id} not found`);
     return this.prisma.order.update({
       where: { id },
       data: { status, ...(notes ? { notes } : {}) },
     });
   }
 
-  /** Create an order (store manager places order via Store app) */
-  async create(data: {
-    id: string;
-    outletId: string;
-    runDate: string;
-    brand: Brand;
-    tempClass: TempClass;
-    units: number;
-    kg: number;
-    m3: number;
-    notes?: string;
-  }) {
-    return this.prisma.order.create({
-      data: {
-        ...data,
-        runDate: new Date(data.runDate),
-        orderedAt: new Date(),
-        status: OrderStatus.RECEIVED,
-      },
+  /** Cancel an order that has not been loaded yet. */
+  async cancel(id: string, reason?: string) {
+    return this.prisma.order.update({
+      where: { id },
+      data: { status: OrderStatus.CANCELLED, ...(reason ? { notes: `Cancelled: ${reason}` } : {}) },
     });
   }
 
-  async getDeferralSuggestions(runDate?: string) {
-    const date = runDate ? new Date(runDate) : new Date('2026-04-07');
-    const startOf = new Date(date.toDateString());
-    const endOf = new Date(new Date(date).setDate(date.getDate() + 1));
-    return this.prisma.order.findMany({
-      where: {
-        runDate: { gte: startOf, lt: endOf },
-        status: { in: [OrderStatus.RECEIVED, OrderStatus.PLANNED] },
-        deferralScore: { gt: 0, lt: 91 }, // score <91 means not protected
-      },
-      include: { outlet: true },
-      orderBy: { deferralScore: 'asc' },
-      take: 10,
+  /** Next order number in the ORD0000000 format. */
+  async nextOrderId(): Promise<string> {
+    const last = await this.prisma.order.findFirst({
+      where: { id: { startsWith: 'ORD' } },
+      orderBy: { id: 'desc' },
+      select: { id: true },
     });
+    const n = last ? Number(last.id.slice(3)) || 0 : 0;
+    return `ORD${String(n + 1).padStart(7, '0')}`;
   }
 }

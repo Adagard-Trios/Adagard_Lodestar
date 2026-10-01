@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { TempClass, DockType, Brand } from '@prisma/client';
+import { TempClass, Brand } from '@prisma/client';
 
 /**
  * Deferral Scoring Service

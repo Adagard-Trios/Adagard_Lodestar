@@ -1,0 +1,19 @@
+/* The website shows each desktop screen full-window, without the design frame's bezel or browser bar. */
+html, body { background: #EEF1F6; }
+.web-screen { position: relative; width: 100vw; height: 100vh; overflow: auto; }
+.web-screen > .frame {
+  width: 100% !important; height: 100% !important; min-width: 1280px; min-height: 760px;
+  border: 0 !important; border-radius: 0 !important; box-shadow: none !important; margin: 0;
+}
+/* overlays were placed under the design's 40px browser bar; the website has none */
+.web-screen > .frame > .dx-scrim, .web-screen > .frame > .dx-drawer { top: 0 !important; }
+.web-screen > .frame > .dx-modal { margin-top: -40px; left: 50% !important; transform: translateX(-50%); }
+.web-screen [data-lk], .web-screen.is-tappable { cursor: pointer; }
+.web-screen [data-lk]:focus-visible { outline: 3px solid #3B4CCA; outline-offset: 2px; }
+.web-toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 1000;
+  display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-radius: 14px;
+  background: #141B4D; color: #FFFFFF; font: 600 14px/1.4 Inter, system-ui, sans-serif; box-shadow: 0 12px 32px rgba(10,15,40,.28);
+}
+.web-toast b { color: #F5B83D; }
+.web-toast button { margin-left: 8px; padding: 6px 12px; border: 0; border-radius: 999px; background: #F5B83D; color: #141B4D; font: 700 13px Inter, system-ui, sans-serif; cursor: pointer; }

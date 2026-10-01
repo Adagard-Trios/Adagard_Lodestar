@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from '@lodestar/prisma';
-import { FleetController } from './fleet.controller';
+import { ODataModule } from '@lodestar/odata';
+import { PlatformModule } from '@lodestar/platform';
 import { FleetService } from './fleet.service';
+import { VehiclesSet } from './vehicles.set';
 
 @Module({
-  imports: [PrismaModule],
-  controllers: [FleetController],
-  providers: [FleetService],
+  imports: [
+    PlatformModule.forService('fleet'),
+    ODataModule.forRoot({ service: 'fleet', entitySets: [VehiclesSet], providers: [FleetService] }),
+  ],
 })
 export class AppModule {}

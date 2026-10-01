@@ -1,0 +1,12 @@
+# Copy to terraform.tfvars (gitignored) and fill in. No secrets here.
+# subscription_id            = "00000000-0000-0000-0000-000000000000" # or export ARM_SUBSCRIPTION_ID
+location                     = "southeastasia"
+unique_suffix                = "adg01"
+environments                 = ["dev", "prod"]
+state_contributor_object_ids = [
+  # "<object id of the Jenkins service principal>",
+  # "<object id of the platform-admins Entra group>",
+]
+allowed_ip_ranges = [
+  # "203.0.113.10/32", # Jenkins egress IP
+]

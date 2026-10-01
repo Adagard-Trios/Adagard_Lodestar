@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: trips
+  labels:
+    app: trips
+    app.kubernetes.io/name: trips
+    app.kubernetes.io/part-of: lodestar
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: trips

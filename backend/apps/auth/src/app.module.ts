@@ -1,22 +1,20 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
-import { PassportModule } from '@nestjs/passport';
-import { PrismaModule } from '@lodestar/prisma';
-import { AuthController } from './auth.controller';
+import { LODESTAR_SERVICE_DOCUMENT, ODataModule } from '@lodestar/odata';
+import { PlatformModule } from '@lodestar/platform';
 import { AuthService } from './auth.service';
-import { JwtStrategy } from './jwt.strategy';
-import { LocalStrategy } from './local.strategy';
+import { DevicesSet, UsersSet } from './auth.sets';
+import { KeycloakAdminClient } from './keycloak-admin.client';
 
 @Module({
   imports: [
-    PrismaModule,
-    PassportModule,
-    JwtModule.register({
-      secret: process.env.JWT_SECRET || 'dev-secret-change-in-prod',
-      signOptions: { expiresIn: process.env.JWT_EXPIRES_IN || '15m' },
+    PlatformModule.forService('auth'),
+    ODataModule.forRoot({
+      service: 'auth',
+      entitySets: [UsersSet, DevicesSet],
+      providers: [AuthService, KeycloakAdminClient],
+      // No NGINX on AKS: auth answers GET /odata/v4/ with every set of the platform.
+      serviceDocument: LODESTAR_SERVICE_DOCUMENT,
     }),
   ],
-  controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, LocalStrategy],
 })
 export class AppModule {}

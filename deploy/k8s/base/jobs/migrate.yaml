@@ -1,0 +1,220 @@
+# Argo CD PreSync hook: runs before every sync, before any Deployment rolls.
+# 1. db-roles (init): idempotently creates svc_<schema> login roles and one
+#    schema per service, with default privileges (least privilege per service).
+# 2. migrate: prisma migrate deploy as the admin role; seeds when RUN_SEED=true
+#    (synthetic data unless the competition CSVs are provided, PLATFORM.md section 5).
+# No Istio sidecar (it would keep the Job alive); the Job only talks to Postgres,
+# which NetworkPolicy allow-postgres-egress permits via lodestar.io/db=true.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: migrate
+  labels:
+    app: migrate
+    app.kubernetes.io/name: migrate
+    app.kubernetes.io/part-of: lodestar
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: '-2'
+    azure.workload.identity/client-id: CLIENT_ID_MIGRATE
+    azure.workload.identity/tenant-id: TENANT_ID
+automountServiceAccountToken: false
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: migrate
+  labels:
+    app: migrate
+    app.kubernetes.io/name: migrate
+    app.kubernetes.io/part-of: lodestar
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: '-2'
+spec:
+  provider: azure
+  parameters:
+    usePodIdentity: 'false'
+    clientID: CLIENT_ID_MIGRATE
+    keyvaultName: KEYVAULT_NAME
+    tenantId: TENANT_ID
+    objects: |
+      array:
+        - |
+          objectName: database-url-admin
+          objectType: secret
+        - |
+          objectName: db-password-auth
+          objectType: secret
+        - |
+          objectName: db-password-orders
+          objectType: secret
+        - |
+          objectName: db-password-planning
+          objectType: secret
+        - |
+          objectName: db-password-fleet
+          objectType: secret
+        - |
+          objectName: db-password-outlets
+          objectType: secret
+        - |
+          objectName: db-password-trips
+          objectType: secret
+        - |
+          objectName: db-password-sync
+          objectType: secret
+        - |
+          objectName: db-password-notifications
+          objectType: secret
+        - |
+          objectName: db-password-audit
+          objectType: secret
+        - |
+          objectName: db-password-agent
+          objectType: secret
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  labels:
+    app: migrate
+    app.kubernetes.io/name: migrate
+    app.kubernetes.io/part-of: lodestar
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: '-1'
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 900
+  template:
+    metadata:
+      labels:
+        app: migrate
+        app.kubernetes.io/name: migrate
+        app.kubernetes.io/part-of: lodestar
+        lodestar.io/db: 'true'
+        azure.workload.identity/use: 'true'
+      annotations:
+        sidecar.istio.io/inject: 'false'
+    spec:
+      restartPolicy: Never
+      serviceAccountName: migrate
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      nodeSelector:
+        lodestar.io/pool: apps
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+      - name: db-roles
+        image: lodestar/postgres-client:16
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -eu
+          ADMIN_URL="$(cat /mnt/secrets-store/database-url-admin)"
+          ADMIN_ROLE="$(printf '%s' "$ADMIN_URL" | sed -E 's#^postgresql://([^:]+):.*#\1#')"
+          for s in $SCHEMAS; do
+            pw="$(cat "/mnt/secrets-store/db-password-$s")"
+            psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -q \
+                 -v role="svc_$s" -v schema="$s" -v pw="$pw" -v admin="$ADMIN_ROLE" <<'SQL'
+          SELECT format('CREATE ROLE %I LOGIN', :'role')
+           WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'role') \gexec
+          SELECT format('ALTER ROLE %I WITH LOGIN PASSWORD %L CONNECTION LIMIT 50', :'role', :'pw') \gexec
+          SELECT format('GRANT %I TO %I', :'role', :'admin') \gexec
+          SELECT format('CREATE SCHEMA IF NOT EXISTS %I AUTHORIZATION %I', :'schema', :'role') \gexec
+          SELECT format('GRANT USAGE, CREATE ON SCHEMA %I TO %I', :'schema', :'role') \gexec
+          SELECT format('GRANT ALL ON ALL TABLES IN SCHEMA %I TO %I', :'schema', :'role') \gexec
+          SELECT format('GRANT ALL ON ALL SEQUENCES IN SCHEMA %I TO %I', :'schema', :'role') \gexec
+          SELECT format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA %I GRANT ALL ON TABLES TO %I', :'admin', :'schema', :'role') \gexec
+          SELECT format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA %I GRANT ALL ON SEQUENCES TO %I', :'admin', :'schema', :'role') \gexec
+          SELECT format('REVOKE CREATE ON SCHEMA public FROM %I', :'role') \gexec
+          SQL
+            echo "role svc_$s / schema $s ready"
+          done
+        env:
+        - name: SCHEMAS
+          value: auth orders planning fleet outlets trips sync notifications audit agent
+        - name: HOME
+          value: /tmp
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+        securityContext: &id001
+          allowPrivilegeEscalation: false
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: secrets-store
+          mountPath: /mnt/secrets-store
+          readOnly: true
+      containers:
+      - name: migrate
+        image: lodestar/migrate:0.0.0
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -eu
+          export DATABASE_URL="$(cat /mnt/secrets-store/database-url-admin)"
+          npx prisma migrate deploy
+          if [ "${RUN_SEED:-false}" = "true" ]; then
+            npx ts-node prisma/seed.ts
+          fi
+        env:
+        - name: RUN_SEED
+          valueFrom:
+            configMapKeyRef:
+              name: lodestar-common
+              key: RUN_SEED
+        - name: HOME
+          value: /tmp
+        - name: npm_config_cache
+          value: /tmp/.npm
+        - name: NODE_ENV
+          value: production
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: '1'
+            memory: 1Gi
+        securityContext: *id001
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: secrets-store
+          mountPath: /mnt/secrets-store
+          readOnly: true
+      volumes:
+      - name: tmp
+        emptyDir:
+          sizeLimit: 512Mi
+      - name: secrets-store
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: migrate

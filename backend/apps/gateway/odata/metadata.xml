@@ -1,0 +1,733 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="4.0" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+  <edmx:DataServices>
+    <Schema Namespace="Lodestar" xmlns="http://docs.oasis-open.org/odata/ns/edm">
+      <EnumType Name="Role">
+        <Member Name="DISPATCHER" Value="0"/>
+        <Member Name="LOADER" Value="1"/>
+        <Member Name="DRIVER" Value="2"/>
+        <Member Name="STORE_MANAGER" Value="3"/>
+        <Member Name="ADMIN" Value="4"/>
+      </EnumType>
+      <EnumType Name="Depot">
+        <Member Name="PELIYAGODA" Value="0"/>
+        <Member Name="KANDY" Value="1"/>
+      </EnumType>
+      <EnumType Name="Brand">
+        <Member Name="FRESH" Value="0"/>
+        <Member Name="STYLE" Value="1"/>
+        <Member Name="TECH" Value="2"/>
+      </EnumType>
+      <EnumType Name="TempClass">
+        <Member Name="CHILLED" Value="0"/>
+        <Member Name="AMBIENT" Value="1"/>
+      </EnumType>
+      <EnumType Name="DockType">
+        <Member Name="REAR_DOCK" Value="0"/>
+        <Member Name="STREET" Value="1"/>
+        <Member Name="MALL_BAY" Value="2"/>
+      </EnumType>
+      <EnumType Name="ParkingType">
+        <Member Name="NORMAL" Value="0"/>
+        <Member Name="VAN_ONLY" Value="1"/>
+        <Member Name="MALL_DOCK" Value="2"/>
+      </EnumType>
+      <EnumType Name="VehicleType">
+        <Member Name="TRUCK" Value="0"/>
+        <Member Name="VAN" Value="1"/>
+      </EnumType>
+      <EnumType Name="VehicleStatus">
+        <Member Name="AVAILABLE" Value="0"/>
+        <Member Name="WORKSHOP" Value="1"/>
+        <Member Name="ENROUTE" Value="2"/>
+      </EnumType>
+      <EnumType Name="OrderStatus">
+        <Member Name="RECEIVED" Value="0"/>
+        <Member Name="PLANNED" Value="1"/>
+        <Member Name="LOADED" Value="2"/>
+        <Member Name="ENROUTE" Value="3"/>
+        <Member Name="DELIVERED" Value="4"/>
+        <Member Name="DEFERRED" Value="5"/>
+        <Member Name="EXCEPTION" Value="6"/>
+        <Member Name="CANCELLED" Value="7"/>
+      </EnumType>
+      <EnumType Name="TripStatus">
+        <Member Name="PLANNED" Value="0"/>
+        <Member Name="LOADING" Value="1"/>
+        <Member Name="ENROUTE" Value="2"/>
+        <Member Name="COMPLETE" Value="3"/>
+      </EnumType>
+      <EnumType Name="NotificationChannel">
+        <Member Name="PUSH" Value="0"/>
+        <Member Name="SMS" Value="1"/>
+        <Member Name="WEBSOCKET" Value="2"/>
+      </EnumType>
+      <EnumType Name="DeferralStatus">
+        <Member Name="SUGGESTED" Value="0"/>
+        <Member Name="CONFIRMED" Value="1"/>
+        <Member Name="DISMISSED" Value="2"/>
+        <Member Name="REVERSED" Value="3"/>
+      </EnumType>
+      <EnumType Name="PlanStatus">
+        <Member Name="DRAFT" Value="0"/>
+        <Member Name="NEEDS_APPROVAL" Value="1"/>
+        <Member Name="APPROVED" Value="2"/>
+        <Member Name="PUBLISHED" Value="3"/>
+        <Member Name="REJECTED" Value="4"/>
+        <Member Name="SUPERSEDED" Value="5"/>
+      </EnumType>
+      <EnumType Name="PlanSource">
+        <Member Name="MANUAL" Value="0"/>
+        <Member Name="AUTOPLAN" Value="1"/>
+        <Member Name="AGENT" Value="2"/>
+      </EnumType>
+      <EnumType Name="DeviceStatus">
+        <Member Name="PENDING" Value="0"/>
+        <Member Name="ACTIVE" Value="1"/>
+        <Member Name="REVOKED" Value="2"/>
+      </EnumType>
+      <EnumType Name="DeferralReason">
+        <Member Name="CAP_REEFER" Value="0"/>
+        <Member Name="CAP_TIME" Value="1"/>
+        <Member Name="ACCESS" Value="2"/>
+        <Member Name="WINDOW" Value="3"/>
+        <Member Name="FUEL" Value="4"/>
+        <Member Name="VEH_DOWN" Value="5"/>
+      </EnumType>
+      <EntityType Name="User">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="id" Type="Edm.String" Nullable="false"/>
+        <Property Name="email" Type="Edm.String" Nullable="false"/>
+        <Property Name="name" Type="Edm.String" Nullable="false"/>
+        <Property Name="role" Type="Lodestar.Role" Nullable="false"/>
+        <Property Name="depot" Type="Lodestar.Depot"/>
+        <Property Name="outletId" Type="Edm.String"/>
+        <Property Name="phone" Type="Edm.String"/>
+        <Property Name="isActive" Type="Edm.Boolean" Nullable="false"/>
+        <Property Name="createdAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <NavigationProperty Name="outlet" Type="Lodestar.Outlet"/>
+        <NavigationProperty Name="driverTrips" Type="Collection(Lodestar.Trip)"/>
+        <NavigationProperty Name="loadRecords" Type="Collection(Lodestar.LoadRecord)"/>
+        <NavigationProperty Name="notifications" Type="Collection(Lodestar.Notification)"/>
+        <NavigationProperty Name="offlineEvents" Type="Collection(Lodestar.OfflineEvent)"/>
+        <NavigationProperty Name="devices" Type="Collection(Lodestar.Device)"/>
+      </EntityType>
+      <EntityType Name="Outlet">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="id" Type="Edm.String" Nullable="false"/>
+        <Property Name="name" Type="Edm.String" Nullable="false"/>
+        <Property Name="brand" Type="Lodestar.Brand" Nullable="false"/>
+        <Property Name="district" Type="Edm.String" Nullable="false"/>
+        <Property Name="depot" Type="Lodestar.Depot" Nullable="false"/>
+        <Property Name="dockType" Type="Lodestar.DockType" Nullable="false"/>
+        <Property Name="parking" Type="Lodestar.ParkingType" Nullable="false"/>
+        <Property Name="windowOpen" Type="Edm.String" Nullable="false"/>
+        <Property Name="windowClose" Type="Edm.String" Nullable="false"/>
+        <Property Name="address" Type="Edm.String"/>
+        <Property Name="accessNote" Type="Edm.String"/>
+        <Property Name="lat" Type="Edm.Double"/>
+        <Property Name="lng" Type="Edm.Double"/>
+        <Property Name="isActive" Type="Edm.Boolean" Nullable="false"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <NavigationProperty Name="users" Type="Collection(Lodestar.User)"/>
+        <NavigationProperty Name="orders" Type="Collection(Lodestar.Order)"/>
+        <NavigationProperty Name="tripStops" Type="Collection(Lodestar.TripStop)"/>
+      </EntityType>
+      <EntityType Name="Vehicle">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="id" Type="Edm.String" Nullable="false"/>
+        <Property Name="depot" Type="Lodestar.Depot" Nullable="false"/>
+        <Property Name="type" Type="Lodestar.VehicleType" Nullable="false"/>
+        <Property Name="tempClass" Type="Lodestar.TempClass" Nullable="false"/>
+        <Property Name="capacityKg" Type="Edm.Double" Nullable="false"/>
+        <Property Name="capacityM3" Type="Edm.Double" Nullable="false"/>
+        <Property Name="kmPerLitre" Type="Edm.Double" Nullable="false"/>
+        <Property Name="weeklyLFuel" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="usedLThisWeek" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="status" Type="Lodestar.VehicleStatus" Nullable="false"/>
+        <Property Name="workshopNote" Type="Edm.String"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <NavigationProperty Name="trips" Type="Collection(Lodestar.Trip)"/>
+        <NavigationProperty Name="loadRecords" Type="Collection(Lodestar.LoadRecord)"/>
+      </EntityType>
+      <EntityType Name="Order">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="id" Type="Edm.String" Nullable="false"/>
+        <Property Name="outletId" Type="Edm.String" Nullable="false"/>
+        <Property Name="runDate" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <Property Name="orderedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <Property Name="brand" Type="Lodestar.Brand" Nullable="false"/>
+        <Property Name="tempClass" Type="Lodestar.TempClass" Nullable="false"/>
+        <Property Name="units" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="kg" Type="Edm.Double" Nullable="false"/>
+        <Property Name="m3" Type="Edm.Double" Nullable="false"/>
+        <Property Name="status" Type="Lodestar.OrderStatus" Nullable="false"/>
+        <Property Name="deferredYesterday" Type="Edm.Boolean" Nullable="false"/>
+        <Property Name="daysSince" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="deferralScore" Type="Edm.Int32"/>
+        <Property Name="notes" Type="Edm.String"/>
+        <Property Name="createdAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <NavigationProperty Name="outlet" Type="Lodestar.Outlet" Nullable="false"/>
+        <NavigationProperty Name="tripStop" Type="Lodestar.TripStop"/>
+        <NavigationProperty Name="deferralLog" Type="Lodestar.DeferralLog"/>
+        <NavigationProperty Name="lineItems" Type="Collection(Lodestar.OrderLineItem)"/>
+      </EntityType>
+      <EntityType Name="OrderLineItem">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="id" Type="Edm.String" Nullable="false"/>
+        <Property Name="orderId" Type="Edm.String" Nullable="false"/>
+        <Property Name="name" Type="Edm.String" Nullable="false"/>
+        <Property Name="qty" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="kg" Type="Edm.Double" Nullable="false"/>
+        <Property Name="tempClass" Type="Lodestar.TempClass" Nullable="false"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <NavigationProperty Name="order" Type="Lodestar.Order" Nullable="false"/>
+      </EntityType>
+      <EntityType Name="Trip">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="id" Type="Edm.String" Nullable="false"/>
+        <Property Name="vehicleId" Type="Edm.String" Nullable="false"/>
+        <Property Name="driverId" Type="Edm.String"/>
+        <Property Name="depot" Type="Lodestar.Depot" Nullable="false"/>
+        <Property Name="runDate" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <Property Name="brand" Type="Lodestar.Brand" Nullable="false"/>
+        <Property Name="district" Type="Edm.String" Nullable="false"/>
+        <Property Name="status" Type="Lodestar.TripStatus" Nullable="false"/>
+        <Property Name="planVersion" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="tripNumber" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="departTime" Type="Edm.DateTimeOffset"/>
+        <Property Name="returnTime" Type="Edm.DateTimeOffset"/>
+        <Property Name="planMinutes" Type="Edm.Int32"/>
+        <Property Name="actualMinutes" Type="Edm.Int32"/>
+        <Property Name="sealNumber" Type="Edm.String"/>
+        <Property Name="reeferTempC" Type="Edm.Double"/>
+        <Property Name="bay" Type="Edm.String"/>
+        <Property Name="planId" Type="Edm.String"/>
+        <Property Name="createdAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <NavigationProperty Name="vehicle" Type="Lodestar.Vehicle" Nullable="false"/>
+        <NavigationProperty Name="driver" Type="Lodestar.User"/>
+        <NavigationProperty Name="plan" Type="Lodestar.Plan"/>
+        <NavigationProperty Name="stops" Type="Collection(Lodestar.TripStop)"/>
+        <NavigationProperty Name="loadRecord" Type="Lodestar.LoadRecord"/>
+        <NavigationProperty Name="notifications" Type="Collection(Lodestar.Notification)"/>
+        <NavigationProperty Name="offlineEvents" Type="Collection(Lodestar.OfflineEvent)"/>
+      </EntityType>
+      <EntityType Name="TripStop">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="id" Type="Edm.String" Nullable="false"/>
+        <Property Name="tripId" Type="Edm.String" Nullable="false"/>
+        <Property Name="orderId" Type="Edm.String" Nullable="false"/>
+        <Property Name="outletId" Type="Edm.String" Nullable="false"/>
+        <Property Name="stopSeq" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="etaPlan" Type="Edm.DateTimeOffset"/>
+        <Property Name="etaModel" Type="Edm.DateTimeOffset"/>
+        <Property Name="etaModelBandEarly" Type="Edm.DateTimeOffset"/>
+        <Property Name="etaModelBandLate" Type="Edm.DateTimeOffset"/>
+        <Property Name="lateRiskPct" Type="Edm.Int32"/>
+        <Property Name="serviceMinPredicted" Type="Edm.Int32"/>
+        <Property Name="arrivalActual" Type="Edm.DateTimeOffset"/>
+        <Property Name="leaveActual" Type="Edm.DateTimeOffset"/>
+        <Property Name="status" Type="Lodestar.OrderStatus" Nullable="false"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <NavigationProperty Name="trip" Type="Lodestar.Trip" Nullable="false"/>
+        <NavigationProperty Name="order" Type="Lodestar.Order" Nullable="false"/>
+        <NavigationProperty Name="outlet" Type="Lodestar.Outlet" Nullable="false"/>
+        <NavigationProperty Name="pod" Type="Lodestar.POD"/>
+      </EntityType>
+      <EntityType Name="POD">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="id" Type="Edm.String" Nullable="false"/>
+        <Property Name="tripStopId" Type="Edm.String" Nullable="false"/>
+        <Property Name="unitsDelivered" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="unitsOrdered" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="photoUrl" Type="Edm.String"/>
+        <Property Name="receiverName" Type="Edm.String"/>
+        <Property Name="exceptions" Type="Edm.Untyped"/>
+        <Property Name="creditNoteId" Type="Edm.String"/>
+        <Property Name="savedOffline" Type="Edm.Boolean" Nullable="false"/>
+        <Property Name="savedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <Property Name="syncedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="createdAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <NavigationProperty Name="tripStop" Type="Lodestar.TripStop" Nullable="false"/>
+      </EntityType>
+      <EntityType Name="LoadRecord">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="id" Type="Edm.String" Nullable="false"/>
+        <Property Name="tripId" Type="Edm.String" Nullable="false"/>
+        <Property Name="vehicleId" Type="Edm.String" Nullable="false"/>
+        <Property Name="loaderId" Type="Edm.String" Nullable="false"/>
+        <Property Name="bay" Type="Edm.String" Nullable="false"/>
+        <Property Name="sealNumber" Type="Edm.String"/>
+        <Property Name="reeferTempC" Type="Edm.Double"/>
+        <Property Name="loadedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="releasedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="shortfalls" Type="Edm.Untyped"/>
+        <Property Name="notes" Type="Edm.String"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <NavigationProperty Name="trip" Type="Lodestar.Trip" Nullable="false"/>
+        <NavigationProperty Name="vehicle" Type="Lodestar.Vehicle" Nullable="false"/>
+        <NavigationProperty Name="loader" Type="Lodestar.User" Nullable="false"/>
+      </EntityType>
+      <EntityType Name="OfflineEvent">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="id" Type="Edm.String" Nullable="false"/>
+        <Property Name="driverId" Type="Edm.String" Nullable="false"/>
+        <Property Name="tripId" Type="Edm.String"/>
+        <Property Name="eventType" Type="Edm.String" Nullable="false"/>
+        <Property Name="payload" Type="Edm.Untyped" Nullable="false"/>
+        <Property Name="savedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <Property Name="syncedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="conflictResolved" Type="Edm.Boolean" Nullable="false"/>
+        <Property Name="conflictNote" Type="Edm.String"/>
+        <NavigationProperty Name="driver" Type="Lodestar.User" Nullable="false"/>
+        <NavigationProperty Name="trip" Type="Lodestar.Trip"/>
+      </EntityType>
+      <EntityType Name="DeferralLog">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="id" Type="Edm.String" Nullable="false"/>
+        <Property Name="orderId" Type="Edm.String" Nullable="false"/>
+        <Property Name="reason" Type="Lodestar.DeferralReason" Nullable="false"/>
+        <Property Name="score" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="resolvedBy" Type="Edm.String"/>
+        <Property Name="notes" Type="Edm.String"/>
+        <Property Name="rescheduledDate" Type="Edm.DateTimeOffset"/>
+        <Property Name="isProvisional" Type="Edm.Boolean" Nullable="false"/>
+        <Property Name="status" Type="Lodestar.DeferralStatus" Nullable="false"/>
+        <Property Name="confirmedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="planId" Type="Edm.String"/>
+        <Property Name="createdAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <NavigationProperty Name="order" Type="Lodestar.Order" Nullable="false"/>
+        <NavigationProperty Name="plan" Type="Lodestar.Plan"/>
+      </EntityType>
+      <EntityType Name="Notification">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="id" Type="Edm.String" Nullable="false"/>
+        <Property Name="recipientId" Type="Edm.String" Nullable="false"/>
+        <Property Name="tripId" Type="Edm.String"/>
+        <Property Name="type" Type="Edm.String" Nullable="false"/>
+        <Property Name="channel" Type="Lodestar.NotificationChannel" Nullable="false"/>
+        <Property Name="payload" Type="Edm.Untyped" Nullable="false"/>
+        <Property Name="sentAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <Property Name="readAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <NavigationProperty Name="recipient" Type="Lodestar.User" Nullable="false"/>
+        <NavigationProperty Name="trip" Type="Lodestar.Trip"/>
+      </EntityType>
+      <EntityType Name="Calendar">
+        <Key>
+          <PropertyRef Name="date"/>
+        </Key>
+        <Property Name="date" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <Property Name="isOperating" Type="Edm.Boolean" Nullable="false"/>
+        <Property Name="isPayday" Type="Edm.Boolean" Nullable="false"/>
+        <Property Name="festivalRamp" Type="Edm.Double" Nullable="false"/>
+        <Property Name="monsoon" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="festivalName" Type="Edm.String"/>
+        <Property Name="note" Type="Edm.String"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+      </EntityType>
+      <EntityType Name="DistrictTravel">
+        <Key>
+          <PropertyRef Name="district"/>
+        </Key>
+        <Property Name="district" Type="Edm.String" Nullable="false"/>
+        <Property Name="depot" Type="Lodestar.Depot" Nullable="false"/>
+        <Property Name="roadClass" Type="Edm.String" Nullable="false"/>
+        <Property Name="depotToDistMin" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="interStopMin" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="distKm" Type="Edm.Double"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+      </EntityType>
+      <EntityType Name="ServiceAllowance">
+        <Key>
+          <PropertyRef Name="brand"/>
+          <PropertyRef Name="dockType"/>
+        </Key>
+        <Property Name="brand" Type="Lodestar.Brand" Nullable="false"/>
+        <Property Name="dockType" Type="Lodestar.DockType" Nullable="false"/>
+        <Property Name="minutes" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+      </EntityType>
+      <EntityType Name="Plan">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="id" Type="Edm.String" Nullable="false"/>
+        <Property Name="depot" Type="Lodestar.Depot" Nullable="false"/>
+        <Property Name="runDate" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <Property Name="version" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="status" Type="Lodestar.PlanStatus" Nullable="false"/>
+        <Property Name="source" Type="Lodestar.PlanSource" Nullable="false"/>
+        <Property Name="summary" Type="Edm.Untyped"/>
+        <Property Name="explanation" Type="Edm.String"/>
+        <Property Name="agentRunId" Type="Edm.String"/>
+        <Property Name="createdBy" Type="Edm.String"/>
+        <Property Name="approvedBy" Type="Edm.String"/>
+        <Property Name="approvedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="publishedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="notes" Type="Edm.String"/>
+        <Property Name="createdAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <NavigationProperty Name="trips" Type="Collection(Lodestar.Trip)"/>
+        <NavigationProperty Name="deferrals" Type="Collection(Lodestar.DeferralLog)"/>
+      </EntityType>
+      <EntityType Name="AgentRun">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="id" Type="Edm.String" Nullable="false"/>
+        <Property Name="depot" Type="Lodestar.Depot" Nullable="false"/>
+        <Property Name="runDate" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <Property Name="status" Type="Edm.String" Nullable="false"/>
+        <Property Name="requestedBy" Type="Edm.String" Nullable="false"/>
+        <Property Name="planId" Type="Edm.String"/>
+        <Property Name="decision" Type="Edm.String"/>
+        <Property Name="decidedBy" Type="Edm.String"/>
+        <Property Name="detail" Type="Edm.Untyped"/>
+        <Property Name="lastSyncedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="createdAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+      </EntityType>
+      <EntityType Name="Device">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="id" Type="Edm.String" Nullable="false"/>
+        <Property Name="userId" Type="Edm.String" Nullable="false"/>
+        <Property Name="label" Type="Edm.String"/>
+        <Property Name="platform" Type="Edm.String"/>
+        <Property Name="model" Type="Edm.String"/>
+        <Property Name="status" Type="Lodestar.DeviceStatus" Nullable="false"/>
+        <Property Name="registeredAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <Property Name="lastSeenAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="revokedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="revokedBy" Type="Edm.String"/>
+        <Property Name="revokeReason" Type="Edm.String"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <NavigationProperty Name="user" Type="Lodestar.User" Nullable="false"/>
+      </EntityType>
+      <EntityType Name="AuditEntry">
+        <Key>
+          <PropertyRef Name="seq"/>
+        </Key>
+        <Property Name="seq" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="at" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <Property Name="actor" Type="Edm.String" Nullable="false"/>
+        <Property Name="actorRoles" Type="Collection(Edm.String)" Nullable="false"/>
+        <Property Name="client" Type="Edm.String" Nullable="false"/>
+        <Property Name="service" Type="Edm.String" Nullable="false"/>
+        <Property Name="action" Type="Edm.String" Nullable="false"/>
+        <Property Name="entitySet" Type="Edm.String"/>
+        <Property Name="entityKey" Type="Edm.String"/>
+        <Property Name="outcome" Type="Edm.String" Nullable="false"/>
+        <Property Name="payload" Type="Edm.Untyped"/>
+        <Property Name="prevHash" Type="Edm.String" Nullable="false"/>
+        <Property Name="hash" Type="Edm.String" Nullable="false"/>
+      </EntityType>
+      <ComplexType Name="ChainCheck">
+        <Property Name="valid" Type="Edm.Boolean"/>
+        <Property Name="checked" Type="Edm.Int32"/>
+        <Property Name="headSeq" Type="Edm.Int32"/>
+        <Property Name="headHash" Type="Edm.String"/>
+        <Property Name="firstInvalidSeq" Type="Edm.Int32"/>
+        <Property Name="reason" Type="Edm.String"/>
+      </ComplexType>
+      <ComplexType Name="OrdersSummary">
+        <Property Name="runDate" Type="Edm.Date"/>
+        <Property Name="total" Type="Edm.Int32"/>
+        <Property Name="byStatus" Type="Edm.Untyped"/>
+        <Property Name="chilledM3" Type="Edm.Double"/>
+        <Property Name="chilledKg" Type="Edm.Double"/>
+        <Property Name="chilledOrders" Type="Edm.Int32"/>
+        <Property Name="deferred" Type="Edm.Int32"/>
+        <Property Name="delivered" Type="Edm.Int32"/>
+      </ComplexType>
+      <Action Name="Revoke" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.Device" Nullable="false"/>
+        <Parameter Name="reason" Type="Edm.String"/>
+        <ReturnType Type="Lodestar.Device"/>
+      </Action>
+      <Action Name="Activate" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.Device" Nullable="false"/>
+        <ReturnType Type="Lodestar.Device"/>
+      </Action>
+      <Function Name="Me" IsBound="false">
+        <ReturnType Type="Edm.Untyped"/>
+      </Function>
+      <Action Name="SetStatus" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.Order" Nullable="false"/>
+        <Parameter Name="status" Type="Lodestar.OrderStatus" Nullable="false"/>
+        <Parameter Name="notes" Type="Edm.String"/>
+        <ReturnType Type="Lodestar.Order"/>
+      </Action>
+      <Action Name="Cancel" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.Order" Nullable="false"/>
+        <Parameter Name="reason" Type="Edm.String"/>
+        <ReturnType Type="Lodestar.Order"/>
+      </Action>
+      <Function Name="Summary" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.Order)" Nullable="false"/>
+        <Parameter Name="runDate" Type="Edm.Date" Nullable="false"/>
+        <ReturnType Type="Lodestar.OrdersSummary"/>
+      </Function>
+      <Function Name="DeferralSuggestions" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.Order)" Nullable="false"/>
+        <Parameter Name="runDate" Type="Edm.Date" Nullable="false"/>
+        <ReturnType Type="Collection(Lodestar.Order)"/>
+      </Function>
+      <Action Name="Approve" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.Plan" Nullable="false"/>
+        <Parameter Name="note" Type="Edm.String"/>
+        <ReturnType Type="Lodestar.Plan"/>
+      </Action>
+      <Action Name="Reject" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.Plan" Nullable="false"/>
+        <Parameter Name="reason" Type="Edm.String"/>
+        <ReturnType Type="Lodestar.Plan"/>
+      </Action>
+      <Action Name="AutoPlan" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.Plan)" Nullable="false"/>
+        <Parameter Name="depot" Type="Lodestar.Depot" Nullable="false"/>
+        <Parameter Name="runDate" Type="Edm.Date" Nullable="false"/>
+        <ReturnType Type="Lodestar.Plan"/>
+      </Action>
+      <Function Name="Board" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.Plan)" Nullable="false"/>
+        <Parameter Name="depot" Type="Lodestar.Depot" Nullable="false"/>
+        <Parameter Name="runDate" Type="Edm.Date" Nullable="false"/>
+        <ReturnType Type="Edm.Untyped"/>
+      </Function>
+      <Function Name="CapacityOutlook" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.Plan)" Nullable="false"/>
+        <Parameter Name="depot" Type="Lodestar.Depot" Nullable="false"/>
+        <ReturnType Type="Edm.Untyped"/>
+      </Function>
+      <Action Name="Confirm" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.DeferralLog" Nullable="false"/>
+        <Parameter Name="notes" Type="Edm.String"/>
+        <Parameter Name="rescheduledDate" Type="Edm.Date"/>
+        <ReturnType Type="Lodestar.DeferralLog"/>
+      </Action>
+      <Action Name="Dismiss" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.DeferralLog" Nullable="false"/>
+        <ReturnType Type="Lodestar.DeferralLog"/>
+      </Action>
+      <Action Name="Reverse" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.DeferralLog" Nullable="false"/>
+        <Parameter Name="notes" Type="Edm.String"/>
+        <ReturnType Type="Lodestar.DeferralLog"/>
+      </Action>
+      <Action Name="Resume" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.AgentRun" Nullable="false"/>
+        <Parameter Name="decision" Type="Edm.String" Nullable="false"/>
+        <Parameter Name="edits" Type="Collection(Edm.Untyped)"/>
+        <Parameter Name="comment" Type="Edm.String"/>
+        <ReturnType Type="Lodestar.AgentRun"/>
+      </Action>
+      <Action Name="Ask" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.AgentRun" Nullable="false"/>
+        <Parameter Name="question" Type="Edm.String" Nullable="false"/>
+        <ReturnType Type="Edm.Untyped"/>
+      </Action>
+      <Action Name="SetStatus" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.Vehicle" Nullable="false"/>
+        <Parameter Name="status" Type="Lodestar.VehicleStatus" Nullable="false"/>
+        <Parameter Name="workshopNote" Type="Edm.String"/>
+        <ReturnType Type="Lodestar.Vehicle"/>
+      </Action>
+      <Action Name="RecordFuel" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.Vehicle" Nullable="false"/>
+        <Parameter Name="litres" Type="Edm.Double" Nullable="false"/>
+        <ReturnType Type="Lodestar.Vehicle"/>
+      </Action>
+      <Function Name="Summary" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.Vehicle)" Nullable="false"/>
+        <ReturnType Type="Edm.Untyped"/>
+      </Function>
+      <Function Name="IsWindowOpen" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.Outlet" Nullable="false"/>
+        <ReturnType Type="Edm.Boolean"/>
+      </Function>
+      <Action Name="SetStatus" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.Trip" Nullable="false"/>
+        <Parameter Name="status" Type="Lodestar.TripStatus" Nullable="false"/>
+        <Parameter Name="departTime" Type="Edm.DateTimeOffset"/>
+        <ReturnType Type="Lodestar.Trip"/>
+      </Action>
+      <Action Name="Release" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.Trip" Nullable="false"/>
+        <Parameter Name="sealNumber" Type="Edm.String" Nullable="false"/>
+        <Parameter Name="reeferTempC" Type="Edm.Double"/>
+        <ReturnType Type="Lodestar.Trip"/>
+      </Action>
+      <Function Name="BayQueue" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.Trip)" Nullable="false"/>
+        <Parameter Name="depot" Type="Lodestar.Depot" Nullable="false"/>
+        <Parameter Name="runDate" Type="Edm.Date" Nullable="false"/>
+        <ReturnType Type="Edm.Untyped"/>
+      </Function>
+      <Action Name="Arrive" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.TripStop" Nullable="false"/>
+        <Parameter Name="time" Type="Edm.DateTimeOffset"/>
+        <ReturnType Type="Lodestar.TripStop"/>
+      </Action>
+      <Action Name="CompleteStop" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.TripStop" Nullable="false"/>
+        <Parameter Name="unitsDelivered" Type="Edm.Int32" Nullable="false"/>
+        <Parameter Name="unitsOrdered" Type="Edm.Int32" Nullable="false"/>
+        <Parameter Name="receiverName" Type="Edm.String"/>
+        <Parameter Name="photoUrl" Type="Edm.String"/>
+        <Parameter Name="signature" Type="Edm.String"/>
+        <Parameter Name="exceptions" Type="Collection(Edm.Untyped)"/>
+        <Parameter Name="creditNoteId" Type="Edm.String"/>
+        <Parameter Name="savedOffline" Type="Edm.Boolean"/>
+        <Parameter Name="arrivalActual" Type="Edm.DateTimeOffset"/>
+        <Parameter Name="leaveActual" Type="Edm.DateTimeOffset"/>
+        <ReturnType Type="Lodestar.TripStop"/>
+      </Action>
+      <Action Name="UpdateLateRisk" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.TripStop" Nullable="false"/>
+        <Parameter Name="lateRiskPct" Type="Edm.Int32" Nullable="false"/>
+        <ReturnType Type="Lodestar.TripStop"/>
+      </Action>
+      <Action Name="RecordShortfalls" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.LoadRecord" Nullable="false"/>
+        <Parameter Name="shortfalls" Type="Collection(Edm.Untyped)" Nullable="false"/>
+        <ReturnType Type="Lodestar.LoadRecord"/>
+      </Action>
+      <Action Name="PushBatch" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.OfflineEvent)" Nullable="false"/>
+        <Parameter Name="events" Type="Collection(Edm.Untyped)" Nullable="false"/>
+        <ReturnType Type="Edm.Untyped"/>
+      </Action>
+      <Function Name="SyncStatus" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.OfflineEvent)" Nullable="false"/>
+        <Parameter Name="tripId" Type="Edm.String" Nullable="false"/>
+        <ReturnType Type="Edm.Untyped"/>
+      </Function>
+      <Action Name="MarkRead" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.Notification" Nullable="false"/>
+        <ReturnType Type="Lodestar.Notification"/>
+      </Action>
+      <Action Name="Send" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.Notification)" Nullable="false"/>
+        <Parameter Name="recipientId" Type="Edm.String" Nullable="false"/>
+        <Parameter Name="type" Type="Edm.String" Nullable="false"/>
+        <Parameter Name="payload" Type="Edm.Untyped"/>
+        <Parameter Name="tripId" Type="Edm.String"/>
+        <Parameter Name="depot" Type="Lodestar.Depot"/>
+        <Parameter Name="outletId" Type="Edm.String"/>
+        <Parameter Name="creditNoteId" Type="Edm.String"/>
+        <ReturnType Type="Lodestar.Notification"/>
+      </Action>
+      <Function Name="VerifyChain" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.AuditEntry)" Nullable="false"/>
+        <ReturnType Type="Lodestar.ChainCheck"/>
+      </Function>
+      <EntityContainer Name="Container">
+        <EntitySet Name="Users" EntityType="Lodestar.User">
+          <NavigationPropertyBinding Path="outlet" Target="Outlets"/>
+          <NavigationPropertyBinding Path="driverTrips" Target="Trips"/>
+          <NavigationPropertyBinding Path="loadRecords" Target="LoadRecords"/>
+          <NavigationPropertyBinding Path="notifications" Target="Notifications"/>
+          <NavigationPropertyBinding Path="offlineEvents" Target="OfflineEvents"/>
+          <NavigationPropertyBinding Path="devices" Target="Devices"/>
+        </EntitySet>
+        <EntitySet Name="Devices" EntityType="Lodestar.Device">
+          <NavigationPropertyBinding Path="user" Target="Users"/>
+        </EntitySet>
+        <EntitySet Name="Orders" EntityType="Lodestar.Order">
+          <NavigationPropertyBinding Path="outlet" Target="Outlets"/>
+          <NavigationPropertyBinding Path="tripStop" Target="TripStops"/>
+          <NavigationPropertyBinding Path="deferralLog" Target="Deferrals"/>
+          <NavigationPropertyBinding Path="lineItems" Target="OrderLineItems"/>
+        </EntitySet>
+        <EntitySet Name="OrderLineItems" EntityType="Lodestar.OrderLineItem">
+          <NavigationPropertyBinding Path="order" Target="Orders"/>
+        </EntitySet>
+        <EntitySet Name="Plans" EntityType="Lodestar.Plan">
+          <NavigationPropertyBinding Path="trips" Target="Trips"/>
+          <NavigationPropertyBinding Path="deferrals" Target="Deferrals"/>
+        </EntitySet>
+        <EntitySet Name="Deferrals" EntityType="Lodestar.DeferralLog">
+          <NavigationPropertyBinding Path="order" Target="Orders"/>
+          <NavigationPropertyBinding Path="plan" Target="Plans"/>
+        </EntitySet>
+        <EntitySet Name="AgentRuns" EntityType="Lodestar.AgentRun"/>
+        <EntitySet Name="Vehicles" EntityType="Lodestar.Vehicle">
+          <NavigationPropertyBinding Path="trips" Target="Trips"/>
+          <NavigationPropertyBinding Path="loadRecords" Target="LoadRecords"/>
+        </EntitySet>
+        <EntitySet Name="Outlets" EntityType="Lodestar.Outlet">
+          <NavigationPropertyBinding Path="users" Target="Users"/>
+          <NavigationPropertyBinding Path="orders" Target="Orders"/>
+          <NavigationPropertyBinding Path="tripStops" Target="TripStops"/>
+        </EntitySet>
+        <EntitySet Name="Calendar" EntityType="Lodestar.Calendar"/>
+        <EntitySet Name="DistrictTravel" EntityType="Lodestar.DistrictTravel"/>
+        <EntitySet Name="ServiceAllowances" EntityType="Lodestar.ServiceAllowance"/>
+        <EntitySet Name="Trips" EntityType="Lodestar.Trip">
+          <NavigationPropertyBinding Path="vehicle" Target="Vehicles"/>
+          <NavigationPropertyBinding Path="driver" Target="Users"/>
+          <NavigationPropertyBinding Path="plan" Target="Plans"/>
+          <NavigationPropertyBinding Path="stops" Target="TripStops"/>
+          <NavigationPropertyBinding Path="loadRecord" Target="LoadRecords"/>
+          <NavigationPropertyBinding Path="notifications" Target="Notifications"/>
+          <NavigationPropertyBinding Path="offlineEvents" Target="OfflineEvents"/>
+        </EntitySet>
+        <EntitySet Name="TripStops" EntityType="Lodestar.TripStop">
+          <NavigationPropertyBinding Path="trip" Target="Trips"/>
+          <NavigationPropertyBinding Path="order" Target="Orders"/>
+          <NavigationPropertyBinding Path="outlet" Target="Outlets"/>
+          <NavigationPropertyBinding Path="pod" Target="PODs"/>
+        </EntitySet>
+        <EntitySet Name="PODs" EntityType="Lodestar.POD">
+          <NavigationPropertyBinding Path="tripStop" Target="TripStops"/>
+        </EntitySet>
+        <EntitySet Name="LoadRecords" EntityType="Lodestar.LoadRecord">
+          <NavigationPropertyBinding Path="trip" Target="Trips"/>
+          <NavigationPropertyBinding Path="vehicle" Target="Vehicles"/>
+          <NavigationPropertyBinding Path="loader" Target="Users"/>
+        </EntitySet>
+        <EntitySet Name="OfflineEvents" EntityType="Lodestar.OfflineEvent">
+          <NavigationPropertyBinding Path="driver" Target="Users"/>
+          <NavigationPropertyBinding Path="trip" Target="Trips"/>
+        </EntitySet>
+        <EntitySet Name="Notifications" EntityType="Lodestar.Notification">
+          <NavigationPropertyBinding Path="recipient" Target="Users"/>
+          <NavigationPropertyBinding Path="trip" Target="Trips"/>
+        </EntitySet>
+        <EntitySet Name="AuditEntries" EntityType="Lodestar.AuditEntry"/>
+        <FunctionImport Name="Me" Function="Lodestar.Me" IncludeInServiceDocument="true"/>
+      </EntityContainer>
+    </Schema>
+  </edmx:DataServices>
+</edmx:Edmx>

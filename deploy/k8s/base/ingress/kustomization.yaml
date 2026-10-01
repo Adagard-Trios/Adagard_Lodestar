@@ -1,0 +1,8 @@
+# Resources in the AKS Istio add-on's ingress namespace (created by the add-on).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: aks-istio-ingress
+resources:
+- frontdoor-lock.yaml
+- pls-service.yaml
+- tls-sync.yaml

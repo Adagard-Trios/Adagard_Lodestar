@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: outlets-config
+  labels:
+    app: outlets
+    app.kubernetes.io/name: outlets
+    app.kubernetes.io/part-of: lodestar
+data:
+  SERVICE_NAME: outlets
+  PORT: '3005'
+  DB_SCHEMA: outlets

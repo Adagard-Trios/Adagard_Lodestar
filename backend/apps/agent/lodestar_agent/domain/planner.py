@@ -1,0 +1,233 @@
+"""draft_plan heuristics: capacity + packing.
+
+Packing rules the drafter enforces itself:
+  chilled orders only on reefers, van_only outlets only on vans, one brand +
+  one district per trip, at most 2 trips per vehicle, weight, volume and the
+  daily minutes budget. It does *not* look at fuel quotas or mall windows:
+  ``check_rules`` is the authority and feeds violations back as constraints.
+"""
+
+from __future__ import annotations
+
+from collections import defaultdict
+from typing import Any
+
+from . import heuristics as h
+from .context import PlanningContext
+
+Plan = dict[str, Any]
+
+
+# ---------------------------------------------------------------- trip maths
+def _stop_sort_key(ctx: PlanningContext, oid: str) -> tuple[int, int, str, str]:
+    outlet = ctx.outlet_of(oid)
+    return (h.to_min(outlet.get("windowOpen")), h.to_min(outlet.get("windowClose"), 1440), str(outlet["id"]), oid)
+
+
+def build_trip(ctx: PlanningContext, vehicle_id: str, trip_no: int, order_ids: list[str]) -> dict[str, Any]:
+    ordered = sorted(order_ids, key=lambda o: _stop_sort_key(ctx, o))
+    first = ordered[0]
+    district = ctx.district_of(first)
+    travel = ctx.travel_for(district)
+    vehicle = ctx.vehicles[vehicle_id]
+    services = [ctx.service_min(o) for o in ordered]
+    km = h.trip_km(travel, len(ordered))
+    return {
+        "id": f"{vehicle_id}-T{trip_no}",
+        "vehicleId": vehicle_id,
+        "tripNo": trip_no,
+        "brand": ctx.brand_of(first),
+        "district": district,
+        "chilled": any(ctx.needs_reefer(o) for o in ordered),
+        "orderIds": ordered,
+        "kg": round(sum(float(ctx.orders[o].get("kg") or 0) for o in ordered), 1),
+        "m3": round(sum(float(ctx.orders[o].get("m3") or 0) for o in ordered), 2),
+        "minutes": h.trip_minutes(travel, services),
+        "km": km,
+        "litres": h.trip_litres(km, vehicle.get("kmPerLitre")),
+        "stops": [],
+        "departs": None,
+        "returns": None,
+    }
+
+
+def schedule(ctx: PlanningContext, plan: Plan) -> Plan:
+    """Recompute trip metrics and clock times (departure, arrivals, model ETA)."""
+    by_vehicle: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for trip in plan["trips"]:
+        by_vehicle[trip["vehicleId"]].append(trip)
+    trips: list[dict[str, Any]] = []
+    first_dep = h.to_min(ctx.first_departure)
+    monsoon = ctx.is_monsoon()
+    for vid in sorted(by_vehicle):
+        prev_return = 0
+        for n, old in enumerate(sorted(by_vehicle[vid], key=lambda t: t["tripNo"]), start=1):
+            trip = build_trip(ctx, vid, n, old["orderIds"])
+            travel = ctx.travel_for(trip["district"])
+            to_dist = int(travel.get("depotToDistMin") or 0)
+            inter = int(travel.get("interStopMin") or 0)
+            earliest_open = min(h.to_min(ctx.outlet_of(o).get("windowOpen")) for o in trip["orderIds"])
+            depart = max(first_dep, earliest_open - to_dist, prev_return)
+            t = depart + to_dist
+            stops = []
+            for i, oid in enumerate(trip["orderIds"]):
+                outlet = ctx.outlet_of(oid)
+                if i:
+                    t += inter
+                arrive = max(t, h.to_min(outlet.get("windowOpen")))
+                eta = h.compute_model_eta(
+                    eta_plan_min=arrive,
+                    road_class=str(travel.get("roadClass") or ""),
+                    is_monsoon=monsoon,
+                    window_close=str(outlet.get("windowClose") or "23:59"),
+                )
+                svc = ctx.service_min(oid)
+                stops.append(
+                    {
+                        "seq": i + 1,
+                        "orderId": oid,
+                        "outletId": outlet["id"],
+                        "dockType": outlet.get("dockType"),
+                        "parking": outlet.get("parking"),
+                        "window": f"{outlet.get('windowOpen')}-{outlet.get('windowClose')}",
+                        "serviceMin": svc,
+                        "arrive": h.fmt_min(arrive),
+                        "etaModel": h.fmt_min(eta["etaModel"]),
+                        "lateRiskPct": eta["lateRiskPct"],
+                        "protected": ctx.protected.get(oid, False),
+                    }
+                )
+                t = arrive + svc
+            trip["stops"] = stops
+            trip["departs"] = h.fmt_min(depart)
+            trip["returns"] = h.fmt_min(t + to_dist)
+            prev_return = t + to_dist
+            trips.append(trip)
+    plan["trips"] = trips
+    return plan
+
+
+# ---------------------------------------------------------------- constraints
+def _index_constraints(constraints: list[dict[str, Any]]) -> tuple[dict[str, dict[str, str]], set[str]]:
+    avoid: dict[str, dict[str, str]] = defaultdict(dict)
+    prioritise: set[str] = set()
+    for c in constraints:
+        if c.get("type") == "avoid":
+            for oid in c.get("orderIds", []):
+                avoid[oid][c["vehicleId"]] = c.get("reason", "CAP_TIME")
+        elif c.get("type") == "prioritise":
+            prioritise.update(c.get("orderIds", []))
+    return avoid, prioritise
+
+
+def _unplaced_reason(ctx: PlanningContext, oid: str, avoid: dict[str, dict[str, str]]) -> str:
+    if avoid.get(oid):
+        return sorted(avoid[oid].values())[0]
+    needs_reefer, needs_van = ctx.needs_reefer(oid), ctx.needs_van(oid)
+
+    def compatible(v: dict[str, Any]) -> bool:
+        return (not needs_reefer or v.get("tempClass") == "CHILLED") and (not needs_van or v.get("type") == "VAN")
+
+    if not any(compatible(v) for v in ctx.available_vehicles()) and any(compatible(v) for v in ctx.vehicles.values()):
+        return "VEH_DOWN"
+    if needs_reefer:
+        return "CAP_REEFER"
+    if needs_van:
+        return "ACCESS"
+    return "CAP_TIME"
+
+
+# ---------------------------------------------------------------- the drafter
+def draft_plan(ctx: PlanningContext, constraints: list[dict[str, Any]] | None = None, version: int = 1) -> Plan:
+    constraints = constraints or []
+    avoid, prioritise = _index_constraints(constraints)
+
+    groups: dict[tuple[str, str, bool, bool], list[str]] = defaultdict(list)
+    for oid in sorted(ctx.orders):
+        groups[(ctx.brand_of(oid), ctx.district_of(oid), ctx.needs_reefer(oid), ctx.needs_van(oid))].append(oid)
+
+    def group_key(item: tuple[tuple[str, str, bool, bool], list[str]]) -> tuple[Any, ...]:
+        key, oids = item
+        m3 = sum(float(ctx.orders[o].get("m3") or 0) for o in oids)
+        earliest = min(h.to_min(ctx.outlet_of(o).get("windowOpen")) for o in oids)
+        # prioritised first, then chilled (scarce reefers), van_only, earliest window, biggest volume
+        return (not any(o in prioritise for o in oids), not key[2], not key[3], earliest, -m3, key)
+
+    vehicle_trips: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    unassigned: list[dict[str, Any]] = []
+
+    for (brand, district, needs_reefer, needs_van), oids in sorted(groups.items(), key=group_key):
+        travel = ctx.travel_for(district)
+        remaining = sorted(oids, key=lambda o: (not ctx.protected[o], -ctx.scores[o], o))
+
+        def candidates() -> list[dict[str, Any]]:
+            out = [
+                v
+                for v in ctx.available_vehicles()
+                if len(vehicle_trips[v["id"]]) < h.MAX_TRIPS_PER_VEHICLE
+                and (not needs_reefer or v.get("tempClass") == "CHILLED")
+                and (not needs_van or v.get("type") == "VAN")
+            ]
+            return sorted(
+                out,
+                key=lambda v: (
+                    v.get("tempClass") == "CHILLED" and not needs_reefer,
+                    v.get("type") == "VAN" and not needs_van,
+                    len(vehicle_trips[v["id"]]),
+                    -float(v.get("capacityM3") or 0),
+                    v["id"],
+                ),
+            )
+
+        while remaining:
+            placed: list[str] = []
+            for v in candidates():
+                vid = v["id"]
+                used = sum(t["minutes"] for t in vehicle_trips[vid])
+                budget = h.minutes_budget([t["brand"] for t in vehicle_trips[vid]] + [brand])
+                kg = m3 = 0.0
+                services: list[int] = []
+                for oid in remaining:
+                    if vid in avoid.get(oid, {}):
+                        continue
+                    o = ctx.orders[oid]
+                    nkg, nm3 = kg + float(o.get("kg") or 0), m3 + float(o.get("m3") or 0)
+                    nsvc = services + [ctx.service_min(oid)]
+                    if nkg > float(v.get("capacityKg") or 0) or nm3 > float(v.get("capacityM3") or 0):
+                        continue
+                    if used + h.trip_minutes(travel, nsvc) > budget:
+                        continue
+                    kg, m3, services = nkg, nm3, nsvc
+                    placed.append(oid)
+                if placed:
+                    vehicle_trips[vid].append(
+                        {"orderIds": placed, "brand": brand, "minutes": h.trip_minutes(travel, services), "tripNo": len(vehicle_trips[vid]) + 1}
+                    )
+                    break
+            if not placed:
+                unassigned.extend({"orderId": o, "reason": _unplaced_reason(ctx, o, avoid)} for o in remaining)
+                break
+            remaining = [o for o in remaining if o not in placed]
+
+    trips = [
+        {"vehicleId": vid, "tripNo": t["tripNo"], "orderIds": t["orderIds"]}
+        for vid in sorted(vehicle_trips)
+        for t in vehicle_trips[vid]
+    ]
+    plan: Plan = {"version": version, "trips": trips, "unassigned": sorted(unassigned, key=lambda u: u["orderId"])}
+    return schedule(ctx, plan)
+
+
+def planned_order_ids(plan: Plan) -> set[str]:
+    return {oid for t in plan["trips"] for oid in t["orderIds"]}
+
+
+def remove_orders(ctx: PlanningContext, plan: Plan, order_ids: set[str]) -> Plan:
+    """Drop orders from trips (empty trips vanish) and reschedule."""
+    trips = []
+    for t in plan["trips"]:
+        keep = [o for o in t["orderIds"] if o not in order_ids]
+        if keep:
+            trips.append({"vehicleId": t["vehicleId"], "tripNo": t["tripNo"], "orderIds": keep})
+    plan = {**plan, "trips": trips}
+    return schedule(ctx, plan)

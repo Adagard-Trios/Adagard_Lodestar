@@ -1,0 +1,318 @@
+# Routes /odata/v4/<EntitySet> exactly like the local NGINX gateway.
+# The regex matches the entity set, keys ('..'), sub-paths (actions, $count)
+# and query strings. /ws/ goes to notifications (Socket.IO); / goes to the UI.
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: lodestar-web
+  namespace: lodestar
+spec:
+  hosts:
+  - WEB_HOST
+  gateways:
+  - lodestar
+  http:
+  - name: odata-orders
+    match:
+    - uri:
+        regex: /odata/v4/(Orders|OrderLineItems)([(/?].*)?
+    route:
+    - destination:
+        host: orders.lodestar.svc.cluster.local
+        port:
+          number: 3002
+    timeout: 60s
+    retries:
+      attempts: 2
+      perTryTimeout: 30s
+      retryOn: connect-failure,refused-stream,unavailable
+  - name: odata-planning
+    match:
+    - uri:
+        regex: /odata/v4/(Plans|Deferrals|AgentRuns)([(/?].*)?
+    route:
+    - destination:
+        host: planning.lodestar.svc.cluster.local
+        port:
+          number: 3003
+    timeout: 60s
+    retries:
+      attempts: 2
+      perTryTimeout: 30s
+      retryOn: connect-failure,refused-stream,unavailable
+  - name: odata-fleet
+    match:
+    - uri:
+        regex: /odata/v4/(Vehicles)([(/?].*)?
+    route:
+    - destination:
+        host: fleet.lodestar.svc.cluster.local
+        port:
+          number: 3004
+    timeout: 60s
+    retries:
+      attempts: 2
+      perTryTimeout: 30s
+      retryOn: connect-failure,refused-stream,unavailable
+  - name: odata-outlets
+    match:
+    - uri:
+        regex: /odata/v4/(Outlets|Calendar|DistrictTravel|ServiceAllowances)([(/?].*)?
+    route:
+    - destination:
+        host: outlets.lodestar.svc.cluster.local
+        port:
+          number: 3005
+    timeout: 60s
+    retries:
+      attempts: 2
+      perTryTimeout: 30s
+      retryOn: connect-failure,refused-stream,unavailable
+  - name: odata-trips
+    match:
+    - uri:
+        regex: /odata/v4/(Trips|TripStops|PODs|LoadRecords)([(/?].*)?
+    route:
+    - destination:
+        host: trips.lodestar.svc.cluster.local
+        port:
+          number: 3006
+    timeout: 60s
+    retries:
+      attempts: 2
+      perTryTimeout: 30s
+      retryOn: connect-failure,refused-stream,unavailable
+  - name: odata-sync
+    match:
+    - uri:
+        regex: /odata/v4/(OfflineEvents)([(/?].*)?
+    route:
+    - destination:
+        host: sync.lodestar.svc.cluster.local
+        port:
+          number: 3007
+    timeout: 60s
+    retries:
+      attempts: 2
+      perTryTimeout: 30s
+      retryOn: connect-failure,refused-stream,unavailable
+  - name: odata-notifications
+    match:
+    - uri:
+        regex: /odata/v4/(Notifications)([(/?].*)?
+    route:
+    - destination:
+        host: notifications.lodestar.svc.cluster.local
+        port:
+          number: 3008
+    timeout: 60s
+    retries:
+      attempts: 2
+      perTryTimeout: 30s
+      retryOn: connect-failure,refused-stream,unavailable
+  - name: odata-audit
+    match:
+    - uri:
+        regex: /odata/v4/(AuditEntries)([(/?].*)?
+    route:
+    - destination:
+        host: audit.lodestar.svc.cluster.local
+        port:
+          number: 3009
+    timeout: 60s
+    retries:
+      attempts: 2
+      perTryTimeout: 30s
+      retryOn: connect-failure,refused-stream,unavailable
+  - name: odata-auth
+    match:
+    - uri:
+        regex: /odata/v4/(Users|Devices)([(/?].*)?
+    route:
+    - destination:
+        host: auth.lodestar.svc.cluster.local
+        port:
+          number: 3001
+    timeout: 60s
+    retries:
+      attempts: 2
+      perTryTimeout: 30s
+      retryOn: connect-failure,refused-stream,unavailable
+  - name: ws-notifications
+    match:
+    - uri:
+        prefix: /ws/
+    route:
+    - destination:
+        host: notifications.lodestar.svc.cluster.local
+        port:
+          number: 3008
+    timeout: 0s
+  - name: ui-frontend
+    match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: frontend.lodestar.svc.cluster.local
+        port:
+          number: 3000
+    timeout: 30s
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: lodestar-field
+  namespace: lodestar
+spec:
+  hosts:
+  - FIELD_HOST
+  gateways:
+  - lodestar
+  http:
+  - name: odata-orders
+    match:
+    - uri:
+        regex: /odata/v4/(Orders|OrderLineItems)([(/?].*)?
+    route:
+    - destination:
+        host: orders.lodestar.svc.cluster.local
+        port:
+          number: 3002
+    timeout: 60s
+    retries:
+      attempts: 2
+      perTryTimeout: 30s
+      retryOn: connect-failure,refused-stream,unavailable
+  - name: odata-planning
+    match:
+    - uri:
+        regex: /odata/v4/(Plans|Deferrals|AgentRuns)([(/?].*)?
+    route:
+    - destination:
+        host: planning.lodestar.svc.cluster.local
+        port:
+          number: 3003
+    timeout: 60s
+    retries:
+      attempts: 2
+      perTryTimeout: 30s
+      retryOn: connect-failure,refused-stream,unavailable
+  - name: odata-fleet
+    match:
+    - uri:
+        regex: /odata/v4/(Vehicles)([(/?].*)?
+    route:
+    - destination:
+        host: fleet.lodestar.svc.cluster.local
+        port:
+          number: 3004
+    timeout: 60s
+    retries:
+      attempts: 2
+      perTryTimeout: 30s
+      retryOn: connect-failure,refused-stream,unavailable
+  - name: odata-outlets
+    match:
+    - uri:
+        regex: /odata/v4/(Outlets|Calendar|DistrictTravel|ServiceAllowances)([(/?].*)?
+    route:
+    - destination:
+        host: outlets.lodestar.svc.cluster.local
+        port:
+          number: 3005
+    timeout: 60s
+    retries:
+      attempts: 2
+      perTryTimeout: 30s
+      retryOn: connect-failure,refused-stream,unavailable
+  - name: odata-trips
+    match:
+    - uri:
+        regex: /odata/v4/(Trips|TripStops|PODs|LoadRecords)([(/?].*)?
+    route:
+    - destination:
+        host: trips.lodestar.svc.cluster.local
+        port:
+          number: 3006
+    timeout: 60s
+    retries:
+      attempts: 2
+      perTryTimeout: 30s
+      retryOn: connect-failure,refused-stream,unavailable
+  - name: odata-sync
+    match:
+    - uri:
+        regex: /odata/v4/(OfflineEvents)([(/?].*)?
+    route:
+    - destination:
+        host: sync.lodestar.svc.cluster.local
+        port:
+          number: 3007
+    timeout: 60s
+    retries:
+      attempts: 2
+      perTryTimeout: 30s
+      retryOn: connect-failure,refused-stream,unavailable
+  - name: odata-notifications
+    match:
+    - uri:
+        regex: /odata/v4/(Notifications)([(/?].*)?
+    route:
+    - destination:
+        host: notifications.lodestar.svc.cluster.local
+        port:
+          number: 3008
+    timeout: 60s
+    retries:
+      attempts: 2
+      perTryTimeout: 30s
+      retryOn: connect-failure,refused-stream,unavailable
+  - name: odata-audit
+    match:
+    - uri:
+        regex: /odata/v4/(AuditEntries)([(/?].*)?
+    route:
+    - destination:
+        host: audit.lodestar.svc.cluster.local
+        port:
+          number: 3009
+    timeout: 60s
+    retries:
+      attempts: 2
+      perTryTimeout: 30s
+      retryOn: connect-failure,refused-stream,unavailable
+  - name: odata-auth
+    match:
+    - uri:
+        regex: /odata/v4/(Users|Devices)([(/?].*)?
+    route:
+    - destination:
+        host: auth.lodestar.svc.cluster.local
+        port:
+          number: 3001
+    timeout: 60s
+    retries:
+      attempts: 2
+      perTryTimeout: 30s
+      retryOn: connect-failure,refused-stream,unavailable
+  - name: ws-notifications
+    match:
+    - uri:
+        prefix: /ws/
+    route:
+    - destination:
+        host: notifications.lodestar.svc.cluster.local
+        port:
+          number: 3008
+    timeout: 0s
+  - name: ui-mobile-web
+    match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: mobile-web.lodestar.svc.cluster.local
+        port:
+          number: 80
+    timeout: 30s

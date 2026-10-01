@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mobile-web
+  labels:
+    app: mobile-web
+    app.kubernetes.io/name: mobile-web
+    app.kubernetes.io/part-of: lodestar
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: mobile-web
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: mobile-web
+        app.kubernetes.io/name: mobile-web
+        app.kubernetes.io/part-of: lodestar
+        version: v1
+        lodestar.io/exposed: 'true'
+      annotations:
+        kubectl.kubernetes.io/default-container: mobile-web
+        proxy.istio.io/config: '{"holdApplicationUntilProxyStarts": true}'
+    spec:
+      serviceAccountName: mobile-web
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      nodeSelector:
+        lodestar.io/pool: apps
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: mobile-web
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: mobile-web
+      containers:
+      - name: mobile-web
+        image: lodestar/mobile-web:0.0.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        envFrom:
+        - configMapRef:
+            name: mobile-web-config
+        resources:
+          requests:
+            cpu: 100m
+            memory: 32Mi
+          limits:
+            cpu: 500m
+            memory: 128Mi
+        startupProbe:
+          httpGet:
+            path: /
+            port: http
+          periodSeconds: 5
+          failureThreshold: 30
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+          periodSeconds: 15
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+        - name: nginx-run
+          mountPath: /var/run
+      volumes:
+      - name: tmp
+        emptyDir:
+          sizeLimit: 128Mi
+      - name: nginx-cache
+        emptyDir:
+          sizeLimit: 64Mi
+      - name: nginx-run
+        emptyDir:
+          sizeLimit: 64Mi

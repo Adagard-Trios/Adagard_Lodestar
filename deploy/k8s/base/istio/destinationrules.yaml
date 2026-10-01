@@ -1,0 +1,33 @@
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: default-outlier
+  namespace: lodestar
+spec:
+  host: '*.lodestar.svc.cluster.local'
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 10s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: notifications
+  namespace: lodestar
+spec:
+  host: notifications.lodestar.svc.cluster.local
+  trafficPolicy:
+    loadBalancer:
+      consistentHash:
+        httpCookie:
+          name: lodestar-ws
+          path: /ws/
+          ttl: 0s
+    connectionPool:
+      http:
+        idleTimeout: 3600s

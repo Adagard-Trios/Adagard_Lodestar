@@ -1,0 +1,47 @@
+# Restricted AppProject for the dev cluster: one repo, two namespaces, an
+# explicit allow-list of kinds. Cluster-scoped objects: Namespace only.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: lodestar-dev
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Waypoint Lodestar - dev
+  sourceRepos:
+    - https://github.com/Adagard-Trios/Tech-Triathlon.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: lodestar
+    - server: https://kubernetes.default.svc
+      namespace: aks-istio-ingress
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - { group: "", kind: ConfigMap }
+    - { group: "", kind: Service }
+    - { group: "", kind: ServiceAccount }
+    - { group: apps, kind: Deployment }
+    - { group: batch, kind: Job }
+    - { group: autoscaling, kind: HorizontalPodAutoscaler }
+    - { group: policy, kind: PodDisruptionBudget }
+    - { group: networking.k8s.io, kind: NetworkPolicy }
+    - { group: secrets-store.csi.x-k8s.io, kind: SecretProviderClass }
+    - { group: security.istio.io, kind: PeerAuthentication }
+    - { group: security.istio.io, kind: RequestAuthentication }
+    - { group: security.istio.io, kind: AuthorizationPolicy }
+    - { group: networking.istio.io, kind: Gateway }
+    - { group: networking.istio.io, kind: VirtualService }
+    - { group: networking.istio.io, kind: DestinationRule }
+  orphanedResources:
+    warn: true
+  roles:
+    - name: developers
+      description: Developers may view and sync dev.
+      policies:
+        - p, proj:lodestar-dev:developers, applications, get, lodestar-dev/*, allow
+        - p, proj:lodestar-dev:developers, applications, sync, lodestar-dev/*, allow
+      groups:
+        - lodestar-developers # Entra group object ID once Argo CD SSO is wired

@@ -1,12 +1,17 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from '@lodestar/prisma';
-import { TripsController } from './trips.controller';
+import { ODataModule } from '@lodestar/odata';
+import { PlatformModule } from '@lodestar/platform';
 import { TripsService } from './trips.service';
-import { LoadRecordService } from './load-record.service';
+import { LoadRecordsSet, PODsSet, TripStopsSet, TripsSet } from './trips.sets';
 
 @Module({
-  imports: [PrismaModule],
-  controllers: [TripsController],
-  providers: [TripsService, LoadRecordService],
+  imports: [
+    PlatformModule.forService('trips'),
+    ODataModule.forRoot({
+      service: 'trips',
+      entitySets: [TripsSet, TripStopsSet, PODsSet, LoadRecordsSet],
+      providers: [TripsService],
+    }),
+  ],
 })
 export class AppModule {}

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trips-config
+  labels:
+    app: trips
+    app.kubernetes.io/name: trips
+    app.kubernetes.io/part-of: lodestar
+data:
+  SERVICE_NAME: trips
+  PORT: '3006'
+  DB_SCHEMA: trips

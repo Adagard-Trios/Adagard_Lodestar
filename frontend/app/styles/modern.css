@@ -1,0 +1,103 @@
+/* ==========================================================================
+   Waypoint Lodestar — "Soft modern SaaS" layer
+   Loaded LAST on every page. Only changes radius, shadow, gradient, surface
+   and border tones — never sizes — so no frame content can overflow.
+   ========================================================================== */
+
+:root {
+  --shadow-1: 0 1px 2px rgba(15, 20, 50, .04), 0 2px 6px rgba(15, 20, 50, .04);
+  --shadow-2: 0 2px 4px rgba(15, 20, 50, .04), 0 8px 24px rgba(15, 20, 50, .07);
+  --shadow-3: 0 4px 8px rgba(15, 20, 50, .04), 0 24px 64px rgba(15, 20, 50, .14);
+  --grad-brand: linear-gradient(135deg, #4F5FE0 0%, #3B4CCA 55%, #2F3CB0 100%);
+  --grad-star: linear-gradient(135deg, #FFD37A 0%, #F5B83D 60%, #EDA422 100%);
+  --grad-navy: linear-gradient(180deg, #121A4A 0%, #0A0F2E 100%);
+  --board-bg: #E9ECF4;
+}
+
+/* ---------- Board canvas ---------- */
+body { background: radial-gradient(1200px 800px at 0% 0%, #F1F3FA 0%, rgba(241,243,250,0) 70%), var(--board-bg); }
+
+/* ---------- Role modes: softer surfaces & hairlines ---------- */
+.mode-dispatcher { --surface-2: #F6F7FB; --surface-3: #EEF0F6; --line: #E8EBF2; --line-strong: #D3D8E3; }
+.mode-store      { --surface-2: #F7F8FC; --surface-3: #EFF1F7; --line: #E8EBF2; --line-strong: #D3D8E3; }
+.mode-loader     { --surface-2: #F4F6FA; }
+.mode-driver     { --surface: #0A0F1E; --surface-2: #121A2E; --surface-3: #1A2340; --line: #232C47; }
+
+/* ---------- Frames ---------- */
+.frame--desktop { border-radius: 18px; border: 1px solid #D9DEE8; box-shadow: var(--shadow-3); }
+.frame--tablet  { border-radius: 28px; }
+.frame--phone   { border-radius: 44px; box-shadow: 0 0 0 1px #2A2F3D, var(--shadow-3); }
+.browserbar { background: #F3F5F9; border-bottom: 1px solid #E6E9F0; }
+.browserbar__url { border-radius: 999px; border: 1px solid #E3E7EF; }
+.browserbar__dots div:nth-child(1) { background: #FF6B61; }
+.browserbar__dots div:nth-child(2) { background: #FFBE3C; }
+.browserbar__dots div:nth-child(3) { background: #2BC955; }
+
+/* ---------- App shell (dispatcher) ---------- */
+.sidenav { background: var(--grad-navy); }
+.sidenav__item { border-radius: 10px; }
+.sidenav__item.is-active { background: linear-gradient(90deg, rgba(91,108,255,.35) 0%, rgba(91,108,255,.12) 100%); box-shadow: inset 0 0 0 1px rgba(140,152,255,.25); }
+.topbar { border-bottom: 1px solid var(--line); }
+.seg { border-radius: 12px; }
+.seg__item { border-radius: 9px; }
+
+/* ---------- Buttons ---------- */
+.btn { border-radius: 12px; }
+.btn--primary { background: var(--grad-brand); box-shadow: 0 1px 0 rgba(255,255,255,.18) inset, 0 6px 16px rgba(59,76,202,.28); }
+.mode-driver .btn--primary { background: var(--grad-star); box-shadow: 0 1px 0 rgba(255,255,255,.35) inset, 0 8px 22px rgba(245,184,61,.25); }
+.mode-loader .btn--primary, .mode-driver-day .btn--primary { background: linear-gradient(135deg, #243080 0%, #141B4D 100%); box-shadow: 0 6px 16px rgba(20,27,77,.25); }
+.btn--secondary { box-shadow: var(--shadow-1); }
+.btn--danger { background: linear-gradient(135deg, #D8392B 0%, #B42318 100%); box-shadow: 0 6px 16px rgba(180,35,24,.22); }
+.btn--xl { border-radius: 18px; }
+.btn--sm { border-radius: 9px; }
+
+/* ---------- Cards, KPIs, tables ---------- */
+.card { border-radius: 16px; }
+.card--raised { box-shadow: var(--shadow-2); }
+.kpi { border-radius: 16px; box-shadow: var(--shadow-1); background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 140%); }
+.tbl { border-radius: 16px; box-shadow: var(--shadow-1); }
+.tbl__row--head { background: var(--surface-2); letter-spacing: .06em; }
+.input { border-radius: 12px; }
+.stepper { border-radius: 14px; }
+.check { border-radius: 7px; }
+.check--xl { border-radius: 12px; }
+.photo { border-radius: 12px; }
+
+/* ---------- Chips & capacity ---------- */
+.chip { font-weight: 700; }
+.cap__track { border-radius: 999px; }
+.cap__fill { border-radius: 999px; background: var(--grad-brand); }
+.cap__fill--ok { background: linear-gradient(90deg, #10B981 0%, #047857 100%); }
+.cap__fill--warn { background: var(--grad-star); }
+.cap__fill--over { background: linear-gradient(90deg, #F04438 0%, #B42318 100%); }
+
+/* ---------- Order Thread: soft ring on the live step ---------- */
+.thread__step.is-done .thread__node { box-shadow: 0 2px 6px rgba(4,120,87,.25); }
+.thread__step.is-now .thread__node { box-shadow: 0 0 0 5px var(--st-enroute-bg), 0 4px 10px rgba(3,105,161,.3); }
+
+/* ---------- Mobile bars ---------- */
+.appbar { border-bottom: 1px solid var(--line); }
+.tabbar { border-top: 1px solid var(--line); }
+.sync-pill { box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+
+/* ---------- Presentation elements ---------- */
+.rationale { border-radius: 20px; border: 1px solid #E3E7EF; border-top: 4px solid var(--brand-600); box-shadow: var(--shadow-2); }
+.doc-card { border-radius: 24px; border: 1px solid #E3E7EF; box-shadow: var(--shadow-2); }
+.doc-card--dark { background: var(--grad-navy); border-color: #1B2358; }
+.screen-label__id { border-radius: 8px; }
+.pins { border-radius: 16px; }
+.annot { border-radius: 12px; }
+.page-head { border-bottom: 1px solid #C9CFDB; }
+.page-head__num { border-radius: 12px; background: var(--grad-navy); }
+
+/* ---------- Page-local components lifted to the same language ---------- */
+/* dispatcher (05) */
+.panel, .cand, .handoff { border-radius: 16px; }
+.veh, .trip, .downbar, .tip { border-radius: 14px; }
+.att { border-radius: 12px; }
+.filterchip, .searchbox, .clock, .iconbtn, .ghost { border-radius: 10px; }
+.trip { box-shadow: var(--shadow-1); }
+.tl { border-radius: 22px; box-shadow: var(--shadow-1); }
+/* store (04) / loader (06) / driver (07) / degradation (08) cards */
+.w-card, .s-card, .l-card, .l-list, .l-veh { box-shadow: var(--shadow-1); }
+.persona, .ctx, .q3, .side { border-radius: 20px; }

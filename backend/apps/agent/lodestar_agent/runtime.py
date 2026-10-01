@@ -1,0 +1,124 @@
+"""Run orchestration used by the API: start, read, resume and ask."""
+
+from __future__ import annotations
+
+import logging
+import uuid
+from collections.abc import Callable
+from typing import Any
+
+from langchain_core.language_models import BaseChatModel
+from langgraph.types import Command
+
+from .domain.context import PlanningContext
+from .domain.edits import EditError, validate_edit
+from .graph.ask import answer_question
+from .graph.builder import build_graph
+from .checkpoint import Checkpointing
+from .odata import ODataClient
+
+log = logging.getLogger("lodestar_agent.runtime")
+
+VIEW_KEYS = (
+    "depot",
+    "runDate",
+    "requestedBy",
+    "contextSummary",
+    "plan",
+    "ruleChecks",
+    "violations",
+    "deferrals",
+    "needsReview",
+    "explanation",
+    "decision",
+    "decisions",
+    "constraints",
+    "redrafts",
+    "history",
+)
+
+
+class RunNotFound(LookupError):
+    pass
+
+
+class RunConflict(RuntimeError):
+    pass
+
+
+class AgentRuntime:
+    def __init__(
+        self,
+        model: BaseChatModel,
+        odata_factory: Callable[[], ODataClient],
+        checkpointing: Checkpointing,
+        *,
+        max_redrafts: int = 3,
+        first_departure: str = "03:30",
+    ):
+        self.model = model
+        self.checkpointing = checkpointing
+        self.first_departure = first_departure
+        self.graph = build_graph(model, odata_factory, checkpointing.saver, max_redrafts=max_redrafts, first_departure=first_departure)
+
+    @staticmethod
+    def _config(run_id: str) -> dict[str, Any]:
+        return {"configurable": {"thread_id": run_id}, "recursion_limit": 50}
+
+    # ---------------------------------------------------------------- reads
+    def _snapshot(self, run_id: str):
+        snap = self.graph.get_state(self._config(run_id))
+        if not snap or not snap.values or "depot" not in snap.values:
+            raise RunNotFound(run_id)
+        return snap
+
+    def depot_of(self, run_id: str) -> str:
+        return str(self._snapshot(run_id).values["depot"])
+
+    def get_run(self, run_id: str) -> dict[str, Any]:
+        snap = self._snapshot(run_id)
+        values = snap.values
+        waiting = "await_approval" in (snap.next or ()) and any(t.interrupts for t in snap.tasks)
+        status = "NEEDS_APPROVAL" if waiting else values.get("status", "DRAFTING")
+        view: dict[str, Any] = {"id": run_id, "status": status}
+        view.update({k: values[k] for k in VIEW_KEYS if k in values})
+        view["version"] = (values.get("plan") or {}).get("version")
+        view["canPublish"] = False  # the agent never publishes; planning does, on a human approval
+        return view
+
+    # ---------------------------------------------------------------- writes
+    def start_run(self, depot: str, run_date: str, requested_by: str) -> dict[str, Any]:
+        run_id = f"run-{depot.lower()}-{run_date}-{uuid.uuid4().hex[:8]}"
+        initial = {"runId": run_id, "depot": depot, "runDate": run_date, "requestedBy": requested_by, "status": "DRAFTING", "raw": {}}
+        log.info("run started", extra={"run_id": run_id, "depot": depot, "run_date": run_date, "sub": requested_by})
+        self.graph.invoke(initial, self._config(run_id))
+        return self.get_run(run_id)
+
+    def _context(self, run_id: str) -> tuple[PlanningContext, dict[str, Any]]:
+        snap = self._snapshot(run_id)
+        values = snap.values
+        ctx = PlanningContext.from_raw(values.get("raw", {}), values["depot"], values["runDate"], self.first_departure)
+        return ctx, self.get_run(run_id)
+
+    def resume(self, run_id: str, decision: str, edits: list[dict[str, Any]] | None, principal_sub: str, roles: list[str], comment: str | None = None) -> dict[str, Any]:
+        ctx, run = self._context(run_id)
+        if run["status"] != "NEEDS_APPROVAL":
+            raise RunConflict(f"run {run_id} is {run['status']}, not waiting for approval")
+        if decision == "edit":
+            if not edits:
+                raise EditError("decision 'edit' needs at least one edit")
+            plan = run["plan"]
+            for e in edits:
+                validate_edit(ctx, plan, e)
+        payload = {"decision": decision, "edits": edits or [], "by": principal_sub, "roles": roles, "comment": comment}
+        log.info("run resumed", extra={"run_id": run_id, "decision": decision, "sub": principal_sub})
+        self.graph.invoke(Command(resume=payload), self._config(run_id))
+        return self.get_run(run_id)
+
+    def ask(self, run_id: str, question: str) -> dict[str, Any]:
+        ctx, run = self._context(run_id)
+        if "plan" not in run:
+            raise RunConflict(f"run {run_id} has no draft yet")
+        result = answer_question(self.model, ctx, run, question)
+        log.info("ask answered", extra={"run_id": run_id, "tools": result["toolCalls"]})
+        return {"runId": run_id, **result}

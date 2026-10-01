@@ -1,0 +1,326 @@
+import { Inject, Injectable } from '@nestjs/common';
+import { PrismaService } from '@lodestar/prisma';
+import {
+  callerAuthorization, currentRequest, EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, OperationContext, WriteContext,
+} from '@lodestar/odata';
+import { AUDIT_SINK, AuditSink, canAccessDepot, Principal, Roles, serviceName } from '@lodestar/security';
+import { Depot, DeferralStatus, PlanSource, PlanStatus } from '@prisma/client';
+import { AgentClient, AgentRunSnapshot } from './agent.client';
+import { dayRange, OPEN_PLAN_STATUSES, PlanningService } from './planning.service';
+
+function assertDepot(p: Principal, depot: string) {
+  if (!canAccessDepot(p, depot)) throw ODataError.forbidden(`You do not plan for depot ${depot}`, 'depot');
+}
+
+/** Plans: versioned dispatch plans. Only a human dispatcher can approve (publish). */
+@Injectable()
+@EntitySet({
+  name: 'Plans',
+  model: 'Plan',
+  read: [Roles.Dispatcher, Roles.Loader, Roles.Admin, Roles.Service],
+  create: [Roles.Dispatcher, Roles.Admin, Roles.Service],
+  update: [Roles.Dispatcher, Roles.Admin],
+  abac: { depot: (depots) => ({ depot: { in: depots } }) },
+  navigation: ['trips', 'deferrals'],
+  search: ['id', 'notes'],
+  insertable: ['depot', 'runDate', 'summary', 'explanation', 'agentRunId', 'notes'],
+  updatable: ['summary', 'explanation', 'notes'],
+  defaultOrderBy: 'runDate desc,version desc',
+})
+export class PlansSet extends ODataEntitySet {
+  constructor(
+    prisma: PrismaService,
+    private readonly planning: PlanningService,
+  ) {
+    super(prisma);
+  }
+
+  /** Drafts only: the id, version and status are assigned here, never by the client. */
+  async beforeCreate(data: Record<string, any>, ctx: WriteContext) {
+    if (!data.depot || !data.runDate) throw ODataError.badRequest('depot and runDate are required');
+    assertDepot(ctx.principal, data.depot);
+    const next = await this.planning.nextPlanId(data.depot, data.runDate.toISOString());
+    const fromAgent = serviceName(ctx.principal) === 'agent';
+    return {
+      ...data,
+      id: next.id,
+      version: next.version,
+      runDate: next.runDate,
+      // The agent drafts and asks for approval; it can never publish.
+      status: fromAgent ? PlanStatus.NEEDS_APPROVAL : PlanStatus.DRAFT,
+      source: fromAgent ? PlanSource.AGENT : PlanSource.MANUAL,
+      createdBy: ctx.principal.sub,
+    };
+  }
+
+  async beforeUpdate(patch: Record<string, any>, current: any) {
+    if (!OPEN_PLAN_STATUSES.includes(current.status)) throw ODataError.conflict(`Plan ${current.id} is ${current.status} and read-only`);
+    return patch;
+  }
+
+  /** POST Plans('PLG-2026-04-07-v3')/Lodestar.Approve — human dispatchers only (not svc, not admin). */
+  @ODataAction({ name: 'Approve', binding: 'entity', roles: [Roles.Dispatcher], params: { note: 'Edm.String' }, returns: 'Lodestar.Plan' })
+  approve(ctx: OperationContext) {
+    if (ctx.principal.isService) throw ODataError.forbidden('Only a human dispatcher can approve a plan');
+    return this.planning.approvePlan(ctx.entity.id, ctx.principal.sub, ctx.params.note);
+  }
+
+  /** POST Plans('…')/Lodestar.Reject {reason?} */
+  @ODataAction({ name: 'Reject', binding: 'entity', roles: [Roles.Dispatcher], params: { reason: 'Edm.String' }, returns: 'Lodestar.Plan' })
+  reject(ctx: OperationContext) {
+    return this.planning.rejectPlan(ctx.entity.id, ctx.params.reason);
+  }
+
+  /** POST Plans/Lodestar.AutoPlan {depot, runDate} — runs the auto-planner and stores a draft. */
+  @ODataAction({
+    name: 'AutoPlan',
+    binding: 'collection',
+    roles: [Roles.Dispatcher, Roles.Admin],
+    params: { depot: { type: 'Lodestar.Depot', required: true }, runDate: { type: 'Edm.Date', required: true } },
+    returns: 'Lodestar.Plan',
+  })
+  autoPlan(ctx: OperationContext) {
+    assertDepot(ctx.principal, ctx.params.depot);
+    return this.planning.runAutoPlan(ctx.params.depot as Depot, ctx.params.runDate, ctx.principal.sub);
+  }
+
+  /** GET Plans/Lodestar.Board(depot='KANDY',runDate=2026-04-07) — DSP-01 plan board. */
+  @ODataFunction({
+    name: 'Board',
+    binding: 'collection',
+    roles: [Roles.Dispatcher, Roles.Loader, Roles.Admin, Roles.Service],
+    params: { depot: { type: 'Lodestar.Depot', required: true }, runDate: { type: 'Edm.Date', required: true } },
+    returns: 'Edm.Untyped',
+  })
+  board(ctx: OperationContext) {
+    assertDepot(ctx.principal, ctx.params.depot);
+    return this.planning.getPlan(ctx.params.depot as Depot, ctx.params.runDate);
+  }
+
+  /** GET Plans/Lodestar.CapacityOutlook(depot='PELIYAGODA') — DSP-05 10-week outlook. */
+  @ODataFunction({
+    name: 'CapacityOutlook',
+    binding: 'collection',
+    roles: [Roles.Dispatcher, Roles.Admin, Roles.Service],
+    params: { depot: { type: 'Lodestar.Depot', required: true } },
+    returns: 'Edm.Untyped',
+  })
+  capacityOutlook(ctx: OperationContext) {
+    assertDepot(ctx.principal, ctx.params.depot);
+    return this.planning.getCapacityOutlook(ctx.params.depot as Depot);
+  }
+}
+
+const deferralDepot = (depots: string[]) => ({ order: { is: { outlet: { is: { depot: { in: depots } } } } } });
+
+/** Deferrals: suggested by the planner or a dispatcher, confirmed by a dispatcher. */
+@Injectable()
+@EntitySet({
+  name: 'Deferrals',
+  model: 'DeferralLog',
+  read: [Roles.Dispatcher, Roles.StoreManager, Roles.Admin, Roles.Service],
+  create: [Roles.Dispatcher, Roles.Admin],
+  abac: {
+    depot: deferralDepot,
+    outlet: (outletId) => ({ order: { is: { outletId } } }),
+  },
+  navigation: ['order', 'plan'],
+  search: ['orderId', 'notes'],
+  insertable: ['orderId', 'reason', 'notes', 'rescheduledDate', 'isProvisional', 'planId'],
+  defaultOrderBy: 'createdAt desc',
+})
+export class DeferralsSet extends ODataEntitySet {
+  constructor(
+    prisma: PrismaService,
+    private readonly planning: PlanningService,
+  ) {
+    super(prisma);
+  }
+
+  async beforeCreate(data: Record<string, any>, ctx: WriteContext) {
+    if (!data.orderId || !data.reason) throw ODataError.badRequest('orderId and reason are required');
+    const { order, score, isProtected } = await this.planning.scoreOrder(data.orderId);
+    const outlet = await this.prisma.outlet.findUnique({ where: { id: order.outletId }, select: { depot: true } });
+    assertDepot(ctx.principal, outlet?.depot);
+    if (isProtected) throw ODataError.conflict(`Order ${order.id} is protected and is never deferred`, 'orderId');
+    return { ...data, score, status: DeferralStatus.SUGGESTED, resolvedBy: null };
+  }
+
+  /** POST Deferrals('…')/Lodestar.Confirm {notes?, rescheduledDate?} */
+  @ODataAction({
+    name: 'Confirm',
+    binding: 'entity',
+    roles: [Roles.Dispatcher],
+    params: { notes: 'Edm.String', rescheduledDate: 'Edm.Date' },
+    returns: 'Lodestar.DeferralLog',
+  })
+  confirm(ctx: OperationContext) {
+    return this.planning.confirmDeferral(ctx.entity.id, ctx.principal.sub, ctx.params.notes, ctx.params.rescheduledDate);
+  }
+
+  /** POST Deferrals('…')/Lodestar.Dismiss */
+  @ODataAction({ name: 'Dismiss', binding: 'entity', roles: [Roles.Dispatcher], returns: 'Lodestar.DeferralLog' })
+  dismiss(ctx: OperationContext) {
+    if (ctx.entity.status !== DeferralStatus.SUGGESTED) throw ODataError.conflict(`Deferral is ${ctx.entity.status}`);
+    return this.planning.dismissDeferral(ctx.entity.id, ctx.principal.sub);
+  }
+
+  /** POST Deferrals('…')/Lodestar.Reverse {notes?} — field evidence wins. */
+  @ODataAction({
+    name: 'Reverse',
+    binding: 'entity',
+    roles: [Roles.Dispatcher, Roles.Service],
+    params: { notes: 'Edm.String' },
+    returns: 'Lodestar.DeferralLog',
+  })
+  reverse(ctx: OperationContext) {
+    if (ctx.entity.status !== DeferralStatus.CONFIRMED) throw ODataError.conflict(`Deferral is ${ctx.entity.status}`);
+    return this.planning.reverseDeferral(ctx.entity.id, ctx.principal.sub, ctx.params.notes);
+  }
+}
+
+const TERMINAL_RUN = new Set(['APPROVED', 'REJECTED', 'FAILED', 'COMPLETED', 'CANCELLED']);
+const RESYNC_AFTER_MS = 2_000;
+
+/** Fields we keep from an agent run view. */
+function fromSnapshot(s: AgentRunSnapshot) {
+  return {
+    status: String(s.status ?? 'DRAFTING').toUpperCase(),
+    detail: s as any,
+    lastSyncedAt: new Date(),
+  };
+}
+
+/**
+ * AgentRuns: the planning agent's runs, exposed as OData.
+ *  - POST AgentRuns {depot, runDate} starts a draft run in the agent.
+ *  - The reference row makes runs listable and depot-scoped; reading one
+ *    refreshes it from the agent.
+ *  - Every agent call carries the calling dispatcher's own token.
+ */
+@Injectable()
+@EntitySet({
+  name: 'AgentRuns',
+  model: 'AgentRun',
+  read: [Roles.Dispatcher, Roles.Admin],
+  create: [Roles.Dispatcher],
+  abac: { depot: (depots) => ({ depot: { in: depots } }) },
+  navigation: [],
+  search: ['id', 'status'],
+  insertable: ['depot', 'runDate'],
+  defaultOrderBy: 'createdAt desc',
+})
+export class AgentRunsSet extends ODataEntitySet {
+  constructor(
+    prisma: PrismaService,
+    private readonly agent: AgentClient,
+    private readonly planning: PlanningService,
+    @Inject(AUDIT_SINK) private readonly audit: AuditSink,
+  ) {
+    super(prisma);
+  }
+
+  private authorization(headers?: Record<string, string | string[] | undefined>): string {
+    const auth = callerAuthorization(headers);
+    if (!auth) throw ODataError.forbidden('The planning agent needs the calling dispatcher’s token');
+    return auth;
+  }
+
+  async beforeCreate(data: Record<string, any>, ctx: WriteContext) {
+    if (!data.depot || !data.runDate) throw ODataError.badRequest('depot and runDate are required');
+    assertDepot(ctx.principal, data.depot);
+    return data;
+  }
+
+  /** POST /odata/v4/AgentRuns {depot, runDate} → starts a draft run in the agent. */
+  async create(data: Record<string, any>, ctx: WriteContext) {
+    const { iso, start } = dayRange(data.runDate);
+    const snapshot = await this.agent.startRun(data.depot, iso, this.authorization(ctx.headers));
+    if (!snapshot?.id) throw new ODataError(502, 'BadGateway', 'The planning agent returned no run id');
+    return this.prisma.agentRun.create({
+      data: { id: String(snapshot.id), depot: data.depot, runDate: start, requestedBy: ctx.principal.sub, ...fromSnapshot(snapshot) },
+    });
+  }
+
+  /** Single reads refresh a live run from the agent with the caller's token (best effort). */
+  async findFirst(args: { where?: any; select?: any }) {
+    const row = await super.findFirst({ where: args.where });
+    if (!row) return null;
+    const auth = callerAuthorization(currentRequest()?.headers);
+    const stale = !row.lastSyncedAt || Date.now() - new Date(row.lastSyncedAt).getTime() > RESYNC_AFTER_MS;
+    if (auth && stale && !TERMINAL_RUN.has(row.status)) {
+      try {
+        const snapshot = await this.agent.getRun(row.id, auth);
+        await this.prisma.agentRun.update({ where: { id: row.id }, data: fromSnapshot(snapshot) });
+      } catch {
+        // Keep the last known state if the agent is unavailable.
+      }
+    }
+    return super.findFirst(args);
+  }
+
+  /**
+   * POST AgentRuns('…')/Lodestar.Resume {decision: approve|edit|reject, edits?, comment?}
+   * The human decision. On "approve", planning stores the agent's draft as a
+   * plan version and publishes it with the dispatcher's authority (Plans
+   * Approve) — the agent itself can never publish.
+   */
+  @ODataAction({
+    name: 'Resume',
+    binding: 'entity',
+    roles: [Roles.Dispatcher],
+    params: { decision: { type: 'Edm.String', required: true }, edits: 'Collection(Edm.Untyped)', comment: 'Edm.String' },
+    returns: 'Lodestar.AgentRun',
+  })
+  async resume(ctx: OperationContext) {
+    const decision = String(ctx.params.decision).toLowerCase();
+    if (!['approve', 'edit', 'reject'].includes(decision)) throw ODataError.badRequest('decision must be approve, edit or reject', 'decision');
+    if (decision === 'edit' && !(ctx.params.edits as unknown[] | undefined)?.length) {
+      throw ODataError.badRequest("decision 'edit' needs at least one edit", 'edits');
+    }
+
+    const snapshot = await this.agent.resume(ctx.entity.id, this.authorization(ctx.headers), decision, ctx.params.edits, ctx.params.comment);
+    // Record the agent's new state first, so a failure below never loses the decision.
+    let run = await this.prisma.agentRun.update({
+      where: { id: ctx.entity.id },
+      data: { ...fromSnapshot(snapshot), decision, decidedBy: ctx.principal.sub },
+    });
+
+    if (decision === 'approve' && String(snapshot.status).toUpperCase() === 'APPROVED') {
+      let planId: string | undefined = run.planId ?? undefined;
+      if (!planId) {
+        planId = (await this.planning.createAgentPlan(ctx.entity, snapshot, ctx.principal.sub)).id;
+        run = await this.prisma.agentRun.update({ where: { id: run.id }, data: { planId } });
+      }
+      // If publishing fails here, the draft stays NEEDS_APPROVAL and can be approved with Plans('…')/Lodestar.Approve.
+      await this.planning.approvePlan(planId, ctx.principal.sub, `Approved via planning-agent run ${ctx.entity.id}`);
+      // The publication is its own audited write, attributed to the dispatcher.
+      await this.audit.record({
+        at: new Date().toISOString(),
+        actor: ctx.principal.sub,
+        actorRoles: ctx.principal.roles,
+        client: ctx.principal.clientId,
+        action: 'Plans.Approve',
+        entitySet: 'Plans',
+        entityKey: planId,
+        outcome: 'SUCCESS',
+        payload: { via: 'AgentRuns.Resume', agentRunId: ctx.entity.id },
+      });
+    }
+    return run;
+  }
+
+  /** POST AgentRuns('…')/Lodestar.Ask {question} — "Ask the planning agent" (DSP-39/40). */
+  @ODataAction({
+    name: 'Ask',
+    binding: 'entity',
+    roles: [Roles.Dispatcher],
+    params: { question: { type: 'Edm.String', required: true } },
+    returns: 'Edm.Untyped',
+  })
+  ask(ctx: OperationContext) {
+    const question = String(ctx.params.question).trim();
+    if (!question || question.length > 2000) throw ODataError.badRequest('question must be 1–2000 characters', 'question');
+    return this.agent.ask(ctx.entity.id, question, this.authorization(ctx.headers));
+  }
+}

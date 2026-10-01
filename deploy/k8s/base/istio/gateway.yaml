@@ -1,0 +1,22 @@
+# Internal Istio ingress (AKS add-on). Front Door Premium reaches it over
+# Private Link; TLS cert comes from Key Vault (see ingress-tls-sync.yaml).
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: lodestar
+  namespace: lodestar
+spec:
+  selector:
+    istio: aks-istio-ingressgateway-internal
+  servers:
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      credentialName: lodestar-ingress-tls
+      minProtocolVersion: TLSV1_2
+    hosts:
+    - WEB_HOST
+    - FIELD_HOST

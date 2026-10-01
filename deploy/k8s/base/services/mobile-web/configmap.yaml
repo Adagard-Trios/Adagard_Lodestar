@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mobile-web-config
+  labels:
+    app: mobile-web
+    app.kubernetes.io/name: mobile-web
+    app.kubernetes.io/part-of: lodestar
+data:
+  SERVICE_NAME: mobile-web
+  PORT: '8080'

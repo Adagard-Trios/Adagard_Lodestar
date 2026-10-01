@@ -1,0 +1,278 @@
+# Waypoint Lodestar · pull-request checks (PLATFORM.md §7).
+# Fast feedback on every PR / feature branch: lint, typecheck, unit tests, build and Cypress.
+# main is built by Jenkins (Jenkinsfile): full stack + Playwright, SonarQube gate, images, Terraform, GitOps.
+# Project setting: enable "Only build pull requests" so feature branches build once a PR is open.
+version: 2.1
+
+orbs:
+  node: circleci/node@7
+  python: circleci/python@3
+
+parameters:
+  node-image:
+    type: string
+    default: cimg/node:lts
+  python-image:
+    type: string
+    default: cimg/python:3.12
+
+executors:
+  node:
+    docker:
+      - image: << pipeline.parameters.node-image >>
+    resource_class: medium
+    environment:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      CYPRESS_INSTALL_BINARY: "0"  # only the Cypress job downloads the binary
+  cypress:
+    docker:
+      - image: cypress/browsers:latest
+    resource_class: large
+    environment:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      CYPRESS_CACHE_FOLDER: ~/.cache/Cypress
+  python:
+    docker:
+      - image: << pipeline.parameters.python-image >>
+    resource_class: medium
+
+commands:
+  frontend-deps:
+    description: Install frontend packages (npm ci, cached on package-lock.json)
+    steps:
+      - node/install-packages:
+          app-dir: frontend
+          pkg-manager: npm
+  backend-deps:
+    description: Install backend packages (npm ci when a lockfile exists, cached on it or package.json)
+    steps:
+      - run:
+          name: Lockfile checksum source
+          command: |
+            cd backend
+            if [ -f package-lock.json ]; then cp package-lock.json /tmp/backend-deps-key; else cp package.json /tmp/backend-deps-key; fi
+      - restore_cache:
+          keys:
+            - backend-npm-v1-{{ checksum "/tmp/backend-deps-key" }}
+            - backend-npm-v1-
+      - run:
+          name: npm install (backend)
+          command: |
+            cd backend
+            if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
+            if [ -f prisma/schema.prisma ]; then npx prisma generate; fi
+      - save_cache:
+          key: backend-npm-v1-{{ checksum "/tmp/backend-deps-key" }}
+          paths:
+            - ~/.npm
+
+jobs:
+  # ------------------------------------------------------------------ frontend
+  frontend-lint:
+    executor: node
+    steps:
+      - checkout
+      - frontend-deps
+      - run:
+          name: ESLint
+          command: cd frontend && npm run lint
+
+  frontend-typecheck:
+    executor: node
+    steps:
+      - checkout
+      - frontend-deps
+      - run:
+          name: tsc (app, Jest and Cypress projects)
+          command: cd frontend && npm run typecheck
+
+  frontend-jest:
+    executor: node
+    steps:
+      - checkout
+      - frontend-deps
+      - run:
+          name: Jest with coverage
+          command: cd frontend && npx jest --ci --coverage
+      - store_test_results:
+          path: frontend/reports/junit
+      - store_artifacts:
+          path: frontend/coverage
+          destination: frontend-coverage
+      - persist_to_workspace:
+          root: .
+          paths:
+            - frontend/coverage/lcov.info
+
+  frontend-build:
+    executor: node
+    steps:
+      - checkout
+      - frontend-deps
+      - restore_cache:
+          keys:
+            - next-cache-v1-{{ .Branch }}-{{ checksum "frontend/package-lock.json" }}
+            - next-cache-v1-
+      - run:
+          name: next build
+          command: cd frontend && npm run build
+      - save_cache:
+          key: next-cache-v1-{{ .Branch }}-{{ checksum "frontend/package-lock.json" }}-{{ epoch }}
+          paths:
+            - frontend/.next/cache
+      - persist_to_workspace:
+          root: .
+          paths:
+            - frontend/.next
+
+  frontend-cypress:
+    executor: cypress
+    parallelism: 1
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - restore_cache:
+          keys:
+            - cypress-v1-{{ checksum "frontend/package-lock.json" }}
+      - run:
+          name: npm ci (with the Cypress binary)
+          # npm >= 11 does not run dependency install scripts by default, so fetch the binary explicitly
+          command: cd frontend && npm ci && npx cypress install && npx cypress verify
+      - save_cache:
+          key: cypress-v1-{{ checksum "frontend/package-lock.json" }}
+          paths:
+            - ~/.npm
+            - ~/.cache/Cypress
+      - run:
+          name: Cypress against the built site (next start)
+          command: |
+            cd frontend
+            npx start-server-and-test "npx next start -p 3000" http://localhost:3000 \
+              "npx cypress run --e2e --browser electron --reporter junit --reporter-options mochaFile=reports/cypress/results-[hash].xml"
+          environment:
+            CYPRESS_BASE_URL: http://localhost:3000
+      - store_test_results:
+          path: frontend/reports/cypress
+      - store_artifacts:
+          path: frontend/cypress/screenshots
+          destination: cypress-screenshots
+
+  # ------------------------------------------------------------------ mobile
+  mobile-typecheck:
+    executor: node
+    steps:
+      - checkout
+      - node/install-packages:
+          app-dir: mobile
+          pkg-manager: npm
+      - run:
+          name: tsc (Expo app)
+          command: cd mobile && npx tsc --noEmit
+
+  # ------------------------------------------------------------------ backend (NestJS)
+  backend-lint:
+    executor: node
+    steps:
+      - checkout
+      - backend-deps
+      - run:
+          name: ESLint
+          command: cd backend && npm run lint
+
+  backend-typecheck:
+    executor: node
+    steps:
+      - checkout
+      - backend-deps
+      - run:
+          name: tsc
+          command: cd backend && (npm run typecheck --if-present || npx tsc --noEmit -p tsconfig.json)
+
+  backend-jest:
+    executor: node
+    steps:
+      - checkout
+      - backend-deps
+      - run:
+          name: Jest with coverage
+          command: |
+            cd backend
+            REPORTERS=""
+            if [ -d node_modules/jest-junit ]; then REPORTERS="--reporters=default --reporters=jest-junit"; fi
+            npx jest --ci --coverage $REPORTERS
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: reports/junit
+      - store_test_results:
+          path: backend/reports/junit
+      - store_artifacts:
+          path: backend/coverage
+          destination: backend-coverage
+      - persist_to_workspace:
+          root: .
+          paths:
+            - backend/coverage/lcov.info
+
+  # ------------------------------------------------------------------ planning agent (Python)
+  agent-pytest:
+    executor: python
+    steps:
+      - checkout
+      - python/install-packages:
+          app-dir: backend/apps/agent
+          pkg-manager: pip
+          pip-dependency-file: requirements-dev.txt
+      - run:
+          name: pytest (+ mockito), coverage.xml
+          command: |
+            cd backend/apps/agent
+            mkdir -p reports
+            python -m pytest --junitxml=reports/pytest.xml --cov=lodestar_agent --cov-report=xml:coverage.xml
+      - store_test_results:
+          path: backend/apps/agent/reports
+      - store_artifacts:
+          path: backend/apps/agent/coverage.xml
+      - persist_to_workspace:
+          root: .
+          paths:
+            - backend/apps/agent/coverage.xml
+
+  # ------------------------------------------------------------------ tools
+  screengen-check:
+    executor: node
+    steps:
+      - checkout
+      - run:
+          name: node --check tools/screengen/*.js
+          command: |
+            status=0
+            for f in tools/screengen/*.js; do
+              node --check "$f" && echo "ok  $f" || { echo "BAD $f"; status=1; }
+            done
+            exit $status
+
+workflows:
+  pr-checks:
+    when:
+      not:
+        equal: [main, << pipeline.git.branch >>]
+    jobs:
+      - screengen-check: &pr-only
+          filters:
+            branches:
+              ignore: main
+      - frontend-lint: *pr-only
+      - frontend-typecheck: *pr-only
+      - frontend-jest: *pr-only
+      - frontend-build: *pr-only
+      - frontend-cypress:
+          <<: *pr-only
+          requires:
+            - frontend-build
+      - mobile-typecheck: *pr-only
+      - backend-lint: *pr-only
+      - backend-typecheck: *pr-only
+      - backend-jest: *pr-only
+      - agent-pytest: *pr-only

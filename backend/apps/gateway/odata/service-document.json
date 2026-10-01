@@ -1,0 +1,105 @@
+{
+  "@odata.context": "$metadata",
+  "value": [
+    {
+      "name": "Users",
+      "kind": "EntitySet",
+      "url": "Users"
+    },
+    {
+      "name": "Devices",
+      "kind": "EntitySet",
+      "url": "Devices"
+    },
+    {
+      "name": "Orders",
+      "kind": "EntitySet",
+      "url": "Orders"
+    },
+    {
+      "name": "OrderLineItems",
+      "kind": "EntitySet",
+      "url": "OrderLineItems"
+    },
+    {
+      "name": "Plans",
+      "kind": "EntitySet",
+      "url": "Plans"
+    },
+    {
+      "name": "Deferrals",
+      "kind": "EntitySet",
+      "url": "Deferrals"
+    },
+    {
+      "name": "AgentRuns",
+      "kind": "EntitySet",
+      "url": "AgentRuns"
+    },
+    {
+      "name": "Vehicles",
+      "kind": "EntitySet",
+      "url": "Vehicles"
+    },
+    {
+      "name": "Outlets",
+      "kind": "EntitySet",
+      "url": "Outlets"
+    },
+    {
+      "name": "Calendar",
+      "kind": "EntitySet",
+      "url": "Calendar"
+    },
+    {
+      "name": "DistrictTravel",
+      "kind": "EntitySet",
+      "url": "DistrictTravel"
+    },
+    {
+      "name": "ServiceAllowances",
+      "kind": "EntitySet",
+      "url": "ServiceAllowances"
+    },
+    {
+      "name": "Trips",
+      "kind": "EntitySet",
+      "url": "Trips"
+    },
+    {
+      "name": "TripStops",
+      "kind": "EntitySet",
+      "url": "TripStops"
+    },
+    {
+      "name": "PODs",
+      "kind": "EntitySet",
+      "url": "PODs"
+    },
+    {
+      "name": "LoadRecords",
+      "kind": "EntitySet",
+      "url": "LoadRecords"
+    },
+    {
+      "name": "OfflineEvents",
+      "kind": "EntitySet",
+      "url": "OfflineEvents"
+    },
+    {
+      "name": "Notifications",
+      "kind": "EntitySet",
+      "url": "Notifications"
+    },
+    {
+      "name": "AuditEntries",
+      "kind": "EntitySet",
+      "url": "AuditEntries"
+    },
+    {
+      "name": "Me",
+      "kind": "FunctionImport",
+      "url": "Me"
+    }
+  ]
+}

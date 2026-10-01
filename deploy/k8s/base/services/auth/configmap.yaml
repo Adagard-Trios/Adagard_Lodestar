@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-config
+  labels:
+    app: auth
+    app.kubernetes.io/name: auth
+    app.kubernetes.io/part-of: lodestar
+data:
+  SERVICE_NAME: auth
+  PORT: '3001'
+  DB_SCHEMA: auth

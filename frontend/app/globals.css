@@ -1,9 +1,10 @@
 @import './styles/tokens.css';
 @import './styles/base.css';
-
-/* Global resets for the Next.js app */
-body {
-  margin: 0;
-  padding: 0;
-  background-color: var(--board-bg);
-}
+@import './styles/components.css';
+@import './styles/modern.css';
+@import './styles/ui2.css';
+@import './styles/boards/P1.css';
+@import './styles/boards/P2.css';
+@import './styles/boards/P5.css';
+@import './styles/boards/P6.css';
+@import './styles/web.css';

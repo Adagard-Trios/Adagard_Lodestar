@@ -1,33 +1,107 @@
-import { WebSocketGateway, WebSocketServer, OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets';
+import { Logger } from '@nestjs/common';
+import { OnGatewayConnection, OnGatewayDisconnect, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { PrismaService } from '@lodestar/prisma';
+import { bearerToken, DevicePostureService, isPrivileged, JwtVerifier, Principal, Roles } from '@lodestar/security';
+
+/** Depot rooms are upper-case (dispatcher:KANDY, loader:KANDY); other ids are kept as given. */
+export function canonicalRoom(room: string): string {
+  const [kind, id] = room.split(':', 2);
+  return (kind === 'dispatcher' || kind === 'loader') && id ? `${kind}:${id.toUpperCase()}` : room;
+}
+
+const WS_ORIGINS =(process.env.WS_CORS_ORIGINS ?? 'https://localhost:8443,http://localhost:8082').split(',').map((s) => s.trim());
 
 /**
- * Real-time WebSocket gateway.
+ * Real-time WebSocket gateway. Connections authenticate with the same access
+ * token as HTTP (handshake `auth.token` or Authorization header) and may only
+ * join rooms their claims allow.
  * Rooms:
+ *   user:<sub>           — personal notifications (joined automatically)
  *   dispatcher:<depot>   — dispatchers see all events for their depot
- *   trip:<tripId>        — ops tracking specific trip
+ *   trip:<tripId>        — ops tracking a specific trip
  *   store:<outletId>     — store manager sees their ETA
  *   driver:<userId>      — driver receives their assigned trip
  *   loader:<depot>       — loader sees bay queue updates
  */
-@WebSocketGateway({ cors: { origin: '*' }, path: '/ws/socket.io' })
+@WebSocketGateway({ cors: { origin: WS_ORIGINS, credentials: true }, path: '/ws/' })
 export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  private readonly logger = new Logger(NotificationsGateway.name);
+
   @WebSocketServer()
   server: Server;
 
-  handleConnection(client: Socket) {
-    const { room } = client.handshake.query;
-    if (room) client.join(room as string);
-    console.log(`WS client connected: ${client.id} → room: ${room}`);
+  constructor(
+    private readonly verifier: JwtVerifier,
+    private readonly posture: DevicePostureService,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  async handleConnection(client: Socket) {
+    try {
+      const raw = client.handshake.auth?.token ?? bearerToken(client.handshake.headers?.authorization);
+      const token = typeof raw === 'string' ? raw.replace(/^Bearer\s+/i, '') : undefined;
+      if (!token) throw new Error('missing token');
+      const principal = await this.verifier.verify(token);
+      await this.posture.check(principal);
+      client.data.principal = principal;
+      client.join(`user:${principal.sub}`);
+
+      const requested = String(client.handshake.query?.room ?? '')
+        .split(',')
+        .map((r) => r.trim())
+        .filter(Boolean);
+      for (const room of requested) {
+        // Join the canonical name, so dispatcher:kandy receives dispatcher:KANDY events.
+        const canonical = canonicalRoom(room);
+        if (await this.roomAllowed(principal, canonical)) client.join(canonical);
+        else client.emit('room_denied', { room });
+      }
+      this.logger.log(`WS ${client.id} connected as ${principal.sub} → ${[...client.rooms].join(', ')}`);
+    } catch (err) {
+      client.emit('unauthorized', { message: 'A valid access token is required' });
+      client.disconnect(true);
+    }
   }
 
   handleDisconnect(client: Socket) {
-    console.log(`WS client disconnected: ${client.id}`);
+    this.logger.log(`WS client disconnected: ${client.id}`);
+  }
+
+  /** ABAC for rooms: the same claims that scope OData rows scope realtime events. */
+  async roomAllowed(p: Principal, room: string): Promise<boolean> {
+    const [kind, id] = room.split(':', 2);
+    if (!id) return false;
+    if (p.roles.includes(Roles.Admin)) return true;
+    switch (kind) {
+      case 'user':
+      case 'driver':
+        return id === p.sub;
+      case 'dispatcher':
+        return p.roles.includes(Roles.Dispatcher) && p.depots.includes(id.toUpperCase());
+      case 'loader':
+        return p.roles.includes(Roles.Loader) && p.depots.includes(id.toUpperCase());
+      case 'store':
+        return p.roles.includes(Roles.StoreManager) && p.outletId === id;
+      case 'trip': {
+        const trip = await this.prisma.trip.findUnique({
+          where: { id },
+          select: { depot: true, vehicleId: true, stops: { select: { outletId: true } } },
+        });
+        if (!trip) return false;
+        if (isPrivileged(p)) return true;
+        if (p.roles.includes(Roles.Dispatcher) && p.depots.includes(trip.depot)) return true;
+        if (p.roles.includes(Roles.Driver) && p.vehicleId === trip.vehicleId) return true;
+        return p.roles.includes(Roles.StoreManager) && trip.stops.some((s) => s.outletId === p.outletId);
+      }
+      default:
+        return false;
+    }
   }
 
   /** Emit to all subscribers of a room */
   emit(room: string, event: string, payload: any) {
-    this.server.to(room).emit(event, payload);
+    this.server?.to(room).emit(event, payload);
   }
 
   /** Dispatcher-wide alert */
@@ -52,6 +126,6 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
 
   /** Credit note issued — notify store manager */
   creditNoteIssued(outletId: string, creditNoteId: string, payload: any) {
-    this.emit(`store:${outletId}`, 'credit_note_issued', { creditNoteId, ...payload });
+    this.emit(`store:${outletId}`, 'credit_note_issued', { ...payload, creditNoteId });
   }
 }

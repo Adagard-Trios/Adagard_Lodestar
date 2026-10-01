@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: audit-config
+  labels:
+    app: audit
+    app.kubernetes.io/name: audit
+    app.kubernetes.io/part-of: lodestar
+data:
+  SERVICE_NAME: audit
+  PORT: '3009'
+  DB_SCHEMA: audit

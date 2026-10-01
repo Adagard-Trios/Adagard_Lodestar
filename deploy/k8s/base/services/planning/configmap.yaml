@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: planning-config
+  labels:
+    app: planning
+    app.kubernetes.io/name: planning
+    app.kubernetes.io/part-of: lodestar
+data:
+  SERVICE_NAME: planning
+  PORT: '3003'
+  DB_SCHEMA: planning

@@ -1,0 +1,131 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: outlets
+  labels:
+    app: outlets
+    app.kubernetes.io/name: outlets
+    app.kubernetes.io/part-of: lodestar
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: outlets
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: outlets
+        app.kubernetes.io/name: outlets
+        app.kubernetes.io/part-of: lodestar
+        version: v1
+        azure.workload.identity/use: 'true'
+        lodestar.io/db: 'true'
+        lodestar.io/exposed: 'true'
+      annotations:
+        kubectl.kubernetes.io/default-container: outlets
+        proxy.istio.io/config: '{"holdApplicationUntilProxyStarts": true}'
+    spec:
+      serviceAccountName: outlets
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      nodeSelector:
+        lodestar.io/pool: apps
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: outlets
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: outlets
+      containers:
+      - name: outlets
+        image: lodestar/outlets:0.0.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 3005
+          protocol: TCP
+        envFrom:
+        - configMapRef:
+            name: lodestar-common
+        - configMapRef:
+            name: outlets-config
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: outlets-secrets
+              key: DATABASE_URL
+        - name: NODE_OPTIONS
+          value: --max-old-space-size=384
+        resources:
+          requests:
+            cpu: 100m
+            memory: 192Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+          periodSeconds: 5
+          failureThreshold: 30
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          periodSeconds: 15
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: secrets-store
+          mountPath: /mnt/secrets-store
+          readOnly: true
+      volumes:
+      - name: tmp
+        emptyDir:
+          sizeLimit: 128Mi
+      - name: secrets-store
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: outlets

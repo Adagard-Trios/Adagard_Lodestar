@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: audit
+  labels:
+    app: audit
+    app.kubernetes.io/name: audit
+    app.kubernetes.io/part-of: lodestar
+spec:
+  type: ClusterIP
+  selector:
+    app: audit
+  ports:
+  - name: http
+    port: 3009
+    targetPort: http
+    protocol: TCP
+    appProtocol: http

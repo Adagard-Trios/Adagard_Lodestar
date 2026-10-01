@@ -1,0 +1,349 @@
+# Kubernetes NetworkPolicies (enforced by Azure CNI powered by Cilium) as
+# defence in depth under the Istio AuthorizationPolicies: default deny,
+# then DNS/istiod, Postgres only for pods labelled lodestar.io/db, HTTPS out
+# (Entra ID + private endpoints), ingress-gateway -> exposed pods, and the
+# same caller -> callee edges as authz-allow.yaml.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: lodestar
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-and-istiod
+  namespace: lodestar
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: aks-istio-system
+    ports:
+    - protocol: TCP
+      port: 15012
+    - protocol: TCP
+      port: 15017
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-intra-namespace-egress
+  namespace: lodestar
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - podSelector: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-https-egress
+  namespace: lodestar
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 10.0.0.0/8
+        - 172.16.0.0/12
+        - 192.168.0.0/16
+    ports:
+    - protocol: TCP
+      port: 443
+  - to:
+    - ipBlock:
+        cidr: PRIVATE_ENDPOINT_CIDR
+    ports:
+    - protocol: TCP
+      port: 443
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-postgres-egress
+  namespace: lodestar
+spec:
+  podSelector:
+    matchLabels:
+      lodestar.io/db: 'true'
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - ipBlock:
+        cidr: POSTGRES_CIDR
+    ports:
+    - protocol: TCP
+      port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-from-ingress-gateway
+  namespace: lodestar
+spec:
+  podSelector:
+    matchLabels:
+      lodestar.io/exposed: 'true'
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: aks-istio-ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-metrics-scrape
+  namespace: lodestar
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+    ports:
+    - protocol: TCP
+      port: 15020
+    - protocol: TCP
+      port: 15090
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-callers-auth
+  namespace: lodestar
+spec:
+  podSelector:
+    matchLabels:
+      app: auth
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - planning
+          - trips
+          - sync
+          - notifications
+    ports:
+    - protocol: TCP
+      port: 3001
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-callers-orders
+  namespace: lodestar
+spec:
+  podSelector:
+    matchLabels:
+      app: orders
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - planning
+          - agent
+          - trips
+          - sync
+    ports:
+    - protocol: TCP
+      port: 3002
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-callers-fleet
+  namespace: lodestar
+spec:
+  podSelector:
+    matchLabels:
+      app: fleet
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - planning
+          - agent
+          - trips
+    ports:
+    - protocol: TCP
+      port: 3004
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-callers-outlets
+  namespace: lodestar
+spec:
+  podSelector:
+    matchLabels:
+      app: outlets
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - orders
+          - planning
+          - agent
+          - trips
+    ports:
+    - protocol: TCP
+      port: 3005
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-callers-trips
+  namespace: lodestar
+spec:
+  podSelector:
+    matchLabels:
+      app: trips
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - planning
+          - sync
+    ports:
+    - protocol: TCP
+      port: 3006
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-callers-notifications
+  namespace: lodestar
+spec:
+  podSelector:
+    matchLabels:
+      app: notifications
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - auth
+          - orders
+          - planning
+          - fleet
+          - trips
+          - sync
+    ports:
+    - protocol: TCP
+      port: 3008
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-callers-audit
+  namespace: lodestar
+spec:
+  podSelector:
+    matchLabels:
+      app: audit
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - auth
+          - orders
+          - planning
+          - fleet
+          - outlets
+          - trips
+          - sync
+          - notifications
+          - agent
+    ports:
+    - protocol: TCP
+      port: 3009
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-callers-agent
+  namespace: lodestar
+spec:
+  podSelector:
+    matchLabels:
+      app: agent
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - planning
+    ports:
+    - protocol: TCP
+      port: 8000

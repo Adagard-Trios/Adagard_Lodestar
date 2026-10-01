@@ -1,0 +1,127 @@
+import { createHash } from 'crypto';
+import { Logger } from '@nestjs/common';
+import { ServiceTokenClient } from './service-token.client';
+
+export type AuditOutcome = 'SUCCESS' | 'FAILED' | 'DENIED';
+
+/** One write, as reported by the service that performed it. */
+export interface AuditEvent {
+  at: string; // ISO timestamp
+  actor: string; // token subject
+  actorRoles: string[];
+  client?: string; // azp of the caller's token
+  action: string; // Plans.Approve, Orders.Create, PATCH /odata/v4/Orders('…')
+  entitySet?: string;
+  entityKey?: string;
+  outcome: AuditOutcome;
+  payload?: unknown;
+}
+
+/** Where audit events go. Services send them to the audit service; the audit service writes locally. */
+export interface AuditSink {
+  record(event: AuditEvent): Promise<void>;
+}
+
+export const AUDIT_SINK = Symbol('AUDIT_SINK');
+
+const MAX_PENDING = 1000;
+const RETRY_EVERY_MS = 5_000;
+const REQUEST_TIMEOUT_MS = 3_000;
+
+/**
+ * Sends audit events to the audit service (POST /odata/v4/AuditEntries) with
+ * this service's client-credentials token. If the audit service is briefly
+ * unreachable, events are kept in a bounded in-memory queue and retried in
+ * order, so a write is never lost silently and never blocks for long.
+ */
+export class HttpAuditSink implements AuditSink {
+  private readonly logger = new Logger(HttpAuditSink.name);
+  private readonly pending: AuditEvent[] = [];
+  private timer?: NodeJS.Timeout;
+
+  constructor(
+    private readonly auditUrl: string,
+    private readonly tokens: ServiceTokenClient,
+  ) {}
+
+  get queued(): number {
+    return this.pending.length;
+  }
+
+  async record(event: AuditEvent): Promise<void> {
+    // Keep ordering: if older events are waiting, queue behind them.
+    if (this.pending.length === 0 && (await this.send(event))) return;
+    this.enqueue(event);
+  }
+
+  /** Retries queued events in order; stops at the first failure. */
+  async flush(): Promise<void> {
+    while (this.pending.length) {
+      if (!(await this.send(this.pending[0]))) return;
+      this.pending.shift();
+    }
+  }
+
+  stop(): void {
+    if (this.timer) clearInterval(this.timer);
+    this.timer = undefined;
+  }
+
+  private enqueue(event: AuditEvent) {
+    if (this.pending.length >= MAX_PENDING) {
+      const dropped = this.pending.shift();
+      this.logger.error(`Audit queue full; dropped oldest event ${dropped?.action} at ${dropped?.at}`);
+    }
+    this.pending.push(event);
+    if (!this.timer) {
+      this.timer = setInterval(() => void this.flush().then(() => !this.pending.length && this.stop()), RETRY_EVERY_MS);
+      this.timer.unref?.();
+    }
+  }
+
+  private async send(event: AuditEvent): Promise<boolean> {
+    if (!this.tokens.configured) {
+      this.logger.warn(`Audit (no service credentials configured): ${event.action} by ${event.actor} → ${event.outcome}`);
+      return true;
+    }
+    try {
+      const res = await this.tokens.fetch(`${this.auditUrl.replace(/\/$/, '')}/odata/v4/AuditEntries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify(event),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+      if (res.ok) return true;
+      this.logger.warn(`Audit service answered HTTP ${res.status} for ${event.action}`);
+      return false;
+    } catch (err) {
+      this.logger.warn(`Audit service unreachable (${(err as Error).message}); queued ${event.action}`);
+      return false;
+    }
+  }
+}
+
+const REDACT = /pass(word)?|secret|token|signature|authorization|photo(data|base64)/i;
+const MAX_PAYLOAD_CHARS = 4096;
+
+/** Removes secrets and bulky fields from a request body before it is audited. */
+export function redact(value: unknown, depth = 0): unknown {
+  if (depth > 6 || value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.slice(0, 50).map((v) => redact(v, depth + 1));
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    out[k] = REDACT.test(k) ? '[redacted]' : redact(v, depth + 1);
+  }
+  return out;
+}
+
+/** Audit payload for a request body: a SHA-256 of the full body plus a redacted, size-capped copy. */
+export function auditPayload(body: unknown, extra: Record<string, unknown> = {}): Record<string, unknown> {
+  const raw = body === undefined ? '' : JSON.stringify(body);
+  const redacted = JSON.stringify(redact(body) ?? null);
+  return {
+    ...extra,
+    bodySha256: createHash('sha256').update(raw).digest('hex'),
+    body: redacted.length > MAX_PAYLOAD_CHARS ? { truncated: true, preview: redacted.slice(0, MAX_PAYLOAD_CHARS) } : redact(body),
+  };
+}

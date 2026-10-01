@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: outlets
+  labels:
+    app: outlets
+    app.kubernetes.io/name: outlets
+    app.kubernetes.io/part-of: lodestar
+spec:
+  type: ClusterIP
+  selector:
+    app: outlets
+  ports:
+  - name: http
+    port: 3005
+    targetPort: http
+    protocol: TCP
+    appProtocol: http

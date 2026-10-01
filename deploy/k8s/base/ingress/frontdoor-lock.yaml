@@ -1,0 +1,16 @@
+# Only Front Door (our profile's X-Azure-FDID) may use the ingress gateway.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: require-frontdoor
+  namespace: aks-istio-ingress
+spec:
+  selector:
+    matchLabels:
+      istio: aks-istio-ingressgateway-internal
+  action: DENY
+  rules:
+  - when:
+    - key: request.headers[x-azure-fdid]
+      notValues:
+      - FRONTDOOR_ID

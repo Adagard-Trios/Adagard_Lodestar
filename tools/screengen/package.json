@@ -1,0 +1,16 @@
+{
+  "name": "lodestar-screengen",
+  "private": true,
+  "description": "Turns the Lodestar design boards (Designing/pages) into the Next.js website screens and the Expo app's native screens.",
+  "scripts": {
+    "extract": "node extract.js",
+    "web": "node gen-web.js",
+    "mobile": "node gen-mobile.js",
+    "screens": "node extract.js && node gen-web.js && node gen-mobile.js",
+    "compare:web": "node compare-web.js",
+    "compare:mobile": "node compare-mobile.js"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^24.0.0"
+  }
+}

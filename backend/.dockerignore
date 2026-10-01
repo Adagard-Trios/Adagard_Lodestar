@@ -1,0 +1,12 @@
+# Keep images small and free of local state and secrets
+node_modules
+dist
+coverage
+**/*.spec.ts
+**/.env
+**/.env.*
+apps/agent
+apps/gateway
+identity
+tools
+*.log

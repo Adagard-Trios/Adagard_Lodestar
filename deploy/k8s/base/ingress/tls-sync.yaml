@@ -1,0 +1,100 @@
+# Syncs the origin certificate lodestar-ingress-tls from Key Vault into a
+# kubernetes.io/tls Secret in aks-istio-ingress (the Gateway's credentialName).
+# The pause pod only exists to mount the CSI volume, which triggers the sync.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: lodestar-ingress-tls
+  namespace: aks-istio-ingress
+  labels:
+    app: lodestar-ingress-tls
+    app.kubernetes.io/part-of: lodestar
+  annotations:
+    azure.workload.identity/client-id: CLIENT_ID_INGRESS_TLS
+    azure.workload.identity/tenant-id: TENANT_ID
+automountServiceAccountToken: false
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: lodestar-ingress-tls
+  namespace: aks-istio-ingress
+  labels:
+    app: lodestar-ingress-tls
+    app.kubernetes.io/part-of: lodestar
+spec:
+  provider: azure
+  secretObjects:
+  - secretName: lodestar-ingress-tls
+    type: kubernetes.io/tls
+    data:
+    - objectName: lodestar-ingress-tls
+      key: tls.key
+    - objectName: lodestar-ingress-tls
+      key: tls.crt
+  parameters:
+    usePodIdentity: 'false'
+    clientID: CLIENT_ID_INGRESS_TLS
+    keyvaultName: KEYVAULT_NAME
+    tenantId: TENANT_ID
+    objects: |
+      array:
+        - |
+          objectName: lodestar-ingress-tls
+          objectType: secret
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lodestar-ingress-tls
+  namespace: aks-istio-ingress
+  labels:
+    app: lodestar-ingress-tls
+    app.kubernetes.io/part-of: lodestar
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lodestar-ingress-tls
+  template:
+    metadata:
+      labels:
+        app: lodestar-ingress-tls
+        app.kubernetes.io/part-of: lodestar
+        azure.workload.identity/use: 'true'
+    spec:
+      serviceAccountName: lodestar-ingress-tls
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: sync
+        image: registry.k8s.io/pause:3.10
+        resources:
+          requests:
+            cpu: 5m
+            memory: 8Mi
+          limits:
+            cpu: 20m
+            memory: 16Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: secrets-store
+          mountPath: /mnt/secrets-store
+          readOnly: true
+      volumes:
+      - name: secrets-store
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: lodestar-ingress-tls

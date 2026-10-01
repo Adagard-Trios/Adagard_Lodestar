@@ -1,0 +1,22 @@
+{
+  "name": "lodestar-e2e",
+  "private": true,
+  "description": "Full-stack Playwright tests for Waypoint Lodestar (API + UI + auth, cross-browser) against the docker compose stack.",
+  "scripts": {
+    "test": "playwright test",
+    "test:stack": "playwright test --grep @stack",
+    "test:smoke": "playwright test --grep-invert @stack",
+    "test:api": "playwright test --project=api",
+    "test:web": "playwright test --project=web-chromium --project=web-firefox --project=web-webkit",
+    "test:mobile": "playwright test --project=mobile-web",
+    "report": "playwright show-report reports/html",
+    "typecheck": "tsc --noEmit",
+    "install:browsers": "playwright install --with-deps chromium firefox webkit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.3",
+    "fast-xml-parser": "^5.11.2",
+    "typescript": "^7.0.2"
+  }
+}
