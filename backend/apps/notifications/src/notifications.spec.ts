@@ -104,6 +104,35 @@ describe('NotificationsSet', () => {
   });
 });
 
+describe('NotificationsSet · Publish', () => {
+  let service: NotificationsService;
+  let set: NotificationsSet;
+  beforeEach(() => {
+    service = mock(NotificationsService);
+    set = new NotificationsSet({} as any, instance(service));
+    when(service.publish(anything(), anything(), anything())).thenCall((event: string, rooms: string[]) => ({ event, rooms }));
+  });
+  const call = (params: Record<string, unknown>) => set.publish({ principal: personas.agent, params, headers: {} } as any);
+
+  it('emits a realtime event the clients listen for to the given rooms', () => {
+    expect(call({ event: 'plan_published', rooms: ['dispatcher:KANDY', 'store:OUT106'], payload: { planId: 'P1' } })).toEqual({
+      event: 'plan_published',
+      rooms: ['dispatcher:KANDY', 'store:OUT106'],
+    });
+    expect(capture(service.publish).last()).toEqual(['plan_published', ['dispatcher:KANDY', 'store:OUT106'], { planId: 'P1' }]);
+  });
+
+  it.each([
+    [{ event: 'PlanPublished', rooms: ['dispatcher:KANDY'] }, 'event'],
+    [{ event: 'plan_published', rooms: [] }, 'rooms'],
+    [{ event: 'plan_published', rooms: ['everyone'] }, 'rooms'],
+    [{ event: 'plan_published', rooms: ['store:OUT106; drop'] }, 'rooms'],
+  ])('refuses %p with 400', (params, target) => {
+    expect(() => call(params)).toThrow(expect.objectContaining({ status: 400, target }));
+    verify(service.publish(anything(), anything(), anything())).never();
+  });
+});
+
 describe('NotificationsService', () => {
   let notification: NotificationDelegate;
   let gateway: NotificationsGateway;
@@ -116,6 +145,12 @@ describe('NotificationsService', () => {
     service = new NotificationsService({ notification: instance(notification) } as any, instance(gateway));
     when(notification.create(anything())).thenResolve(row);
     when(notification.update(anything())).thenCall(async (a: any) => a);
+  });
+
+  it('publishes an event to each room once, with depot rooms upper-cased', () => {
+    service.publish('trip_released', ['dispatcher:kandy', 'trip:T1', 'trip:T1'], { tripId: 'T1' });
+    verify(gateway.emit('dispatcher:KANDY', 'trip_released', anything())).once();
+    verify(gateway.emit('trip:T1', 'trip_released', anything())).once();
   });
 
   it('stores a WEBSOCKET notification and emits to the recipient room', async () => {

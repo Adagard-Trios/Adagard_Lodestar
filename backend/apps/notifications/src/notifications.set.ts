@@ -4,6 +4,9 @@ import { EntitySet, ODataAction, ODataEntitySet, ODataError, OperationContext } 
 import { canAccessDepot, HUMAN_ROLES, isPrivileged, Roles } from '@lodestar/security';
 import { NotificationsService } from './notifications.service';
 
+/** Room names the realtime gateway uses: <kind>:<id>. */
+const ROOM = /^(dispatcher|loader|store|driver|user|trip):[A-Za-z0-9_-]{1,64}$/;
+
 /** Notifications: everyone reads only their own (admins and services see all). */
 @Injectable()
 @EntitySet({
@@ -56,5 +59,30 @@ export class NotificationsSet extends ODataEntitySet {
     }
     if (!/^[A-Z][A-Z_]{2,40}$/.test(ctx.params.type)) throw ODataError.badRequest('type must be an UPPER_SNAKE_CASE code', 'type');
     return this.notifications.send(ctx.params as any);
+  }
+
+  /**
+   * POST Notifications/Lodestar.Publish {event, rooms, payload} — services only. Emits a realtime event the
+   * clients listen for (plan_published, trip_released, shortfall_ack, …) to the given rooms; nothing is stored.
+   */
+  @ODataAction({
+    name: 'Publish',
+    binding: 'collection',
+    roles: [Roles.Service],
+    params: {
+      event: { type: 'Edm.String', required: true },
+      rooms: { type: 'Collection(Edm.String)', required: true },
+      payload: 'Edm.Untyped',
+    },
+    returns: 'Edm.Untyped',
+  })
+  publish(ctx: OperationContext) {
+    const event = String(ctx.params.event);
+    if (!/^[a-z][a-z_]{2,40}$/.test(event)) throw ODataError.badRequest('event must be a lower_snake_case name', 'event');
+    const rooms = ctx.params.rooms as unknown;
+    if (!Array.isArray(rooms) || !rooms.length || rooms.length > 500 || !rooms.every(r => typeof r === 'string' && ROOM.test(r))) {
+      throw ODataError.badRequest('rooms must be 1–500 room names like dispatcher:KANDY or store:OUT106', 'rooms');
+    }
+    return this.notifications.publish(event, rooms as string[], ctx.params.payload ?? {});
   }
 }

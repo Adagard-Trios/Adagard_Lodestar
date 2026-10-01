@@ -8,6 +8,7 @@ export * from './device-posture.service';
 export * from './prisma-device-lookup';
 export * from './service-token.client';
 export * from './audit';
+export * from './notify';
 export * from './audit.interceptor';
 export * from './zero-trust.guard';
 export * from './security.module';

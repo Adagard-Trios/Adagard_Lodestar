@@ -222,7 +222,7 @@ def test_context_tools_query_odata_with_scoped_filters(make_runtime):
     by_name["fetch_outlets"].invoke({"depot": fx.DEPOT})
     verify(client).get_all(
         "Orders",
-        {"$filter": "runDate ge 2030-01-08T00:00:00Z and runDate lt 2030-01-09T00:00:00Z and status in ('RECEIVED','PLANNED')"},
+        {"$filter": "runDate ge 2030-01-08T00:00:00Z and runDate lt 2030-01-09T00:00:00Z and status in ('RECEIVED','PLANNED','DEFERRED')"},
     )
     verify(client).get_all("Outlets", {"$filter": "depot eq 'NORTH' and isActive eq true"})
     assert set(loaded) == {"orders", "outlets"}

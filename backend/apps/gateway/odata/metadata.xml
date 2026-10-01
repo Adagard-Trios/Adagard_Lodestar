@@ -666,6 +666,13 @@
         <Parameter Name="creditNoteId" Type="Edm.String"/>
         <ReturnType Type="Lodestar.Notification"/>
       </Action>
+      <Action Name="Publish" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.Notification)" Nullable="false"/>
+        <Parameter Name="event" Type="Edm.String" Nullable="false"/>
+        <Parameter Name="rooms" Type="Collection(Edm.String)" Nullable="false"/>
+        <Parameter Name="payload" Type="Edm.Untyped"/>
+        <ReturnType Type="Edm.Untyped"/>
+      </Action>
       <Function Name="VerifyChain" IsBound="true">
         <Parameter Name="bindingParameter" Type="Collection(Lodestar.AuditEntry)" Nullable="false"/>
         <ReturnType Type="Lodestar.ChainCheck"/>

@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { ODataError } from '@lodestar/odata';
 import { Depot, OrderStatus, Prisma, TripStatus } from '@prisma/client';
 import { runDateRange } from '@lodestar/platform';
+import { NOTIFY, NotifyClient } from '@lodestar/security';
 
 /** Stored window [start, end) of a run date (YYYY-MM-DD, or a Date read in Sri Lanka time). */
 export function dayRange(runDate: string | Date) {
@@ -32,7 +33,10 @@ const NEXT_TRIP_STATUS: Record<TripStatus, TripStatus[]> = {
 
 @Injectable()
 export class TripsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(NOTIFY) private notify: NotifyClient,
+  ) {}
 
   /** Loader: trips of a depot and run date in bay order (bay queue). */
   async getBayQueue(depot: Depot, runDate: string, scope?: Prisma.TripWhereInput) {
@@ -63,9 +67,12 @@ export class TripsService {
     });
   }
 
-  /** Loader releases a loaded trip: seal, reefer temperature, departure. */
+  /**
+   * Loader releases a loaded trip: seal, reefer temperature, departure. Its stops and orders go en route,
+   * and the driver, the depot and the stores on the trip are told (trip_released).
+   */
   async release(tripId: string, sealNumber: string, reeferTempC?: number) {
-    return this.prisma.$transaction(async (tx) => {
+    const released = await this.prisma.$transaction(async (tx) => {
       const trip = await tx.trip.findUnique({ where: { id: tripId }, select: { status: true } });
       if (!trip || !NEXT_TRIP_STATUS[trip.status].includes(TripStatus.ENROUTE)) {
         throw ODataError.conflict(`A ${trip?.status ?? 'missing'} trip cannot be released`);
@@ -77,6 +84,10 @@ export class TripsService {
         where: { tripId },
         data: { sealNumber, releasedAt: now, ...(reeferTempC !== undefined ? { reeferTempC } : {}) },
       });
+      const open = { tripId, status: { notIn: [OrderStatus.DELIVERED, OrderStatus.EXCEPTION, OrderStatus.CANCELLED] } };
+      const stops = await tx.tripStop.findMany({ where: open, select: { orderId: true } });
+      await tx.tripStop.updateMany({ where: open, data: { status: OrderStatus.ENROUTE } });
+      await tx.order.updateMany({ where: { id: { in: stops.map((st) => st.orderId) } }, data: { status: OrderStatus.ENROUTE } });
       return tx.trip.update({
         where: { id: tripId },
         data: {
@@ -85,8 +96,19 @@ export class TripsService {
           departTime: now,
           ...(reeferTempC !== undefined ? { reeferTempC } : {}),
         },
+        include: { stops: { select: { outletId: true } } },
       });
     });
+    const { stops, ...trip } = released;
+    const outlets = [...new Set(stops.map((st) => st.outletId))];
+    const event = { tripId, vehicleId: trip.vehicleId, depot: trip.depot, bay: trip.bay, departTime: trip.departTime, sealNumber, outlets };
+    if (trip.driverId) await this.notify.notice({ recipientId: trip.driverId, type: 'TRIP_RELEASED', tripId, depot: trip.depot, payload: event });
+    await this.notify.publish('trip_released', [
+      `trip:${tripId}`, `dispatcher:${trip.depot}`, `loader:${trip.depot}`,
+      ...(trip.driverId ? [`driver:${trip.driverId}`] : []),
+      ...outlets.map((o) => `store:${o}`),
+    ], event);
+    return trip;
   }
 
   async arrive(stopId: string, at: Date) {

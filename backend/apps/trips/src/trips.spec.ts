@@ -1,4 +1,5 @@
 import { anything, capture, deepEqual, instance, mock, verify, when } from 'ts-mockito';
+import { NotifyClient } from '@lodestar/security';
 import { personas } from '../../../libs/security/test/principals';
 import { TripsService } from './trips.service';
 import { LoadRecordsSet, TripsSet, TripStopsSet } from './trips.sets';
@@ -17,6 +18,8 @@ interface PodDelegate {
 }
 interface UpdateDelegate {
   update(args: any): Promise<any>;
+  findMany(args: any): Promise<any[]>;
+  updateMany(args: any): Promise<{ count: number }>;
 }
 
 describe('TripsSet', () => {
@@ -157,6 +160,7 @@ describe('TripsService', () => {
   let txOrder: UpdateDelegate;
   let txStop: UpdateDelegate;
   let service: TripsService;
+  let notify: NotifyClient;
 
   beforeEach(() => {
     trip = mock<TripDelegate>();
@@ -167,8 +171,15 @@ describe('TripsService', () => {
     txStop = mock<UpdateDelegate>();
     const tx = { trip: instance(txTrip), loadRecord: instance(txLoad), pOD: instance(txPod), order: instance(txOrder), tripStop: instance(txStop) };
     const prisma = { trip: instance(trip), $transaction: async (cb: (t: any) => any) => cb(tx) };
-    service = new TripsService(prisma as any);
-    for (const d of [trip, txTrip, txLoad, txOrder, txStop]) when(d.update(anything())).thenCall(async (a: any) => a);
+    notify = mock(NotifyClient);
+    when(notify.notice(anything())).thenResolve(true);
+    when(notify.publish(anything(), anything(), anything())).thenResolve(true);
+    service = new TripsService(prisma as any, instance(notify));
+    for (const d of [trip, txLoad, txOrder, txStop]) when(d.update(anything())).thenCall(async (a: any) => a);
+    // a released trip comes back with its stops' outlets (for the stores to tell)
+    when(txTrip.update(anything())).thenCall(async (a: any) => ({ ...a, id: 'T1', depot: 'KANDY', vehicleId: 'VEH057', driverId: 'ruwan', bay: 'K2', stops: [{ outletId: 'OUT106' }, { outletId: 'OUT108' }] }));
+    when(txStop.findMany(anything())).thenResolve([{ orderId: 'O1' }, { orderId: 'O2' }]);
+    for (const d of [txOrder, txStop]) when(d.updateMany(anything())).thenResolve({ count: 2 });
     when(txPod.upsert(anything())).thenResolve({});
     when(txTrip.findUnique(anything())).thenResolve({ status: 'LOADING' });
   });
@@ -232,6 +243,25 @@ describe('TripsService', () => {
       when(txLoad.findUnique(anything())).thenResolve(null);
       await expect(service.release('T1', 'SEAL-1')).rejects.toMatchObject({ status: 409 });
       verify(txTrip.update(anything())).never();
+    });
+
+    it('sends the open stops and their orders en route and tells the driver, depot and stores (trip_released)', async () => {
+      when(txLoad.findUnique(anything())).thenResolve({ tripId: 'T1' });
+      const out = await service.release('T1', 'SEAL-1');
+      expect(out).not.toHaveProperty('stops');
+      expect(capture(txStop.updateMany).last()[0]).toMatchObject({ where: { tripId: 'T1' }, data: { status: 'ENROUTE' } });
+      expect(capture(txOrder.updateMany).last()[0]).toEqual({ where: { id: { in: ['O1', 'O2'] } }, data: { status: 'ENROUTE' } });
+      expect(capture(notify.notice).last()[0]).toMatchObject({ recipientId: 'ruwan', type: 'TRIP_RELEASED', tripId: 'T1' });
+      const [event, rooms, payload] = capture(notify.publish).last();
+      expect(event).toBe('trip_released');
+      expect(rooms).toEqual(['trip:T1', 'dispatcher:KANDY', 'loader:KANDY', 'driver:ruwan', 'store:OUT106', 'store:OUT108']);
+      expect(payload).toMatchObject({ tripId: 'T1', vehicleId: 'VEH057', sealNumber: 'SEAL-1', outlets: ['OUT106', 'OUT108'] });
+    });
+
+    it('does not announce a release that was refused', async () => {
+      when(txLoad.findUnique(anything())).thenResolve(null);
+      await expect(service.release('T1', 'SEAL-1')).rejects.toMatchObject({ status: 409 });
+      verify(notify.publish(anything(), anything(), anything())).never();
     });
 
     it('seals the load record and sends the trip ENROUTE', async () => {

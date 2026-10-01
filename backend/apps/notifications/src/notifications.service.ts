@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { NotificationChannel, Prisma } from '@prisma/client';
-import { NotificationsGateway } from './notifications.gateway';
+import { canonicalRoom, NotificationsGateway } from './notifications.gateway';
 
 export interface SendParams {
   recipientId: string;
@@ -59,6 +59,12 @@ export class NotificationsService {
     }
 
     return notif;
+  }
+
+  /** Realtime only (nothing stored): an operational event to rooms, e.g. plan_published to dispatcher:KANDY. */
+  publish(event: string, rooms: string[], payload: unknown) {
+    for (const room of new Set(rooms)) this.gateway.emit(canonicalRoom(room), event, payload);
+    return { event, rooms: [...new Set(rooms)].map(canonicalRoom) };
   }
 
   async markRead(id: string) {

@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { ODataError } from '@lodestar/odata';
 import {
-  Depot, OrderStatus, TempClass, DeferralReason, DeferralStatus, PlanSource, PlanStatus, Prisma,
+  Depot, OrderStatus, TempClass, DeferralReason, DeferralStatus, PlanSource, PlanStatus, Prisma, Role,
 } from '@prisma/client';
 import { runDateRange, runDateValue } from '@lodestar/platform';
+import { NOTIFY, NotifyClient } from '@lodestar/security';
+import { executePlan, type ExecutionResult } from './plan-execution';
 import { DeferralScoringService } from './deferral-scoring.service';
 import { CapacityService } from './capacity.service';
 
@@ -33,10 +35,13 @@ export function dayRange(runDate: string | Date) {
  */
 @Injectable()
 export class PlanningService {
+  private readonly logger = new Logger(PlanningService.name);
+
   constructor(
     private prisma: PrismaService,
     private deferralScoring: DeferralScoringService,
     private capacity: CapacityService,
+    @Inject(NOTIFY) private notify: NotifyClient,
   ) {}
 
   /** DSP-01: the plan board for a depot and run date. */
@@ -212,9 +217,14 @@ export class PlanningService {
     });
   }
 
-  /** Publishes a plan (dispatcher only). Earlier published versions become SUPERSEDED. */
+  /**
+   * Publishes a plan (dispatcher only) and puts it into effect in the same transaction: trips and stops,
+   * order statuses and deferrals (plan-execution.ts). Earlier published versions become SUPERSEDED and
+   * their trips that have not started are replaced. Stores, the dock and drivers are told afterwards.
+   */
   async approvePlan(planId: string, approvedBy: string, note?: string) {
-    return this.prisma.$transaction(async (tx) => {
+    let execution: ExecutionResult | undefined;
+    const published = await this.prisma.$transaction(async (tx) => {
       const plan = await tx.plan.findUnique({ where: { id: planId } });
       if (!plan) throw ODataError.notFound(`Plan ${planId} was not found`);
       if (!OPEN_PLAN_STATUSES.includes(plan.status)) {
@@ -224,6 +234,7 @@ export class PlanningService {
         where: { depot: plan.depot, runDate: plan.runDate, status: PlanStatus.PUBLISHED, id: { not: plan.id } },
         data: { status: PlanStatus.SUPERSEDED },
       });
+      execution = await executePlan(tx, plan);
       const now = new Date();
       return tx.plan.update({
         where: { id: plan.id },
@@ -235,7 +246,45 @@ export class PlanningService {
           ...(note ? { notes: note } : {}),
         },
       });
+    }, { timeout: 60_000, maxWait: 10_000 });
+    if (execution) await this.announce(execution);
+    return published;
+  }
+
+  /** After a plan is in effect: each affected store gets a notice, and the open screens are told to refresh. */
+  private async announce(x: ExecutionResult) {
+    const outlets = [...new Set([...x.planned.map(p => p.outletId), ...x.deferred.map(d => d.outletId)])];
+    const managers = await this.prisma.user.findMany({
+      where: { role: Role.STORE_MANAGER, isActive: true, outletId: { in: outlets } },
+      select: { id: true, outletId: true },
     });
+    for (const m of managers) {
+      const planned = x.planned.filter(p => p.outletId === m.outletId);
+      const deferred = x.deferred.filter(d => d.outletId === m.outletId);
+      if (planned.length) {
+        await this.notify.notice({
+          recipientId: m.id, type: 'PLAN_PUBLISHED', outletId: m.outletId!,
+          payload: { planId: x.planId, runDate: x.runDate, orders: planned.map(p => ({ orderId: p.orderId, tripId: p.tripId, etaModel: p.etaModel })) },
+        });
+      }
+      for (const d of deferred) {
+        await this.notify.notice({
+          recipientId: m.id, type: 'ORDER_DEFERRED', outletId: m.outletId!,
+          payload: { planId: x.planId, orderId: d.orderId, reason: d.reason, from: x.runDate, rescheduledDate: d.rescheduledDate },
+        });
+      }
+    }
+    const rooms = [
+      `dispatcher:${x.depot}`,
+      `loader:${x.depot}`,
+      ...outlets.map(o => `store:${o}`),
+      ...x.trips.filter(t => t.driverId).map(t => `driver:${t.driverId}`),
+    ];
+    await this.notify.publish('plan_published', rooms, {
+      planId: x.planId, depot: x.depot, runDate: x.runDate,
+      trips: x.trips.length, planned: x.planned.length, deferred: x.deferred.length, supersededTrips: x.supersededTrips,
+    });
+    this.logger.log(`Plan ${x.planId} in effect: ${x.trips.length} trips, ${x.planned.length} orders, ${x.deferred.length} deferred, ${x.locked.length} left on started trips`);
   }
 
   async rejectPlan(planId: string, reason?: string) {

@@ -57,7 +57,8 @@ def build_context_tools(client: ODataClient, depot: str, run_date: str) -> tuple
         err = _scope_error(depot, run_date)
         if err:
             return json.dumps({"error": err})
-        flt = f"runDate ge {day.isoformat()}T00:00:00Z and runDate lt {nxt.isoformat()}T00:00:00Z and status in ('RECEIVED','PLANNED')"
+        # DEFERRED: orders a previous run deferred and rolled to this day (protected by deferredYesterday)
+        flt = f"runDate ge {day.isoformat()}T00:00:00Z and runDate lt {nxt.isoformat()}T00:00:00Z and status in ('RECEIVED','PLANNED','DEFERRED')"
         return _load("orders", {"$filter": flt})
 
     @tool

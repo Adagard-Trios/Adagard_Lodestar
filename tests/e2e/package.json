@@ -17,6 +17,7 @@
     "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.3",
     "fast-xml-parser": "^5.11.2",
+    "socket.io-client": "^4.8.4",
     "typescript": "^7.0.2"
   }
 }

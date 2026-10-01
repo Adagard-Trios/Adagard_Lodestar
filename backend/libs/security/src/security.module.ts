@@ -1,6 +1,7 @@
 import { DynamicModule, Global, Module, Provider } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AUDIT_SINK, HttpAuditSink } from './audit';
+import { NOTIFY, NotifyClient } from './notify';
 import { AuditInterceptor } from './audit.interceptor';
 import { loadOidcConfig, OIDC_CONFIG, OidcConfig, SERVICE_NAME } from './config';
 import { DEVICE_LOOKUP, DevicePostureService } from './device-posture.service';
@@ -40,13 +41,19 @@ export class SecurityModule {
           new HttpAuditSink(process.env.AUDIT_URL || 'http://audit:3009', tokens),
         inject: [ServiceTokenClient],
       },
+      {
+        provide: NOTIFY,
+        useFactory: (tokens: ServiceTokenClient) =>
+          new NotifyClient(process.env.NOTIFICATIONS_URL || 'http://notifications:3008', tokens),
+        inject: [ServiceTokenClient],
+      },
       { provide: APP_GUARD, useClass: ZeroTrustGuard },
       { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
     ];
     return {
       module: SecurityModule,
       providers,
-      exports: [SERVICE_NAME, OIDC_CONFIG, JwtVerifier, DevicePostureService, ServiceTokenClient, AUDIT_SINK],
+      exports: [SERVICE_NAME, OIDC_CONFIG, JwtVerifier, DevicePostureService, ServiceTokenClient, AUDIT_SINK, NOTIFY],
     };
   }
 }

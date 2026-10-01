@@ -2,7 +2,21 @@ import { anything, capture, instance, mock, verify, when } from 'ts-mockito';
 import { CapacityService } from './capacity.service';
 import { DeferralScoringService } from './deferral-scoring.service';
 import { EtaService } from './eta.service';
+import { NotifyClient } from '@lodestar/security';
 import { dayRange, PlanningService } from './planning.service';
+import { executePlan, type ExecutionResult } from './plan-execution';
+
+// Plan execution (trips, stops, deferrals) is covered in plan-execution.spec.ts against an in-memory store.
+jest.mock('./plan-execution', () => ({ ...jest.requireActual('./plan-execution'), executePlan: jest.fn() }));
+const executed = executePlan as jest.MockedFunction<typeof executePlan>;
+
+const EXECUTION: ExecutionResult = {
+  planId: 'PLK-2026-04-07-v2', depot: 'KANDY', runDate: '2026-04-07',
+  trips: [{ id: 'TRP-VEH057-20260407-1', vehicleId: 'VEH057', driverId: 'ruwan', bay: 'K1', outletIds: ['OUT106'] }],
+  planned: [{ orderId: 'ORD1', outletId: 'OUT106', tripId: 'TRP-VEH057-20260407-1', etaModel: '2026-04-07T01:05:00.000Z' }],
+  deferred: [{ orderId: 'ORD2', outletId: 'OUT108', reason: 'CAP_REEFER', rescheduledDate: '2026-04-08' }],
+  locked: [], supersededTrips: 0,
+};
 
 interface PlanDelegate {
   findUnique(args: any): Promise<any>;
@@ -27,15 +41,22 @@ describe('PlanningService', () => {
   let capacity: CapacityService;
   let scoring: DeferralScoringService;
   let service: PlanningService;
+  let notify: NotifyClient;
+  let users: { findMany: jest.Mock };
 
   beforeEach(() => {
     plan = mock<PlanDelegate>();
     txPlan = mock<PlanDelegate>();
     capacity = mock(CapacityService);
     scoring = new DeferralScoringService();
+    notify = mock(NotifyClient);
+    when(notify.notice(anything())).thenResolve(true);
+    when(notify.publish(anything(), anything(), anything())).thenResolve(true);
+    users = { findMany: jest.fn().mockResolvedValue([{ id: 'fathima', outletId: 'OUT106' }, { id: 'hawa-sm', outletId: 'OUT108' }]) };
+    executed.mockReset().mockResolvedValue(EXECUTION);
     const tx = { plan: instance(txPlan) };
-    const prisma = { plan: instance(plan), $transaction: async (cb: (t: any) => any) => cb(tx) };
-    service = new PlanningService(prisma as any, scoring, instance(capacity));
+    const prisma = { plan: instance(plan), user: users, $transaction: async (cb: (t: any) => any) => cb(tx) };
+    service = new PlanningService(prisma as any, scoring, instance(capacity), instance(notify));
   });
 
   describe('approvePlan', () => {
@@ -59,6 +80,36 @@ describe('PlanningService', () => {
       expect(upd.data.approvedAt).toBeInstanceOf(Date);
       expect(upd.data.publishedAt).toBe(upd.data.approvedAt);
       expect(res.status).toBe('PUBLISHED');
+    });
+
+    it('puts the plan into effect in the same transaction, then tells stores, dock and drivers', async () => {
+      when(txPlan.findUnique(anything())).thenResolve(open);
+      when(txPlan.updateMany(anything())).thenResolve({ count: 0 });
+      when(txPlan.update(anything())).thenCall(async (a: any) => ({ id: a.where.id, ...a.data }));
+
+      await service.approvePlan(open.id, 'nilanthi');
+
+      expect(executed).toHaveBeenCalledTimes(1);
+      expect(executed.mock.calls[0][1]).toBe(open);
+      const notices = capture(notify.notice);
+      expect(notices.first()[0]).toMatchObject({ recipientId: 'fathima', type: 'PLAN_PUBLISHED', outletId: 'OUT106' });
+      expect(notices.second()[0]).toMatchObject({
+        recipientId: 'hawa-sm', type: 'ORDER_DEFERRED', outletId: 'OUT108',
+        payload: { orderId: 'ORD2', reason: 'CAP_REEFER', rescheduledDate: '2026-04-08' },
+      });
+      const [event, rooms, payload] = capture(notify.publish).last();
+      expect(event).toBe('plan_published');
+      expect(rooms).toEqual(['dispatcher:KANDY', 'loader:KANDY', 'store:OUT106', 'store:OUT108', 'driver:ruwan']);
+      expect(payload).toMatchObject({ planId: open.id, trips: 1, planned: 1, deferred: 1 });
+    });
+
+    it('does not publish when the plan cannot be put into effect', async () => {
+      when(txPlan.findUnique(anything())).thenResolve(open);
+      when(txPlan.updateMany(anything())).thenResolve({ count: 0 });
+      executed.mockRejectedValueOnce(Object.assign(new Error('no trips'), { status: 409, code: 'PlanNotExecutable' }));
+      await expect(service.approvePlan(open.id, 'nilanthi')).rejects.toMatchObject({ code: 'PlanNotExecutable' });
+      verify(txPlan.update(anything())).never();
+      verify(notify.publish(anything(), anything(), anything())).never();
     });
 
     it('omits notes when no note is given', async () => {
@@ -119,7 +170,7 @@ describe('PlanningService', () => {
       when(create.create(anything())).thenCall(async (a: any) => a.data);
       when(plan.findFirst(anything())).thenResolve({ version: 2 });
       const prisma = { plan: Object.assign(instance(plan), { create: instance(create).create }) };
-      const svc = new PlanningService(prisma as any, scoring, instance(capacity));
+      const svc = new PlanningService(prisma as any, scoring, instance(capacity), instance(notify));
 
       const run = { id: 'run-1', depot: 'KANDY' as const, runDate: new Date('2026-04-07T00:00:00.000Z') };
       const data = await svc.createAgentPlan(run, { id: 'run-1', status: 'APPROVED', plan: { trips: 3 }, explanation: { why: 'x' }, violations: [] }, 'nilanthi');
