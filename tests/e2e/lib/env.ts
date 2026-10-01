@@ -81,3 +81,5 @@ export const OTHER_OUTLET = env('E2E_OTHER_OUTLET', 'OUT108');
 export const SEED_PLAN_ID = env('E2E_PLAN_ID', 'PLG-2026-04-07-v3');
 export const SEED_DEPOT = env('E2E_DEPOT', 'PELIYAGODA');
 export const SEED_RUN_DATE = env('E2E_RUN_DATE', '2026-04-07');
+/** The seeded over-capacity demo day: DEMO_DATE in compose, or today in Sri Lanka (backend/prisma/DATA.md). */
+export const DEMO_DATE = env('E2E_DEMO_DATE', new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10));

@@ -77,13 +77,34 @@ export class OrdersSet extends ODataEntitySet {
     );
     return {
       ...data,
-      id: data.id ?? (await this.orders.nextOrderId()),
+      id: data.id ?? this.generated(await this.orders.nextOrderId()),
       orderedAt: cutoff.orderedAt,
       latePhone: cutoff.latePhone,
       lateReason: cutoff.lateReason,
       status: OrderStatus.RECEIVED,
       lineItems: lineItems ? { create: lineItems } : undefined,
     };
+  }
+
+  /** Ids this service generated (not sent by the client), which may be re-drawn on a collision. */
+  private readonly generatedIds = new Set<string>();
+  private generated(id: string): string {
+    this.generatedIds.add(id);
+    return id;
+  }
+
+  /** Two stores ordering at the same moment can draw the same next id: draw again rather than fail. */
+  async create(data: Record<string, any>, ctx: WriteContext) {
+    for (let attempt = 1; ; attempt++) {
+      const mine = this.generatedIds.delete(data.id);
+      try {
+        return await super.create(data, ctx);
+      } catch (e: any) {
+        const idClash = e?.code === 'P2002' && [].concat(e?.meta?.target ?? []).some((t: string) => /^(id|\w+_pkey)$/.test(String(t)));
+        if (!mine || !idClash || attempt >= 5) throw e;
+        data = { ...data, id: this.generated(await this.orders.nextOrderId()) };
+      }
+    }
   }
 
   async beforeUpdate(patch: Record<string, any>, current: any, ctx: WriteContext) {

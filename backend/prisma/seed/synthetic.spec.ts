@@ -45,8 +45,8 @@ describe('generateSynthetic', () => {
   });
 
   it('has the expected sizes', () => {
-    expect(data.outlets).toHaveLength(30 + OUTLET_ANCHORS.length);
-    expect(data.vehicles).toHaveLength(16 + VEHICLE_ANCHORS.length);
+    expect(data.outlets).toHaveLength(120);
+    expect(data.vehicles).toHaveLength(60);
     expect(data.allowances).toHaveLength(9);
     expect(data.districts.length).toBeGreaterThanOrEqual(12);
   });

@@ -109,7 +109,8 @@ test.describe('Plan execution · approve → trips → release', { tag: '@stack'
 
   test('re-approving a new version replaces the unstarted trips instead of adding more', async ({ as }) => {
     d = await as('dispatcher');
-    const before = (await d.json<{ value: Row[] }>(`Trips?$filter=depot eq '${DEPOT}' and runDate eq ${runDate}T00:00:00Z`)).value.length;
+    const unstarted = `Trips?$filter=depot eq '${DEPOT}' and runDate eq ${runDate}T00:00:00Z and status eq 'PLANNED'`;
+    const before = (await d.json<{ value: Row[] }>(unstarted)).value.length;
     const start = await d.post('AgentRuns', { depot: DEPOT, runDate });
     const runId = (await start.json()).id;
     await pwExpect.poll(async () => (await d.json<Row>(`AgentRuns('${runId}')`)).status, { timeout: 120_000, intervals: [1000, 2000] }).toBe('NEEDS_APPROVAL');
@@ -117,7 +118,8 @@ test.describe('Plan execution · approve → trips → release', { tag: '@stack'
     const v2 = (await d.json<Row>(`AgentRuns('${runId}')`)).planId;
     expect(v2).not.toBe(planId);
     expect((await d.json<Row>(`Plans('${planId}')`)).status).toBe('SUPERSEDED');
-    const trips = (await d.json<{ value: Row[] }>(`Trips?$filter=depot eq '${DEPOT}' and runDate eq ${runDate}T00:00:00Z`)).value;
+    // trips that have not started are replaced; one released earlier today stays on its plan
+    const trips = (await d.json<{ value: Row[] }>(unstarted)).value;
     expect(trips.length).toBe(before);
     expect(trips.every(t => t.planId === v2)).toBe(true);
     planId = v2;

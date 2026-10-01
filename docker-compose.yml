@@ -94,6 +94,8 @@ services:
       DATABASE_URL: postgresql://lodestar:${POSTGRES_PASSWORD:-lodestar-dev-only}@postgres:5432/lodestar
       DATA_DIR: /data
       SKIP_SEED: ${SKIP_SEED:-false}
+      # Demo clock: the over-capacity demo day (YYYY-MM-DD). Empty = today in Sri Lanka. See backend/prisma/DATA.md.
+      DEMO_DATE: ${DEMO_DATE:-}
     volumes:
       - ./data:/data:ro
     networks: [data]

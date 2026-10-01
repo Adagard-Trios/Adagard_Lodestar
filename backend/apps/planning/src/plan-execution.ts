@@ -125,13 +125,18 @@ export async function executePlan(tx: Prisma.TransactionClient, plan: Plan): Pro
   const bays = BAYS[plan.depot];
   const result: ExecutionResult = { planId: plan.id, depot: plan.depot, runDate, trips: [], planned: [], deferred: [], locked: [...locked], supersededTrips: replaced.length };
   let bayIndex = 0;
+  const taken = new Set(started.map(t => t.id));
   for (const t of ordered) {
     const stops: DraftStop[] = (t.stops?.length ? t.stops : t.orderIds.map((orderId, i): DraftStop => ({ seq: i + 1, orderId, outletId: orderById.get(orderId)!.outletId })))
       .filter(s => !locked.has(s.orderId))
       .sort((a, b) => a.seq - b.seq);
     if (!stops.length) continue;
     const departMin = t.departs ? minutesOfHhmm(t.departs) : 0;
-    const id = `TRP-${t.vehicleId}-${ymd}-${t.tripNo}`;
+    // a started trip keeps its id: this vehicle's new trip takes the next free number
+    let tripNo = t.tripNo;
+    while (taken.has(`TRP-${t.vehicleId}-${ymd}-${tripNo}`)) tripNo++;
+    const id = `TRP-${t.vehicleId}-${ymd}-${tripNo}`;
+    taken.add(id);
     const bay = bays[bayIndex++ % bays.length];
     const driverId = driverOf.get(t.vehicleId) ?? null;
     await tx.trip.create({
@@ -145,7 +150,7 @@ export async function executePlan(tx: Prisma.TransactionClient, plan: Plan): Pro
         district: t.district,
         status: TripStatus.PLANNED,
         planVersion: plan.version,
-        tripNumber: t.tripNo,
+        tripNumber: tripNo,
         departTime: at(runDate, t.departs, 0),
         returnTime: at(runDate, t.returns, departMin),
         planMinutes: t.minutes ?? null,

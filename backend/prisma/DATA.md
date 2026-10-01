@@ -1,9 +1,10 @@
 # Reference data and seeding
 
-The seed (`prisma/seed.ts`) fills the database in two layers:
+The seed (`prisma/seed.ts`) fills the database in three layers:
 
 1. **Reference tables**: districts, service allowances, calendar, outlets and vehicles. They load at runtime from CSV files in `DATA_DIR`. When a file is missing, the seed generates a small **synthetic** dataset for that table.
-2. **Scenario**: our demo story from `prisma/scenario.ts`. It covers the people, devices, plan versions, the Tue 7 Apr 2026 hero trip and the incidents. It is applied on top of the reference tables and works with either source.
+2. **Scenario**: our demo story from `prisma/scenario.ts`. It covers the people, devices, plan versions, the Tue 7 Apr 2026 hero trip and the incidents. It is applied on top of the reference tables and works with either source. That day is history: the completed run behind the receipts, credit note and offline sync screens.
+3. **Demo day**: one over-capacity delivery day from `prisma/seed/demo-day.ts`, on the date the demo clock sets. It has 100+ open orders across the three brands and both depots, vehicles in the workshop, outlets skipped yesterday (protected today), and **no trips**: the day starts at planning. See [The demo day](#the-demo-day-and-the-demo-clock).
 
 No competition dataset values live in this repository, in code, tests or docs.
 
@@ -28,6 +29,7 @@ DATA_DIR=/nonexistent npm run db:seed
 |---|---|---|
 | `DATA_DIR` | `/data` | Folder holding the CSVs. If the folder doesn't exist, every table is synthetic. |
 | `SYNTHETIC_SEED` | `20260407` | PRNG seed for generated rows. The same seed always gives the same rows. |
+| `DEMO_DATE` | today in Sri Lanka | The demo clock: the demo day's run date, `YYYY-MM-DD`. Empty means today (Asia/Colombo), moved to the next operating day when today is closed. Set it in `.env` or the shell before `docker compose up`. |
 | `DATABASE_URL` | (required) | Postgres connection. |
 
 The seed prints the source of each table (`csv <file>` or `synthetic`), row counts, skipped rows with the first few reasons, and any rows added to fill a gap. It exits non-zero on failure.
@@ -112,6 +114,28 @@ Any brand × dock combination missing from the file gets a generated value, and 
 - **Duplicate keys:** if a key appears twice in one file, the last row wins.
 - **Unusable files:** a file that exists but yields no usable rows is replaced by synthetic rows for that table, and the log says why.
 
+## The demo day and the demo clock
+
+The judged cycle (order → plan → load → deliver → receipt) needs a day that has not happened yet, whatever the real date is. The seed builds one on `DEMO_DATE`, by default **today in Sri Lanka**, so the driver and loader apps, which show today's run, open on it.
+
+| Part | From the peak-day files (when present) | Without them (clean clone) |
+|---|---|---|
+| Peliyagoda orders | `task2b_peak_day_scenarios.csv`, scenario `S1`: outlet, temperature, units, kg, m³, deferred yesterday, days since last served. The brand comes from the outlet. | ~85 generated orders, mostly chilled, for Peliyagoda outlets; ten of them deferred yesterday |
+| Workshop | `task2b_peak_day_fleet.csv`, scenario `S1`, rows `in_workshop` | the larger Peliyagoda reefers (two small ones run) plus dry trucks, ten in all |
+| Kandy orders | always generated: Fathima's store OUT106 (chilled and ambient), OUT108 (deferred yesterday) and ~23 more | same |
+
+To use the peak-day files, copy them next to the other CSVs (they are gitignored like the rest):
+
+```bash
+cp "Designing/data/Test Data/task2b_peak_day_scenarios.csv" "Designing/data/Test Data/task2b_peak_day_fleet.csv" data/
+```
+
+- Order ids are `ORD` + `yymmdd` of the demo day + a 3-digit number, for example `ORD261002001`. Orders were placed the afternoon before, before the 4:00 PM cut-off.
+- Each order skipped yesterday has a confirmed `DeferralLog` (reason `CAP_REEFER`, rescheduled to the demo day) so the store sees why.
+- Every vehicle gets a roster driver (`drv-veh001` …, no sign-in) so every planned trip has a driver; Ruwan drives VEH057, which is never in the workshop.
+- The calendar gets rows from a week before the demo day to four weeks after when the loaded calendar lacks them (Sundays closed), so deferrals roll to a real next operating day.
+- **Re-running the seed never resets the day.** Orders are created once; the workshop list is applied only when the day is first seeded. To start the day again, run `docker compose down -v` then `up`, or seed with another `DEMO_DATE`.
+
 ## Synthetic mode
 
 The generator is deterministic. It uses a seeded PRNG and never calls `Math.random`, and it creates:
@@ -119,8 +143,8 @@ The generator is deterministic. It uses a seeded PRNG and never calls `Math.rand
 - 12 districts split across both depots. The names are real place names, but every minute and distance is generated.
 - An allowance for every brand × dock combination.
 - A calendar for 2026-03-30 to 2026-06-30. Sundays are closed, and it has one generated "Synthetic festival" with a ramp, a generated payday and a monsoon band.
-- About 30 outlets named `Synthetic <Brand> NN`, with `address = "synthetic"`.
-- About 16 vehicles.
+- 120 outlets (anchors included) named `Synthetic <Brand> NN`, with `address = "synthetic"`.
+- 60 vehicles (anchors included), mostly trucks with a few vans, about a quarter refrigerated.
 
 Calendar rows carry `note = "synthetic"`. District, allowance and vehicle rows have no free-text column, so the seed summary is what identifies them as synthetic.
 

@@ -19,6 +19,9 @@ export const SYNTHETIC_TAG = 'synthetic';
 export const DEFAULT_SYNTHETIC_SEED = 20260407;
 export const SYNTHETIC_CALENDAR_FROM = '2026-03-30';
 export const SYNTHETIC_CALENDAR_TO = '2026-06-30';
+/** A clean clone gets a network of the competition's size: 120 outlets and 60 vehicles, anchors included. */
+export const SYNTHETIC_OUTLET_TOTAL = 120;
+export const SYNTHETIC_VEHICLE_TOTAL = 60;
 
 /** mulberry32: tiny deterministic PRNG returning floats in [0, 1). */
 export function prng(seed: number): () => number {
@@ -193,13 +196,13 @@ export function syntheticVehicles(seed: number, count = 16): VehicleRow[] {
     n++;
     const id = `VEH${String(n).padStart(3, '0')}`;
     if (reserved.has(id)) continue;
-    const type = r() < 0.55 ? VehicleType.TRUCK : VehicleType.VAN;
+    const type = r() < 0.85 ? VehicleType.TRUCK : VehicleType.VAN; // mostly trucks, a few vans
     const truck = type === VehicleType.TRUCK;
     rows.push({
       id,
       depot: rows.length % 3 === 2 ? Depot.KANDY : Depot.PELIYAGODA,
       type,
-      tempClass: r() < 0.45 ? TempClass.CHILLED : TempClass.AMBIENT,
+      tempClass: r() < 0.3 ? TempClass.CHILLED : TempClass.AMBIENT, // about a quarter of the fleet is refrigerated
       capacityKg: truck ? int(r, 35, 70) * 100 : int(r, 9, 13) * 100,
       capacityM3: truck ? int(r, 20, 35) : round1(6 + r() * 3),
       kmPerLitre: truck ? round1(4 + r() * 3) : round1(9 + r() * 3),
@@ -239,10 +242,10 @@ export function withDistrictsFor(
 export function generateSynthetic(opts: SyntheticOptions = {}): ReferenceData {
   const seed = opts.seed ?? DEFAULT_SYNTHETIC_SEED;
   const outlets = withAnchors(
-    syntheticOutlets(seed, opts.outletCount ?? 30, opts.districts ?? SYNTHETIC_DISTRICTS),
+    syntheticOutlets(seed, opts.outletCount ?? SYNTHETIC_OUTLET_TOTAL - OUTLET_ANCHORS.length, opts.districts ?? SYNTHETIC_DISTRICTS),
     OUTLET_ANCHORS,
   ).rows;
-  const vehicles = withAnchors(syntheticVehicles(seed, opts.vehicleCount ?? 16), VEHICLE_ANCHORS).rows;
+  const vehicles = withAnchors(syntheticVehicles(seed, opts.vehicleCount ?? SYNTHETIC_VEHICLE_TOTAL - VEHICLE_ANCHORS.length), VEHICLE_ANCHORS).rows;
   const districts = withDistrictsFor(syntheticDistricts(seed), outlets, seed).rows;
   return {
     districts,

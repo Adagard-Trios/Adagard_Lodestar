@@ -25,6 +25,30 @@ describe('OrdersSet', () => {
   // a run date still open for orders today (the 4:00 PM cut-off is covered in order-cutoff.spec.ts)
   const body = { outletId: 'OUT106', runDate: new Date(nextOrderableRunDate()), brand: 'FRESH', tempClass: 'CHILLED', units: 4, kg: 20, m3: 0.2 };
 
+  describe('create (generated ids)', () => {
+    const clash = () => Object.assign(new Error('unique'), { code: 'P2002', meta: { target: ['id'] } });
+
+    it('draws a new id when another order took the generated one at the same moment', async () => {
+      const created: string[] = [];
+      const order = { create: jest.fn(async ({ data }: any) => { if (data.id === 'ORD0104300') throw clash(); created.push(data.id); return data; }) };
+      set = new OrdersSet({ outlet: instance(outlet), order } as any, instance(orders));
+      when(outlet.findUnique(anything())).thenResolve({ depot: 'KANDY' });
+      when(orders.nextOrderId()).thenResolve('ORD0104300', 'ORD0104301');
+      const data = await set.beforeCreate({ ...body }, { principal: personas.fathima, headers: {} });
+      await expect(set.create(data, { principal: personas.fathima, headers: {} })).resolves.toMatchObject({ id: 'ORD0104301' });
+      expect(created).toEqual(['ORD0104301']);
+    });
+
+    it('still refuses a client-chosen id that already exists', async () => {
+      const order = { create: jest.fn(async () => { throw clash(); }) };
+      set = new OrdersSet({ outlet: instance(outlet), order } as any, instance(orders));
+      when(outlet.findUnique(anything())).thenResolve({ depot: 'KANDY' });
+      const data = await set.beforeCreate({ ...body, id: 'ORD0104216' }, { principal: personas.admin, headers: {} });
+      await expect(set.create(data, { principal: personas.admin, headers: {} })).rejects.toMatchObject({ code: 'P2002' });
+      expect(order.create).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('beforeCreate (ABAC on writes)', () => {
     it('lets a store manager order for her own outlet and fills server-side fields', async () => {
       when(outlet.findUnique(anything())).thenResolve({ depot: 'KANDY' });

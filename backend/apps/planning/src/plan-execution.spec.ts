@@ -134,6 +134,14 @@ describe('executePlan', () => {
     expect(x.locked).toEqual(['O1']);
   });
 
+  it("gives a vehicle's new trip the next number when its trip of that number has left", async () => {
+    const started = { id: 'TRP-VEH057-20260407-1', depot: 'KANDY', runDate: RUN, status: 'ENROUTE', stops: [{ orderId: 'O1', outletId: 'OUT106', stopSeq: 1 }] };
+    const { db, tx } = store({ orders: ORDERS, users: [RUWAN], calendar: CALENDAR, trips: [started] });
+    await executePlan(tx, plan(2, [trip('VEH057', 1, '09:30', [['O2', 'OUT108', '11:10']])]));
+    expect(db.trips.map(t => [t.id, t.status])).toEqual([['TRP-VEH057-20260407-1', 'ENROUTE'], ['TRP-VEH057-20260407-2', 'PLANNED']]);
+    expect(db.trips[1].tripNumber).toBe(2);
+  });
+
   it('brings back an order an earlier version deferred when the new version places it', async () => {
     const { db, tx } = store({ orders: ORDERS, users: [RUWAN], calendar: CALENDAR });
     await executePlan(tx, plan(1, [trip('VEH057', 1, '03:30', [['O1', 'OUT106', '06:35']])], [{ orderId: 'O4', reason: 'CAP_REEFER', score: 41 }]));

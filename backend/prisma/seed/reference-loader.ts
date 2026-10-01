@@ -15,7 +15,7 @@ import {
 } from './mappers';
 import {
   DEFAULT_SYNTHETIC_SEED, ReferenceData, SYNTHETIC_DISTRICTS, syntheticAllowances, syntheticCalendar,
-  syntheticDistricts, syntheticOutlets, syntheticVehicles, withAnchors, withDistrictsFor,
+  syntheticDistricts, syntheticOutlets, syntheticVehicles, SYNTHETIC_OUTLET_TOTAL, SYNTHETIC_VEHICLE_TOTAL, withAnchors, withDistrictsFor,
 } from './synthetic';
 import { OUTLET_ANCHORS, VEHICLE_ANCHORS } from '../scenario';
 
@@ -135,8 +135,8 @@ export function loadReference(dataDir: string | null, opts: LoadOptions = {}): L
     districts.report.source === 'csv'
       ? districts.rows.map((d) => ({ district: d.district, depot: d.depot }))
       : SYNTHETIC_DISTRICTS;
-  const outlets = load('outlets', mapOutlet, (r) => r.id, () => syntheticOutlets(seed, 30, outletDistricts));
-  const vehicles = load('vehicles', mapVehicle, (r) => r.id, () => syntheticVehicles(seed));
+  const outlets = load('outlets', mapOutlet, (r) => r.id, () => syntheticOutlets(seed, SYNTHETIC_OUTLET_TOTAL - OUTLET_ANCHORS.length, outletDistricts));
+  const vehicles = load('vehicles', mapVehicle, (r) => r.id, () => syntheticVehicles(seed, SYNTHETIC_VEHICLE_TOTAL - VEHICLE_ANCHORS.length));
 
   // ── Fill gaps the scenario relies on ──────────────────────────────────
   const o = withAnchors(outlets.rows, OUTLET_ANCHORS);

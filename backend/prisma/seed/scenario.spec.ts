@@ -55,8 +55,7 @@ describe('applyScenario', () => {
     expect(db.deferralLog.rows.every((d) => d.confirmedAt?.getTime() === PLAN_PUBLISHED_AT.getTime())).toBe(true);
 
     expect(db.vehicle.rows.find((v) => v.id === 'VEH057')?.usedLThisWeek).toBe(298);
-    expect(db.vehicle.rows.find((v) => v.id === 'VEH004')).toMatchObject({ status: 'WORKSHOP' });
-    expect(db.vehicle.rows.find((v) => v.id === 'VEH021')).toMatchObject({ status: 'WORKSHOP' });
+    expect(db.user.rows.find((u) => u.id === USER_IDS.ruwan)?.vehicleId).toBe('VEH057');
     for (const c of CALENDAR_NOTES) {
       expect(db.calendar.rows.find((r) => r.date.getTime() === c.date.getTime())?.note).toBe(c.note);
     }
@@ -128,10 +127,10 @@ describe('applyScenario', () => {
 
   it('reports overlay targets missing from reference data instead of crashing', async () => {
     const db = await seeded((d) => {
-      d.vehicle.rows = d.vehicle.rows.filter((v) => v.id !== 'VEH021');
+      d.outlet.rows = d.outlet.rows.filter((o) => o.id !== 'OUT009');
     });
     const s = await applyScenario(db as any, quiet);
-    expect(s.missingOverlayTargets).toEqual(['VEH021']);
+    expect(s.missingOverlayTargets).toEqual(['OUT009']);
   });
 
   it('anchors are consistent with the story', () => {

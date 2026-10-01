@@ -53,6 +53,8 @@ export interface Person {
   depot: Depot | null;
   outletId: string | null;
   phone: string | null;
+  /** a driver's vehicle: trips for it are assigned to them (vehicle_id claim) */
+  vehicleId?: string | null;
 }
 
 export const PEOPLE: Person[] = [
@@ -60,7 +62,7 @@ export const PEOPLE: Person[] = [
   // Nilanthi covers both depots through her token claim; her home depot is Peliyagoda.
   { key: 'nilanthi', id: USER_IDS.nilanthi, email: 'nilanthi@waypoint.lk', name: 'Nilanthi Perera', role: Role.DISPATCHER, depot: Depot.PELIYAGODA, outletId: null, phone: '+94771234567' },
   { key: 'kasun', id: USER_IDS.kasun, email: 'kasun@waypoint.lk', name: 'Kasun Jayawardena', role: Role.LOADER, depot: Depot.KANDY, outletId: null, phone: '+94772345678' },
-  { key: 'ruwan', id: USER_IDS.ruwan, email: 'ruwan@waypoint.lk', name: 'Ruwan Bandara', role: Role.DRIVER, depot: Depot.KANDY, outletId: null, phone: '+94773456789' },
+  { key: 'ruwan', id: USER_IDS.ruwan, email: 'ruwan@waypoint.lk', name: 'Ruwan Bandara', role: Role.DRIVER, depot: Depot.KANDY, outletId: null, phone: '+94773456789', vehicleId: 'VEH057' },
   { key: 'admin', id: USER_IDS.admin, email: 'admin@waypoint.lk', name: 'Lodestar Admin', role: Role.ADMIN, depot: null, outletId: null, phone: null },
 ];
 
@@ -112,8 +114,7 @@ export const OUTLET_OVERLAYS: Array<{ id: string; name?: string; accessNote: str
 export const VEHICLE_OVERLAYS: Array<{ id: string; status: VehicleStatus; workshopNote: string | null; usedLThisWeek?: number }> = [
   // 298 L used before the hero trip; the trip adds ~17 L → 315 / 450 L.
   { id: 'VEH057', status: VehicleStatus.AVAILABLE, workshopNote: null, usedLThisWeek: 298 },
-  { id: 'VEH004', status: VehicleStatus.WORKSHOP, workshopNote: 'Reefer compressor failure — in workshop Tue 7 Apr' },
-  { id: 'VEH021', status: VehicleStatus.WORKSHOP, workshopNote: 'Gearbox repair — in workshop Tue 7 Apr' },
+  // Which vehicles are in the workshop today is the demo day's (seed/demo-day.ts), not the April story's.
 ];
 
 export const CALENDAR_NOTES: Array<{ date: Date; note: string }> = [
@@ -376,7 +377,7 @@ type Log = (msg: string) => void;
  * Returns the id actually stored.
  */
 async function upsertPerson(db: ScenarioDb, p: Person, log: Log, s: ScenarioSummary): Promise<string> {
-  const data = { email: p.email, name: p.name, role: p.role, depot: p.depot, outletId: p.outletId, phone: p.phone, isActive: true, passwordHash: null };
+  const data = { email: p.email, name: p.name, role: p.role, depot: p.depot, outletId: p.outletId, phone: p.phone, vehicleId: p.vehicleId ?? null, isActive: true, passwordHash: null };
   if (await db.user.findUnique({ where: { id: p.id } })) {
     await db.user.update({ where: { id: p.id }, data });
     return p.id;
