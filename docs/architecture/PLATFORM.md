@@ -19,12 +19,13 @@ This is the single source of truth that the backend, the agent service, infrastr
 | `audit` | NestJS | 3009 | AuditEntries (append-only, hash chained) |
 | `agent` | Python 3.12, FastAPI, **LangGraph**, mock chat model | 8000 | planning-agent runs (drafts only, never publishes) |
 | `postgres` | PostgreSQL 16 | 5432 (data network only) | all persistence (one schema per service: `orders`, `planning`, …) |
-| `frontend` | Next.js (desk faces: Store desk, Plan, Admin) | 3000 | UI |
-| `mobile-web` | Expo web export served by NGINX (browser build of the field app) | 80 → host **8082** | UI |
+| `frontend` | Next.js (start page `/`, desk faces: Store desk, Plan, Admin) | 3000 | UI |
+| `mobile-web` | Expo web export served by NGINX (browser build of the field app, `experiments.baseUrl` `/field`) | 8080, routed by the gateway at `/field/` (no host port) | UI |
 
 On Azure (AKS), the Istio internal ingress gateway takes the NGINX `gateway`'s place: it routes the same paths, and `auth` serves the merged OData service document at `/odata/v4/`. The `svc-*` client secrets become Entra workload identities, and each service gets least-privilege app roles on `lodestar-api`.
 
-Local: `docker compose up --build` starts everything above. Open `https://localhost:8443` (web), `http://localhost:8082` (field app in the browser), `http://localhost:8180` (Keycloak admin, dev only).
+Local: `docker compose up --build` starts everything above. Open `https://localhost:8443` (start page: every role), `https://localhost:8443/field/` (field app in the browser), `http://localhost:8180` (Keycloak admin, dev only).
+One origin: the gateway serves the desk website (`/`), the field app (`/field/`), the API (`/odata/v4/`), realtime (`/ws/`) and Keycloak (`/auth/`). `PUBLIC_ORIGIN` (default `https://localhost:8443`) is that origin: it sets `KC_HOSTNAME` (`<origin>/auth`), the issuer every service validates (`<origin>/auth/realms/lodestar`) and, through `${PUBLIC_ORIGIN:…}` placeholders in the realm file, the clients' redirect URIs and web origins. The apps derive every URL from the page's origin.
 QA extras: `docker compose --profile qa up sonarqube` (SonarQube at host 9000).
 
 ## 2. Zero trust (verify explicitly, least privilege, assume breach)
@@ -47,6 +48,7 @@ QA extras: `docker compose --profile qa up sonarqube` (SonarQube at host 9000).
    - The app sends its device id as `X-Device-Id` (Socket.IO: `auth.deviceId`). It must equal the `device_id` claim, else 401 `DeviceMismatch`.
    - `REQUIRE_DEVICE_HEADER` (default `true`): a field call without the header is refused with 401 `DeviceHeaderRequired`. With `false`, a missing header is accepted, but a present one is still checked.
    - Other posture codes: `DeviceNotBound`, `DeviceNotRegistered`, `DeviceInactive`, `DeviceNotOwned`.
+   - **Shared demo phones** (judging and demos): the seed marks the four persona phones `sharedDemo` (never settable through the API). After sign-in, a field app whose install id differs from the token's `device_id` reads that row (`GET Devices('id')`, an enrollment route, own rows only) and adopts the id as its install id only when the row is ACTIVE, `sharedDemo` and the caller's own. Every check above still applies to every call; any other user or phone goes through enrollment.
    - **Enrollment** (a new phone, SM-32 → ADM-05):
      - A field user whose token is not bound to the presented phone may only call `POST Devices` (self-enrolment, PENDING), `GET Devices` (own rows) and `Me()`.
      - An admin's `Devices('id')/Lodestar.Activate` binds the phone. It writes the Keycloak `device_id` attribute, revokes the previous phone and ends the user's sessions, so the next sign-in carries the claim.

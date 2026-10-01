@@ -28,6 +28,7 @@ describe('applyScenario', () => {
     expect(db.user.rows.every((u) => u.passwordHash === null)).toBe(true);
     expect(db.user.rows.find((u) => u.email === 'fathima@waypoint.lk')).toMatchObject({ outletId: 'OUT106', role: 'STORE_MANAGER' });
 
+    expect(db.device.rows.every((d) => d.sharedDemo === true)).toBe(true);
     expect(db.device.rows.map((d) => [d.id, d.userId, d.status])).toEqual([
       ['DEV-RB-01', USER_IDS.ruwan, 'ACTIVE'],
       ['DEV-KJ-01', USER_IDS.kasun, 'ACTIVE'],

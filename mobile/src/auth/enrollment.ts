@@ -47,7 +47,7 @@ export type EnrollmentState = {
 };
 
 /** The Devices row as the API returns it. */
-export type DeviceRow = { id: string; userId?: string; status: 'PENDING' | 'ACTIVE' | 'REVOKED' | string; registeredAt?: string; label?: string | null };
+export type DeviceRow = { id: string; userId?: string; status: 'PENDING' | 'ACTIVE' | 'REVOKED' | string; registeredAt?: string; label?: string | null; sharedDemo?: boolean };
 
 export type DeviceRequestBody = { id: string; platform?: string; model?: string; label?: string };
 
@@ -65,6 +65,8 @@ export interface EnrollmentDeps {
   describe(claims: Claims | null): Omit<DeviceRequestBody, 'id'>;
   /** False where the app cannot send X-Device-Id (cross-origin web build): the API cannot check the phone then. */
   sendsDeviceHeader(): boolean;
+  /** Adopts `id` as this install's id (a confirmed shared demo phone), or drops an earlier adoption (null). */
+  adoptDevice?(id: string | null): Promise<void>;
   now?: () => number;
 }
 
@@ -111,12 +113,29 @@ export class DeviceEnrollment {
    * open; otherwise sends the access request (the access guard shows SM-32) and returns false.
    */
   async ensure(claims: Claims | null = this.deps.claims()): Promise<boolean> {
+    // not bound as it stands: adopt the token's shared demo phone, or drop an earlier adoption, and look again
+    if (!(await this.isBound(claims))) await this.adoptShared(claims);
     if (await this.isBound(claims)) {
       this.reset();
       return true;
     }
     await this.request();
     return false;
+  }
+
+  /**
+   * The token names a shared demo phone (a seeded persona's): this install takes that id ONLY when the
+   * registry row is ACTIVE, marked sharedDemo and the signed-in user's own (GET Devices('id') answers with
+   * the caller's rows only). Any other token drops an earlier adoption, so this install asks for access
+   * with its own id.
+   */
+  private async adoptShared(claims: Claims | null): Promise<void> {
+    const adopt = this.deps.adoptDevice;
+    if (!adopt || !this.deps.sendsDeviceHeader()) return;
+    const id = claims?.deviceId;
+    const row = id ? await this.deps.read(id).catch(() => null) : null;
+    const confirmed = !!row && row.id === id && row.sharedDemo === true && row.status === 'ACTIVE' && row.userId === claims?.sub;
+    await adopt(confirmed ? row.id : null);
   }
 
   /** The API said this phone is not bound (DeviceMismatch / DeviceNotBound) in the middle of a session. */

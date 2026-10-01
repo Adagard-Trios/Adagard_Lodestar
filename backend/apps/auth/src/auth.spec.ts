@@ -128,7 +128,16 @@ describe('DevicesSet', () => {
   describe('beforeCreate', () => {
     it('registers a non-admin device as PENDING for the caller, ignoring userId', async () => {
       const data = await set.beforeCreate({ id: 'DEV-RB-02', userId: 'kasun', label: 'Phone' }, w(personas.ruwan));
-      expect(data).toEqual({ id: 'DEV-RB-02', userId: 'ruwan', label: 'Phone', status: 'PENDING' });
+      expect(data).toEqual({ id: 'DEV-RB-02', userId: 'ruwan', label: 'Phone', status: 'PENDING', sharedDemo: false });
+    });
+
+    it('never creates a shared demo phone through the API, not even for an admin (the seed sets sharedDemo)', async () => {
+      expect(set.options.insertable).not.toContain('sharedDemo');
+      expect(set.options.updatable).not.toContain('sharedDemo');
+      await expect(set.beforeCreate({ id: 'DEV-RB-02', sharedDemo: true }, w(personas.ruwan))).resolves.toMatchObject({ sharedDemo: false });
+      await expect(set.beforeCreate({ id: 'DEV-AD-02', sharedDemo: true }, w())).resolves.toMatchObject({ sharedDemo: false });
+      const p = enrolling(personas.fathima, 'DEV-NEWPHONE01', 'DeviceNotBound');
+      await expect(set.beforeCreate({ sharedDemo: true }, w(p))).resolves.toMatchObject({ sharedDemo: false });
     });
 
     it('lets an admin register an ACTIVE device for someone', async () => {
@@ -148,6 +157,7 @@ describe('DevicesSet', () => {
         model: 'Galaxy A15',
         userId: 'fathima',
         status: 'PENDING',
+        sharedDemo: false,
       });
       await expect(set.beforeCreate({ id: 'DEV-NEWPHONE01' }, w(p))).resolves.toMatchObject({ id: 'DEV-NEWPHONE01', status: 'PENDING' });
     });

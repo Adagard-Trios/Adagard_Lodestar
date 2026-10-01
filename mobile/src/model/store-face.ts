@@ -270,3 +270,33 @@ export function initials(name?: string | null): string {
   const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
   return parts.length ? (parts[0][0] + (parts.length > 1 ? parts.at(-1)![0] : '')).toUpperCase() : '—';
 }
+
+// ---------------------------------------------------------------- receipt issue (SM-18 → SM-03)
+
+export type IssueKind = 'SHORT' | 'DAMAGED' | 'TEMPERATURE' | 'WRONG_ITEM';
+export const ISSUE_LABEL: Record<IssueKind, string> = { SHORT: 'Short', DAMAGED: 'Damaged', TEMPERATURE: 'Temperature', WRONG_ITEM: 'Wrong item' };
+/** An issue the store reported on one order while counting it (SM-18): credited when the receipt is confirmed. */
+export type ReceiptIssue = { orderId: string; kind: IssueKind; units: number; note: string };
+
+/** Issues saved on SM-18, by order id, until SM-03 confirms the receipt. */
+export const receiptIssues = new Store<Record<string, ReceiptIssue>>({});
+
+export function saveIssue(issue: ReceiptIssue) {
+  receiptIssues.set(all => ({ ...all, [issue.orderId]: issue }));
+}
+
+export function clearIssues(orderIds: string[]) {
+  receiptIssues.set(all => Object.fromEntries(Object.entries(all).filter(([id]) => !orderIds.includes(id))));
+}
+
+/** "Damaged · 1 unit: Tray torn" — the issue as it goes into the receipt note. */
+export function issueText(i: ReceiptIssue): string {
+  const note = i.note.trim();
+  return `${ISSUE_LABEL[i.kind]} · ${i.units} unit${i.units === 1 ? '' : 's'}${note ? `: ${note}` : ''}`;
+}
+
+/** The receipt note of one order: the short count and the reported issue, if any. */
+export function receiptNoteFor(units: number, counted: number, issue?: ReceiptIssue): string | undefined {
+  const parts = [counted < units ? `${units - counted} short at receipt` : '', issue ? issueText(issue) : ''].filter(Boolean);
+  return parts.join(' · ') || undefined;
+}

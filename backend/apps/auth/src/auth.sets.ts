@@ -82,6 +82,10 @@ export class UsersSet extends ODataEntitySet {
  *    phone may then register only the id it presents as X-Device-Id.
  *  - People see only their own devices (abac.self); admins see all, activate
  *    (binding the token to the phone) and revoke lost phones (ADM-07).
+ *  - `sharedDemo` marks the seeded persona phones. The field app reads its
+ *    owner's row (Devices('id'), an enrollment route) and adopts the token's
+ *    device_id as its install id only when the row is ACTIVE, sharedDemo and
+ *    the caller's own. It is set by the seed only: never insertable or updatable.
  */
 @Injectable()
 @EntitySet({
@@ -121,6 +125,8 @@ export class DevicesSet extends ODataEntitySet {
       // People register only their own device, and it waits for an admin.
       userId: admin ? (data.userId ?? ctx.principal.sub) : ctx.principal.sub,
       status: admin ? DeviceStatus.ACTIVE : DeviceStatus.PENDING,
+      // Shared demo phones come from the seed only: no API call, an admin's included, can create one.
+      sharedDemo: false,
     };
   }
 

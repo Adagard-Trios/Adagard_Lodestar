@@ -8,7 +8,8 @@ import * as api from '@/model/api';
 import { confirmReceipt } from '@/model/actions';
 import { useClaims, useOrder, usePods } from '@/model/hooks';
 import { useQuery } from '@/model/query';
-import { podFor } from '@/model/store-face';
+import { useStore } from '@/lib/store';
+import { clearIssues, issueText, podFor, receiptIssues, receiptNoteFor } from '@/model/store-face';
 import type { POD } from '@/model/types';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
@@ -28,8 +29,10 @@ export default function ScreenSm03ConfirmReceiptCount() {
   const ids = orders.map(o => o.id);
   const lines = useQuery(ids.length ? `lines.${ids.join(',')}` : null, c => api.orderLines(c, ids), { persist: true });
   const [counts, setCounts] = useState<Record<string, number>>({});
+  // issues reported on SM-18 are credited: the count starts that many units lower
+  const issues = useStore(receiptIssues);
   const podOf = (id: string) => podFor(pods.data, id);
-  const countOf = (id: string, units: number) => counts[id] ?? podOf(id)?.unitsDelivered ?? units;
+  const countOf = (id: string, units: number) => counts[id] ?? Math.max(0, (podOf(id)?.unitsDelivered ?? units) - (issues[id]?.units ?? 0));
   const bump = (id: string, units: number, d: number) => setCounts(c => ({ ...c, [id]: Math.max(0, Math.min(units, countOf(id, units) + d)) }));
   const hero = orders.find(o => o.tempClass === 'CHILLED') ?? orders[0] ?? null;
   const heroCount = hero ? countOf(hero.id, hero.units) : 0;
@@ -46,8 +49,9 @@ export default function ScreenSm03ConfirmReceiptCount() {
     if (!claims || !orders.length) return true; // design preview: follow the prototype
     for (const o of orders) {
       const n = countOf(o.id, o.units);
-      await confirmReceipt(o, n, n < o.units ? `${o.units - n} short at receipt` : undefined);
+      await confirmReceipt(o, n, receiptNoteFor(o.units, n, issues[o.id]));
     }
+    clearIssues(ids);
     return true;
   };
 
@@ -97,7 +101,7 @@ export default function ScreenSm03ConfirmReceiptCount() {
               ) : null}
             </View>
             <View>
-              <Text style={s.t10}>{heroPod?.exceptions?.length ? heroPod.exceptions.map(e => `${e.qty ? `${e.qty} ` : ''}${e.item ?? e.type ?? 'item'} ${e.type ? titleCase(e.type).toLowerCase() : ''}`.trim()).join(' + ') + ', credited on confirm.' : short ? `${plural(short, 'unit')} short in your count, credited on confirm.` : 'Count each order, then confirm.'}</Text>
+              <Text style={s.t10}>{hero && issues[hero.id] ? `${issueText(issues[hero.id])}, credited on confirm.` : heroPod?.exceptions?.length ? heroPod.exceptions.map(e => `${e.qty ? `${e.qty} ` : ''}${e.item ?? e.type ?? 'item'} ${e.type ? titleCase(e.type).toLowerCase() : ''}`.trim()).join(' + ') + ', credited on confirm.' : short ? `${plural(short, 'unit')} short in your count, credited on confirm.` : 'Count each order, then confirm.'}</Text>
             </View>
           </View>
           <View style={s.v38}>
@@ -188,7 +192,7 @@ export default function ScreenSm03ConfirmReceiptCount() {
                     <Grad g={G0} style={s.v56} />
                     <Icon xml={X4} width={18} height={18} style={s.v1} />
                   </View>
-                  <Tap lk="L94" style={s.v62}>
+                  <Tap lk="L94" style={s.v62} to={hero ? { to: 'sm-18-report-issue', params: { order: hero.id } } : undefined}>
                     <View style={s.v59}>
                       <Text style={s.t58}>{"Short"}</Text>
                     </View>

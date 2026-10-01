@@ -37,6 +37,7 @@
       "expo-sqlite"
     ],
     "experiments": {
+      "baseUrl": "/field",
       "typedRoutes": true,
       "reactCompiler": true
     }

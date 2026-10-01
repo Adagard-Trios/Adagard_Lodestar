@@ -87,6 +87,43 @@ describe('SM-03 confirm receipt', () => {
   });
 });
 
+describe('SM-18 report issue', () => {
+  it('saves the issue on the phone; SM-03 credits it and sends it as the receipt note', async () => {
+    const { receiptIssues } = require('@/model/store-face');
+    receiptIssues.set({});
+    await signInAs({ sub: 'u-sm18', name: 'Test Manager', realm_access: { roles: ['store_manager'] }, outlet_id: 'OUT-T1' });
+    params.order = 'O-2';
+    const order = { id: 'O-2', outletId: 'OUT-T1', runDate: '2026-04-07T00:00:00.000Z', orderedAt: '2026-04-06T09:00:00.000Z', brand: 'FRESH', tempClass: 'CHILLED', units: 6, kg: 6, m3: 0.1, status: 'DELIVERED', lineItems: [], tripStop: null };
+    routes.set("Orders('O-2')", order);
+    routes.set('Orders', [order]);
+    routes.set('OrderLineItems', [{ id: 'L-1', orderId: 'O-2', name: 'Whole chicken 1 kg', qty: 6, kg: 6, tempClass: 'CHILLED' }]);
+    routes.set("Outlets('OUT-T1')", outlet);
+
+    const Issue = require('@/live/sm-18-report-issue').default;
+    const view = await render(<Issue />);
+    await waitFor(() => expect(screen.getByTestId('issue-summary').props.children).toBe('1 unit damaged'));
+    await fireEvent.press(screen.getByTestId('issue-temperature'));
+    await fireEvent.press(screen.getByTestId('issue-plus'));
+    await fireEvent.changeText(screen.getByTestId('issue-note'), 'Warm on arrival');
+    expect(screen.getByTestId('issue-summary').props.children).toBe('2 units temperature');
+    await fireEvent.press(screen.getByTestId('lk-L95'));
+    await waitFor(() => expect(push).toHaveBeenCalledWith({ pathname: '/s/[key]', params: { key: 'sm-03-confirm-receipt-count', order: 'O-2' } }));
+    expect(receiptIssues.get()['O-2']).toEqual({ orderId: 'O-2', kind: 'TEMPERATURE', units: 2, note: 'Warm on arrival' });
+    await view.unmount();
+
+    const Count = require('@/live/sm-03-confirm-receipt-count').default;
+    await render(<Count />);
+    await waitFor(() => expect(screen.getByTestId('count-0').props.children).toBe('4'));
+    await fireEvent.press(screen.getByTestId('lk-L17'));
+    await waitFor(() => expect(queue.list().find(i => i.sub === 'u-sm18')).toBeTruthy());
+    expect(queue.list().find(i => i.sub === 'u-sm18')).toMatchObject({
+      kind: 'RECEIPT',
+      payload: { orderId: 'O-2', unitsReceived: 4, unitsExpected: 6, note: '2 short at receipt · Temperature · 2 units: Warm on arrival' },
+    });
+    expect(receiptIssues.get()['O-2']).toBeUndefined();
+  });
+});
+
 describe('DSP-28 approve re-plan', () => {
   const plan = { id: 'PLAN-T-v4', depot: 'KANDY', runDate: '2026-04-07T00:00:00.000Z', version: 4, status: 'NEEDS_APPROVAL', source: 'AGENT', createdAt: '2026-04-06T22:00:00.000Z', summary: null };
 

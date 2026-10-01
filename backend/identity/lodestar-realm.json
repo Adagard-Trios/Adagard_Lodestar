@@ -596,7 +596,7 @@
       "fullScopeAllowed": true,
       "consentRequired": false,
       "redirectUris": [
-        "https://localhost:8443/*",
+        "${PUBLIC_ORIGIN:https://localhost:8443}/*",
         "http://localhost:3000/*"
       ],
       "webOrigins": [
@@ -635,12 +635,12 @@
       "consentRequired": false,
       "redirectUris": [
         "lodestar://auth/callback",
-        "http://localhost:8082/auth/callback",
+        "${PUBLIC_ORIGIN:https://localhost:8443}/field/auth/callback",
         "http://localhost:8081/auth/callback",
         "exp://*"
       ],
       "webOrigins": [
-        "http://localhost:8082",
+        "${PUBLIC_ORIGIN:https://localhost:8443}",
         "http://localhost:8081"
       ],
       "attributes": {

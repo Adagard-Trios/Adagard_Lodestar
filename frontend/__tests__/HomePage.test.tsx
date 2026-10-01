@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import Home from '@/app/page';
+import ScreenDirectory from '@/app/screens/page';
 import { FACES, FLOWS } from '@/screens';
 
 // Lets one test render the directory without demo flows; every other test sees the generated data.
@@ -19,9 +20,35 @@ afterEach(() => {
   mockFlows = undefined;
 });
 
-describe('Home page · screen directory', () => {
+describe('Start page · pick a role', () => {
   it('shows the product heading', () => {
     render(<Home />);
+    expect(screen.getByRole('heading', { level: 1, name: 'Waypoint Lodestar' })).toBeInTheDocument();
+  });
+
+  it.each([
+    ['Store manager', '/store', 'fathima'],
+    ['Dispatcher', '/plan', 'nilanthi'],
+    ['Loader', '/field/s/ld-06-sign-in', 'kasun'],
+    ['Driver', '/field/s/dr-06-sign-in', 'ruwan'],
+    ['Admin', '/admin', 'admin'],
+  ])('offers the %s app at %s, signed in as %s', (role, href, persona) => {
+    render(<Home />);
+    const link = screen.getByRole('link', { name: new RegExp(`^${role}:`) });
+    expect(link).toHaveAttribute('href', href);
+    expect(link.closest('[data-role]')).toHaveTextContent(`Sign in as ${persona}`);
+  });
+
+  it('offers the store phone app and the design screen directory', () => {
+    render(<Home />);
+    expect(screen.getByRole('link', { name: /Phone app/ })).toHaveAttribute('href', '/field/s/sm-05-sign-in');
+    expect(screen.getByRole('link', { name: 'All design screens' })).toHaveAttribute('href', '/screens');
+  });
+});
+
+describe('/screens · screen directory', () => {
+  it('shows the product heading', () => {
+    render(<ScreenDirectory />);
     expect(screen.getByRole('heading', { level: 1, name: 'Waypoint Lodestar' })).toBeInTheDocument();
   });
 
@@ -30,7 +57,7 @@ describe('Home page · screen directory', () => {
   });
 
   it.each(Object.entries(FACES))('lists every %s screen with its id and link', (_app, face) => {
-    render(<Home />);
+    render(<ScreenDirectory />);
     const open = screen.getByRole('link', { name: new RegExp(`${face.title}.*Open`) });
     expect(open).toHaveAttribute('href', face.start);
 
@@ -63,7 +90,7 @@ describe('Home page · screen directory', () => {
   });
 
   it('shows a "Start:" chip for each demo flow', () => {
-    render(<Home />);
+    render(<ScreenDirectory />);
     const chips = screen.queryAllByRole('link', { name: /^Start: / });
     expect(chips).toHaveLength(FLOWS.length);
     FLOWS.forEach((f, i) => {
@@ -73,10 +100,10 @@ describe('Home page · screen directory', () => {
   });
 });
 
-describe('Home page · without demo flows', () => {
+describe('/screens · without demo flows', () => {
   it('omits the flow chips section but still lists the screens', () => {
     mockFlows = [];
-    render(<Home />);
+    render(<ScreenDirectory />);
     expect(screen.queryByRole('link', { name: /^Start: / })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /SM-26\s*Sign in/ })).toHaveAttribute('href', '/store/sm-26-sign-in');
   });

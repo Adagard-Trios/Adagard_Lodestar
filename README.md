@@ -35,15 +35,16 @@ docker compose up --build
 
 | Open | What |
 |---|---|
-| https://localhost:8443 | Desk faces. The browser warns about the dev certificate the first time. |
+| https://localhost:8443 | Start page: pick a role (Store, Plan, Dock, Run, Admin). The browser warns about the dev certificate the first time. |
 | https://localhost:8443/odata/v4/ | OData service document (send a bearer token) |
-| http://localhost:8082 | Field app in the browser |
+| https://localhost:8443/field/ | Field app in the browser (Dock, Run, Store and Plan phone), on the same origin |
 | http://localhost:8180/auth | Keycloak admin (dev only) |
 
 - **Sign in** as a persona: `fathima` (store manager), `nilanthi` (dispatcher), `kasun` (loader), `ruwan` (driver) or `admin`. Passwords come from `.env` (`LODESTAR_DEMO_PASSWORD`, `LODESTAR_ADMIN_PASSWORD`).
 - **Field app sign-in:** every phone is checked against the user's approved device (zero trust).
-  - **Seeded phones:** ruwan `DEV-RB-01`, kasun `DEV-KJ-01`, fathima `DEV-FR-01`, nilanthi `DEV-NP-01`. In the browser build at :8082, set `localStorage['lodestar.device-id']` to one of these before signing in.
+  - **Seeded phones:** ruwan `DEV-RB-01`, kasun `DEV-KJ-01`, fathima `DEV-FR-01`, nilanthi `DEV-NP-01`. These four are *shared demo phones* (`Device.sharedDemo`, set by the seed only): after one of these personas signs in, any browser adopts that phone's id, so no setup is needed.
   - **Any other phone** asks for access (SM-32), and an admin approves it on ADM-05.
+- **Public origin:** `PUBLIC_ORIGIN` (default `https://localhost:8443`) is the one URL people open. It sets the Keycloak hostname and issuer and the realm's redirect URIs and web origins (placeholders in the realm file, applied on import). The desk website and the field app take their API, WebSocket and sign-in URLs from the page.
 - **Realm changes:** Keycloak imports `backend/identity/lodestar-realm.json` only when the realm doesn't exist yet. To apply an edit to a running stack, delete the `lodestar` realm in the admin console (http://localhost:8180/auth) and run `docker compose restart identity`. The users keep their fixed ids, so seeded data still lines up.
 - **Competition data** is never committed. To seed with it, put the CSVs in `./data/` (see `backend/prisma/DATA.md`). Without them, a small synthetic dataset is used.
 - **Quality stack:** `docker compose --profile qa up sonarqube`. See `docs/QA.md`.

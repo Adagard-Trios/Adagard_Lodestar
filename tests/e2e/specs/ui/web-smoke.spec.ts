@@ -31,8 +31,16 @@ test.describe('Web · desk faces', () => {
     await page.addInitScript(() => window.sessionStorage.setItem('lodestar.design', '1'));
   });
 
-  test('home lists the three faces and their screens', async ({ page }) => {
+  test('the start page offers every role', async ({ page }) => {
     await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1, name: 'Waypoint Lodestar' })).toBeVisible();
+    for (const [role, href] of [['Store manager', '/store'], ['Dispatcher', '/plan'], ['Loader', '/field/s/ld-06-sign-in'], ['Driver', '/field/s/dr-06-sign-in'], ['Admin', '/admin']]) {
+      await expect(page.getByRole('link', { name: new RegExp(`^${role}:`) })).toHaveAttribute('href', href);
+    }
+  });
+
+  test('/screens lists the three faces and their screens', async ({ page }) => {
+    await page.goto('/screens');
     await expect(page.getByRole('heading', { level: 1, name: 'Waypoint Lodestar' })).toBeVisible();
     for (const face of ['Lodestar Store', 'Lodestar Plan', 'Lodestar Admin']) {
       await expect(page.getByRole('link', { name: new RegExp(`${face}.*Open`) })).toBeVisible();

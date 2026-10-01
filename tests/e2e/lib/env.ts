@@ -6,8 +6,9 @@ const env = (name: string, fallback: string) => process.env[name]?.trim() || fal
 export const BASE_URL = env('E2E_BASE_URL', 'https://localhost:8443');
 /** Where the desk website is served. The gateway by default; `http://localhost:3100` for a local `next start`. */
 export const WEB_URL = env('E2E_WEB_URL', BASE_URL);
-/** Expo web export of the field app (mobile-web container). */
-export const MOBILE_URL = env('E2E_MOBILE_URL', 'http://localhost:8082');
+/** Expo web export of the field app, served by the gateway under /field/ (same origin as the desk website).
+ * Keep the trailing slash: specs open screens with relative paths (`s/<key>`). */
+export const MOBILE_URL = env('E2E_MOBILE_URL', `${BASE_URL}/field/`);
 /** OData root behind the gateway. */
 export const ODATA = `${BASE_URL}/odata/v4`;
 

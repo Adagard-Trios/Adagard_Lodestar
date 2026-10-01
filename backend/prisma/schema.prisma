@@ -560,6 +560,9 @@ model Device {
   platform     String? // android | ios | web
   model        String?
   status       DeviceStatus @default(PENDING)
+  /// A shared demo phone (the four seeded persona phones only, set by the seed; never through the API).
+  /// Its owner may adopt it as the install id of any browser after sign-in (PLATFORM.md §2.6).
+  sharedDemo   Boolean      @default(false)
   registeredAt DateTime     @default(now())
   lastSeenAt   DateTime?
   revokedAt    DateTime?

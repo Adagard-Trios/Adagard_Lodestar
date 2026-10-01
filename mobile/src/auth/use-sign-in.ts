@@ -1,11 +1,11 @@
 // Sign-in with Keycloak: authorization code + PKCE (S256) through expo-auth-session, for the public
 // `lodestar-field` client. Native: the system browser returns to lodestar://auth/callback.
-// Web: a popup returns to <origin>/auth/callback, which hands the result back (src/app/auth/callback.tsx).
+// Web: a popup returns to <origin><basePath>/auth/callback (/field/auth/callback behind the gateway), which hands the result back (src/app/auth/callback.tsx).
 import { useMemo, useState } from 'react';
-import { useWindowDimensions } from 'react-native';
+import { Platform, useWindowDimensions } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
 import { router } from 'expo-router';
-import { APP_SCHEME, CALLBACK_PATH, clientId } from '@/lib/config';
+import { APP_SCHEME, basePath, CALLBACK_PATH, clientId } from '@/lib/config';
 import { session } from '@/model/platform';
 import type { Claims } from './claims';
 import { enrollment } from './device-access';
@@ -15,7 +15,10 @@ import { homeFor } from './roles';
 const DISCOVERY = discovery();
 
 export function redirectUri(): string {
-  return AuthSession.makeRedirectUri({ scheme: APP_SCHEME, path: CALLBACK_PATH });
+  // makeRedirectUri builds web URLs from the origin only, so the export's base path is added here.
+  const base = Platform.OS === 'web' ? basePath().replace(/^\/+/, '') : '';
+  const path = base ? `${base}/${CALLBACK_PATH}` : CALLBACK_PATH;
+  return AuthSession.makeRedirectUri({ scheme: APP_SCHEME, path });
 }
 
 /**

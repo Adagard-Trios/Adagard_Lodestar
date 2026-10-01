@@ -54,6 +54,10 @@ export interface Order {
   daysSince: number;
   deferralScore?: number | null;
   notes?: string | null;
+  /** The store's count (Orders('…')/Lodestar.ConfirmReceipt); null until the receipt is confirmed. */
+  unitsReceived?: number | null;
+  receiptNote?: string | null;
+  creditNoteId?: string | null;
   createdAt?: string;
   updatedAt?: string;
   outlet?: Outlet;

@@ -2,6 +2,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import ScreenShell from '@/components/ScreenShell';
 import PlaceOrder from '@/live/sm-01-place-order';
+import Deliveries, { receiptNote } from '@/live/sm-02-deliveries';
 import OrdersHistory from '@/live/sm-27-orders-and-history';
 import Messages from '@/live/sm-29-messages';
 import AddPerson from '@/live/adm-04-add-or-edit-person';
@@ -61,6 +62,64 @@ describe('SM-01 Place order', () => {
     expect(posts[1].body).toMatchObject({ tempClass: 'CHILLED', units: 10, lineItems: [{ name: 'Milk 1 L', qty: 9 }, { name: 'Yoghurt 80 g', qty: 1, kg: 2 }] });
     expect((posts[0].body as { runDate: string }).runDate).toMatch(/^\d{4}-\d{2}-\d{2}T00:00:00\.000Z$/);
     expect((posts[0].body as { m3: number }).m3).toBeCloseTo(0.28, 2);
+  });
+});
+
+describe('SM-02 Deliveries · confirm receipt and report an issue', () => {
+  const stop = (id: string, o: object, over = {}) => ({ id, tripId: 'TRT1', orderId: (o as { id: string }).id, outletId: 'OUTT01', stopSeq: 1, status: 'DELIVERED', etaPlan: DAY, arrivalActual: DAY, order: o, trip: { id: 'TRT1', vehicleId: 'VEH057', status: 'ENROUTE', runDate: DAY }, ...over });
+
+  it('counts each order, reports an issue and confirms through Orders/Lodestar.ConfirmReceipt', async () => {
+    const dry = order('ORDT1', { units: 10, unitsReceived: null });
+    const chilled = order('ORDT2', { tempClass: 'CHILLED', units: 6, unitsReceived: null });
+    const view = renderLive(<ScreenShell board="P1" nav={nav({})} live><Deliveries /></ScreenShell>, {
+      session: SESSIONS.store,
+      handler: req => storeBase(req) ?? (req.method === 'POST' ? { id: 'x' } : req.path === 'TripStops' ? page([stop('STT1', dry), stop('STT2', chilled)]) : page([])),
+    });
+    expect(await screen.findByTestId('receipt')).toBeInTheDocument();
+    fireEvent.click(screen.getByTitle('One less for ORDT2'));
+    expect(screen.getByTestId('receipt-count-ORDT2')).toHaveTextContent('5');
+    fireEvent.click(screen.getByTestId('report-issue'));
+    fireEvent.change(screen.getByLabelText('Order with the issue'), { target: { value: 'ORDT2' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Damaged' }));
+    fireEvent.change(screen.getByLabelText('Note for Kandy Hub'), { target: { value: 'Tray torn' } });
+    expect(screen.getByTestId('confirm-receipt')).toHaveTextContent('Confirm · 1 to credit');
+    fireEvent.click(screen.getByTestId('confirm-receipt'));
+    await waitFor(() => expect(view.calls.filter(c => c.method === 'POST')).toHaveLength(2));
+    const posts = view.calls.filter(c => c.method === 'POST');
+    expect(posts[0]).toMatchObject({ path: "Orders('ORDT1')/Lodestar.ConfirmReceipt", body: { unitsReceived: 10, unitsExpected: 10, savedAt: expect.any(String) } });
+    expect(posts[0].body).not.toHaveProperty('note');
+    expect(posts[1]).toMatchObject({ path: "Orders('ORDT2')/Lodestar.ConfirmReceipt", body: { unitsReceived: 5, unitsExpected: 6, note: '1 short at receipt · Damaged: Tray torn' } });
+  });
+
+  it('shows the confirmed receipt once every order is counted, and nothing before the delivery is in', async () => {
+    const done = order('ORDT1', { units: 10, unitsReceived: 9, receiptNote: '1 short at receipt', creditNoteId: 'CN-2604-0001' });
+    renderLive(<Deliveries />, { session: SESSIONS.store, handler: req => storeBase(req) ?? (req.path === 'TripStops' ? page([stop('STT1', done)]) : page([])) });
+    expect(await screen.findByTestId('receipt-done')).toHaveTextContent('You counted 9 of 10 units · credit note CN-2604-0001');
+
+    expect(receiptNote({ id: 'A', units: 4 }, 4, null)).toBeUndefined();
+    expect(receiptNote({ id: 'A', units: 4 }, 4, { orderId: 'A', kind: 'Temperature', note: ' ' })).toBe('Temperature');
+    expect(receiptNote({ id: 'A', units: 4 }, 3, { orderId: 'B', kind: 'Short', note: 'x' })).toBe('1 short at receipt');
+  });
+
+  it('asks for the count of the delivery that is in even when the next run is already planned', async () => {
+    const delivered = order('ORDT1', { units: 10, unitsReceived: null });
+    const next = order('ORDT9', { status: 'PLANNED', unitsReceived: null });
+    renderLive(<Deliveries />, {
+      session: SESSIONS.store,
+      handler: req => storeBase(req) ?? (req.path === 'TripStops'
+        ? page([stop('STT9', next, { tripId: 'TRT9', status: 'PLANNED', arrivalActual: null, etaPlan: '2026-04-08T00:00:00.000Z' }), stop('STT1', delivered)])
+        : page([])),
+    });
+    expect(await screen.findByTestId('receipt')).toBeInTheDocument();
+    expect(screen.getByTestId('receipt-count-ORDT1')).toHaveTextContent('10');
+    expect(screen.queryByTestId('receipt-count-ORDT9')).not.toBeInTheDocument();
+  });
+
+  it('asks for no count while the van is on the way', async () => {
+    const onWay = order('ORDT1', { status: 'ENROUTE', unitsReceived: null });
+    renderLive(<Deliveries />, { session: SESSIONS.store, handler: req => storeBase(req) ?? (req.path === 'TripStops' ? page([stop('STT1', onWay, { status: 'PLANNED', arrivalActual: null })]) : page([])) });
+    expect(await screen.findByTestId('eta')).toBeInTheDocument();
+    expect(screen.queryByTestId('receipt')).not.toBeInTheDocument();
   });
 });
 

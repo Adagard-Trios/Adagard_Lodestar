@@ -3,6 +3,8 @@ import { Platform } from 'react-native';
 import * as Device from 'expo-device';
 import { sameOriginApi } from '@/lib/config';
 import { client, getDeviceId, session } from '@/model/platform';
+import { setSharedDeviceId } from './device';
+import { deviceStore } from './secure';
 import { firstName, type Claims } from './claims';
 import { DeviceEnrollment, type DeviceRow } from './enrollment';
 
@@ -26,6 +28,7 @@ export const enrollment = new DeviceEnrollment({
   read: id => client.get<DeviceRow>('Devices', id),
   describe,
   sendsDeviceHeader: sameOriginApi,
+  adoptDevice: id => setSharedDeviceId(deviceStore, id),
 });
 
 // A call refused because this phone is not bound (DeviceMismatch / DeviceNotBound) asks for access

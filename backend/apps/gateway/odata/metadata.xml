@@ -436,6 +436,7 @@
         <Property Name="platform" Type="Edm.String"/>
         <Property Name="model" Type="Edm.String"/>
         <Property Name="status" Type="Lodestar.DeviceStatus" Nullable="false"/>
+        <Property Name="sharedDemo" Type="Edm.Boolean" Nullable="false"/>
         <Property Name="registeredAt" Type="Edm.DateTimeOffset" Nullable="false"/>
         <Property Name="lastSeenAt" Type="Edm.DateTimeOffset"/>
         <Property Name="revokedAt" Type="Edm.DateTimeOffset"/>

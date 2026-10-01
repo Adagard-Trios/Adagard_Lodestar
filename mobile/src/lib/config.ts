@@ -1,6 +1,7 @@
 // Where the field app finds the platform (docs/architecture/PLATFORM.md §1).
 //   Native (device / simulator): https://localhost:8443 unless EXPO_PUBLIC_API_URL is set.
-//   Web (mobile-web container):  the page's own origin; its NGINX proxies /odata/ and /ws/ to the gateway.
+//   Web (mobile-web container):  the page's own origin. The gateway serves the browser build under /field/
+//                                (app.json experiments.baseUrl), next to the desk website, /odata/, /ws/ and /auth/.
 // EXPO_PUBLIC_* values are inlined at build time, so they are read with plain `process.env.X` access.
 import { Platform } from 'react-native';
 
@@ -29,9 +30,9 @@ export function sameOriginApi(): boolean {
 
 export const ODATA_ROOT = '/odata/v4';
 
-/** Keycloak realm issuer. The browser and the services all see this one issuer. */
+/** Keycloak realm issuer. The browser and the services all see this one issuer: on the web, the page's own origin. */
 export function issuer(): string {
-  return trimSlash(process.env.EXPO_PUBLIC_OIDC_ISSUER || `${DEFAULT_API}/auth/realms/lodestar`);
+  return trimSlash(process.env.EXPO_PUBLIC_OIDC_ISSUER || `${apiBase()}/auth/realms/lodestar`);
 }
 
 /** The public, PKCE-only field client (backend/identity/lodestar-realm.json). */
@@ -41,6 +42,11 @@ export function clientId(): string {
 
 export const APP_SCHEME = 'lodestar';
 export const CALLBACK_PATH = 'auth/callback';
+
+/** Web: the path the browser build is served under (app.json experiments.baseUrl, inlined at export), e.g. '/field'. */
+export function basePath(): string {
+  return trimSlash(process.env.EXPO_BASE_URL ?? '');
+}
 
 /** Optional fixed run date (YYYY-MM-DD) for demos against a seeded day. */
 export function runDateOverride(): string | undefined {

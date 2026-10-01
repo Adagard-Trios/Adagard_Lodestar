@@ -4,7 +4,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import type { Claims } from '@/auth/claims';
-import { deviceId, DEVICE_ID_KEY, pinnedDeviceId, resetDeviceIdCache, SEEDED_DEVICE_IDS } from '@/auth/device';
+import { deviceId, DEVICE_ID_KEY, pinnedDeviceId, resetDeviceIdCache, SEEDED_DEVICE_IDS, setSharedDeviceId, SHARED_DEVICE_KEY } from '@/auth/device';
 import { DeviceEnrollment, hubName, type DeviceRow, type EnrollmentDeps } from '@/auth/enrollment';
 import { Session } from '@/auth/session';
 import { memoryStore } from '@/auth/secure';
@@ -77,6 +77,69 @@ describe('DeviceEnrollment', () => {
     const offline = harness({ register: jest.fn(async () => Promise.reject({ status: 0, code: 'NetworkError', message: 'No connection to the server' })) });
     await offline.e.request();
     expect(offline.e.state.get()).toMatchObject({ status: 'error', message: expect.stringMatching(/No connection/) });
+  });
+
+  describe('shared demo phones (the seeded personas sign in from any browser)', () => {
+    /** An install whose id can be adopted: `id` is what it presents as X-Device-Id. */
+    function adopting(row: Partial<DeviceRow> | Error) {
+      const install = { id: 'DEV-NEW-0001' };
+      const h = harness({
+        getDeviceId: jest.fn(async () => install.id),
+        read: jest.fn(async (id: string): Promise<DeviceRow> => {
+          if (row instanceof Error) throw row;
+          return { id, status: 'ACTIVE', userId: 'u-1', sharedDemo: true, ...row };
+        }),
+        adoptDevice: jest.fn(async (id: string | null) => void (install.id = id ?? 'DEV-NEW-0001')),
+      });
+      return { ...h, install, adopt: h.deps.adoptDevice as jest.Mock };
+    }
+
+    it("adopts the token's phone when the backend confirms it is an ACTIVE shared demo phone of this user", async () => {
+      const h = adopting({});
+      await expect(h.e.ensure(claims('DEV-RB-01'))).resolves.toBe(true);
+      expect(h.deps.read).toHaveBeenCalledWith('DEV-RB-01');
+      expect(h.adopt).toHaveBeenCalledWith('DEV-RB-01');
+      expect(h.install.id).toBe('DEV-RB-01');
+      expect(h.deps.register).not.toHaveBeenCalled();
+      expect(h.e.state.get().status).toBe('idle');
+    });
+
+    it.each([
+      ['not a shared demo phone', { sharedDemo: false }],
+      ['no sharedDemo flag (older API)', { sharedDemo: undefined }],
+      ['a pending phone', { status: 'PENDING' }],
+      ['a revoked phone', { status: 'REVOKED' }],
+      ["another user's phone", { userId: 'u-2' }],
+      ['a different row', { id: 'DEV-OTHER-01' }],
+      ['an unreadable row', new Error('Resource not found')],
+    ] as [string, Partial<DeviceRow> | Error][])('keeps device binding for %s: this install asks for access with its own id', async (_what, row) => {
+      const h = adopting(row);
+      await expect(h.e.ensure(claims('DEV-RB-01'))).resolves.toBe(false);
+      expect(h.adopt).toHaveBeenCalledWith(null);
+      expect(h.deps.register).toHaveBeenCalledWith(expect.objectContaining({ id: 'DEV-NEW-0001' }));
+      expect(h.e.state.get().status).toBe('pending');
+    });
+
+    it("another user on a browser that adopted a demo phone gets the install's own id back", async () => {
+      const h = adopting({ sharedDemo: false });
+      h.install.id = 'DEV-RB-01'; // adopted for ruwan earlier
+      // this user's token names the browser's own (approved) id
+      await expect(h.e.ensure(claims('DEV-NEW-0001'))).resolves.toBe(true);
+      expect(h.adopt).toHaveBeenCalledWith(null);
+      expect(h.install.id).toBe('DEV-NEW-0001');
+
+      h.install.id = 'DEV-RB-01';
+      await expect(h.e.ensure(claims('DEV-MINE-01'))).resolves.toBe(false);
+      expect(h.adopt).toHaveBeenLastCalledWith(null);
+      expect(h.deps.register).toHaveBeenCalledWith(expect.objectContaining({ id: 'DEV-NEW-0001' }));
+    });
+
+    it('no token claim: nothing is read and nothing adopted', async () => {
+      const h = adopting({});
+      await expect(h.e.ensure(claims(undefined))).resolves.toBe(false);
+      expect(h.deps.read).not.toHaveBeenCalled();
+      expect(h.adopt).toHaveBeenCalledWith(null);
+    });
   });
 
   it('an already approved phone (row ACTIVE, token still old) asks to sign in again', async () => {
@@ -202,6 +265,22 @@ describe('install id overrides (dev / e2e)', () => {
     expect(st.data.size).toBe(0);
     process.env.EXPO_PUBLIC_DEVICE_ID = 'no!';
     expect(pinnedDeviceId()).toBeNull();
+  });
+
+  it("an adopted shared demo phone is presented instead of the install's own id, until it is dropped", async () => {
+    delete process.env.EXPO_PUBLIC_DEVICE_ID;
+    const st = store();
+    const own = await deviceId(st, () => 'abc-123');
+    expect(own).toBe('DEV-ABC123');
+    await setSharedDeviceId(st, 'DEV-RB-01');
+    await expect(deviceId(st, () => 'x')).resolves.toBe('DEV-RB-01');
+    expect(st.data.get(SHARED_DEVICE_KEY)).toBe('DEV-RB-01');
+    expect(st.data.get(DEVICE_ID_KEY)).toBe(own);
+    resetDeviceIdCache(); // a reload keeps the adoption
+    await expect(deviceId(st, () => 'x')).resolves.toBe('DEV-RB-01');
+    await setSharedDeviceId(st, null);
+    await expect(deviceId(st, () => 'x')).resolves.toBe(own);
+    expect(st.data.has(SHARED_DEVICE_KEY)).toBe(false);
   });
 
   it('a pre-seeded stored id (web: localStorage lodestar.device-id) is respected', async () => {

@@ -4,15 +4,17 @@
 #   cp .env.example .env        # dev defaults work as they are
 #   docker compose up --build
 #
-#   https://localhost:8443          desk faces (Store desk, Plan, Admin) + OData API at /odata/v4/
-#   http://localhost:8082           field app in the browser (Store, Plan phone, Dock, Run)
+#   https://localhost:8443          start page: pick a role (Store, Plan, Dock, Run, Admin)
+#                                   desk faces (Store desk, Plan, Admin) + OData API at /odata/v4/
+#   https://localhost:8443/field/   field app in the browser (Store, Plan phone, Dock, Run), same origin
+#   PUBLIC_ORIGIN (.env) changes the public origin everywhere: Keycloak hostname, issuer, redirect URIs, API
 #   http://localhost:8180/auth      Keycloak admin console (dev only)
 #   docker compose --profile qa up sonarqube    SonarQube on http://localhost:9000
 #
 # Zero trust, locally (docs/architecture/PLATFORM.md §2):
 #   * every service verifies every token itself (Keycloak JWKS); the gateway only routes
 #   * three networks: edge (published), app (service to service), data (Postgres only)
-#   * only the gateway (and dev-only Keycloak/field-app ports) publish to the host
+#   * only the gateway (and the dev-only Keycloak port) publish to the host
 #   * containers are non-root, read-only, with no Linux capabilities
 # =============================================================================
 
@@ -29,13 +31,13 @@ x-hardened: &hardened
 x-service-env: &service-env
   NODE_ENV: production
   DATABASE_URL: postgresql://lodestar:${POSTGRES_PASSWORD:-lodestar-dev-only}@postgres:5432/lodestar
-  OIDC_ISSUER: https://localhost:8443/auth/realms/lodestar
+  OIDC_ISSUER: ${PUBLIC_ORIGIN:-https://localhost:8443}/auth/realms/lodestar
   OIDC_JWKS_URL: http://identity:8080/auth/realms/lodestar/protocol/openid-connect/certs
   OIDC_TOKEN_URL: http://identity:8080/auth/realms/lodestar/protocol/openid-connect/token
   OIDC_AUDIENCE: lodestar-api
   FIELD_CLIENT_ID: lodestar-field
   AUDIT_URL: http://audit:3009
-  PUBLIC_BASE_URL: https://localhost:8443
+  PUBLIC_BASE_URL: ${PUBLIC_ORIGIN:-https://localhost:8443}
 
 x-service: &service
   <<: *hardened
@@ -115,8 +117,10 @@ services:
       KC_HTTP_RELATIVE_PATH: /auth
       KC_HTTP_ENABLED: "true"
       KC_PROXY_HEADERS: xforwarded
-      # one issuer for browsers and services: https://localhost:8443/auth/realms/lodestar
-      KC_HOSTNAME: https://localhost:8443/auth
+      # one issuer for browsers and services: <PUBLIC_ORIGIN>/auth/realms/lodestar
+      KC_HOSTNAME: ${PUBLIC_ORIGIN:-https://localhost:8443}/auth
+      # the realm import fills redirect URIs and web origins from it
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-https://localhost:8443}
       KC_HOSTNAME_ADMIN: http://localhost:8180/auth
       KC_HEALTH_ENABLED: "true"
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
@@ -225,7 +229,7 @@ services:
       PORT: 3008
       OIDC_CLIENT_ID: svc-notifications
       OIDC_CLIENT_SECRET: ${SVC_NOTIFICATIONS_SECRET:-svc-notifications-dev-only}
-      WS_CORS_ORIGINS: https://localhost:8443,http://localhost:8082
+      WS_CORS_ORIGINS: ${PUBLIC_ORIGIN:-https://localhost:8443}
       REDIS_URL: redis://:${REDIS_PASSWORD:-redis-dev-only}@redis:6379
     depends_on:
       migrate: { condition: service_completed_successfully }
@@ -249,7 +253,7 @@ services:
       AGENT_MODEL: ${AGENT_MODEL:-mock}
       DATABASE_URL: postgresql://lodestar:${POSTGRES_PASSWORD:-lodestar-dev-only}@postgres:5432/lodestar
       AGENT_DB_SCHEMA: agent
-      OIDC_ISSUER: https://localhost:8443/auth/realms/lodestar
+      OIDC_ISSUER: ${PUBLIC_ORIGIN:-https://localhost:8443}/auth/realms/lodestar
       OIDC_JWKS_URL: http://identity:8080/auth/realms/lodestar/protocol/openid-connect/certs
       OIDC_TOKEN_URL: http://identity:8080/auth/realms/lodestar/protocol/openid-connect/token
       OIDC_AUDIENCE: lodestar-api
@@ -279,17 +283,14 @@ services:
     build: { context: ./frontend }
     <<: *hardened
     tmpfs: ["/tmp", "/app/.next/cache:uid=1000,gid=1000"]
-    environment:
-      NEXT_PUBLIC_API_URL: https://localhost:8443/odata/v4
-      NEXT_PUBLIC_WS_URL: wss://localhost:8443/ws/
+    # API, sign-in and realtime URLs come from the page's own origin (frontend/lib/config.ts)
     networks: [edge]
 
+  # served by the gateway at <PUBLIC_ORIGIN>/field/ (no host port: one origin for every face)
   mobile-web:
     build: { context: ./mobile }
     <<: *hardened
     tmpfs: ["/tmp", "/var/cache/nginx:uid=101,gid=101", "/var/run:uid=101,gid=101"]
-    ports:
-      - "8082:8080"
     networks: [edge]
 
   # ---------------------------------------------------------------- QA (docker compose --profile qa up)

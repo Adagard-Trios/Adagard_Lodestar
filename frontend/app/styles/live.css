@@ -46,3 +46,72 @@ textarea.lv-input { resize: vertical; min-height: 64px; }
 .lv-live-dot--off { background: var(--st-offline-fg, #98A1B3); }
 .lv-more { align-self: center; margin: 8px 0; }
 .lv-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Start page (/): pick a role. One column on a phone, a grid on the desk. */
+.lv-start { min-height: 100vh; box-sizing: border-box; padding: clamp(28px, 6vw, 64px) clamp(16px, 5vw, 64px) 48px; background: #F4F6FA; color: #0A0F1A; font-family: var(--font-ui, Inter, system-ui, sans-serif); }
+.lv-start__head { display: flex; align-items: center; gap: 14px; }
+.lv-start__eyebrow { display: block; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #5B6475; }
+.lv-start h1 { margin: 0; font: 800 clamp(28px, 6vw, 40px)/1.1 var(--font-display, 'Plus Jakarta Sans', Inter, sans-serif); letter-spacing: -0.03em; }
+.lv-start__lede { margin: 14px 0 28px; font-size: 16px; color: #4A5467; }
+.lv-start__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 16px; max-width: 1280px; }
+.lv-start__card { display: flex; flex-direction: column; gap: 10px; padding: 18px; border-radius: 18px; background: #FFFFFF; border: 1px solid #E3E7EF; box-shadow: 0 1px 2px rgba(15,20,50,.04); }
+.lv-start__main { display: flex; align-items: center; gap: 14px; min-height: 48px; color: inherit; text-decoration: none; }
+.lv-start__main:focus-visible, .lv-start__also:focus-visible { outline: 3px solid #3B4CCA; outline-offset: 3px; border-radius: 10px; }
+.lv-start__txt { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.lv-start__txt b { font: 800 19px/1.2 var(--font-display, 'Plus Jakarta Sans', Inter, sans-serif); }
+.lv-start__txt span { font-size: 14px; font-weight: 600; color: #5B6475; }
+.lv-start__go { font-size: 20px; font-weight: 700; color: #3B4CCA; }
+.lv-start__desc { font-size: 14px; line-height: 1.45; color: #4A5467; }
+.lv-start__foot { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; font-size: 13px; color: #5B6475; }
+.lv-start code { font: 600 12.5px var(--font-mono, 'JetBrains Mono', monospace); color: #141B4D; background: #EEF1F6; padding: 2px 6px; border-radius: 6px; }
+.lv-start__also { margin-left: auto; padding: 8px 0; font-weight: 700; color: #3B4CCA; text-decoration: none; }
+.lv-start__note { max-width: 1280px; margin: 28px 0 0; font-size: 13px; line-height: 1.6; color: #5B6475; }
+.lv-start__note a { color: #3B4CCA; font-weight: 700; }
+/* Desk receipt card (SM-02): a text link and boxed inputs in the design's field style. */
+.lv-link { align-self: flex-start; padding: 6px 0; font-size: 13px; font-weight: 700; color: var(--brand-600, #3B4CCA); cursor: pointer; }
+.lv-field { box-sizing: border-box; padding: 9px 12px; border-radius: 12px; background: #FFFFFF; box-shadow: inset 0 0 0 1px var(--hair, #E3E7EF); font-size: 14px; }
+
+/* Lodestar Store desk: no 1280 px floor (web.css). Narrow windows get the desktop layout down to 900 px, and below
+   that the phone layout underneath. */
+.web-screen.b-P1 > .frame { min-width: 900px; }
+/* Lodestar Store desk on a phone or a narrow window: the design's desktop screens reflow into one column
+   (the page scrolls, not the frame). Wider windows keep the design's desktop layout. */
+@media (max-width: 899px) {
+  .web-screen.b-P1 { width: 100%; height: auto; min-height: 100vh; overflow: visible; }
+  .web-screen.b-P1 > .frame { min-width: 0; min-height: 100vh; height: auto !important; }
+  .b-P1 .s-shell { min-height: 100vh; }
+  .b-P1 .s-top { flex-wrap: wrap; height: auto; padding: 10px 16px; gap: 8px 10px; }
+  .b-P1 .s-top__outlet { order: 1; flex: 1 1 100%; min-width: 0; overflow: hidden; }
+  .b-P1 .s-top__nav { order: 2; flex: 1 1 100%; margin-left: 0; overflow-x: auto; }
+  .b-P1 .s-top__nav { gap: 0; }
+  .b-P1 .s-top__i { flex: 1 1 auto; justify-content: center; gap: 5px; padding: 0 6px; font-size: 13px; }
+  .b-P1 .s-top__i svg { width: 16px; height: 16px; }
+  .b-P1 .s-top__clock, .b-P1 .s-top > .spacer { display: none; }
+  .b-P1 .s-top__brand { margin-right: auto; }
+  .b-P1 .d-main { padding: 16px; gap: 14px; overflow: visible; }
+  .b-P1 .d-head { flex-wrap: wrap; align-items: flex-start; gap: 12px; }
+  .b-P1 .d-head__txt { flex: 1 1 100%; }
+  .b-P1 .d-head > .vstack { align-items: flex-start !important; }
+  .b-P1 .plan-i span { overflow-wrap: anywhere; }
+  .b-P1 .d-h1 { font-size: 26px; }
+  .b-P1 .d-main .hstack, .b-P1 .d-kpis, .b-P1 .arr, .b-P1 .arr__foot { flex-direction: column; align-items: stretch !important; }
+  .b-P1 .arr > .vstack { width: auto !important; }
+  .b-P1 .arr__plan { padding-left: 0; border-left: 0; }
+  .b-P1 .arr__v { font-size: 44px; }
+  .b-P1 .arr__foot .thread { overflow-x: auto; }
+  .b-P1 .thread--wide .thread__step { width: 64px; flex-shrink: 0; }
+  .b-P1 .d-card__head { flex-wrap: wrap; row-gap: 8px; }
+  .b-P1 .d-card__head .m-seg { width: 100% !important; }
+  .b-P1 .d-split { flex-direction: column; }
+  .b-P1 .d-panel { width: auto !important; flex-shrink: 1; }
+  .b-P1 .d-toolbar { flex-wrap: wrap; margin-left: 0 !important; }
+  .b-P1 .d-search { width: 100%; box-sizing: border-box; }
+  .b-P1 .wk-row--head, .b-P1 .ot-row--head, .b-P1 .sx-tr--head { display: none; }
+  .b-P1 .sx-tr { flex-wrap: wrap; gap: 4px 12px; padding: 10px 16px; }
+  .b-P1 .sx-tr .c { width: auto !important; }
+  .b-P1 .wk-row { flex-wrap: wrap; gap: 4px 12px; padding: 10px 16px; }
+  .b-P1 .wk-row .c { width: auto !important; }
+  .b-P1 .ot-row { padding: 6px 16px; gap: 10px; }
+  .b-P1 .ot-last, .b-P1 .ot-sug { display: none; }
+  .b-P1 .ot-qty { width: auto; }
+}

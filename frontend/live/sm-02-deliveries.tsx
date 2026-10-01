@@ -4,6 +4,9 @@
 // token — the next delivery's ETA band and late risk, its order thread, the week's orders, and unread
 // Notifications ("Got it" marks them read). Realtime: the store:<outlet> room pushes eta_update and
 // credit_note_issued, which refresh the screen.
+// Receipt: once the delivery is in, the side panel asks for the store's count of each order and an optional
+// issue (the phone's SM-03 count and SM-18 report issue, on the desk): Orders('…')/Lodestar.ConfirmReceipt
+// records the count and the issue as the receipt note; a short count gets a credit note and a POD exception.
 import { useMemo, useState } from 'react';
 import Btn from '@/components/live/Btn';
 import { StoreTop, useMyOutlet } from '@/components/live/chrome';
@@ -20,6 +23,102 @@ const PILL: Record<string, [string, string]> = {
   EXCEPTION: ['m-pill--bad', 'Exception'], CANCELLED: ['', 'Cancelled'],
 };
 const STEPS = ['RECEIVED', 'PLANNED', 'LOADED', 'ENROUTE', 'DELIVERED'];
+/** Orders('…')/Lodestar.ConfirmReceipt accepts these (backend RECEIVABLE_STATUSES). */
+const RECEIVABLE = ['LOADED', 'ENROUTE', 'DELIVERED', 'EXCEPTION'];
+/** SM-18 "What's wrong?" */
+const ISSUES = ['Short', 'Damaged', 'Temperature', 'Wrong item'] as const;
+
+type Receipt = { order: Order; units: number; note?: string };
+type Issue = { orderId: string; kind: (typeof ISSUES)[number]; note: string };
+
+/** The receipt note of one order: the short count and the reported issue, if any. */
+export function receiptNote(order: Pick<Order, 'id' | 'units'>, counted: number, issue: Issue | null): string | undefined {
+  const parts = [
+    counted < order.units ? `${order.units - counted} short at receipt` : '',
+    issue?.orderId === order.id ? `${issue.kind}${issue.note.trim() ? `: ${issue.note.trim()}` : ''}` : '',
+  ].filter(Boolean);
+  return parts.join(' · ') || undefined;
+}
+
+/** The delivery is in: count each order, report an issue, confirm (SM-03 and SM-18 on the desk). */
+function ReceiptCard({ stops, onDone }: { stops: TripStop[]; onDone: () => void }) {
+  const orders = stops.map(s => s.order).filter((o): o is Order => !!o && o.status !== 'CANCELLED');
+  const open = orders.filter(o => o.unitsReceived == null && RECEIVABLE.includes(o.status));
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [issue, setIssue] = useState<Issue | null>(null);
+  const confirm = useAction<Receipt[], unknown>(async (c, list) => {
+    const savedAt = new Date().toISOString();
+    for (const r of list) {
+      await c.action('Orders', r.order.id, 'ConfirmReceipt', { unitsReceived: r.units, unitsExpected: r.order.units, savedAt, ...(r.note ? { note: r.note } : {}) });
+    }
+  }, { onSuccess: onDone });
+
+  if (!orders.length) return null;
+  if (!open.length) {
+    if (orders.some(o => o.unitsReceived == null)) return null;
+    const got = orders.reduce((n, o) => n + (o.unitsReceived ?? 0), 0);
+    const want = orders.reduce((n, o) => n + o.units, 0);
+    const credit = orders.find(o => o.creditNoteId)?.creditNoteId;
+    return (
+      <div className="d-card" data-testid="receipt-done">
+        <div className="ncard" style={{ gap: '6px' }}>
+          <span className="ncard__meta" style={{ color: 'var(--st-delivered-fg)' }}><Ic n="check" className="ic ic--sm" />{"Receipt confirmed"}</span>
+          <span className="ncard__p">You counted <b>{got} of {want}</b> units{credit ? <> · credit note <span className="id">{credit}</span></> : null}.</span>
+          {orders.filter(o => o.receiptNote).map(o => <span key={o.id} className="ncard__p"><span className="id">{o.id}</span> {o.receiptNote}</span>)}
+        </div>
+      </div>
+    );
+  }
+  const countOf = (o: Order) => counts[o.id] ?? o.units;
+  const bump = (o: Order, d: number) => setCounts(c => ({ ...c, [o.id]: Math.max(0, Math.min(o.units, countOf(o) + d)) }));
+  const short = open.reduce((n, o) => n + o.units - countOf(o), 0);
+  const submit = () => void confirm.run(open.map(o => ({ order: o, units: countOf(o), note: receiptNote(o, countOf(o), issue) })));
+  const pick = (kind: Issue['kind']) => issue && setIssue({ ...issue, kind });
+  return (
+    <div className="d-card" data-testid="receipt">
+      <div className="ncard">
+        <span className="ncard__meta" style={{ color: 'var(--brand-600)' }}><Ic n="box" className="ic ic--sm" />{"Delivery in · count it"}</span>
+        <span className="ncard__t">{"Confirm receipt"}</span>
+        {open.map(o => (
+          <div key={o.id} className="between" style={{ gap: '10px' }} data-receipt={o.id}>
+            <span className="vstack" style={{ gap: '2px', minWidth: '0' }}>
+              <span className="id" style={{ color: 'var(--text)' }}>{o.id}</span>
+              <span className="t-3" style={{ fontSize: '12.5px' }}>{o.tempClass === 'CHILLED' ? 'Chilled' : 'Dry'} · {o.units} ordered</span>
+            </span>
+            <span className="qty">
+              <Btn className="qty__b" title={`One less for ${o.id}`} onClick={() => bump(o, -1)}><Ic n="minus" /></Btn>
+              <span className="qty__v" aria-label={`${o.id} count`} data-testid={`receipt-count-${o.id}`}>{countOf(o)}</span>
+              <Btn className="qty__b" title={`One more for ${o.id}`} onClick={() => bump(o, 1)}><Ic n="plus" /></Btn>
+            </span>
+          </div>
+        ))}
+        {issue ? (
+          <div className="vstack" style={{ gap: '8px' }} data-testid="issue">
+            <span className="d-kpi__l">{"Report an issue · what's wrong?"}</span>
+            {open.length > 1 && (
+              <select className="lv-input lv-field" aria-label="Order with the issue" value={issue.orderId} onChange={e => setIssue({ ...issue, orderId: e.target.value })} onClick={e => e.stopPropagation()}>
+                {open.map(o => <option key={o.id} value={o.id}>{o.id}</option>)}
+              </select>
+            )}
+            <div className="m-seg" style={{ margin: '0', flexWrap: 'wrap' }} role="radiogroup" aria-label="What's wrong?">
+              {ISSUES.map(k => (
+                <span key={k} role="radio" aria-checked={issue.kind === k} tabIndex={0} className={`m-seg__i lv-click${issue.kind === k ? ' is-on' : ''}`} style={{ height: '32px', fontSize: '13px' }}
+                  onClick={e => { e.stopPropagation(); pick(k); }} onKeyDown={e => { if (e.key === 'Enter') pick(k); }}>{k}</span>
+              ))}
+            </div>
+            <textarea className="lv-input lv-field" aria-label="Note for Kandy Hub" placeholder="Note for Kandy Hub · optional" maxLength={400} value={issue.note} onChange={e => setIssue({ ...issue, note: e.target.value })} onClick={e => e.stopPropagation()} />
+          </div>
+        ) : (
+          <Btn className="lv-link" testId="report-issue" onClick={() => setIssue({ orderId: open[0].id, kind: short ? 'Short' : 'Damaged', note: '' })}>{"Report an issue"}</Btn>
+        )}
+        <ErrorBanner error={confirm.error} />
+        <Btn className="d-btn d-btn--primary" testId="confirm-receipt" busy={confirm.pending} onClick={submit}>
+          {short ? `Confirm · ${short} to credit` : 'Confirm receipt'}
+        </Btn>
+      </div>
+    </div>
+  );
+}
 
 function Thread({ order, stop, trip }: { order: Order; stop?: TripStop; trip?: Trip }) {
   const at = Math.max(0, STEPS.indexOf(order.status === 'DEFERRED' || order.status === 'EXCEPTION' ? 'PLANNED' : order.status));
@@ -64,6 +163,12 @@ export default function LiveSm02Deliveries() {
   const open = sorted.filter(s => s.status !== 'DELIVERED');
   const current = open[0] ?? sorted[sorted.length - 1];
   const sameRun = current ? sorted.filter(s => s.tripId === current.tripId && s.outletId === current.outletId) : [];
+  // The receipt to count: the latest delivery that is in and not counted yet (a later run may already be planned),
+  // else the confirmed receipt of the delivery shown above.
+  const arrived = sorted.filter(s => s.status === 'DELIVERED' || !!s.arrivalActual);
+  const uncounted = arrived.filter(s => s.order && s.order.unitsReceived == null && RECEIVABLE.includes(s.order.status));
+  const receiptTrip = uncounted.length ? uncounted[uncounted.length - 1].tripId : current && arrived.includes(current) ? current.tripId : null;
+  const receiptRun = receiptTrip ? arrived.filter(s => s.tripId === receiptTrip) : [];
   const trip = current?.trip;
   const order = current?.order;
   const risk = current?.lateRiskPct ?? null;
@@ -138,6 +243,7 @@ export default function LiveSm02Deliveries() {
               )}
             </div>
             <div className="d-panel">
+              {receiptRun.length > 0 && <ReceiptCard stops={receiptRun} onDone={() => { void stops.refresh(); void orders.refresh(); }} />}
               {notes.data?.length === 0 && (
                 <div className="d-card"><div className="ncard" style={{ gap: '6px' }}><span className="ncard__meta"><Ic n="check" className="ic ic--sm" />{"Nothing needs your attention"}</span></div></div>
               )}
