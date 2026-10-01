@@ -1,0 +1,94 @@
+# In-cluster Redis for the Socket.IO adapter (Azure: Azure Cache for Redis
+# behind a private endpoint). Pub/sub only, so no persistence.
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  labels:
+    app: redis
+spec:
+  selector:
+    app: redis
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      priorityClassName: lodestar-api
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      nodeSelector:
+        lodestar.io/pool: apps
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        args:
+        - --requirepass
+        - $(REDIS_PASSWORD)
+        - --save
+        - ''
+        - --appendonly
+        - 'no'
+        - --maxmemory
+        - 64mb
+        - --maxmemory-policy
+        - allkeys-lru
+        env:
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-credentials
+              key: REDIS_PASSWORD
+        ports:
+        - name: redis
+          containerPort: 6379
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 128Mi
+        readinessProbe:
+          tcpSocket:
+            port: redis
+          periodSeconds: 5
+        livenessProbe:
+          tcpSocket:
+            port: redis
+          periodSeconds: 15
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: [ALL]
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      volumes:
+      - name: data
+        emptyDir:
+          sizeLimit: 64Mi

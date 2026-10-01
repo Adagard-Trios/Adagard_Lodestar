@@ -1,0 +1,35 @@
+# Who keeps running when the cluster is full and the cluster autoscaler has
+# not caught up yet: the request path first, the planning agent next, batch
+# last. Batch never preempts anything; it waits for room.
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: lodestar-api
+  labels:
+    app.kubernetes.io/part-of: lodestar
+value: 100000
+globalDefault: false
+preemptionPolicy: PreemptLowerPriority
+description: Waypoint Lodestar request path (OData services, realtime, UIs). Preempts the agent and batch.
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: lodestar-agent
+  labels:
+    app.kubernetes.io/part-of: lodestar
+value: 10000
+globalDefault: false
+preemptionPolicy: PreemptLowerPriority
+description: Waypoint Lodestar planning agent. Runs are checkpointed in Postgres, so preemption only delays a draft.
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: lodestar-batch
+  labels:
+    app.kubernetes.io/part-of: lodestar
+value: 1000
+globalDefault: false
+preemptionPolicy: Never
+description: Waypoint Lodestar jobs (migrate, seed). Never preempts; waits for capacity.

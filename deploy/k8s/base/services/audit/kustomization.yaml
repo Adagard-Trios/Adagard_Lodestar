@@ -4,6 +4,7 @@ namespace: lodestar
 resources:
 - configmap.yaml
 - deployment.yaml
+- hpa.yaml
 - pdb.yaml
 - secretproviderclass.yaml
 - service.yaml

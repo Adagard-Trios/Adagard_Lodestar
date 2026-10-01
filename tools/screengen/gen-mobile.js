@@ -1,5 +1,7 @@
 // Writes the Expo app's screens from out/screens.json: every phone and tablet screen as native
 // React Native views (mobile/src/screens/<key>.tsx), a registry, and the fonts they use.
+// Live screens: when mobile/src/live/<key>.tsx exists (hand-written from the generated file, with real
+// data and actions in the same Frame/Tap runtime), the registry opens it instead of the generated one.
 // Usage: node gen-mobile.js   (after node extract.js)
 const fs = require('fs');
 const path = require('path');
@@ -186,16 +188,25 @@ ${styleSrc}
 `;
 }
 
+// ---------- live screens (src/live/<key>.tsx replaces the generated screen in the registry)
+const LIVE_DIR = path.join(MOB, 'live');
+const live = new Set(fs.existsSync(LIVE_DIR) ? fs.readdirSync(LIVE_DIR).filter(f => /^[a-z0-9-]+\.tsx$/.test(f)).map(f => f.slice(0, -4)) : []);
+for (const k of live) if (!byKey[k] || byKey[k].plat === 'desktop') console.warn(`live/${k}.tsx does not match a phone or tablet screen; ignored`);
+const liveKeys = mobile.map(f => f.key).filter(k => live.has(k));
+
 // ---------- write
 fs.rmSync(path.join(MOB, 'screens'), { recursive: true, force: true });
 for (const f of mobile) write(path.join(MOB, 'screens', f.key + '.tsx'), genScreen(f));
 
-write(path.join(MOB, 'screens', 'registry.ts'), `${HEADER}import type { ComponentType } from 'react';
+write(path.join(MOB, 'screens', 'registry.ts'), `${HEADER}/* eslint-disable @typescript-eslint/no-require-imports */
+import type { ComponentType } from 'react';
 
-// Loaded on first use so the app starts fast.
+// Loaded on first use so the app starts fast. Keys in LIVE open src/live/<key>.tsx (real data).
 export const SCREENS: Record<string, () => ComponentType> = {
-${mobile.map(f => `  ${JSON.stringify(f.key)}: () => require('./${f.key}').default,`).join('\n')}
+${mobile.map(f => `  ${JSON.stringify(f.key)}: () => require('${live.has(f.key) ? '../live/' : './'}${f.key}').default,`).join('\n')}
 };
+
+export const LIVE: string[] = ${JSON.stringify(liveKeys)};
 
 export type ScreenEntry = { key: string; id: string; name: string };
 export const FACES: { app: string; title: string; device: 'phone' | 'tablet'; start: string; screens: ScreenEntry[] }[] = ${JSON.stringify(
@@ -224,4 +235,4 @@ write(path.join(MOB, 'lodestar', 'fonts.ts'), `${HEADER}${Object.entries(byPkg).
 
 export const FONTS = { ${fonts.join(', ')} };
 `);
-console.log(`mobile: ${mobile.length} screens, ${fonts.length} font files`);
+console.log(`mobile: ${mobile.length} screens (${liveKeys.length} live), ${fonts.length} font files`);

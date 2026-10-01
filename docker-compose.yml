@@ -65,6 +65,24 @@ services:
       timeout: 3s
       retries: 20
 
+  # Socket.IO adapter: lets notifications run as several replicas (same as on Kubernetes)
+  redis:
+    image: redis:7-alpine
+    # run as the image's redis user directly: the entrypoint's chown needs capabilities we drop
+    user: "999:1000"
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-redis-dev-only}", "--save", "", "--appendonly", "no"]
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: ["/data:uid=999,gid=1000"]
+    networks: [data]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD:-redis-dev-only}\" --no-auth-warning ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   # migrations + seed (competition CSVs from ./data if present, else a synthetic demo set)
   migrate:
     build: { context: ./backend, dockerfile: Dockerfile.migrate }
@@ -126,7 +144,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 30
-      start_period: 30s
+      start_period: 600s    # first start imports the realm; slow laptops need several minutes
 
   # ---------------------------------------------------------------- domain services (OData v4)
   auth:
@@ -204,6 +222,11 @@ services:
       OIDC_CLIENT_ID: svc-notifications
       OIDC_CLIENT_SECRET: ${SVC_NOTIFICATIONS_SECRET:-svc-notifications-dev-only}
       WS_CORS_ORIGINS: https://localhost:8443,http://localhost:8082
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis-dev-only}@redis:6379
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      identity: { condition: service_healthy }
+      redis: { condition: service_healthy }
 
   audit:
     <<: *service

@@ -48,6 +48,11 @@ describe('FilterTranslator', () => {
       expect(() => where('notes gt null')).toThrow(/null can only be compared/);
     });
 
+    it('a required property is never null: eq null matches nothing, ne null everything', () => {
+      expect(where('outletId eq null')).toEqual({ OR: [] });
+      expect(where('outletId ne null')).toEqual({});
+    });
+
     it('coerces dates and date-times to Date objects', () => {
       expect(where('runDate ge 2026-04-07')).toEqual({ runDate: { gte: new Date('2026-04-07T00:00:00.000Z') } });
       expect(where('runDate lt 2026-04-07T05:30:00+05:30')).toEqual({ runDate: { lt: new Date('2026-04-07T00:00:00.000Z') } });

@@ -1,3 +1,7 @@
+# orders: stateless, scaled by the HPA (hpa.yaml); see docs/architecture/PLATFORM.md section 9.
+# Graceful drain: readiness drops on SIGTERM, but endpoints/Envoy need a few
+# seconds to stop sending traffic, so preStop sleeps first; the grace period
+# covers that sleep plus in-flight requests.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -7,8 +11,11 @@ metadata:
     app.kubernetes.io/name: orders
     app.kubernetes.io/part-of: lodestar
 spec:
-  replicas: 2
+  # Initial size only: the HPA owns spec.replicas (Argo CD ignores it).
+  replicas: 3
   revisionHistoryLimit: 5
+  minReadySeconds: 5
+  progressDeadlineSeconds: 600
   selector:
     matchLabels:
       app: orders
@@ -29,12 +36,13 @@ spec:
         lodestar.io/exposed: 'true'
       annotations:
         kubectl.kubernetes.io/default-container: orders
-        proxy.istio.io/config: '{"holdApplicationUntilProxyStarts": true}'
+        proxy.istio.io/config: '{"holdApplicationUntilProxyStarts": true, "terminationDrainDuration": "20s"}'
     spec:
       serviceAccountName: orders
       automountServiceAccountToken: false
       enableServiceLinks: false
-      terminationGracePeriodSeconds: 30
+      priorityClassName: lodestar-api
+      terminationGracePeriodSeconds: 45
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -44,19 +52,34 @@ spec:
           type: RuntimeDefault
       nodeSelector:
         lodestar.io/pool: apps
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app: orders
+      # Zones first (hard: survive a zone loss), then nodes (soft). matchLabelKeys
+      # spreads each rollout revision on its own instead of counting old pods.
       topologySpreadConstraints:
       - maxSkew: 1
         topologyKey: topology.kubernetes.io/zone
-        whenUnsatisfiable: ScheduleAnyway
+        whenUnsatisfiable: DoNotSchedule
         labelSelector:
           matchLabels:
             app: orders
+        matchLabelKeys:
+        - pod-template-hash
       - maxSkew: 1
         topologyKey: kubernetes.io/hostname
         whenUnsatisfiable: ScheduleAnyway
         labelSelector:
           matchLabels:
             app: orders
+        matchLabelKeys:
+        - pod-template-hash
       containers:
       - name: orders
         image: lodestar/orders:0.0.0
@@ -78,33 +101,38 @@ spec:
               key: DATABASE_URL
         - name: NODE_OPTIONS
           value: --max-old-space-size=384
+        # Requests = steady-state usage, so HPA utilisation targets mean something.
         resources:
           requests:
-            cpu: 100m
-            memory: 192Mi
+            cpu: 200m
+            memory: 256Mi
           limits:
-            cpu: 500m
+            cpu: '1'
             memory: 512Mi
+        lifecycle:
+          preStop:
+            sleep:
+              seconds: 10
         startupProbe:
           httpGet:
             path: /health
             port: http
           periodSeconds: 5
-          failureThreshold: 30
+          failureThreshold: 24
         livenessProbe:
           httpGet:
             path: /health
             port: http
-          periodSeconds: 15
+          periodSeconds: 10
           timeoutSeconds: 3
           failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /ready
             port: http
-          periodSeconds: 10
+          periodSeconds: 5
           timeoutSeconds: 3
-          failureThreshold: 3
+          failureThreshold: 2
         securityContext:
           allowPrivilegeEscalation: false
           privileged: false

@@ -102,6 +102,27 @@ spec:
     - protocol: TCP
       port: 5432
 ---
+# notifications -> Azure Cache for Redis private endpoint (TLS port 6380), the
+# Socket.IO adapter's pub/sub. Only the notifications pods may reach Redis.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-redis-egress
+  namespace: lodestar
+spec:
+  podSelector:
+    matchLabels:
+      app: notifications
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - ipBlock:
+        cidr: PRIVATE_ENDPOINT_CIDR
+    ports:
+    - protocol: TCP
+      port: 6380
+---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

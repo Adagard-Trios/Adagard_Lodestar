@@ -13,6 +13,7 @@ import { contextUrl, ODATA_JSON, projectEntity } from './serialize';
 import { OperationContext, WriteContext } from './entity-set';
 import { ServiceDocumentEntry } from './service-map';
 import { runWithRequestContext } from './request-context';
+import { IDEMPOTENCY_KEY_HEADER, IdempotencyService } from './idempotency';
 
 export interface ODataRequest {
   method: string;
@@ -80,6 +81,8 @@ export class ODataEngine {
     private readonly complexTypes: Record<string, Record<string, string>> = {},
     /** Replaces the root service document (auth serves the merged one on AKS). */
     private readonly serviceDocumentOverride?: ServiceDocumentEntry[],
+    /** Idempotency-Key support for writes declared idempotent (absent: the header is ignored). */
+    private readonly idempotency?: IdempotencyService,
   ) {}
 
   private get model() {
@@ -120,13 +123,16 @@ export class ODataEngine {
     if (first.args === undefined) {
       if (rest.length === 0) {
         if (req.method === 'GET') return this.list(set, req);
-        if (req.method === 'POST') return this.create(set, req);
+        if (req.method === 'POST') {
+          const rbac = () => this.authorize(req.principal, set.options.create, `create ${set.options.name}`, 'write');
+          return this.once(req, !!set.options.idempotentCreate && !!set.options.create?.length, rbac, () => this.create(set, req));
+        }
         throw ODataError.methodNotAllowed(`${req.method} is not allowed on a collection`);
       }
       if (rest.length === 1 && rest[0].name === '$count' && rest[0].args === undefined) return this.count(set, req);
       if (rest.length === 1) {
         const op = this.findOperation(set, rest[0].name, 'collection');
-        if (op) return this.invoke(op, req, rest[0]);
+        if (op) return this.once(req, this.isIdempotent(op, req), this.opRbac(op, req), () => this.invoke(op, req, rest[0]));
       }
       throw ODataError.notFound(`Unknown path segment '${rest[0].name}'`);
     }
@@ -146,10 +152,39 @@ export class ODataEngine {
     }
     if (rest.length === 1) {
       const op = this.findOperation(set, rest[0].name, 'entity');
-      if (op) return this.invoke(op, req, rest[0], key);
+      if (op) return this.once(req, this.isIdempotent(op, req), this.opRbac(op, req), () => this.invoke(op, req, rest[0], key));
       if (rest[0].args === undefined) return this.member(set, key, rest[0].name, req);
     }
     throw ODataError.notFound(`Unknown path segment '${rest[rest.length - 1].name}'`);
+  }
+
+  // ── idempotent retries ──────────────────────────────────
+
+  private isIdempotent(op: RegisteredOperation, req: ODataRequest): boolean {
+    return !!op.meta.idempotent && op.meta.kind === 'action' && req.method === 'POST';
+  }
+
+  private opRbac(op: RegisteredOperation, req: ODataRequest) {
+    return () => this.authorize(req.principal, op.meta.roles, `invoke ${op.meta.name}`, 'write');
+  }
+
+  /**
+   * Runs a write at most once per (caller, Idempotency-Key) when the route opts
+   * in; a retry gets the stored response with Idempotent-Replay: true. Keys are
+   * scoped to the caller's subject, so one user can never replay another's, and
+   * RBAC is checked again before anything is replayed.
+   */
+  private async once(
+    req: ODataRequest,
+    enabled: boolean,
+    rbac: () => void,
+    exec: () => Promise<ODataResponse>,
+  ): Promise<ODataResponse> {
+    if (!enabled || !this.idempotency) return exec();
+    rbac();
+    const key = IdempotencyService.keyFrom(req.headers[IDEMPOTENCY_KEY_HEADER]);
+    if (!key) return exec();
+    return this.idempotency.run({ userId: req.principal.sub, key, route: `${req.method} ${req.path}`, body: req.body ?? {} }, exec);
   }
 
   // ── metadata ────────────────────────────────────────────
@@ -368,6 +403,7 @@ export class ODataEngine {
     const changed = await set.handler.updateWhere(
       andWhere(scoped, etagField ? { [etagField]: current[etagField] } : undefined)!,
       patch,
+      ctx,
     );
     if (changed === 0) throw ODataError.preconditionFailed();
 

@@ -21,7 +21,20 @@ export default defineConfig({
     setupNodeEvents(on, config) {
       const manifest = loadScreens(__dirname);
       // Public (non-secret) values reach the specs through `expose` (Cypress 16; Cypress.env is for secrets).
-      config.expose = { ...config.expose, screens: manifest, only: process.env.CYPRESS_SCREENS || process.env.SCREENS || '' };
+      const live = /^(1|true|yes)$/i.test(process.env.CYPRESS_LIVE || process.env.LIVE || '');
+      const users = Object.fromEntries(
+        (['dispatcher', 'store', 'admin'] as const)
+          .map(p => [p, process.env[`CYPRESS_USER_${p.toUpperCase()}`]])
+          .filter(([, v]) => v),
+      );
+      config.expose = {
+        ...config.expose,
+        screens: manifest,
+        only: process.env.CYPRESS_SCREENS || process.env.SCREENS || '',
+        live,
+        keycloakOrigin: process.env.CYPRESS_KEYCLOAK_ORIGIN || '',
+        users,
+      };
       on('task', {
         log(message: string) {
           console.log(message);

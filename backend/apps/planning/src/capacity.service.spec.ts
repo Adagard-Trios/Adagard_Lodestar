@@ -20,10 +20,10 @@ describe('CapacityService', () => {
   });
 
   describe('getChilledDemand', () => {
-    it('uses a UTC day window and excludes deferred, exception and cancelled orders', async () => {
+    it('uses the stored run-date window and excludes deferred, exception and cancelled orders', async () => {
       when(order.aggregate(anything())).thenResolve({ _sum: { m3: 118.4, kg: 9000 }, _count: { id: 42 } });
-      // A time late in the UTC day must still select that UTC day, whatever the server time zone.
-      const res = await service.getChilledDemand('PELIYAGODA', new Date('2026-04-07T22:15:00.000Z'));
+      // 17:00 UTC is 22:30 in Colombo, still 7 Apr there: select 7 Apr, whatever the server time zone.
+      const res = await service.getChilledDemand('PELIYAGODA', new Date('2026-04-07T17:00:00.000Z'));
 
       expect(res).toEqual({ m3: 118.4, kg: 9000, orders: 42 });
       const [args] = capture(order.aggregate).last();

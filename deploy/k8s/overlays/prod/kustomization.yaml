@@ -65,11 +65,11 @@ replicas:
 - name: orders
   count: 3
 - name: planning
-  count: 3
+  count: 2
 - name: fleet
-  count: 3
+  count: 2
 - name: outlets
-  count: 3
+  count: 2
 - name: trips
   count: 3
 - name: sync
@@ -77,23 +77,23 @@ replicas:
 - name: notifications
   count: 3
 - name: audit
-  count: 1
+  count: 2
 - name: agent
-  count: 3
+  count: 2
 - name: frontend
   count: 3
 - name: mobile-web
-  count: 3
+  count: 2
+# Autoscaling bounds, requests/limits and quota are the prod-sized values in
+# base/ (per service; see PLATFORM.md section 9), so prod patches only config.
 patches:
-- target:
-    kind: HorizontalPodAutoscaler
-  patch: "- op: replace\n  path: /spec/minReplicas\n  value: 3\n- op: replace\n  path: /spec/maxReplicas\n  value: 10\n"
-- target:
-    kind: Deployment
-    labelSelector: app.kubernetes.io/part-of=lodestar,app notin (mobile-web,lodestar-ingress-tls)
-  patch: "- op: replace\n  path: /spec/template/spec/containers/0/resources\n  value:\n    requests:\n      cpu: 250m\n  \
-    \    memory: 384Mi\n    limits:\n      cpu: '1'\n      memory: 768Mi\n"
 - target:
     kind: ConfigMap
     name: lodestar-common
-  patch: "- op: replace\n  path: /data/LOG_LEVEL\n  value: info\n- op: replace\n  path: /data/RUN_SEED\n  value: 'false'\n"
+  patch: |-
+    - op: replace
+      path: /data/LOG_LEVEL
+      value: info
+    - op: replace
+      path: /data/RUN_SEED
+      value: 'false'

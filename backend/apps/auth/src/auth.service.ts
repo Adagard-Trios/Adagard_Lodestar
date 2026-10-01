@@ -1,8 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { ODataError } from '@lodestar/odata';
-import { DevicePostureService, Principal } from '@lodestar/security';
-import { DeviceStatus, Role } from '@prisma/client';
+import { AUDIT_SINK, AuditOutcome, AuditSink, DevicePostureService, Principal } from '@lodestar/security';
+import { Depot, DeviceStatus, Prisma, Role, User } from '@prisma/client';
 import { KeycloakAdminClient } from './keycloak-admin.client';
 
 /** Directory role (Prisma enum) → realm role (token). */
@@ -13,6 +13,62 @@ export const REALM_ROLE: Record<Role, string> = {
   STORE_MANAGER: 'store_manager',
   ADMIN: 'admin',
 };
+
+/** The directory fields that decide what a user may do; Keycloak mirrors them into the token. */
+export interface DirectoryAccess {
+  role: Role;
+  depot: Depot | null;
+  outletId: string | null;
+  vehicleId: string | null;
+  isActive: boolean;
+}
+
+export const ACCESS_FIELDS = ['role', 'depot', 'outletId', 'vehicleId', 'isActive'] as const;
+
+const accessOf = (u: Partial<DirectoryAccess>): DirectoryAccess => ({
+  role: u.role as Role,
+  depot: u.depot ?? null,
+  outletId: u.outletId ?? null,
+  vehicleId: u.vehicleId ?? null,
+  isActive: u.isActive ?? true,
+});
+
+/** Keycloak user attributes (token claims depot, outlet_id, vehicle_id); null removes one. */
+export function identityAttributes(a: Pick<DirectoryAccess, 'depot' | 'outletId' | 'vehicleId'>): Record<string, string[] | null> {
+  return {
+    depot: a.depot ? [a.depot] : null,
+    outlet_id: a.outletId ? [a.outletId] : null,
+    vehicle_id: a.vehicleId ? [a.vehicleId] : null,
+  };
+}
+
+/** A Keycloak round trip can take a while; keep the directory row locked for at most this long. */
+const ACCESS_TX_TIMEOUT_MS = 45_000;
+
+/** Keycloak attribute (token claim) that binds field tokens to one phone. */
+export const DEVICE_ATTRIBUTE = 'device_id';
+
+/** A user may have at most this many phones waiting for approval (self-enrollment spam guard). */
+export const MAX_PENDING_DEVICES = 3;
+
+/** An identity-provider failure as the OData error the caller sees: 5xx kept (503 unreachable), else 502. */
+function identityError(err: unknown): ODataError {
+  return err instanceof ODataError && err.status >= 500
+    ? err
+    : new ODataError(502, 'BadGateway', `Identity provider update failed: ${(err as Error)?.message ?? String(err)}`);
+}
+
+const isUniqueViolation = (err: unknown) => (err as { code?: unknown })?.code === 'P2002';
+
+/** What a phone sends when it asks for access (POST Devices). */
+export interface DeviceRequest {
+  id: string;
+  label?: string | null;
+  platform?: string | null;
+  model?: string | null;
+}
+
+type DeviceRow = { id: string; userId: string; status: DeviceStatus; platform?: string | null; model?: string | null };
 
 /**
  * Auth service: session helpers (/Me), the user directory mirrored from the
@@ -27,13 +83,14 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly keycloak: KeycloakAdminClient,
     private readonly posture: DevicePostureService,
+    @Inject(AUDIT_SINK) private readonly audit: AuditSink,
   ) {}
 
   /** Who am I: token claims plus the directory row (if any). */
   async me(p: Principal) {
     const user = await this.prisma.user.findUnique({
       where: { id: p.sub },
-      select: { id: true, email: true, name: true, role: true, depot: true, outletId: true, phone: true, isActive: true },
+      select: { id: true, email: true, name: true, role: true, depot: true, outletId: true, vehicleId: true, phone: true, isActive: true },
     });
     return {
       sub: p.sub,
@@ -45,6 +102,8 @@ export class AuthService {
       vehicleId: p.vehicleId ?? null,
       deviceId: p.deviceId ?? null,
       clientId: p.clientId ?? null,
+      // Set when this phone is not bound to the token yet (self-enrollment, SM-32).
+      enrollment: p.enrollment ?? null,
       user,
     };
   }
@@ -59,6 +118,7 @@ export class AuthService {
     const attributes: Record<string, string[]> = {};
     if (data.depot) attributes.depot = [data.depot];
     if (data.outletId) attributes.outlet_id = [data.outletId];
+    if (data.vehicleId) attributes.vehicle_id = [data.vehicleId];
     return this.keycloak.createUser({
       email: data.email,
       firstName,
@@ -68,35 +128,340 @@ export class AuthService {
     });
   }
 
+  /**
+   * ADM-04 create: the identity first (its id is the directory key and the
+   * token `sub`), then the directory row. If the row cannot be written the
+   * identity is deleted again (compensation), logged and audited, so no
+   * orphaned Keycloak user is left behind.
+   */
+  async createUser(data: Record<string, any>, actor: Principal): Promise<User> {
+    // Cheap pre-check: do not create an identity for a row that cannot be inserted.
+    const taken = await this.prisma.user.findUnique({ where: { email: data.email }, select: { id: true } });
+    if (taken) throw ODataError.conflict('A user with this email already exists', 'email');
+
+    const id = await this.createIdentity(data);
+    try {
+      return await this.prisma.user.create({ data: { ...data, id } as Prisma.UserUncheckedCreateInput });
+    } catch (err) {
+      if (this.keycloak.configured) await this.compensateIdentity(id, data, actor, err as Error);
+      throw err;
+    }
+  }
+
+  private async compensateIdentity(id: string, data: Record<string, any>, actor: Principal, cause: Error) {
+    let outcome: AuditOutcome = 'SUCCESS';
+    let error: string | undefined;
+    try {
+      await this.keycloak.deleteUser(id);
+      this.logger.warn(`Users.Create: directory insert failed (${cause.message}); deleted Keycloak user ${id}`);
+    } catch (err) {
+      outcome = 'FAILED';
+      error = (err as Error).message;
+      this.logger.error(`Users.Create: directory insert failed and Keycloak user ${id} (${data.email}) could not be deleted: ${error}. Remove it by hand.`);
+    }
+    await this.record(actor, 'Users.CompensateIdentity', id, outcome, {
+      reason: 'Directory insert failed after the identity was created',
+      cause: cause.message,
+      email: data.email,
+      identityDeleted: outcome === 'SUCCESS',
+      ...(error ? { error } : {}),
+    });
+  }
+
+  /**
+   * PATCH Users: writes the directory row and mirrors access changes (realm
+   * role; depot, outlet_id, vehicle_id attributes; enabled) to Keycloak, then
+   * ends the user's sessions so the next token carries the new claims.
+   * All or nothing: the row is written in a transaction that commits only
+   * after Keycloak accepted every change. On a Keycloak failure the Keycloak
+   * side is restored as far as possible, the transaction rolls back and the
+   * caller gets 502/503.
+   *
+   * Returns the number of rows changed (0 when `where` no longer matches,
+   * e.g. a stale ETag).
+   */
+  async updateUser(where: Prisma.UserWhereInput, patch: Record<string, any>, actor: Principal): Promise<number> {
+    const touchesAccess = ACCESS_FIELDS.some((f) => f in patch);
+    if (!touchesAccess) return (await this.prisma.user.updateMany({ where, data: patch })).count;
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        const before = await tx.user.findFirst({ where });
+        if (!before) return 0;
+        const { count } = await tx.user.updateMany({ where, data: patch });
+        if (count === 0) return 0;
+
+        const from = accessOf(before);
+        const to = accessOf({ ...before, ...patch });
+        const changed = ACCESS_FIELDS.filter((f) => from[f] !== to[f]);
+        if (!changed.length) return count;
+
+        if (!this.keycloak.configured) {
+          this.logger.warn(`Users.Update ${before.id}: no identity admin API configured; ${changed.join(', ')} not synced to the identity provider`);
+          return count;
+        }
+        await this.syncAccess(before.id, from, to, changed, actor);
+        return count;
+      },
+      { timeout: ACCESS_TX_TIMEOUT_MS, maxWait: 10_000 },
+    );
+  }
+
+  /** Applies an access change in Keycloak; on failure restores `from` and throws (the caller rolls back). */
+  private async syncAccess(userId: string, from: DirectoryAccess, to: DirectoryAccess, changed: string[], actor: Principal) {
+    const payload = { changed, from, to };
+    try {
+      await this.applyIdentityAccess(userId, from, to);
+      if (!(await this.keycloak.logoutUser(userId))) {
+        throw new ODataError(502, 'BadGateway', `Could not end the sessions of ${userId}; access change rolled back`);
+      }
+    } catch (err) {
+      let restored = true;
+      try {
+        await this.applyIdentityAccess(userId, to, from);
+      } catch (undo) {
+        restored = false;
+        this.logger.error(`Users.Update ${userId}: Keycloak restore failed (${(undo as Error).message}); check the user by hand`);
+      }
+      const error = identityError(err);
+      this.logger.warn(`Users.Update ${userId}: Keycloak sync failed (${error.message}); directory change rolled back`);
+      await this.record(actor, 'Users.SyncAccess', userId, 'FAILED', { ...payload, error: error.message, identityRestored: restored });
+      throw error;
+    }
+    await this.record(actor, 'Users.SyncAccess', userId, 'SUCCESS', { ...payload, sessionsRevoked: true });
+  }
+
+  private async applyIdentityAccess(userId: string, from: DirectoryAccess, to: DirectoryAccess) {
+    if (from.role !== to.role) await this.keycloak.setRealmRole(userId, REALM_ROLE[to.role], Object.values(REALM_ROLE));
+    const attrsChanged = from.depot !== to.depot || from.outletId !== to.outletId || from.vehicleId !== to.vehicleId;
+    if (attrsChanged || from.isActive !== to.isActive) {
+      await this.keycloak.updateUser(userId, {
+        ...(attrsChanged ? { attributes: identityAttributes(to) } : {}),
+        ...(from.isActive !== to.isActive ? { enabled: to.isActive } : {}),
+      });
+    }
+  }
+
+  private async record(actor: Principal, action: string, entityKey: string, outcome: AuditOutcome, payload: Record<string, unknown>, entitySet = 'Users') {
+    try {
+      await this.audit.record({
+        at: new Date().toISOString(),
+        actor: actor.sub,
+        actorRoles: actor.roles,
+        client: actor.clientId,
+        action,
+        entitySet,
+        entityKey,
+        outcome,
+        payload,
+      });
+    } catch (err) {
+      this.logger.error(`Could not audit ${action} for ${entityKey}: ${(err as Error).message}`);
+    }
+  }
+
   async setIdentityEnabled(userId: string, enabled: boolean) {
     if (this.keycloak.configured) await this.keycloak.setEnabled(userId, enabled);
   }
 
   /**
-   * ADM-07 lost phone: disable the device (field tokens bound to it stop
-   * working at the next posture check) and end the user's sessions.
+   * Self-enrollment (SM-31 "Ask Kandy Hub to add you" -> SM-32 "Access request
+   * sent"): the caller registers a phone for themselves; it waits as PENDING
+   * until an admin activates it (ADM-05). Idempotent per user + device: asking
+   * again for the same phone returns the existing row (whatever its status).
+   * A phone registered to someone else is a 409. Audited as Devices.Enroll.
    */
-  async revokeDevice(deviceId: string, revokedBy: string, reason?: string) {
-    const device = await this.prisma.device.update({
-      where: { id: deviceId },
-      data: { status: DeviceStatus.REVOKED, revokedAt: new Date(), revokedBy, revokeReason: reason ?? 'Reported lost' },
-    });
-    this.posture.invalidate(deviceId);
-    let sessionsRevoked = false;
-    try {
-      sessionsRevoked = this.keycloak.configured ? await this.keycloak.logoutUser(device.userId) : false;
-    } catch (err) {
-      this.logger.warn(`Could not end sessions of ${device.userId}: ${(err as Error).message}`);
+  async enrollDevice(req: DeviceRequest, actor: Principal) {
+    const existing = await this.prisma.device.findUnique({ where: { id: req.id } });
+    if (existing) return this.enrollExisting(existing, actor);
+
+    const waiting = await this.prisma.device.count({ where: { userId: actor.sub, status: DeviceStatus.PENDING } });
+    if (waiting >= MAX_PENDING_DEVICES) {
+      await this.record(actor, 'Devices.Enroll', req.id, 'DENIED', { reason: 'Too many phones waiting for approval', waiting }, 'Devices');
+      throw ODataError.conflict(`You already have ${waiting} phones waiting for approval. Ask Kandy Hub to approve or remove them.`, 'id');
     }
-    return { ...device, sessionsRevoked };
+
+    let device;
+    try {
+      device = await this.prisma.device.create({
+        data: {
+          id: req.id,
+          userId: actor.sub,
+          label: req.label ?? null,
+          platform: req.platform ?? null,
+          model: req.model ?? null,
+          status: DeviceStatus.PENDING,
+        },
+      });
+    } catch (err) {
+      // Two requests for the same phone at once: the loser answers like a repeat.
+      if (!isUniqueViolation(err)) throw err;
+      const raced = await this.prisma.device.findUnique({ where: { id: req.id } });
+      if (!raced) throw err;
+      return this.enrollExisting(raced, actor);
+    }
+    await this.record(actor, 'Devices.Enroll', device.id, 'SUCCESS', this.enrollPayload(device, actor, false), 'Devices');
+    return device;
   }
 
-  async activateDevice(deviceId: string) {
+  private async enrollExisting<D extends DeviceRow>(device: D, actor: Principal): Promise<D> {
+    if (device.userId !== actor.sub) {
+      await this.record(actor, 'Devices.Enroll', device.id, 'DENIED', { reason: 'Device is registered to another user' }, 'Devices');
+      throw ODataError.conflict('This phone is registered to someone else. Ask Kandy Hub to remove it first.', 'id');
+    }
+    await this.record(actor, 'Devices.Enroll', device.id, 'SUCCESS', this.enrollPayload(device, actor, true), 'Devices');
+    return device;
+  }
+
+  private enrollPayload(device: DeviceRow, actor: Principal, repeat: boolean) {
+    return {
+      status: device.status,
+      repeat,
+      platform: device.platform ?? null,
+      model: device.model ?? null,
+      // What the token said when the phone asked (no claim, or another phone's id).
+      tokenDeviceId: actor.deviceId ?? null,
+      postureWaived: actor.enrollment?.reason ?? null,
+    };
+  }
+
+  /**
+   * ADM-05 approve a phone. All or nothing with Keycloak, like the user sync:
+   * in one transaction the device becomes ACTIVE and the user's previous ACTIVE
+   * phone is revoked; then Keycloak gets the user's `device_id` attribute (so
+   * the next token is bound to this phone) and the user's sessions are ended.
+   * The transaction commits only after Keycloak accepted both; on a Keycloak
+   * failure the attribute is restored, the rows roll back and the caller gets
+   * 502/503. Audited as Devices.BindIdentity.
+   */
+  async activateDevice(deviceId: string, actor: Principal) {
+    const result = await this.prisma.$transaction(
+      async (tx) => {
+        const current = await tx.device.findUnique({ where: { id: deviceId } });
+        if (!current) throw ODataError.notFound(`Device ${deviceId} does not exist`);
+        const replaced = (
+          await tx.device.findMany({ where: { userId: current.userId, status: DeviceStatus.ACTIVE, NOT: { id: deviceId } }, select: { id: true } })
+        ).map((d) => d.id);
+
+        const device = await tx.device.update({
+          where: { id: deviceId },
+          data: { status: DeviceStatus.ACTIVE, revokedAt: null, revokedBy: null, revokeReason: null },
+        });
+        if (replaced.length) {
+          await tx.device.updateMany({
+            where: { id: { in: replaced } },
+            data: { status: DeviceStatus.REVOKED, revokedAt: new Date(), revokedBy: actor.sub, revokeReason: `Replaced by ${deviceId}` },
+          });
+        }
+
+        if (!this.keycloak.configured) {
+          this.logger.warn(`Devices.Activate ${deviceId}: no identity admin API configured; ${DEVICE_ATTRIBUTE} of ${current.userId} not synced`);
+          return { device, replaced, identitySynced: false };
+        }
+        await this.bindIdentityDevice(current.userId, deviceId, replaced, actor);
+        return { device, replaced, identitySynced: true };
+      },
+      { timeout: ACCESS_TX_TIMEOUT_MS, maxWait: 10_000 },
+    );
+
+    for (const id of [deviceId, ...result.replaced]) this.posture.invalidate(id);
+    await this.record(
+      actor,
+      'Devices.BindIdentity',
+      deviceId,
+      'SUCCESS',
+      { userId: result.device.userId, replaced: result.replaced, identitySynced: result.identitySynced, sessionsRevoked: result.identitySynced },
+      'Devices',
+    );
+    return { ...result.device, replacedDeviceIds: result.replaced, identitySynced: result.identitySynced, sessionsRevoked: result.identitySynced };
+  }
+
+  /** Writes device_id = deviceId and ends the sessions; on failure restores the old value and throws (the caller rolls back). */
+  private async bindIdentityDevice(userId: string, deviceId: string, replaced: string[], actor: Principal) {
+    let previous: string[] | null | undefined;
+    try {
+      previous = await this.keycloak.getAttribute(userId, DEVICE_ATTRIBUTE);
+      await this.keycloak.updateUser(userId, { attributes: { [DEVICE_ATTRIBUTE]: [deviceId] } });
+      if (!(await this.keycloak.logoutUser(userId))) {
+        throw new ODataError(502, 'BadGateway', `Could not end the sessions of ${userId}; activation rolled back`);
+      }
+    } catch (err) {
+      let restored = true;
+      if (previous !== undefined) {
+        try {
+          await this.keycloak.updateUser(userId, { attributes: { [DEVICE_ATTRIBUTE]: previous } });
+        } catch (undo) {
+          restored = false;
+          this.logger.error(`Devices.Activate ${deviceId}: restoring ${DEVICE_ATTRIBUTE} of ${userId} failed (${(undo as Error).message}); check the user by hand`);
+        }
+      }
+      const error = identityError(err);
+      this.logger.warn(`Devices.Activate ${deviceId}: Keycloak sync failed (${error.message}); activation rolled back`);
+      await this.record(
+        actor,
+        'Devices.BindIdentity',
+        deviceId,
+        'FAILED',
+        { userId, replaced, previous: previous ?? null, error: error.message, identityRestored: restored },
+        'Devices',
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * ADM-07 lost phone: disable the device (field tokens bound to it stop
+   * working at the next posture check), clear the user's `device_id` attribute
+   * when it named this phone, and end the user's sessions. The revocation
+   * itself always stands (fail safe): a Keycloak failure is logged and audited
+   * as Devices.UnbindIdentity FAILED, not rolled back.
+   */
+  async revokeDevice(deviceId: string, actor: Principal, reason?: string) {
     const device = await this.prisma.device.update({
       where: { id: deviceId },
-      data: { status: DeviceStatus.ACTIVE, revokedAt: null, revokedBy: null, revokeReason: null },
+      data: { status: DeviceStatus.REVOKED, revokedAt: new Date(), revokedBy: actor.sub, revokeReason: reason ?? 'Reported lost' },
     });
     this.posture.invalidate(deviceId);
-    return device;
+
+    let wasBound = false;
+    let identityCleared = false;
+    let sessionsRevoked = false;
+    const errors: string[] = [];
+    if (this.keycloak.configured) {
+      try {
+        wasBound = !!(await this.keycloak.getAttribute(device.userId, DEVICE_ATTRIBUTE))?.includes(deviceId);
+        if (wasBound) {
+          await this.keycloak.updateUser(device.userId, { attributes: { [DEVICE_ATTRIBUTE]: null } });
+          identityCleared = true;
+        }
+      } catch (err) {
+        errors.push(`${DEVICE_ATTRIBUTE}: ${(err as Error).message}`);
+        this.logger.warn(`Could not clear ${DEVICE_ATTRIBUTE} of ${device.userId}: ${(err as Error).message}`);
+      }
+      try {
+        sessionsRevoked = await this.keycloak.logoutUser(device.userId);
+        if (!sessionsRevoked) errors.push('sessions: logout refused');
+      } catch (err) {
+        errors.push(`sessions: ${(err as Error).message}`);
+        this.logger.warn(`Could not end sessions of ${device.userId}: ${(err as Error).message}`);
+      }
+    }
+    await this.record(
+      actor,
+      'Devices.UnbindIdentity',
+      deviceId,
+      errors.length ? 'FAILED' : 'SUCCESS',
+      {
+        userId: device.userId,
+        reason: device.revokeReason,
+        identityConfigured: this.keycloak.configured,
+        wasBound,
+        identityCleared,
+        sessionsRevoked,
+        ...(errors.length ? { errors } : {}),
+      },
+      'Devices',
+    );
+    return { ...device, sessionsRevoked, identityCleared };
   }
 }

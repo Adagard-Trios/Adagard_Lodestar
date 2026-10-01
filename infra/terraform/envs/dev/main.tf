@@ -32,6 +32,15 @@ module "platform" {
   user_node_vm_size   = "Standard_D4ds_v5"
   user_node_min       = 1
   user_node_max       = 3
+  # one pool across the zones (fewer idle nodes); scale in quickly
+  user_pool_per_zone = false
+  aks_autoscaler_profile = {
+    expander                         = "least-waste"
+    scale_down_unneeded              = "5m"
+    scale_down_delay_after_add       = "5m"
+    scale_down_utilization_threshold = "0.6"
+  }
+  agent_spot_pool = { enabled = false }
 
   # data
   acr_zone_redundancy            = false
@@ -41,6 +50,8 @@ module "platform" {
   postgres_backup_retention_days = 7
   postgres_geo_redundant_backup  = false
   log_retention_days             = 30
+  redis_sku_name                 = "Standard"
+  redis_capacity                 = 0
 
   # edge
   web_hostname              = var.web_hostname

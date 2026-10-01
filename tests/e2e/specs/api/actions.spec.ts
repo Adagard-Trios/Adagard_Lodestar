@@ -31,7 +31,10 @@ test.describe('Actions · Plans Approve', { tag: '@stack' }, () => {
     if (res.status() === 409) await expectODataError(res, 409);
 
     const plan = await d.json<Record<string, unknown>>(`Plans('${SEED_PLAN_ID}')`);
-    expect(String(plan.status ?? '')).toMatch(/APPROVED|LIVE|PUBLISHED/i);
+    // after a 409 the plan was approved earlier; a later approved draft for the same depot and day
+    // (e.g. the AgentRuns test) supersedes it, since only one plan per depot and day is live
+    const done = res.status() === 409 ? /APPROVED|LIVE|PUBLISHED|SUPERSEDED/i : /APPROVED|LIVE|PUBLISHED/i;
+    expect(String(plan.status ?? '')).toMatch(done);
   });
 
   test('approving an unknown plan -> 404', async ({ as }) => {

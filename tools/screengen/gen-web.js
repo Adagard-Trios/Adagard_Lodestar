@@ -1,5 +1,7 @@
 // Writes the Next.js website from out/screens.json: every desktop screen as a page under
 // frontend/app/<app>/<screen>/, using the design's own CSS (shared assets + each board's CSS, scoped).
+// A screen with a hand-written frontend/live/<screen>.tsx renders that live version (real data) instead, inside
+// the same ScreenShell; the generated design stays available as the design preview (frontend/lib/mode.ts).
 // Usage: node gen-web.js   (after node extract.js)
 const fs = require('fs');
 const path = require('path');
@@ -88,9 +90,18 @@ function linkTable(f) {
 }
 const compName = k => 'Screen' + k.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join('').replace(/^(\d)/, '_$1');
 
+// Live screens: when frontend/live/<key>.tsx exists (hand-written, bound to the Lodestar API), the route renders it
+// instead of the generated design, still inside ScreenShell so the design's data-lk links keep working. The
+// design stays available as the static prototype (design preview, see frontend/lib/mode.ts).
+const LIVE = path.join(FE, 'live');
+const isLive = key => fs.existsSync(path.join(LIVE, key + '.tsx'));
+let liveCount = 0;
+
 for (const f of web) {
   const dir = path.join(FE, 'app', f.app, f.key);
   const table = linkTable(f);
+  const live = isLive(f.key);
+  if (live) liveCount++;
   write(path.join(FE, 'screens', f.key + '.tsx'), `${HEADER}// ${f.name} (${f.board})
 // @ts-nocheck
 export default function ${compName(f.key)}() {
@@ -99,9 +110,24 @@ export default function ${compName(f.key)}() {
   );
 }
 `);
-  write(path.join(dir, 'page.tsx'), `${HEADER}import type { Metadata } from 'next';
-import ScreenShell from '@/components/ScreenShell';
+  const imports = live
+    ? `import ScreenShell from '@/components/ScreenShell';
+import LiveSwitch from '@/components/live/LiveSwitch';
 import Screen from '@/screens/${f.key}';
+import Live from '@/live/${f.key}';`
+    : `import ScreenShell from '@/components/ScreenShell';
+import Screen from '@/screens/${f.key}';`;
+  const body = live
+    ? `    <ScreenShell board="${f.board}" nav={nav} live>
+      <LiveSwitch live={<Live />}>
+        <Screen />
+      </LiveSwitch>
+    </ScreenShell>`
+    : `    <ScreenShell board="${f.board}" nav={nav}>
+      <Screen />
+    </ScreenShell>`;
+  write(path.join(dir, 'page.tsx'), `${HEADER}import type { Metadata } from 'next';
+${imports}
 
 export const metadata: Metadata = { title: ${JSON.stringify(f.name.replace(/\s*·\s*desktop$/i, '') + ' · ' + FACE[f.app])} };
 
@@ -109,22 +135,22 @@ const nav = ${JSON.stringify(table, null, 2).replace(/\n/g, '\n')};
 
 export default function Page() {
   return (
-    <ScreenShell board="${f.board}" nav={nav}>
-      <Screen />
-    </ScreenShell>
+${body}
   );
 }
 `);
 }
 
-// app landing routes: /store, /plan, /admin -> the face's first screen
-const STARTS = { store: 'SM-26', plan: 'DSP-06', admin: 'ADM-01' };
-for (const [app, id] of Object.entries(STARTS)) {
-  const f = web.find(x => x.id === id) || web.find(x => x.app === app);
-  write(path.join(FE, 'app', app, 'page.tsx'), `${HEADER}import { redirect } from 'next/navigation';
+// app landing routes /store, /plan, /admin: the face's sign-in screen in the design preview (the prototype's
+// start), the face's home screen once signed in (the face gate in app/<face>/layout.tsx handles sign-in and roles).
+const STARTS = { store: ['SM-26', 'SM-02'], plan: ['DSP-06', 'DSP-08'], admin: ['ADM-01', 'ADM-02'] };
+for (const [app, [signInId, homeId]] of Object.entries(STARTS)) {
+  const signIn = web.find(x => x.id === signInId) || web.find(x => x.app === app);
+  const home = web.find(x => x.id === homeId) || signIn;
+  write(path.join(FE, 'app', app, 'page.tsx'), `${HEADER}import FaceLanding from '@/components/live/FaceLanding';
 
 export default function Page() {
-  redirect(${JSON.stringify(url(f))});
+  return <FaceLanding signIn=${JSON.stringify(url(signIn))} home=${JSON.stringify(url(home))} />;
 }
 `);
 }
@@ -138,4 +164,4 @@ export const FACES: Record<string, { title: string; start: string; screens: Scre
 export const FLOWS = ${JSON.stringify(DATA.starts.filter(s => { const f = frames.find(x => x.id === s[1] && (!s[2] || x.name.startsWith(s[2]))); return f && f.plat === 'desktop'; })
   .map(s => { const f = frames.find(x => x.id === s[1] && (!s[2] || x.name.startsWith(s[2]))); return { name: s[0], href: url(f) }; }), null, 2)};
 `);
-console.log(`web: ${web.length} screens, ${boards.length} board stylesheets`);
+console.log(`web: ${web.length} screens (${liveCount} live), ${boards.length} board stylesheets`);

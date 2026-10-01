@@ -12,6 +12,7 @@ const CODES: Record<number, string> = {
   412: 'PreconditionFailed',
   413: 'PayloadTooLarge',
   415: 'UnsupportedMediaType',
+  422: 'UnprocessableEntity',
   428: 'PreconditionRequired',
   429: 'TooManyRequests',
   501: 'NotImplemented',
@@ -45,7 +46,9 @@ export function toODataError(err: unknown): ODataError {
     const status = err.getStatus();
     const res = err.getResponse() as any;
     const message = typeof res === 'string' ? res : Array.isArray(res?.message) ? res.message.join('; ') : (res?.message ?? err.message);
-    return new ODataError(status, CODES[status] ?? (status >= 500 ? 'InternalError' : 'BadRequest'), message);
+    // A handler may name a precise code: new UnauthorizedException({ code: 'DeviceMismatch', message }).
+    const code = typeof res?.code === 'string' && /^[A-Za-z][\w.]*$/.test(res.code) ? res.code : undefined;
+    return new ODataError(status, code ?? CODES[status] ?? (status >= 500 ? 'InternalError' : 'BadRequest'), message);
   }
   if ((err as any)?.type === 'entity.parse.failed') return ODataError.badRequest('The request body is not valid JSON');
   if ((err as any)?.type === 'entity.too.large') return new ODataError(413, 'PayloadTooLarge', 'The request body is too large');

@@ -6,10 +6,10 @@ How the platform is tested and shipped. The binding contract is [architecture/PL
 
 | Layer | Tool | Where | What it proves |
 |---|---|---|---|
-| Unit, web (TS) | Jest + React Testing Library (`next/jest`) | `frontend/__tests__` | `ScreenShell`: `data-lk` click and keyboard navigation (Enter, Space), `nav` vs `go` (replace vs push), back behaviour (history back only with a same-site referrer), the 1.5 s auto-advance (fake timers), the "Continues in … on the phone" toast. The home page directory matches `frontend/screens` (`FACES`, `FLOWS`). |
+| Unit, web (TS) | Jest + React Testing Library (`next/jest`) | `frontend/__tests__` | `ScreenShell`: `data-lk` click and keyboard navigation (Enter, Space), `nav` vs `go` (replace vs push), back behaviour (history back only with a same-site referrer), the 1.5 s auto-advance (fake timers), the "Continues in … on the phone" toast. The home page directory matches `frontend/screens` (`FACES`, `FLOWS`). The live layer: the OData client (query options, keys, `@odata.nextLink` paging on the same origin only, If-Match on PATCH, the OData error body, 401 → renew → retry, else sign-in), sign-in (OIDC code + PKCE through `oidc-client-ts`, tokens in sessionStorage only, refresh-token renewal, logout), the route guard and role landing, the hooks (`useEntitySet`, `useEntity`, `useAction`, `useRealtime`), the Socket.IO client, and live screens (DSP-01/02/03/06/12/39, SM-01/27/29, ADM-04/07/16/20) against a mocked API at the HTTP level. |
 | Unit, services (TS) | Jest + ts-mockito | `backend/**/*.spec.ts` | owned by the backend team |
 | Unit, agent (Python) | pytest + mockito | `backend/apps/agent/tests` | owned by the agent team |
-| UI e2e, desk screens | Cypress | `frontend/cypress` | Every generated desktop screen is visited and every `data-lk` element clicked: it must land on the destination path, or show the cross-device notice for phone-only targets. Auto-advancing screens are checked with a frozen clock. Plus the three demo flows as readable specs. |
+| UI e2e, desk screens | Cypress | `frontend/cypress` | Design preview: every generated desktop screen is visited and every `data-lk` element clicked; it must land on the destination path, or show the cross-device notice for phone-only targets. Auto-advancing screens are checked with a frozen clock. Plus the three demo flows as readable specs. Live mode (`CYPRESS_LIVE=1`, against the stack): signs in through Keycloak per persona (`cy.session`, `cy.origin` when identity is on another origin) and checks the live screens show the seeded scenario. |
 | Full stack e2e | Playwright | `tests/e2e` | Zero trust (401, 403, ABAC row filters, expired, tampered and unsigned tokens), OData v4 conformance ($metadata CSDL, query options, paging, errors, ETags), actions (Approve, AgentRuns human-in-the-loop), audit hash chain, and UI smoke on Chromium, Firefox, WebKit and the mobile-web build in a phone viewport. |
 | Static analysis, coverage gate | SonarQube | `sonar-project.properties`, compose profile `qa` | Frontend, mobile, backend (TS) and the agent (Python). Generated screens, `node_modules` and migrations are excluded. |
 
@@ -51,6 +51,15 @@ npm run test:cov        # coverage in frontend/coverage (lcov.info for Sonar)
 npm run typecheck       # app, Jest (tsconfig.jest.json) and Cypress (cypress/tsconfig.json) projects
 ```
 
+### The website: design preview and live mode
+
+Every desk screen (`frontend/app/<store|plan|admin>/<screen>`) can show two things:
+
+- **Live** (the default): the screen signs in through Keycloak and shows real data. A screen with a hand-written `frontend/live/<screen-key>.tsx` renders it (32 screens; `tools/screengen/gen-web.js` wires them); the others show the design. Every face route sits behind a guard (`app/<face>/layout.tsx`): no session → Keycloak; another role → that role's face. Sign-in, reset-access and session-expired screens stay public.
+- **Design preview**: the static, clickable prototype, with no sign-in and no API. `?design=1` turns it on for the tab (sessionStorage `lodestar.design`), `?design=0` turns it off. Cypress `openScreen()` and the untagged Playwright web smoke use it. Build with `NEXT_PUBLIC_DESIGN_PREVIEW=off` to disable the switch, or `NEXT_PUBLIC_LODESTAR_MODE=design` for a prototype-only build.
+
+Endpoints come from the page origin (gateway): API `/odata/v4`, Keycloak `/auth/realms/lodestar` (client `lodestar-web`), Socket.IO `/ws/`. Override them at build time with `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_OIDC_AUTHORITY`, `NEXT_PUBLIC_OIDC_CLIENT_ID` and `NEXT_PUBLIC_WS_URL` (Docker build args in `frontend/Dockerfile`).
+
 ### Cypress (frontend)
 
 Run it against a production build. The base URL comes from `CYPRESS_BASE_URL` (or `BASE_URL`) and defaults to `http://localhost:3000`.
@@ -65,13 +74,21 @@ CYPRESS_BASE_URL=http://localhost:3200 npm run cy:run            # headless (Ele
 CYPRESS_BASE_URL=http://localhost:3200 npm run cy:open           # interactive
 CYPRESS_SCREENS=dsp-0,adm-07 CYPRESS_BASE_URL=http://localhost:3200 npm run cy:run -- --spec cypress/e2e/clickthrough.cy.ts
 npm run e2e:ci          # starts next on :3000, waits, runs Cypress, stops the server
+
+# live mode, against the stack (docker compose up): signs in through Keycloak, checks seeded data
+CYPRESS_LIVE=1 CYPRESS_BASE_URL=https://localhost:8443 npm run cy:run -- --spec "cypress/e2e/live/**/*.cy.ts"
 ```
+
+Live-mode settings: `CYPRESS_KEYCLOAK_ORIGIN` (only when identity is not on the app's origin; then the login runs in `cy.origin`), `CYPRESS_LODESTAR_PASSWORD` and `CYPRESS_LODESTAR_ADMIN_PASSWORD` (default: the realm's dev passwords), `CYPRESS_USER_DISPATCHER`, `CYPRESS_USER_STORE`, `CYPRESS_USER_ADMIN` (default `nilanthi`, `fathima`, `admin`). Without `CYPRESS_LIVE` the live specs are skipped.
+
+If Cypress fails to start with `bad option: --smoke-test`, the shell has `ELECTRON_RUN_AS_NODE=1` set (VS Code terminals do this): `env -u ELECTRON_RUN_AS_NODE npm run cy:run`.
 
 Specs:
 - `cypress/e2e/clickthrough.cy.ts`: every screen and every link.
 - `cypress/e2e/flows/1-happy-path.cy.ts`: SM-01 → DSP-01 → DSP-22 (auto) → DSP-02 → DSP-03 → DSP-12, then the handover to Lodestar Dock.
 - `cypress/e2e/flows/2-dead-zone.cy.ts`: DSP-A1 → DSP-A1b.
 - `cypress/e2e/flows/3-reefer-down.cy.ts`: DSP-B1, approve & send, or edit manually.
+- `cypress/e2e/live/live-screens.cy.ts` (live mode): dispatcher lands on Plan, plan board shows the seeded trip lanes, cutoff queue, live operations (trip `TRP-VEH057-20260407`), deferral log and outlet profile; the store manager sees only OUT106 orders, deliveries and receipts, and can't open Plan; the admin's audit log shows hash-chained entries, VerifyChain is valid, and people, devices and outlets load.
 
 ### Playwright (full stack)
 
@@ -83,8 +100,11 @@ npm test                 # everything; @stack specs skip if the stack is down
 npm run test:stack       # only @stack (API, auth, audit, Keycloak login)
 npm run test:smoke       # only what needs no backend (web and mobile-web UI smoke)
 npm run report           # opens reports/html
-E2E_WEB_URL=http://localhost:3200 npm run test:smoke -- --project=web-chromium    # desk UI against a local next start
+E2E_WEB_URL=http://localhost:3200 npm run test:smoke -- --project=web-chromium    # desk UI against a local next start (design preview)
+npm run test:stack -- --project=web-chromium specs/ui/web-live.spec.ts              # desk UI signed in, live data
 ```
+
+`specs/ui/web-live.spec.ts` (@stack): an anonymous visit goes to Keycloak (code + PKCE S256); the dispatcher signs in on DSP-06, lands on Plan, and the plan board shows the real trips; the dispatcher starts a planning-agent run on DSP-01, DSP-22 follows it to NEEDS_APPROVAL, and DSP-12 approves it (`AgentRuns('…')/Lodestar.Resume`), checked through the API; the store manager sees only their outlet's orders and is sent back from Plan; the admin's audit log has entries and VerifyChain is valid; sign-out ends the Keycloak session. Tokens must be in sessionStorage, never localStorage.
 
 | Env | Default | Meaning |
 |---|---|---|

@@ -109,13 +109,61 @@ variable "user_node_vm_size" {
 }
 
 variable "user_node_min" {
-  type    = number
-  default = 1
+  description = "Minimum nodes per user pool (per zone when user_pool_per_zone)."
+  type        = number
+  default     = 1
 }
 
 variable "user_node_max" {
-  type    = number
-  default = 5
+  description = "Maximum nodes per user pool (per zone when user_pool_per_zone)."
+  type        = number
+  default     = 5
+}
+
+variable "user_pool_per_zone" {
+  description = "One user pool per zone (zone-aware cluster autoscaling for hard zone spread). false = one pool across all zones."
+  type        = bool
+  default     = true
+}
+
+variable "keda_enabled" {
+  description = "AKS KEDA add-on (workload_autoscaler_profile)."
+  type        = bool
+  default     = true
+}
+
+variable "vpa_enabled" {
+  description = "AKS Vertical Pod Autoscaler add-on. Off: the HPAs scale on CPU/memory, and VPA in Auto mode would fight them."
+  type        = bool
+  default     = false
+}
+
+variable "autoscaler_profile" {
+  description = "Cluster autoscaler tuning that differs per environment."
+  type = object({
+    expander                         = optional(string, "least-waste")
+    scan_interval                    = optional(string, "10s")
+    scale_down_delay_after_add       = optional(string, "10m")
+    scale_down_unneeded              = optional(string, "10m")
+    scale_down_utilization_threshold = optional(string, "0.5")
+  })
+  default = {}
+
+  validation {
+    condition     = contains(["least-waste", "most-pods", "priority", "random"], var.autoscaler_profile.expander)
+    error_message = "The expander must be least-waste, most-pods, priority or random."
+  }
+}
+
+variable "agent_spot_pool" {
+  description = "Optional Azure spot pool for the planning agent (tainted, min 0). max_price -1 = up to the on-demand price (evicted for capacity only)."
+  type = object({
+    enabled   = optional(bool, false)
+    vm_size   = optional(string, "Standard_D4ds_v5")
+    max_count = optional(number, 3)
+    max_price = optional(number, -1)
+  })
+  default = {}
 }
 
 variable "tags" {

@@ -32,8 +32,8 @@ const CREATE_ONLY: Record<keyof ReferenceDb, readonly string[]> = {
   vehicle: ['status', 'workshopNote', 'usedLThisWeek'],
 };
 
-/** Upserts per round trip; keeps the connection pool busy without flooding it. */
-export const CHUNK = 50;
+/** Upserts per round trip: below Prisma's default pool size (cpus*2+1), so no upsert waits for a connection. */
+export const CHUNK = 8;
 
 export function omit<T extends object>(obj: T, keys: readonly string[]): Partial<T> {
   const out: Record<string, unknown> = {};

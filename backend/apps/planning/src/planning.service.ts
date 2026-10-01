@@ -4,6 +4,7 @@ import { ODataError } from '@lodestar/odata';
 import {
   Depot, OrderStatus, TempClass, DeferralReason, DeferralStatus, PlanSource, PlanStatus, Prisma,
 } from '@prisma/client';
+import { runDateRange, runDateValue } from '@lodestar/platform';
 import { DeferralScoringService } from './deferral-scoring.service';
 import { CapacityService } from './capacity.service';
 
@@ -13,12 +14,9 @@ export const PLAN_PREFIX: Record<Depot, string> = { PELIYAGODA: 'PLG', KANDY: 'P
 /** Plans a human may still approve or reject. */
 export const OPEN_PLAN_STATUSES: PlanStatus[] = [PlanStatus.DRAFT, PlanStatus.NEEDS_APPROVAL];
 
+/** Stored window of a run date (a Date is read as its Sri Lanka calendar date). */
 export function dayRange(runDate: string | Date) {
-  const start = new Date(typeof runDate === 'string' ? `${runDate.slice(0, 10)}T00:00:00.000Z` : runDate);
-  start.setUTCHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setUTCDate(end.getUTCDate() + 1);
-  return { start, end, iso: start.toISOString().slice(0, 10) };
+  return runDateRange(runDate);
 }
 
 /**
@@ -133,7 +131,7 @@ export class PlanningService {
   }
 
   /** Next plan id and version for a depot and run date. */
-  async nextPlanId(depot: Depot, runDate: string) {
+  async nextPlanId(depot: Depot, runDate: string | Date) {
     const { start, iso } = dayRange(runDate);
     const last = await this.prisma.plan.findFirst({
       where: { depot, runDate: start },
@@ -189,7 +187,7 @@ export class PlanningService {
    * drafts; this row is what a dispatcher's approval then publishes.
    */
   async createAgentPlan(run: { id: string; depot: Depot; runDate: Date }, snapshot: Record<string, any>, createdBy: string) {
-    const next = await this.nextPlanId(run.depot, run.runDate.toISOString());
+    const next = await this.nextPlanId(run.depot, run.runDate);
     const explanation = snapshot.explanation;
     return this.prisma.plan.create({
       data: {
@@ -285,7 +283,7 @@ export class PlanningService {
           confirmedAt: new Date(),
           resolvedBy,
           ...(notes ? { notes } : {}),
-          ...(rescheduledDate ? { rescheduledDate: new Date(`${rescheduledDate}T00:00:00.000Z`) } : {}),
+          ...(rescheduledDate ? { rescheduledDate: runDateValue(rescheduledDate) } : {}),
         },
       });
     });

@@ -1,0 +1,20 @@
+# Ceiling for the whole namespace, sized for every HPA at maxReplicas plus the
+# Istio sidecars (AKS add-on default: 100m / 128Mi request each) and a rolling
+# update's 25 % surge. It stops a runaway (a bad HPA bound, a crash-looping
+# Job) from starving the cluster autoscaler's budget; it is not a target.
+# Prod numbers; overlays/dev and overlays/local lower them.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: lodestar
+  labels:
+    app.kubernetes.io/part-of: lodestar
+spec:
+  hard:
+    requests.cpu: '48'
+    requests.memory: 80Gi
+    limits.memory: 256Gi
+    pods: '300'
+    services.loadbalancers: '0'
+    services.nodeports: '0'
+    persistentvolumeclaims: '0'

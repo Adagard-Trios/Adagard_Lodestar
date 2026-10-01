@@ -57,12 +57,20 @@ export interface DmmfDatamodel {
 
 export const DEFAULT_NAMESPACE = 'Lodestar';
 
+/** Models documented with this tag (`/// @odata.ignore …`) are internal and never enter the EDM. */
+export const ODATA_IGNORE_TAG = '@odata.ignore';
+
+export function isIgnoredModel(m: { documentation?: string }): boolean {
+  return !!m.documentation?.includes(ODATA_IGNORE_TAG);
+}
+
 export function buildEdmModel(datamodel: DmmfDatamodel, namespace = DEFAULT_NAMESPACE): EdmModel {
   const enums = new Map<string, string[]>();
   for (const e of datamodel.enums) enums.set(e.name, e.values.map((v) => v.name));
 
   const entityTypes = new Map<string, EdmEntityType>();
   for (const m of datamodel.models) {
+    if (isIgnoredModel(m)) continue;
     const properties = new Map<string, EdmProperty>();
     for (const f of m.fields) {
       properties.set(f.name, {

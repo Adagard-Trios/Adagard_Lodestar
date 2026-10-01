@@ -5,6 +5,18 @@ import { loginViaUi } from '../../lib/auth';
 import { CLIENT_ID, KEYCLOAK_URL, PERSONAS, REALM, REDIRECT_URI, WEB_URL } from '../../lib/env';
 import { expect, requireStack, requireUrl, test } from '../../lib/fixtures';
 import type { Page } from '@playwright/test';
+import { createHash, randomBytes } from 'node:crypto';
+
+/** The hosted login page for the web client. The realm requires PKCE (S256), like the real app sends. */
+function loginUrl(state: string): string {
+  const challenge = createHash('sha256').update(randomBytes(32).toString('base64url')).digest('base64url');
+  const url = new URL(`${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/auth`);
+  url.search = new URLSearchParams({
+    client_id: CLIENT_ID, redirect_uri: REDIRECT_URI, response_type: 'code', scope: 'openid', state,
+    code_challenge: challenge, code_challenge_method: 'S256',
+  }).toString();
+  return url.toString();
+}
 
 async function hydrated(page: Page) {
   // ScreenShell gives wired elements role=button once React has hydrated; before that clicks do nothing.
@@ -13,6 +25,11 @@ async function hydrated(page: Page) {
 
 test.describe('Web · desk faces', () => {
   requireUrl(WEB_URL, 'desk website');
+  // The design preview (static prototype, sessionStorage "lodestar.design") needs no sign-in or API.
+  // The signed-in, live screens are covered by web-live.spec.ts (@stack).
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => window.sessionStorage.setItem('lodestar.design', '1'));
+  });
 
   test('home lists the three faces and their screens', async ({ page }) => {
     await page.goto('/');
@@ -84,29 +101,22 @@ test.describe('Web · sign-in through Keycloak', { tag: '@stack' }, () => {
   requireStack();
 
   test('the dispatcher signs in on the hosted login page and is sent back with a code', async ({ page }) => {
-    const redirect = REDIRECT_URI;
-    const url = new URL(`${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/auth`);
-    url.search = new URLSearchParams({ client_id: CLIENT_ID, redirect_uri: redirect, response_type: 'code', scope: 'openid', state: 'e2e' }).toString();
-
-    // Don't let the SPA consume the code: stop at the redirect.
-    let returned: URL | undefined;
-    await page.route(`${redirect}**`, route => {
-      returned = new URL(route.request().url());
-      return route.fulfill({ status: 200, body: 'ok' });
-    });
-    await page.goto(url.toString());
+    // Keycloak sends the browser back to the app with ?code=…&state=… (a redirect, so read the final URL)
+    await page.goto(loginUrl('e2e'));
     await loginViaUi(page, 'dispatcher');
-    await expect.poll(() => returned?.searchParams.get('code') ?? null).not.toBeNull();
-    expect(returned!.searchParams.get('state')).toBe('e2e');
+    await page.waitForURL(u => u.href.startsWith(REDIRECT_URI) && u.searchParams.has('code'), { timeout: 30_000 });
+    const returned = new URL(page.url());
+    expect(returned.searchParams.get('code')).toBeTruthy();
+    expect(returned.searchParams.get('state')).toBe('e2e');
   });
 
   test('a wrong password stays on the login page with an error', async ({ page }) => {
-    const url = `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/auth?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=openid`;
-    await page.goto(url);
-    await page.locator('#username').fill(PERSONAS.dispatcher.username);
+    // the loader persona: a deliberate failed login must not count against the dispatcher the API tests use
+    await page.goto(loginUrl('e2e-wrong'));
+    await page.locator('#username').fill(PERSONAS.loader.username);
     await page.locator('#password').fill('definitely-wrong');
     await page.locator('#kc-login').click();
-    await expect(page.locator('#input-error, .kc-feedback-text, [id*="error"]').first()).toBeVisible();
+    await expect(page.getByText(/invalid username or password/i)).toBeVisible();
     await expect(page).toHaveURL(/\/realms\//);
   });
 });

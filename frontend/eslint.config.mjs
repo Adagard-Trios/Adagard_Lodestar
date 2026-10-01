@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated design markup from tools/screengen (tested through behaviour, like in Sonar): not linted.
+    "screens/**",
+    "coverage/**",
   ]),
 ]);
 

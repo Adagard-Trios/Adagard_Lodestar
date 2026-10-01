@@ -12,7 +12,7 @@ FROM node:22-alpine AS build
 RUN apk add --no-cache openssl
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+RUN --mount=type=cache,target=/root/.npm npm ci --fetch-retries=10 --fetch-retry-maxtimeout=600000 --fetch-timeout=600000 --no-audit --no-fund
 COPY tsconfig.json nest-cli.json ./
 COPY prisma/schema.prisma ./prisma/schema.prisma
 RUN npx prisma generate
@@ -24,7 +24,7 @@ RUN npx nest build orders
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund && npm cache clean --force
+RUN --mount=type=cache,target=/root/.npm npm ci --fetch-retries=10 --fetch-retry-maxtimeout=600000 --fetch-timeout=600000 --omit=dev --ignore-scripts --no-audit --no-fund
 
 # ---- 3. runtime ----
 FROM node:22-alpine AS runtime

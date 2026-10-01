@@ -19,6 +19,7 @@ const config: Config = {
     'components/**/*.{ts,tsx}',
     'app/page.tsx',
     'lib/**/*.{ts,tsx}',
+    'live/**/*.{ts,tsx}',
     '!**/*.d.ts',
   ],
   // JUnit XML for CircleCI/Jenkins test results.

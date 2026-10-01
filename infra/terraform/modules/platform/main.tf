@@ -83,6 +83,9 @@ module "monitoring" {
     postgres = {
       resource_id = module.postgres.id
     }
+    redis = {
+      resource_id = module.redis.id
+    }
     frontdoor = {
       resource_id = module.frontdoor.profile_id
     }
@@ -98,7 +101,7 @@ module "network" {
   address_space           = var.vnet_address_space
   subnets                 = var.subnets
   zones                   = var.zones
-  extra_private_dns_zones = var.enable_openai ? ["privatelink.openai.azure.com"] : []
+  extra_private_dns_zones = concat(["privatelink.redis.cache.windows.net"], var.enable_openai ? ["privatelink.openai.azure.com"] : [])
   tags                    = local.tags
 }
 
@@ -125,6 +128,10 @@ module "aks" {
   user_node_vm_size               = var.user_node_vm_size
   user_node_min                   = var.user_node_min
   user_node_max                   = var.user_node_max
+  user_pool_per_zone              = var.user_pool_per_zone
+  keda_enabled                    = true # KEDA ScaledObjects in deploy/k8s depend on it
+  autoscaler_profile              = var.aks_autoscaler_profile
+  agent_spot_pool                 = var.agent_spot_pool
   tags                            = local.tags
 
   # NAT gateway must be attached to the node subnets before cluster creation.
@@ -178,6 +185,22 @@ module "postgres" {
   tags                         = local.tags
 }
 
+# ----------------------------------------------------------------- Redis
+# Socket.IO adapter for notifications (horizontal scaling, PLATFORM.md section 9).
+module "redis" {
+  source                     = "../redis"
+  name                       = "redis-${var.project}-${var.environment}-${var.unique_suffix}"
+  resource_group_name        = azurerm_resource_group.this.name
+  location                   = var.location
+  sku_name                   = var.redis_sku_name
+  capacity                   = var.redis_capacity
+  zones                      = var.zones
+  private_endpoint_subnet_id = module.network.subnet_ids.private_endpoints
+  private_dns_zone_id        = module.network.private_dns_zone_ids["privatelink.redis.cache.windows.net"]
+  key_vault_id               = module.keyvault.id
+  tags                       = local.tags
+}
+
 # ----------------------------------------------------------------- identity
 module "identity" {
   source                 = "../identity"
@@ -206,7 +229,7 @@ module "identity" {
       namespace            = local.k8s_ns
       service_account      = s
       api_roles            = cfg.api_roles
-      key_vault_secret_ids = [module.postgres.service_url_secret_ids[s]]
+      key_vault_secret_ids = concat([module.postgres.service_url_secret_ids[s]], lookup(local.extra_workload_secret_ids, s, []))
     } },
     {
       # PreSync migrate/seed job: admin URL + every service password (creates roles).
@@ -223,6 +246,18 @@ module "identity" {
       }
     }
   )
+}
+
+# Secrets a workload reads besides its own database URL:
+#   agent, sync    their role's password, for the KEDA postgresql scaler
+#                  (TriggerAuthentication in deploy/k8s/base/services/<svc>)
+#   notifications  the Redis URL for the Socket.IO adapter
+locals {
+  extra_workload_secret_ids = {
+    agent         = [module.postgres.service_password_secret_ids["agent"]]
+    sync          = [module.postgres.service_password_secret_ids["sync"]]
+    notifications = [module.redis.url_secret_id]
+  }
 }
 
 # ----------------------------------------------------------------- Front Door

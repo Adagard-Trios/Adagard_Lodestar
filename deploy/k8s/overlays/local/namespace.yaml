@@ -1,0 +1,10 @@
+# Local (kind) namespace: no Istio revision label (no mesh on kind).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lodestar
+  labels:
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted
+    app.kubernetes.io/part-of: lodestar

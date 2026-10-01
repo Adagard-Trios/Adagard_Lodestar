@@ -15,8 +15,9 @@ export const KEYCLOAK_URL = env('E2E_KEYCLOAK_URL', 'http://localhost:8180');
 export const REALM = env('E2E_REALM', 'lodestar');
 /** Public web client. Tokens come from the password grant when the client allows it, else auth code + PKCE. */
 export const CLIENT_ID = env('E2E_CLIENT_ID', 'lodestar-web');
-/** 'password' | 'code' | 'auto' (password first, then the login form). */
-export const AUTH_MODE = env('E2E_AUTH_MODE', 'auto');
+/** 'password' | 'code' | 'auto' (password first, then the login form). Default 'code': the shipped realm disables the
+ * password grant, and Keycloak's brute-force protection counts each refused password grant as a failed login. */
+export const AUTH_MODE = env('E2E_AUTH_MODE', 'code');
 /** Must match a redirect URI registered on CLIENT_ID. */
 export const REDIRECT_URI = env('E2E_REDIRECT_URI', 'https://localhost:8443/');
 export const CLIENT_SECRET = process.env.E2E_CLIENT_SECRET; // only when the test client is confidential

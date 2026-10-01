@@ -11,6 +11,7 @@ labels:
   includeSelectors: false
 resources:
 - namespace.yaml
+- policies
 - common
 - network-policies
 - istio

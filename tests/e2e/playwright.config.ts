@@ -11,6 +11,7 @@ const CI = Boolean(process.env.CI);
 const channel = process.env.E2E_BROWSER_CHANNEL || undefined;
 
 export default defineConfig({
+  globalSetup: './global-setup.ts',
   testDir: './specs',
   timeout: 60_000,
   expect: { timeout: 10_000 },

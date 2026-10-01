@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { businessMinutesOfDay } from '@lodestar/platform';
 
 /** Minutes since midnight for "HH:mm". */
 export function minutesOf(hhmm: string): number {
@@ -13,8 +14,7 @@ export class OutletsService {
    * Windows are local (Sri Lanka, UTC+5:30) wall-clock times.
    */
   isWindowOpen(outlet: { windowOpen: string; windowClose: string }, at: Date = new Date()): boolean {
-    const local = new Date(at.getTime() + 330 * 60_000);
-    const nowMin = local.getUTCHours() * 60 + local.getUTCMinutes();
+    const nowMin = businessMinutesOfDay(at);
     return nowMin >= minutesOf(outlet.windowOpen) && nowMin <= minutesOf(outlet.windowClose);
   }
 

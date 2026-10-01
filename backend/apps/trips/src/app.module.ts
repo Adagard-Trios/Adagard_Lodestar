@@ -11,6 +11,7 @@ import { LoadRecordsSet, PODsSet, TripStopsSet, TripsSet } from './trips.sets';
       service: 'trips',
       entitySets: [TripsSet, TripStopsSet, PODsSet, LoadRecordsSet],
       providers: [TripsService],
+      idempotency: { model: 'tripsIdempotencyKey' },
     }),
   ],
 })

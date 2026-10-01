@@ -1,7 +1,9 @@
 import { DynamicModule, Module, Provider, Type } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { PrismaService } from '@lodestar/prisma';
 import { buildEdmModel, DmmfDatamodel } from './edm/model';
 import { ODataEngine } from './engine';
+import { IdempotencyDelegate, IdempotencyService, idempotencyTtlMs, PrismaIdempotencyStore } from './idempotency';
 import { ODataEntitySet } from './entity-set';
 import { ODataController } from './odata.controller';
 import { ODataRegistry } from './registry';
@@ -22,6 +24,11 @@ export interface ODataModuleOptions {
   serviceDocument?: ServiceDocumentEntry[];
   /** Defaults to the generated Prisma client's DMMF. */
   datamodel?: DmmfDatamodel;
+  /**
+   * Idempotency-Key support for writes declared idempotent: the Prisma delegate
+   * (camelCase model name) of this service's own IdempotencyKey table, e.g. 'ordersIdempotencyKey'.
+   */
+  idempotency?: { model: string };
 }
 
 /**
@@ -53,9 +60,20 @@ export class ODataModule {
           inject: handlers,
         },
         {
+          provide: IdempotencyService,
+          useFactory: (prisma: Record<string, unknown>) => {
+            if (!options.idempotency) return null;
+            const delegate = prisma?.[options.idempotency.model] as IdempotencyDelegate | undefined;
+            if (!delegate) throw new Error(`Prisma delegate ${options.idempotency.model} not found (idempotency)`);
+            return new IdempotencyService(new PrismaIdempotencyStore(delegate), idempotencyTtlMs());
+          },
+          inject: [PrismaService],
+        },
+        {
           provide: ODataEngine,
-          useFactory: (registry: ODataRegistry) => new ODataEngine(registry, options.complexTypes, options.serviceDocument),
-          inject: [ODataRegistry],
+          useFactory: (registry: ODataRegistry, idempotency?: IdempotencyService) =>
+            new ODataEngine(registry, options.complexTypes, options.serviceDocument, idempotency ?? undefined),
+          inject: [ODataRegistry, IdempotencyService],
         },
       ],
       exports: [ODataRegistry, ODataEngine, ...handlers],

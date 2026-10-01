@@ -2,7 +2,7 @@ import { CanActivate, ExecutionContext, ForbiddenException, Injectable, Unauthor
 import { Reflector } from '@nestjs/core';
 import { missingScopes } from './abac';
 import { ALLOW_KEY, IS_PUBLIC_KEY, SCOPE_KEY } from './decorators';
-import { DevicePostureService } from './device-posture.service';
+import { DEVICE_HEADER, DevicePostureService } from './device-posture.service';
 import { JwtVerifier } from './jwt-verifier';
 import { hasAnyRole, Principal } from './principal';
 import { Role, ScopeKind } from './roles';
@@ -18,7 +18,10 @@ export function bearerToken(header: unknown): string | undefined {
  * Global guard installed in every service (PLATFORM.md §2):
  *   1. @Public() routes (only /health and /ready) pass.
  *   2. Otherwise a valid RS256 access token is required (401).
- *   3. Field-client tokens must be bound to an active device (401).
+ *   3. Field-client tokens must be bound to an active device, and X-Device-Id
+ *      must name that device (401). Exception: in the auth service a phone that
+ *      is not bound yet may use the self-enrollment routes (POST/GET Devices,
+ *      Me()); the principal then carries `enrollment` and sees only its own rows.
  *   4. The route must declare @Allow(roles…) and the caller must hold one (403).
  *   5. @Scope(...) claims must be present for non-privileged callers (403).
  */
@@ -42,8 +45,16 @@ export class ZeroTrustGuard implements CanActivate {
     const token = bearerToken(req.headers?.authorization);
     if (!token) throw new UnauthorizedException('Missing bearer token');
 
-    const principal: Principal = await this.verifier.verify(token);
-    await this.posture.check(principal);
+    let principal: Principal = await this.verifier.verify(token);
+    const presented = req.headers?.[DEVICE_HEADER];
+    try {
+      await this.posture.check(principal, presented);
+    } catch (err) {
+      // A phone not yet bound to its user may still ask for access (self-enrollment routes only).
+      const grant = this.posture.enrollmentGrant(err, principal, presented, { method: req.method, url: req.originalUrl ?? req.url });
+      if (!grant) throw err;
+      principal = { ...principal, enrollment: grant };
+    }
     req.principal = principal;
 
     const allowed = this.reflector.getAllAndOverride<Role[]>(ALLOW_KEY, targets);

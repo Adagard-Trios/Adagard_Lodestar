@@ -14,10 +14,18 @@ describe('splitTopLevel', () => {
 });
 
 describe('parseQueryString', () => {
-  it('decodes values and keeps + literally (RFC 3986)', () => {
+  it('decodes values and keeps an unencoded + in a date-time offset', () => {
     const q = parseQueryString('$filter=runDate%20gt%202026-04-07T00:00:00+05:30&x=1');
     expect(q.get('$filter')).toBe('runDate gt 2026-04-07T00:00:00+05:30');
     expect(q.get('x')).toBe('1');
+  });
+
+  it('reads + as a space, the way httpx, requests and URLSearchParams encode queries', () => {
+    expect(parseQueryString("$filter=depot+eq+'KANDY'+and+isActive+eq+true").get('$filter'))
+      .toBe("depot eq 'KANDY' and isActive eq true");
+    expect(parseQueryString('$filter=runDate+ge+2026-04-07T06:35:00+05:30').get('$filter'))
+      .toBe('runDate ge 2026-04-07T06:35:00+05:30');
+    expect(parseQueryString("$filter=name+eq+'A%2BB'").get('$filter')).toBe("name eq 'A+B'");
   });
 
   it('decodes an encoded $ in the option name', () => {

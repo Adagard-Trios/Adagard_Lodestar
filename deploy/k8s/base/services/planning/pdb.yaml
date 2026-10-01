@@ -1,3 +1,6 @@
+# One voluntary disruption at a time (node drain, cluster-autoscaler scale-in,
+# node-image upgrade). Every environment runs >= 2 pods except dev (1), where
+# this still lets a node drain. Unhealthy pods never block an eviction.
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
@@ -8,6 +11,7 @@ metadata:
     app.kubernetes.io/part-of: lodestar
 spec:
   maxUnavailable: 1
+  unhealthyPodEvictionPolicy: AlwaysAllow
   selector:
     matchLabels:
       app: planning

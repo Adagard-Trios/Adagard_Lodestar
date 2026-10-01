@@ -79,6 +79,14 @@ describe('JwtVerifier (RS256 + JWKS)', () => {
 });
 
 describe('loadOidcConfig', () => {
+  it('reads REQUIRE_DEVICE_HEADER (default true)', () => {
+    expect(loadOidcConfig({}).requireDeviceHeader).toBe(true);
+    expect(loadOidcConfig({ REQUIRE_DEVICE_HEADER: '' }).requireDeviceHeader).toBe(true);
+    expect(loadOidcConfig({ REQUIRE_DEVICE_HEADER: 'true' }).requireDeviceHeader).toBe(true);
+    for (const off of ['false', 'FALSE', '0', 'no', 'off', ' false ']) expect(loadOidcConfig({ REQUIRE_DEVICE_HEADER: off }).requireDeviceHeader).toBe(false);
+    expect(loadOidcConfig({ REQUIRE_DEVICE_HEADER: 'false', AZURE_FEDERATED_TOKEN_FILE: '/f' }).requireDeviceHeader).toBe(false);
+  });
+
   it('reads the OIDC_CLIENT_* names (SERVICE_CLIENT_* are aliases)', () => {
     expect(loadOidcConfig({ OIDC_ISSUER: ISSUER, OIDC_CLIENT_ID: 'svc-trips', OIDC_CLIENT_SECRET: 'x' })).toMatchObject({ clientId: 'svc-trips', clientSecret: 'x' });
     expect(loadOidcConfig({ OIDC_ISSUER: ISSUER, OIDC_CLIENT_SECRET_FILE: __filename }).clientSecret).toContain('OIDC_CLIENT_SECRET_FILE');

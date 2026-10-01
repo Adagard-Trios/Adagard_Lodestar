@@ -1,0 +1,137 @@
+# Keycloak 26 (start-dev --import-realm), as `identity` in docker-compose.yml.
+# The realm (backend/identity/lodestar-realm.json) comes from the
+# lodestar-realm configMapGenerator; its ${SVC_*_SECRET} placeholders are
+# filled from identity-secrets. Browsers and services see one issuer,
+# https://localhost:8443/auth/realms/lodestar (the gateway NodePort mapped to
+# host port 8443 by deploy/local/kind/kind-config.yaml).
+apiVersion: v1
+kind: Service
+metadata:
+  name: identity
+  labels:
+    app: identity
+spec:
+  selector:
+    app: identity
+  ports:
+  - name: http
+    port: 8080
+    targetPort: http
+---
+# Admin console, dev only: http://localhost:8180/auth (host port 8180 -> 30180).
+apiVersion: v1
+kind: Service
+metadata:
+  name: identity-admin
+  labels:
+    app: identity
+spec:
+  type: NodePort
+  selector:
+    app: identity
+  ports:
+  - name: http
+    port: 8080
+    targetPort: http
+    nodePort: 30180
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: identity
+  labels:
+    app: identity
+spec:
+  progressDeadlineSeconds: 1900   # first start can take most of the 30 min startup window
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: identity
+  template:
+    metadata:
+      labels:
+        app: identity
+    spec:
+      priorityClassName: lodestar-api
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      nodeSelector:
+        lodestar.io/pool: apps
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 0
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: identity
+        image: quay.io/keycloak/keycloak:26.0
+        args: [start-dev, --import-realm]
+        ports:
+        - name: http
+          containerPort: 8080
+        - name: management
+          containerPort: 9000
+        env:
+        - name: KC_DB
+          value: postgres
+        - name: KC_DB_URL
+          value: jdbc:postgresql://postgres:5432/keycloak
+        - name: KC_DB_USERNAME
+          value: keycloak
+        - name: KC_HTTP_RELATIVE_PATH
+          value: /auth
+        - name: KC_HTTP_ENABLED
+          value: 'true'
+        - name: KC_PROXY_HEADERS
+          value: xforwarded
+        - name: KC_HOSTNAME
+          value: https://localhost:8443/auth
+        - name: KC_HOSTNAME_ADMIN
+          value: http://localhost:8180/auth
+        - name: KC_HEALTH_ENABLED
+          value: 'true'
+        - name: KC_BOOTSTRAP_ADMIN_USERNAME
+          value: admin
+        envFrom:
+        - secretRef:
+            name: identity-secrets
+        resources:
+          requests:
+            cpu: '1'          # first start builds the schema and imports the realm; starved at 200m on a busy laptop
+            memory: 512Mi
+          limits:
+            cpu: '2'
+            memory: 1Gi
+        startupProbe:          # up to 30 min for that first start
+          httpGet:
+            path: /auth/health/started
+            port: management
+          periodSeconds: 10
+          failureThreshold: 180
+        readinessProbe:
+          httpGet:
+            path: /auth/health/ready
+            port: management
+          periodSeconds: 10
+          timeoutSeconds: 3
+        livenessProbe:
+          httpGet:
+            path: /auth/health/live
+            port: management
+          periodSeconds: 15
+          timeoutSeconds: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ALL]
+        volumeMounts:
+        - name: realm
+          mountPath: /opt/keycloak/data/import
+          readOnly: true
+      volumes:
+      - name: realm
+        configMap:
+          name: lodestar-realm

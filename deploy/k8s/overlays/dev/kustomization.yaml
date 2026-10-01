@@ -85,15 +85,78 @@ replicas:
 - name: mobile-web
   count: 1
 patches:
+# Autoscaling bounds: 1 pod at rest, up to 3 (the agent up to 2). Same
+# behaviour (fast up, slow down) as prod; see PLATFORM.md section 9.
 - target:
     kind: HorizontalPodAutoscaler
-  patch: "- op: replace\n  path: /spec/minReplicas\n  value: 1\n- op: replace\n  path: /spec/maxReplicas\n  value: 3\n"
+  patch: |-
+    - op: replace
+      path: /spec/minReplicas
+      value: 1
+    - op: replace
+      path: /spec/maxReplicas
+      value: 3
+- target:
+    kind: ScaledObject
+  patch: |-
+    - op: replace
+      path: /spec/minReplicaCount
+      value: 1
+    - op: replace
+      path: /spec/maxReplicaCount
+      value: 3
+- target:
+    kind: ScaledObject
+    name: agent
+  patch: |-
+    - op: replace
+      path: /spec/maxReplicaCount
+      value: 2
+# dev runs one user pool spread over the zones (not one pool per zone), and
+# mostly single pods: spread across zones best-effort instead of hard.
+- target:
+    kind: Deployment
+    labelSelector: app.kubernetes.io/part-of=lodestar,app notin (lodestar-ingress-tls)
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/topologySpreadConstraints/0/whenUnsatisfiable
+      value: ScheduleAnyway
 - target:
     kind: Deployment
     labelSelector: app.kubernetes.io/part-of=lodestar,app notin (mobile-web,lodestar-ingress-tls)
-  patch: "- op: replace\n  path: /spec/template/spec/containers/0/resources\n  value:\n    requests:\n      cpu: 50m\n   \
-    \   memory: 128Mi\n    limits:\n      cpu: 500m\n      memory: 512Mi\n"
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources
+      value:
+        requests:
+          cpu: 50m
+          memory: 160Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+- target:
+    kind: ResourceQuota
+    name: lodestar
+  patch: |-
+    - op: replace
+      path: /spec/hard/requests.cpu
+      value: '12'
+    - op: replace
+      path: /spec/hard/requests.memory
+      value: 24Gi
+    - op: replace
+      path: /spec/hard/limits.memory
+      value: 64Gi
+    - op: replace
+      path: /spec/hard/pods
+      value: '100'
 - target:
     kind: ConfigMap
     name: lodestar-common
-  patch: "- op: replace\n  path: /data/LOG_LEVEL\n  value: debug\n- op: replace\n  path: /data/RUN_SEED\n  value: 'true'\n"
+  patch: |-
+    - op: replace
+      path: /data/LOG_LEVEL
+      value: debug
+    - op: replace
+      path: /data/RUN_SEED
+      value: 'true'

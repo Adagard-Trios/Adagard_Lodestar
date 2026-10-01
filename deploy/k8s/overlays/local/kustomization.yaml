@@ -1,0 +1,462 @@
+# Local overlay: the whole platform on a kind cluster named `lodestar`
+# (deploy/local/kind/up.sh). Same Deployments, HPAs, KEDA ScaledObjects, PDBs,
+# PriorityClasses and quota as AKS (base/), minus everything Azure: no Istio,
+# no Key Vault CSI (plain Secrets from the generators below, with the dev-only
+# defaults of docker-compose.yml), no workload identity, no NetworkPolicies.
+# In-cluster Postgres, Keycloak and Redis replace the Azure services, and the
+# compose NGINX gateway is the entry point (NodePort, host port 8443).
+#
+# Build (the realm file and the Postgres init script live outside this folder):
+#   kubectl kustomize --load-restrictor LoadRestrictionsNone deploy/k8s/overlays/local
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: lodestar
+labels:
+- pairs:
+    app.kubernetes.io/part-of: lodestar
+    lodestar.io/environment: local
+  includeSelectors: false
+resources:
+- namespace.yaml
+- ../../base/policies
+- ../../base/common
+- ../../base/services/auth
+- ../../base/services/orders
+- ../../base/services/planning
+- ../../base/services/fleet
+- ../../base/services/outlets
+- ../../base/services/trips
+- ../../base/services/sync
+- ../../base/services/notifications
+- ../../base/services/audit
+- ../../base/services/agent
+- ../../base/services/frontend
+- ../../base/services/mobile-web
+- infra/postgres.yaml
+- infra/identity.yaml
+- infra/redis.yaml
+- gateway.yaml
+- migrate.yaml
+
+# Images from `docker compose build` (project `lodestar`), loaded with
+# `kind load docker-image`; base sets imagePullPolicy IfNotPresent.
+images:
+- name: lodestar/auth
+  newName: lodestar-auth
+  newTag: latest
+- name: lodestar/orders
+  newName: lodestar-orders
+  newTag: latest
+- name: lodestar/planning
+  newName: lodestar-planning
+  newTag: latest
+- name: lodestar/fleet
+  newName: lodestar-fleet
+  newTag: latest
+- name: lodestar/outlets
+  newName: lodestar-outlets
+  newTag: latest
+- name: lodestar/trips
+  newName: lodestar-trips
+  newTag: latest
+- name: lodestar/sync
+  newName: lodestar-sync
+  newTag: latest
+- name: lodestar/notifications
+  newName: lodestar-notifications
+  newTag: latest
+- name: lodestar/audit
+  newName: lodestar-audit
+  newTag: latest
+- name: lodestar/agent
+  newName: lodestar-agent
+  newTag: latest
+- name: lodestar/frontend
+  newName: lodestar-frontend
+  newTag: latest
+- name: lodestar/mobile-web
+  newName: lodestar-mobile-web
+  newTag: latest
+- name: lodestar/gateway
+  newName: lodestar-gateway
+  newTag: latest
+- name: lodestar/migrate
+  newName: lodestar-migrate
+  newTag: latest
+
+configMapGenerator:
+- name: lodestar-realm
+  files:
+  - lodestar-realm.json=../../../../backend/identity/lodestar-realm.json
+- name: postgres-init
+  files:
+  - 01-keycloak.sh=../../../local/postgres/01-keycloak.sh
+# Keycloak instead of Entra ID (values as in docker-compose.yml)
+- name: lodestar-common
+  behavior: merge
+  literals:
+  - AUTH_PROVIDER=keycloak
+  - OIDC_ISSUER=https://localhost:8443/auth/realms/lodestar
+  - OIDC_JWKS_URL=http://identity:8080/auth/realms/lodestar/protocol/openid-connect/certs
+  - OIDC_JWKS_URI=http://identity:8080/auth/realms/lodestar/protocol/openid-connect/certs
+  - OIDC_TOKEN_URL=http://identity:8080/auth/realms/lodestar/protocol/openid-connect/token
+  - OIDC_AUDIENCE=lodestar-api
+  - SVC_TOKEN_SCOPE=
+  - FIELD_CLIENT_ID=lodestar-field
+  - PUBLIC_WEB_URL=https://localhost:8443
+  - PUBLIC_BASE_URL=https://localhost:8443
+  - RUN_SEED=false
+- name: auth-config
+  behavior: merge
+  literals:
+  - OIDC_CLIENT_ID=svc-auth
+  - KEYCLOAK_ADMIN_URL=http://identity:8080/auth
+  - KEYCLOAK_REALM=lodestar
+- name: orders-config
+  behavior: merge
+  literals:
+  - OIDC_CLIENT_ID=svc-orders
+- name: planning-config
+  behavior: merge
+  literals:
+  - OIDC_CLIENT_ID=svc-planning
+- name: fleet-config
+  behavior: merge
+  literals:
+  - OIDC_CLIENT_ID=svc-fleet
+- name: outlets-config
+  behavior: merge
+  literals:
+  - OIDC_CLIENT_ID=svc-outlets
+- name: trips-config
+  behavior: merge
+  literals:
+  - OIDC_CLIENT_ID=svc-trips
+- name: sync-config
+  behavior: merge
+  literals:
+  - OIDC_CLIENT_ID=svc-sync
+- name: notifications-config
+  behavior: merge
+  literals:
+  - OIDC_CLIENT_ID=svc-notifications
+  - WS_CORS_ORIGINS=https://localhost:8443,http://localhost:8082
+- name: audit-config
+  behavior: merge
+  literals:
+  - OIDC_CLIENT_ID=svc-audit
+- name: agent-config
+  behavior: merge
+  literals:
+  - OIDC_CLIENT_ID=svc-agent
+  - AGENT_MODEL=mock
+- name: frontend-config
+  behavior: merge
+  literals:
+  - NEXT_PUBLIC_API_URL=https://localhost:8443/odata/v4
+  - NEXT_PUBLIC_WS_URL=wss://localhost:8443/ws/
+
+# DEV-ONLY values, identical to the docker-compose.yml defaults. Never reuse.
+# Fixed names (no hash suffix): the KEDA TriggerAuthentications reference them.
+generatorOptions:
+  disableNameSuffixHash: true
+secretGenerator:
+- name: postgres-credentials
+  literals:
+  - POSTGRES_PASSWORD=lodestar-dev-only
+  - KEYCLOAK_DB_PASSWORD=keycloak-dev-only
+  - DATABASE_URL=postgresql://lodestar:lodestar-dev-only@postgres:5432/lodestar
+- name: redis-credentials
+  literals:
+  - REDIS_PASSWORD=redis-dev-only
+- name: identity-secrets
+  literals:
+  - KC_DB_PASSWORD=keycloak-dev-only
+  - KC_BOOTSTRAP_ADMIN_PASSWORD=admin-dev-only
+  - LODESTAR_DEMO_PASSWORD=lodestar-dev-only
+  - LODESTAR_ADMIN_PASSWORD=lodestar-admin-dev-only
+  - SVC_AUTH_SECRET=svc-auth-dev-only
+  - SVC_ORDERS_SECRET=svc-orders-dev-only
+  - SVC_PLANNING_SECRET=svc-planning-dev-only
+  - SVC_FLEET_SECRET=svc-fleet-dev-only
+  - SVC_OUTLETS_SECRET=svc-outlets-dev-only
+  - SVC_TRIPS_SECRET=svc-trips-dev-only
+  - SVC_SYNC_SECRET=svc-sync-dev-only
+  - SVC_NOTIFICATIONS_SECRET=svc-notifications-dev-only
+  - SVC_AUDIT_SECRET=svc-audit-dev-only
+  - SVC_AGENT_SECRET=svc-agent-dev-only
+- name: auth-secrets
+  literals:
+  - DATABASE_URL=postgresql://lodestar:lodestar-dev-only@postgres:5432/lodestar?connection_limit=5
+  - OIDC_CLIENT_SECRET=svc-auth-dev-only
+- name: orders-secrets
+  literals:
+  - DATABASE_URL=postgresql://lodestar:lodestar-dev-only@postgres:5432/lodestar?connection_limit=5
+  - OIDC_CLIENT_SECRET=svc-orders-dev-only
+- name: planning-secrets
+  literals:
+  - DATABASE_URL=postgresql://lodestar:lodestar-dev-only@postgres:5432/lodestar?connection_limit=5
+  - OIDC_CLIENT_SECRET=svc-planning-dev-only
+- name: fleet-secrets
+  literals:
+  - DATABASE_URL=postgresql://lodestar:lodestar-dev-only@postgres:5432/lodestar?connection_limit=5
+  - OIDC_CLIENT_SECRET=svc-fleet-dev-only
+- name: outlets-secrets
+  literals:
+  - DATABASE_URL=postgresql://lodestar:lodestar-dev-only@postgres:5432/lodestar?connection_limit=5
+  - OIDC_CLIENT_SECRET=svc-outlets-dev-only
+- name: trips-secrets
+  literals:
+  - DATABASE_URL=postgresql://lodestar:lodestar-dev-only@postgres:5432/lodestar?connection_limit=5
+  - OIDC_CLIENT_SECRET=svc-trips-dev-only
+- name: sync-secrets
+  literals:
+  - DATABASE_URL=postgresql://lodestar:lodestar-dev-only@postgres:5432/lodestar?connection_limit=5
+  - OIDC_CLIENT_SECRET=svc-sync-dev-only
+  - DB_PASSWORD=lodestar-dev-only
+- name: notifications-secrets
+  literals:
+  - DATABASE_URL=postgresql://lodestar:lodestar-dev-only@postgres:5432/lodestar?connection_limit=5
+  - OIDC_CLIENT_SECRET=svc-notifications-dev-only
+  - REDIS_URL=redis://:redis-dev-only@redis:6379
+- name: audit-secrets
+  literals:
+  - DATABASE_URL=postgresql://lodestar:lodestar-dev-only@postgres:5432/lodestar?connection_limit=5
+  - OIDC_CLIENT_SECRET=svc-audit-dev-only
+- name: agent-secrets
+  literals:
+  - DATABASE_URL=postgresql://lodestar:lodestar-dev-only@postgres:5432/lodestar
+  - OIDC_CLIENT_SECRET=svc-agent-dev-only
+  - DB_PASSWORD=lodestar-dev-only
+
+patches:
+# --- no Azure: drop the Key Vault SecretProviderClasses and their CSI volume
+- target:
+    kind: SecretProviderClass
+  patch: |-
+    $patch: delete
+    apiVersion: secrets-store.csi.x-k8s.io/v1
+    kind: SecretProviderClass
+    metadata:
+      name: any
+- target:
+    kind: Deployment
+    labelSelector: app in (auth,orders,planning,fleet,outlets,trips,sync,notifications,audit,agent)
+  patch: |-
+    - op: test
+      path: /spec/template/spec/volumes/1/name
+      value: secrets-store
+    - op: remove
+      path: /spec/template/spec/volumes/1
+    - op: test
+      path: /spec/template/spec/containers/0/volumeMounts/1/name
+      value: secrets-store
+    - op: remove
+      path: /spec/template/spec/containers/0/volumeMounts/1
+    - op: remove
+      path: /spec/template/metadata/labels/azure.workload.identity~1use
+    - op: remove
+      path: /spec/template/metadata/annotations/proxy.istio.io~1config
+# auth: OIDC client secret etc. from its local Secret
+- target:
+    kind: Deployment
+    name: auth
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/envFrom/-
+      value:
+        secretRef:
+          name: auth-secrets
+# orders: OIDC client secret etc. from its local Secret
+- target:
+    kind: Deployment
+    name: orders
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/envFrom/-
+      value:
+        secretRef:
+          name: orders-secrets
+# planning: OIDC client secret etc. from its local Secret
+- target:
+    kind: Deployment
+    name: planning
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/envFrom/-
+      value:
+        secretRef:
+          name: planning-secrets
+# fleet: OIDC client secret etc. from its local Secret
+- target:
+    kind: Deployment
+    name: fleet
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/envFrom/-
+      value:
+        secretRef:
+          name: fleet-secrets
+# outlets: OIDC client secret etc. from its local Secret
+- target:
+    kind: Deployment
+    name: outlets
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/envFrom/-
+      value:
+        secretRef:
+          name: outlets-secrets
+# trips: OIDC client secret etc. from its local Secret
+- target:
+    kind: Deployment
+    name: trips
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/envFrom/-
+      value:
+        secretRef:
+          name: trips-secrets
+# sync: OIDC client secret etc. from its local Secret
+- target:
+    kind: Deployment
+    name: sync
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/envFrom/-
+      value:
+        secretRef:
+          name: sync-secrets
+# notifications: OIDC client secret etc. from its local Secret
+- target:
+    kind: Deployment
+    name: notifications
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/envFrom/-
+      value:
+        secretRef:
+          name: notifications-secrets
+# audit: OIDC client secret etc. from its local Secret
+- target:
+    kind: Deployment
+    name: audit
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/envFrom/-
+      value:
+        secretRef:
+          name: audit-secrets
+# agent: OIDC client secret etc. from its local Secret
+- target:
+    kind: Deployment
+    name: agent
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/envFrom/-
+      value:
+        secretRef:
+          name: agent-secrets
+# no workload identity on kind
+- target:
+    kind: ServiceAccount
+    labelSelector: app in (auth,orders,planning,fleet,outlets,trips,sync,notifications,audit,agent)
+  patch: |-
+    - op: remove
+      path: /metadata/annotations
+- target:
+    kind: Deployment
+    labelSelector: app in (frontend,mobile-web)
+  patch: |-
+    - op: remove
+      path: /spec/template/metadata/annotations/proxy.istio.io~1config
+
+# --- small requests so a laptop fits 3 nodes and a few hundred req/s move the
+# HPAs; limits leave headroom so the load test is not just CPU throttling.
+- target:
+    kind: Deployment
+    labelSelector: app in (auth,orders,planning,fleet,outlets,trips,sync,notifications,audit,frontend)
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources
+      value:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: '1'
+          memory: 512Mi
+- target:
+    kind: Deployment
+    name: agent
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources
+      value:
+        requests:
+          cpu: 100m
+          memory: 384Mi
+        limits:
+          cpu: '1'
+          memory: 1Gi
+- target:
+    kind: Deployment
+    labelSelector: app in (auth,orders,planning,fleet,outlets,trips,sync,notifications,audit,agent,frontend,mobile-web)
+  patch: |-
+    - op: replace
+      path: /spec/replicas
+      value: 1
+
+# --- autoscaling bounds for a laptop; scale-in after 60 s instead of 5 min so
+# the load test shows pods going back in within a few minutes.
+- target:
+    kind: HorizontalPodAutoscaler
+    labelSelector: app.kubernetes.io/name
+  patch: |-
+    - op: replace
+      path: /spec/minReplicas
+      value: 1
+    - op: replace
+      path: /spec/maxReplicas
+      value: 4
+    - op: replace
+      path: /spec/behavior/scaleDown/stabilizationWindowSeconds
+      value: 60
+- target:
+    kind: ScaledObject
+  patch: |-
+    - op: replace
+      path: /spec/minReplicaCount
+      value: 1
+    - op: replace
+      path: /spec/maxReplicaCount
+      value: 3
+    - op: replace
+      path: /spec/advanced/horizontalPodAutoscalerConfig/behavior/scaleDown/stabilizationWindowSeconds
+      value: 60
+    - op: test
+      path: /spec/triggers/2/type
+      value: postgresql
+    - op: replace
+      path: /spec/triggers/2/metadata/host
+      value: postgres.lodestar.svc.cluster.local
+    - op: replace
+      path: /spec/triggers/2/metadata/userName
+      value: lodestar
+    - op: replace
+      path: /spec/triggers/2/metadata/sslmode
+      value: disable
+- target:
+    kind: ResourceQuota
+    name: lodestar
+  patch: |-
+    - op: replace
+      path: /spec/hard
+      value:
+        requests.cpu: '16'
+        requests.memory: 24Gi
+        limits.memory: 48Gi
+        pods: '120'
+        services.loadbalancers: '0'
+        services.nodeports: '4'   # gateway 8443, gateway 8080, identity 8180, mobile-web 8082
+        persistentvolumeclaims: '2'

@@ -1,9 +1,16 @@
+# syntax=docker/dockerfile:1.7
 # Lodestar desk faces (Store desk, Plan, Admin). Next.js 16 needs Node >= 20.9.
 FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci --fetch-retries=10 --fetch-retry-maxtimeout=600000 --fetch-timeout=600000
 COPY . .
+# Optional build-time overrides (Next inlines NEXT_PUBLIC_* into the bundle). Empty = derive from the page's own
+# origin: API /odata/v4, Keycloak /auth/realms/lodestar, Socket.IO /ws/ on the gateway (frontend/lib/config.ts).
+# NEXT_PUBLIC_DESIGN_PREVIEW=off disables the ?design=1 prototype switch in production builds.
+ARG NEXT_PUBLIC_API_URL="" NEXT_PUBLIC_OIDC_AUTHORITY="" NEXT_PUBLIC_OIDC_CLIENT_ID="" NEXT_PUBLIC_WS_URL="" NEXT_PUBLIC_DESIGN_PREVIEW="" NEXT_PUBLIC_LODESTAR_MODE=""
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL NEXT_PUBLIC_OIDC_AUTHORITY=$NEXT_PUBLIC_OIDC_AUTHORITY NEXT_PUBLIC_OIDC_CLIENT_ID=$NEXT_PUBLIC_OIDC_CLIENT_ID \
+    NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL NEXT_PUBLIC_DESIGN_PREVIEW=$NEXT_PUBLIC_DESIGN_PREVIEW NEXT_PUBLIC_LODESTAR_MODE=$NEXT_PUBLIC_LODESTAR_MODE
 RUN npm run build && npm prune --omit=dev
 
 FROM node:22-alpine

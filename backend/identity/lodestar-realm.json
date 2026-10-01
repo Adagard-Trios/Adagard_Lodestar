@@ -544,6 +544,33 @@
         "display.on.consent.screen": "false"
       },
       "protocolMappers": []
+    },
+    {
+      "name": "realm-admin",
+      "description": "Keycloak admin API roles (realm-management) for the auth service only: user directory sync and device binding",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm-management roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "usermodel.clientRoleMapping.clientId": "realm-management",
+            "claim.name": "resource_access.${client_id}.roles",
+            "multivalued": "true",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
     }
   ],
   "defaultDefaultClientScopes": [
@@ -607,12 +634,14 @@
       "fullScopeAllowed": true,
       "consentRequired": false,
       "redirectUris": [
-        "http://localhost:8082/*",
-        "lodestar://*",
+        "lodestar://auth/callback",
+        "http://localhost:8082/auth/callback",
+        "http://localhost:8081/auth/callback",
         "exp://*"
       ],
       "webOrigins": [
-        "http://localhost:8082"
+        "http://localhost:8082",
+        "http://localhost:8081"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
@@ -659,7 +688,8 @@
         "lodestar-api",
         "roles",
         "audit.write",
-        "auth.read"
+        "auth.read",
+        "realm-admin"
       ],
       "optionalClientScopes": []
     },
@@ -975,6 +1005,9 @@
         ],
         "depot": [
           "KANDY"
+        ],
+        "device_id": [
+          "DEV-FR-01"
         ]
       },
       "credentials": [
@@ -1001,6 +1034,9 @@
         "depot": [
           "PELIYAGODA",
           "KANDY"
+        ],
+        "device_id": [
+          "DEV-NP-01"
         ]
       },
       "credentials": [

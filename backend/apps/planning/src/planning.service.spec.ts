@@ -221,8 +221,8 @@ describe('DeferralScoringService', () => {
 
 describe('EtaService.computeModelEta', () => {
   const eta = new EtaService({} as any);
-  // Local-time dates: computeModelEta compares with getHours() (server local time).
-  const at = (h: number, m = 0) => new Date(2026, 3, 7, h, m, 0, 0);
+  // Sri Lanka wall-clock times on the hero day; independent of the server's TZ.
+  const at = (h: number, m = 0) => new Date(`2026-04-07T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00+05:30`);
   const minutesBetween = (a: Date, b: Date) => Math.round((b.getTime() - a.getTime()) / 60000);
 
   it('hill road in monsoon before 6 AM: speed index 64 → +29 min, ±20 band, 20% risk', () => {

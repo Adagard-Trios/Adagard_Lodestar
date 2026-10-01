@@ -55,6 +55,7 @@ export class TripsSet extends ODataEntitySet {
     roles: [Roles.Loader, Roles.Dispatcher],
     params: { sealNumber: { type: 'Edm.String', required: true }, reeferTempC: 'Edm.Double' },
     returns: 'Lodestar.Trip',
+    idempotent: true,
   })
   release(ctx: OperationContext) {
     if (typeof ctx.params.sealNumber !== 'string' || !ctx.params.sealNumber.trim()) {
@@ -185,6 +186,8 @@ export class PODsSet extends ODataEntitySet {
   navigation: ['trip', 'vehicle', 'loader'],
   insertable: ['tripId', 'bay', 'reeferTempC', 'shortfalls', 'notes'],
   defaultOrderBy: 'loadedAt desc',
+  // The dock tablet replays queued load records after a Wi-Fi drop.
+  idempotentCreate: true,
 })
 export class LoadRecordsSet extends ODataEntitySet {
   constructor(
@@ -211,6 +214,7 @@ export class LoadRecordsSet extends ODataEntitySet {
     roles: [Roles.Loader, Roles.Dispatcher],
     params: { shortfalls: { type: 'Collection(Edm.Untyped)', required: true } },
     returns: 'Lodestar.LoadRecord',
+    idempotent: true,
   })
   recordShortfalls(ctx: OperationContext) {
     return this.trips.updateShortfalls(ctx.entity.tripId, ctx.params.shortfalls);

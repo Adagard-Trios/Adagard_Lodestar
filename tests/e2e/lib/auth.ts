@@ -1,17 +1,30 @@
 // Keycloak helpers: tokens via the OAuth2 password grant (API tests) and the hosted login page (UI tests).
 import { expect, request, type APIRequestContext, type Page } from '@playwright/test';
 import { createHash, randomBytes } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { AUTH_MODE, CLIENT_ID, CLIENT_SECRET, KEYCLOAK_URL, PERSONAS, REALM, REDIRECT_URI, TOKEN_URL, type Persona, type PersonaKey } from './env';
 
 export type TokenSet = { access_token: string; refresh_token?: string; expires_in: number; token_type: string };
 
 const cache = new Map<string, { token: TokenSet; until: number }>();
 
+/** Tokens signed in once by global-setup.ts (one login per persona, before the workers start). */
+export const TOKEN_FILE = join(__dirname, '..', '.auth', 'tokens.json');
+function sharedToken(username: string): { token: TokenSet; until: number } | undefined {
+  try {
+    const all = JSON.parse(readFileSync(TOKEN_FILE, 'utf8')) as Record<string, { token: TokenSet; until: number }>;
+    return all[username];
+  } catch {
+    return undefined;
+  }
+}
+
 /** Password grant for a persona. Tokens are cached per worker until 30 s before expiry. */
 export async function tokenFor(who: PersonaKey | Persona, ctx?: APIRequestContext): Promise<string> {
   const p = typeof who === 'string' ? PERSONAS[who] : who;
-  const hit = cache.get(p.username);
-  if (hit && hit.until > Date.now()) return hit.token.access_token;
+  const hit = cache.get(p.username) ?? sharedToken(p.username);
+  if (hit && hit.until > Date.now()) { cache.set(p.username, hit); return hit.token.access_token; }
 
   const own = !ctx;
   const api = ctx ?? (await request.newContext({ ignoreHTTPSErrors: true }));

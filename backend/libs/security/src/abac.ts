@@ -50,6 +50,8 @@ export function andWhere(...parts: (Where | undefined | null)[]): Where | undefi
  * A user holding several roles sees the union of what each role allows.
  */
 export function rowFilter(p: Principal, rules?: AbacRules): Where | undefined {
+  // A phone that is still asking for access sees only its user's own rows, whatever the role.
+  if (p.enrollment) return rules?.self?.(p) ?? MATCH_NOTHING;
   if (isPrivileged(p)) return undefined;
   if (!rules) return MATCH_NOTHING;
 

@@ -44,6 +44,8 @@ function validateLineItems(raw: unknown): LineItemInput[] {
   insertable: ['id', 'outletId', 'runDate', 'brand', 'tempClass', 'units', 'kg', 'm3', 'notes', 'lineItems'],
   updatable: ['runDate', 'units', 'kg', 'm3', 'notes'],
   defaultOrderBy: 'runDate desc,id',
+  // A store's queued order is replayed after a blackout: Idempotency-Key keeps it single.
+  idempotentCreate: true,
 })
 export class OrdersSet extends ODataEntitySet {
   constructor(
@@ -110,6 +112,30 @@ export class OrdersSet extends ODataEntitySet {
       throw ODataError.conflict(`Order ${ctx.entity.id} is ${ctx.entity.status} and cannot be cancelled`);
     }
     return this.orders.cancel(ctx.entity.id, ctx.params.reason);
+  }
+
+  /**
+   * POST Orders('…')/Lodestar.ConfirmReceipt {unitsReceived, unitsExpected, note?, savedAt}
+   * SM-03: the store manager's count. ABAC: the order is loaded through her outlet
+   * row filter (another outlet's order is 404) and checked against her outlet claim again.
+   */
+  @ODataAction({
+    name: 'ConfirmReceipt',
+    binding: 'entity',
+    roles: [Roles.StoreManager],
+    params: {
+      unitsReceived: { type: 'Edm.Int32', required: true },
+      unitsExpected: { type: 'Edm.Int32', required: true },
+      note: 'Edm.String',
+      savedAt: { type: 'Edm.DateTimeOffset', required: true },
+    },
+    returns: 'Lodestar.Order',
+    idempotent: true,
+  })
+  confirmReceipt(ctx: OperationContext) {
+    if (!canAccessOutlet(ctx.principal, ctx.entity.outletId)) throw ODataError.forbidden('You can only confirm receipts for your own outlet', 'outletId');
+    const { unitsReceived, unitsExpected, note, savedAt } = ctx.params;
+    return this.orders.confirmReceipt(ctx.entity.id, ctx.principal.sub, { unitsReceived, unitsExpected, note, savedAt });
   }
 
   /** GET Orders/Lodestar.Summary(runDate=2026-04-07) */

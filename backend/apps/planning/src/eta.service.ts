@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { DockType, Brand } from '@prisma/client';
+import { businessHour, businessMinutesOfDay, minutesOfHhmm } from '@lodestar/platform';
+
+const MINUTE_MS = 60_000;
+const addMinutes = (d: Date, min: number) => new Date(d.getTime() + min * MINUTE_MS);
 
 /**
  * ETA Service — computes plan ETA (free-flow) and model ETA (ML-adjusted).
@@ -12,6 +16,9 @@ import { DockType, Brand } from '@prisma/client';
  *       Monsoon hill runs average ~80 min behind free-flow plan
  *   - OUT106 late risk: 12% when planned before 6:00 AM (monsoon)
  *   - OUT108 late risk: 18% normal, 61% during blackout
+ *
+ * All times of day (planned hour, window close) are Sri Lanka time
+ * (Asia/Colombo), never the server's local time: containers run in UTC.
  */
 @Injectable()
 export class EtaService {
@@ -40,9 +47,7 @@ export class EtaService {
       params.priorInterStopMins +
       params.interStopMin;
 
-    const eta = new Date(params.departTime);
-    eta.setMinutes(eta.getMinutes() + totalMin);
-    return eta;
+    return addMinutes(params.departTime, totalMin);
   }
 
   /**
@@ -54,47 +59,43 @@ export class EtaService {
     etaPlan: Date;
     roadClass: string;
     isMonsoon: boolean;
-    plannedHour: number;    // hour of planned arrival (IST)
-    windowClose: string;    // "08:00"
+    /** Colombo hour of the planned arrival; defaults to the Colombo hour of etaPlan. */
+    plannedHour?: number;
+    windowClose: string;    // "08:00", Colombo wall clock
   }): { etaModel: Date; bandEarly: Date; bandLate: Date; lateRiskPct: number } {
+    const plannedHour = params.plannedHour ?? businessHour(params.etaPlan);
     let delayMin = 0;
     let bandWidthMin = 15;
     let lateRiskPct = 5;
 
     if (params.roadClass === 'hill' && params.isMonsoon) {
       // Traffic speed index: 5AM=64, 6AM=58, 7AM=48 → slowdowns
-      const speedIndex = params.plannedHour <= 5 ? 64 : params.plannedHour <= 6 ? 58 : 48;
+      const speedIndex = plannedHour <= 5 ? 64 : plannedHour <= 6 ? 58 : 48;
       // At full speed (100) → 0 delay; at 64 → ~55% slower → ~80 min delay
       delayMin = Math.round((100 - speedIndex) / 100 * 80);
       bandWidthMin = 20;
 
       // Late risk: before 6AM in monsoon → 20% (from training: 51 runs, 20% late)
-      if (params.plannedHour < 6) {
+      if (plannedHour < 6) {
         lateRiskPct = params.isMonsoon ? 20 : 10;
       } else {
         lateRiskPct = params.isMonsoon ? 53 : 20;
       }
     } else if (params.roadClass === 'urban') {
-      delayMin = params.plannedHour < 6 ? 0 : 10;
+      delayMin = plannedHour < 6 ? 0 : 10;
       lateRiskPct = 8;
     } else if (params.roadClass === 'suburban') {
       delayMin = params.isMonsoon ? 15 : 5;
       lateRiskPct = 12;
     }
 
-    const etaModel = new Date(params.etaPlan);
-    etaModel.setMinutes(etaModel.getMinutes() + delayMin);
+    const etaModel = addMinutes(params.etaPlan, delayMin);
+    const bandEarly = addMinutes(etaModel, -bandWidthMin);
+    const bandLate = addMinutes(etaModel, bandWidthMin);
 
-    const bandEarly = new Date(etaModel);
-    bandEarly.setMinutes(bandEarly.getMinutes() - bandWidthMin);
-
-    const bandLate = new Date(etaModel);
-    bandLate.setMinutes(bandLate.getMinutes() + bandWidthMin);
-
-    // Recompute late risk based on whether model ETA exceeds window
-    const [wh, wm] = params.windowClose.split(':').map(Number);
-    const windowCloseMin = wh * 60 + wm;
-    const modelEtaMin = etaModel.getHours() * 60 + etaModel.getMinutes();
+    // Recompute late risk based on whether model ETA (Colombo time) nears the window close
+    const windowCloseMin = minutesOfHhmm(params.windowClose);
+    const modelEtaMin = businessMinutesOfDay(etaModel);
     if (modelEtaMin > windowCloseMin - 30) {
       lateRiskPct = Math.min(lateRiskPct + 30, 95);
     }

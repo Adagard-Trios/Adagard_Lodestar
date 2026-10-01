@@ -103,6 +103,9 @@ spec:
         sidecar.istio.io/inject: 'false'
     spec:
       restartPolicy: Never
+      # No priorityClassName: PreSync runs before the PriorityClasses are synced on
+      # a fresh cluster. Default priority 0 already ranks below every lodestar-*
+      # class, which is what lodestar-batch expresses for later batch workloads.
       serviceAccountName: migrate
       automountServiceAccountToken: false
       enableServiceLinks: false

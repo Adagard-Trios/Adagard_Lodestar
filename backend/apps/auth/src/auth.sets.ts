@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, OperationContext, WriteContext } from '@lodestar/odata';
-import { ALL_ROLES, isPrivileged, Roles } from '@lodestar/security';
+import { ALL_ROLES, DEVICE_ID_PATTERN, isPrivileged, Roles } from '@lodestar/security';
 import { DeviceStatus } from '@prisma/client';
 import { AuthService, REALM_ROLE } from './auth.service';
 
@@ -16,8 +16,8 @@ import { AuthService, REALM_ROLE } from './auth.service';
   abac: { depot: (depots) => ({ depot: { in: depots } }) },
   navigation: ['outlet', 'devices'],
   search: ['name', 'email'],
-  insertable: ['id', 'email', 'name', 'role', 'depot', 'outletId', 'phone'],
-  updatable: ['name', 'role', 'depot', 'outletId', 'phone', 'isActive'],
+  insertable: ['id', 'email', 'name', 'role', 'depot', 'outletId', 'vehicleId', 'phone'],
+  updatable: ['name', 'role', 'depot', 'outletId', 'vehicleId', 'phone', 'isActive'],
   defaultOrderBy: 'name',
 })
 export class UsersSet extends ODataEntitySet {
@@ -28,19 +28,42 @@ export class UsersSet extends ODataEntitySet {
     super(prisma);
   }
 
+  /** Validation only: the identity is created in create(), next to the row, so it can be compensated. */
   async beforeCreate(data: Record<string, any>) {
     for (const f of ['email', 'name', 'role']) if (!data[f]) throw ODataError.badRequest(`${f} is required`, f);
     // role is an enum already validated by the OData body coercion; guard the REALM_ROLE mapping too.
     if (!REALM_ROLE[data.role as keyof typeof REALM_ROLE]) throw ODataError.badRequest('Unknown role', 'role');
     if (data.role === 'STORE_MANAGER' && !data.outletId) throw ODataError.badRequest('A store manager needs an outletId', 'outletId');
-    return { ...data, id: await this.auth.createIdentity(data) };
+    await this.checkVehicle(data.vehicleId);
+    return data;
+  }
+
+  /** Keycloak user, then the directory row; a failed insert deletes the Keycloak user again. */
+  create(data: Record<string, any>, ctx: WriteContext) {
+    return this.auth.createUser(data, ctx.principal);
   }
 
   async beforeUpdate(patch: Record<string, any>, current: any) {
-    if (patch.isActive !== undefined && patch.isActive !== current.isActive) {
-      await this.auth.setIdentityEnabled(current.id, patch.isActive);
-    }
+    const role = patch.role ?? current.role;
+    const outletId = 'outletId' in patch ? patch.outletId : current.outletId;
+    if (role === 'STORE_MANAGER' && !outletId) throw ODataError.badRequest('A store manager needs an outletId', 'outletId');
+    if ('vehicleId' in patch) await this.checkVehicle(patch.vehicleId);
     return patch;
+  }
+
+  /** Directory row and Keycloak (role, ABAC attributes, enabled, sessions) together, or neither. */
+  updateWhere(where: Record<string, any>, data: Record<string, any>, ctx?: WriteContext) {
+    if (!ctx) throw new Error('UsersSet.updateWhere needs the write context');
+    return this.auth.updateUser(where, data, ctx.principal);
+  }
+
+  private async checkVehicle(vehicleId: unknown) {
+    if (vehicleId === undefined || vehicleId === null) return;
+    if (typeof vehicleId !== 'string' || !/^[A-Za-z0-9-]{1,32}$/.test(vehicleId)) {
+      throw ODataError.badRequest('vehicleId must be 1-32 letters, digits or dashes', 'vehicleId');
+    }
+    const vehicle = await this.prisma.vehicle.findUnique({ where: { id: vehicleId }, select: { id: true } });
+    if (!vehicle) throw ODataError.badRequest(`Vehicle ${vehicleId} does not exist`, 'vehicleId');
   }
 
   /** GET /odata/v4/Me() — session helper: claims plus directory row. */
@@ -51,16 +74,21 @@ export class UsersSet extends ODataEntitySet {
 }
 
 /**
- * Devices: field-app device registry (device posture). Users see and register
- * their own devices (PENDING until an admin activates them); admins see all
- * and revoke lost phones (ADM-06/07).
+ * Devices: field-app device registry (device posture, PLATFORM.md §2.6).
+ *  - Every field role registers its own phone (SM-31 "Ask Kandy Hub to add
+ *    you"); it waits as PENDING until an admin activates it (ADM-05). A phone
+ *    that is not bound to the token yet may still do this: the guard lets the
+ *    self-enrollment routes through with `principal.enrollment` set, and the
+ *    phone may then register only the id it presents as X-Device-Id.
+ *  - People see only their own devices (abac.self); admins see all, activate
+ *    (binding the token to the phone) and revoke lost phones (ADM-07).
  */
 @Injectable()
 @EntitySet({
   name: 'Devices',
   model: 'Device',
-  read: [Roles.Admin, Roles.Dispatcher, Roles.Loader, Roles.Driver],
-  create: [Roles.Admin, Roles.Loader, Roles.Driver],
+  read: [Roles.Admin, Roles.Dispatcher, Roles.Loader, Roles.Driver, Roles.StoreManager],
+  create: [Roles.Admin, Roles.Dispatcher, Roles.Loader, Roles.Driver, Roles.StoreManager],
   update: [Roles.Admin],
   abac: { open: '*', self: (p) => ({ userId: p.sub }) },
   navigation: ['user'],
@@ -78,7 +106,15 @@ export class DevicesSet extends ODataEntitySet {
   }
 
   async beforeCreate(data: Record<string, any>, ctx: WriteContext) {
-    if (!data.id || !/^[A-Za-z0-9-]{4,64}$/.test(data.id)) throw ODataError.badRequest('id must be 4-64 letters, digits or dashes', 'id');
+    const enrolling = ctx.principal.enrollment;
+    if (enrolling) {
+      // A phone asks for itself only: the key is the X-Device-Id it presented.
+      if (data.id !== undefined && data.id !== enrolling.deviceId) {
+        throw ODataError.badRequest('A phone can only ask for access for itself: id must equal its X-Device-Id', 'id');
+      }
+      data = { ...data, id: enrolling.deviceId };
+    }
+    if (!data.id || !DEVICE_ID_PATTERN.test(data.id)) throw ODataError.badRequest('id must be 4-64 letters, digits or dashes', 'id');
     const admin = isPrivileged(ctx.principal);
     return {
       ...data,
@@ -88,16 +124,22 @@ export class DevicesSet extends ODataEntitySet {
     };
   }
 
+  /** Admins insert directly; everyone else goes through self-enrollment (idempotent, audited). */
+  create(data: Record<string, any>, ctx: WriteContext) {
+    if (isPrivileged(ctx.principal)) return super.create(data, ctx);
+    return this.auth.enrollDevice({ id: data.id, label: data.label, platform: data.platform, model: data.model }, ctx.principal);
+  }
+
   /** POST Devices('DEV-RB-01')/Lodestar.Revoke {reason?} — lost phone (ADM-07). */
   @ODataAction({ name: 'Revoke', binding: 'entity', roles: [Roles.Admin], params: { reason: 'Edm.String' }, returns: 'Lodestar.Device' })
   revoke(ctx: OperationContext) {
     if (ctx.entity.status === DeviceStatus.REVOKED) throw ODataError.conflict('The device is already revoked');
-    return this.auth.revokeDevice(ctx.entity.id, ctx.principal.sub, ctx.params.reason);
+    return this.auth.revokeDevice(ctx.entity.id, ctx.principal, ctx.params.reason);
   }
 
-  /** POST Devices('…')/Lodestar.Activate — approve a registered device. */
+  /** POST Devices('…')/Lodestar.Activate — approve a phone (ADM-05) and bind the user's token to it. */
   @ODataAction({ name: 'Activate', binding: 'entity', roles: [Roles.Admin], returns: 'Lodestar.Device' })
   activate(ctx: OperationContext) {
-    return this.auth.activateDevice(ctx.entity.id);
+    return this.auth.activateDevice(ctx.entity.id, ctx.principal);
   }
 }

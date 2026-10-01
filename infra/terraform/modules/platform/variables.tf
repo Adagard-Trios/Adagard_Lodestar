@@ -159,6 +159,47 @@ variable "user_node_max" {
   default = 5
 }
 
+variable "user_pool_per_zone" {
+  description = "One autoscaled user pool per zone (true) or one across all zones (false). user_node_min/max apply per pool."
+  type        = bool
+  default     = true
+}
+
+variable "aks_autoscaler_profile" {
+  description = "Cluster autoscaler tuning (see modules/aks var.autoscaler_profile)."
+  type = object({
+    expander                         = optional(string, "least-waste")
+    scan_interval                    = optional(string, "10s")
+    scale_down_delay_after_add       = optional(string, "10m")
+    scale_down_unneeded              = optional(string, "10m")
+    scale_down_utilization_threshold = optional(string, "0.5")
+  })
+  default = {}
+}
+
+variable "agent_spot_pool" {
+  description = "Optional spot pool for the planning agent (see modules/aks var.agent_spot_pool)."
+  type = object({
+    enabled   = optional(bool, false)
+    vm_size   = optional(string, "Standard_D4ds_v5")
+    max_count = optional(number, 3)
+    max_price = optional(number, -1)
+  })
+  default = {}
+}
+
+# ------------------------------------------------------------------ Redis
+variable "redis_sku_name" {
+  description = "Azure Cache for Redis tier for the Socket.IO adapter."
+  type        = string
+  default     = "Standard"
+}
+
+variable "redis_capacity" {
+  type    = number
+  default = 1
+}
+
 # ------------------------------------------------------------------ data
 variable "acr_zone_redundancy" {
   type    = bool

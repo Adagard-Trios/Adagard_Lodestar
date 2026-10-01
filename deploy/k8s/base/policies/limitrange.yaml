@@ -1,0 +1,27 @@
+# Defaults for any container that does not declare resources (so the quota
+# above can admit it and the HPA has a request to divide by), and hard bounds
+# per container.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: lodestar
+  labels:
+    app.kubernetes.io/part-of: lodestar
+spec:
+  limits:
+  - type: Container
+    defaultRequest:
+      cpu: 100m
+      memory: 128Mi
+    default:
+      cpu: 500m
+      memory: 512Mi
+    min:
+      cpu: 5m
+      memory: 8Mi
+    max:
+      cpu: '4'
+      memory: 4Gi
+  - type: PersistentVolumeClaim
+    max:
+      storage: 20Gi

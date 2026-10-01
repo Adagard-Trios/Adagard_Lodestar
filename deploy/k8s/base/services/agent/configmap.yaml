@@ -12,5 +12,8 @@ data:
   DB_SCHEMA: agent
   AGENT_MODEL: mock
   CHECKPOINT_SCHEMA: agent
+  # names read by lodestar_agent/config.py
+  AGENT_DB_SCHEMA: agent
+  LODESTAR_SERVICE_URLS: Orders=http://orders.lodestar.svc.cluster.local:3002,Outlets=http://outlets.lodestar.svc.cluster.local:3005,Calendar=http://outlets.lodestar.svc.cluster.local:3005,DistrictTravel=http://outlets.lodestar.svc.cluster.local:3005,ServiceAllowances=http://outlets.lodestar.svc.cluster.local:3005,Vehicles=http://fleet.lodestar.svc.cluster.local:3004
   UVICORN_WORKERS: '2'
   PYTHONUNBUFFERED: '1'

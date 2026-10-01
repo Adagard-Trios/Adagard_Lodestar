@@ -1,0 +1,35 @@
+# kind cluster `lodestar` for deploy/k8s/overlays/local (used by up.sh).
+# 1 control plane + 2 workers. The workers carry the same pool label as the AKS
+# user pools (lodestar.io/pool=apps) and one zone each, so the Deployments'
+# nodeSelector and zone topology spread work unchanged.
+# Host ports are the docker-compose ones (the images bake https://localhost:8443
+# in), so stop the compose stack first: `docker compose down`.
+#   https://localhost:8443  gateway (NodePort 30443): web, OData, /auth, /ws
+#   http://localhost:8082   field app (NodePort 30082)
+#   http://localhost:8180   Keycloak admin console, dev only (NodePort 30180)
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: lodestar
+nodes:
+- role: control-plane
+  extraPortMappings:
+  - containerPort: 30443
+    hostPort: 8443
+    listenAddress: 127.0.0.1
+    protocol: TCP
+  - containerPort: 30082
+    hostPort: 8082
+    listenAddress: 127.0.0.1
+    protocol: TCP
+  - containerPort: 30180
+    hostPort: 8180
+    listenAddress: 127.0.0.1
+    protocol: TCP
+- role: worker
+  labels:
+    lodestar.io/pool: apps
+    topology.kubernetes.io/zone: lodestar-a
+- role: worker
+  labels:
+    lodestar.io/pool: apps
+    topology.kubernetes.io/zone: lodestar-b

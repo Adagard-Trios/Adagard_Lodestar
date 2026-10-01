@@ -35,3 +35,11 @@ output "node_resource_group" {
 output "istio_revision" {
   value = var.istio_revision
 }
+
+output "user_node_pool_names" {
+  value = [for p in azurerm_kubernetes_cluster_node_pool.user : p.name]
+}
+
+output "keda_enabled" {
+  value = var.keda_enabled
+}

@@ -59,18 +59,24 @@ export function splitTopLevel(input: string, sep: string): string[] {
   return parts;
 }
 
+// '+' between a time and an offset, e.g. 06:35:00+05:30, is a sign, not an encoded space
+const TIME_BEFORE = /\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/;
+const OFFSET_AFTER = /^\d{2}:\d{2}/;
+
 function decode(s: string): string {
+  // Most HTTP clients (httpx, requests, URLSearchParams) send spaces as '+' and a real '+' as %2B.
+  const spaced = s.replace(/\+/g, (_m, at: number) =>
+    TIME_BEFORE.test(s.slice(0, at)) && OFFSET_AFTER.test(s.slice(at + 1)) ? '+' : ' ');
   try {
-    return decodeURIComponent(s);
+    return decodeURIComponent(spaced);
   } catch {
     throw ODataError.badRequest(`Malformed percent-encoding in '${s}'`);
   }
 }
 
 /**
- * Parses a raw query string (without '?'). Per RFC 3986 a '+' is kept as-is
- * (OData URLs encode spaces as %20), so date-times with +05:30 offsets work
- * when clients encode them properly.
+ * Parses a raw query string (without '?'). Spaces may arrive as %20 or as '+'
+ * (form encoding); an unencoded '+' in a date-time offset such as +05:30 is kept.
  */
 export function parseQueryString(raw: string): Map<string, string> {
   const params = new Map<string, string>();

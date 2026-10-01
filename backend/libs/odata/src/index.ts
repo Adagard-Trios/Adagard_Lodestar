@@ -15,6 +15,7 @@ export * from './serialize';
 export * from './entity-set';
 export * from './registry';
 export * from './engine';
+export * from './idempotency';
 export * from './request-context';
 export * from './service-map';
 export * from './odata-exception.filter';

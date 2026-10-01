@@ -174,7 +174,7 @@ describe('NotificationsGateway', () => {
     trip = mock<FindUniqueDelegate>();
     gateway = new NotificationsGateway(instance(verifier), instance(posture), { trip: instance(trip) } as any);
     when(trip.findUnique(anything())).thenResolve({ depot: 'KANDY', vehicleId: 'VEH057', stops: [{ outletId: 'OUT106' }] });
-    when(posture.check(anything())).thenResolve(undefined as any);
+    when(posture.check(anything(), anything())).thenResolve(undefined as any);
   });
 
   describe('roomAllowed', () => {
@@ -269,7 +269,7 @@ describe('NotificationsGateway', () => {
       expect(s1.disconnected).toBe(true);
 
       when(verifier.verify('tok')).thenResolve(personas.ruwan);
-      when(posture.check(anything())).thenReject(new Error('revoked'));
+      when(posture.check(anything(), anything())).thenReject(new Error('revoked'));
       const s2 = fakeSocket({ auth: { token: 'tok' }, headers: {}, query: {} });
       await gateway.handleConnection(s2 as any);
       expect(s2.disconnected).toBe(true);
@@ -284,7 +284,7 @@ describe('NotificationsGateway', () => {
       await gateway.handleConnection(s as any);
 
       verify(verifier.verify('h.p.s')).once();
-      verify(posture.check(kandyDispatcher)).once();
+      verify(posture.check(kandyDispatcher, undefined)).once();
       expect(s.data.principal).toBe(kandyDispatcher);
       expect(s.joined).toEqual(['user:nilanthi', 'dispatcher:KANDY', 'trip:T1']);
       expect(s.emitted).toEqual([
@@ -292,6 +292,21 @@ describe('NotificationsGateway', () => {
         ['room_denied', { room: 'store:OUT106' }],
       ]);
       expect(s.disconnected).toBeUndefined();
+    });
+
+    it('binds a field token to the device named in the handshake (auth.deviceId, else X-Device-Id)', async () => {
+      when(verifier.verify('tok')).thenResolve(personas.ruwan);
+      await gateway.handleConnection(fakeSocket({ auth: { token: 'tok', deviceId: 'DEV-RB-01' }, headers: { 'x-device-id': 'ignored' }, query: {} }) as any);
+      verify(posture.check(personas.ruwan, 'DEV-RB-01')).once();
+
+      await gateway.handleConnection(fakeSocket({ auth: { token: 'tok' }, headers: { 'x-device-id': 'DEV-RB-01' }, query: {} }) as any);
+      verify(posture.check(personas.ruwan, 'DEV-RB-01')).twice();
+
+      when(posture.check(personas.ruwan, 'DEV-OTHER')).thenReject(new Error('DeviceMismatch'));
+      const s = fakeSocket({ auth: { token: 'tok', deviceId: 'DEV-OTHER' }, headers: {}, query: {} });
+      await gateway.handleConnection(s as any);
+      expect(s.disconnected).toBe(true);
+      expect(s.joined).toEqual([]);
     });
 
     it('joins the canonical (upper-case) depot room and reports denials under the requested name', async () => {

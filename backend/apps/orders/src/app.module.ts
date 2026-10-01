@@ -12,6 +12,7 @@ import { OrderLineItemsSet, ORDERS_SUMMARY_TYPE, OrdersSet } from './orders.sets
       entitySets: [OrdersSet, OrderLineItemsSet],
       providers: [OrdersService],
       complexTypes: { OrdersSummary: ORDERS_SUMMARY_TYPE },
+      idempotency: { model: 'ordersIdempotencyKey' },
     }),
   ],
 })

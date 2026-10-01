@@ -1,0 +1,47 @@
+// Is there signal? NetInfo (OS / browser connectivity) combined with what the last API call saw:
+// a failed fetch marks us offline at once; the next successful call or a NetInfo "connected" marks us back.
+import NetInfo from '@react-native-community/netinfo';
+import { Store } from '@/lib/store';
+
+export type NetState = { online: boolean; since: string };
+
+export const network = new Store<NetState>({ online: true, since: new Date().toISOString() });
+
+function setOnline(online: boolean) {
+  if (network.get().online === online) return;
+  network.set({ online, since: new Date().toISOString() });
+}
+
+/** Feedback from the API client. */
+export function reportReachable(ok: boolean) {
+  setOnline(ok);
+}
+
+let started = false;
+
+/** Starts listening to the OS / browser (idempotent). */
+export function startNetwork(): () => void {
+  if (started) return () => undefined;
+  started = true;
+  // No third-party reachability probe: connectivity comes from the OS / browser, and real API calls
+  // report what they see (reportReachable).
+  NetInfo.configure({ reachabilityShouldRun: () => false });
+  // With the probe off NetInfo reports isInternetReachable=false, so only isConnected counts.
+  const unsub = NetInfo.addEventListener(s => setOnline(s.isConnected !== false));
+  NetInfo.fetch()
+    .then(s => setOnline(s.isConnected !== false))
+    .catch(() => undefined);
+  // Browsers: NetInfo follows navigator.connection "change" where it exists, which does not fire when
+  // the browser goes offline; the window online/offline events do.
+  const w = typeof window !== 'undefined' && typeof window.addEventListener === 'function' ? window : null;
+  const on = () => setOnline(true);
+  const off = () => setOnline(false);
+  w?.addEventListener('online', on);
+  w?.addEventListener('offline', off);
+  return () => {
+    unsub();
+    w?.removeEventListener('online', on);
+    w?.removeEventListener('offline', off);
+    started = false;
+  };
+}

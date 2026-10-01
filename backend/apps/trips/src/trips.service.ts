@@ -2,12 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { ODataError } from '@lodestar/odata';
 import { Depot, OrderStatus, Prisma, TripStatus } from '@prisma/client';
+import { runDateRange } from '@lodestar/platform';
 
-export function dayRange(runDate: string) {
-  const start = new Date(`${runDate.slice(0, 10)}T00:00:00.000Z`);
-  const end = new Date(start);
-  end.setUTCDate(end.getUTCDate() + 1);
-  return { start, end };
+/** Stored window [start, end) of a run date (YYYY-MM-DD, or a Date read in Sri Lanka time). */
+export function dayRange(runDate: string | Date) {
+  return runDateRange(runDate);
 }
 
 export interface PodInput {

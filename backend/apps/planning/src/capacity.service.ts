@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { Depot, TempClass, VehicleStatus } from '@prisma/client';
+import { addBusinessDays, runDateRange, runDateValue } from '@lodestar/platform';
 
 /**
  * Capacity Service
@@ -24,11 +25,8 @@ export class CapacityService {
   }
 
   async getChilledDemand(depot: Depot, runDate: Date) {
-    // Run dates are stored as UTC midnight; use a UTC day window (not server-local).
-    const startOf = new Date(runDate);
-    startOf.setUTCHours(0, 0, 0, 0);
-    const endOf = new Date(startOf);
-    endOf.setUTCDate(endOf.getUTCDate() + 1);
+    // Run dates are stored as UTC midnight of their Sri Lanka calendar date (never server-local).
+    const { start: startOf, end: endOf } = runDateRange(runDate);
 
     const agg = await this.prisma.order.aggregate({
       where: {
@@ -56,12 +54,12 @@ export class CapacityService {
     const baseTotalM3PerDay   = depot === Depot.PELIYAGODA ? 183 : 100;
 
     const weeks = [];
-    const startWeek = new Date('2026-04-06'); // W15
+    const startWeek = '2026-04-06'; // W15 (Monday)
     for (let w = 0; w < 10; w++) {
-      const weekStart = new Date(startWeek);
-      weekStart.setDate(startWeek.getDate() + w * 7);
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 7);
+      // Calendar dates, not server-local midnights: stable whatever the container TZ.
+      const weekStartIso = addBusinessDays(startWeek, w * 7);
+      const weekStart = runDateValue(weekStartIso);
+      const weekEnd = runDateValue(addBusinessDays(weekStartIso, 7));
 
       const calDays = await this.prisma.calendar.findMany({
         where: { date: { gte: weekStart, lt: weekEnd }, isOperating: true },
@@ -77,7 +75,7 @@ export class CapacityService {
 
       weeks.push({
         week: `W${15 + w}`,
-        weekStart: weekStart.toISOString().split('T')[0],
+        weekStart: weekStartIso,
         operatingDays,
         estimatedChilledDemandM3: Math.round(baseChilledM3PerDay * operatingDays * multiplier),
         estimatedTotalM3: Math.round(baseTotalM3PerDay * operatingDays * multiplier),

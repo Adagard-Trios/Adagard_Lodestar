@@ -6,8 +6,10 @@ deploy/
     base/                       one copy of every manifest
       namespace.yaml            lodestar, istio.io/rev=<asm revision>
       common/                   lodestar-common ConfigMap (OIDC, service URLs)
+      policies/                 PriorityClasses, ResourceQuota, LimitRange
       services/<svc>/           Deployment, Service, ServiceAccount (workload identity),
-                                SecretProviderClass (Key Vault), ConfigMap, PDB, HPA
+                                SecretProviderClass (Key Vault), ConfigMap, PDB,
+                                HPA or KEDA ScaledObject (agent, sync)
       istio/                    STRICT mTLS, RequestAuthentication (Entra JWKS),
                                 deny-all + per-edge AuthorizationPolicies, Gateway,
                                 VirtualServices (/odata/v4/<EntitySet> routing), DestinationRules
@@ -16,8 +18,9 @@ deploy/
       network-policies/         Cilium-enforced defence in depth
       jobs/migrate.yaml         Argo CD PreSync hook: DB roles/schemas + prisma migrate (+ seed)
     components/azure-wiring/    kustomize replacements: fills TENANT_ID, CLIENT_ID_*, hosts, ...
-    overlays/dev|prod/          replicas, resources, images (ACR), HPA bounds, LOG_LEVEL, RUN_SEED
+    overlays/dev|prod/          replicas, images (ACR), autoscaling bounds, LOG_LEVEL, RUN_SEED
       azure-wiring/azure.env    non-secret IDs from `terraform output -raw kustomize_azure_env`
+    overlays/local/             kind only (deploy/local/kind/up.sh), never synced by Argo CD
   argocd/
     bootstrap/root-app.yaml     root app-of-apps (Terraform installs the same via Helm)
     envs/dev/                   AppProject lodestar-dev + Application lodestar-dev (auto-sync)
@@ -53,6 +56,7 @@ sequenceDiagram
 3. **Project guardrails.** Each AppProject allows one repo, the namespaces `lodestar` and `aks-istio-ingress`, `Namespace` as the only cluster-scoped kind, and an explicit list of namespaced kinds. It cannot create Secrets, RBAC or CRDs.
 4. **Migrations.** `base/jobs/migrate.yaml` is a PreSync hook, so the schema is migrated before any Deployment rolls. `RUN_SEED` is `true` on dev and `false` on prod.
 5. **Replica drift.** HPAs own `spec.replicas`. The Applications ignore that field (`RespectIgnoreDifferences=true`).
+6. **Scaling objects.** The AppProjects also allow `PriorityClass` (cluster-scoped), `ResourceQuota`, `LimitRange`, and KEDA's `ScaledObject` and `TriggerAuthentication`. The KEDA CRDs come from the AKS add-on, which Terraform enables. KEDA creates the HPAs for `agent` and `sync` itself. They are not in git, and Argo CD shows them as children of the ScaledObjects. See `deploy/k8s/README.md` and PLATFORM.md section 9.
 
 ## What Jenkins does (PLATFORM.md §7, step 6)
 
@@ -107,4 +111,7 @@ These are identifiers only: tenant ID, client IDs, vault name, hosts and CIDRs. 
 ```bash
 kustomize build deploy/k8s/overlays/dev  | kubeconform -strict -ignore-missing-schemas -
 kustomize build deploy/k8s/overlays/prod | kubeconform -strict -ignore-missing-schemas -
+kustomize build --load-restrictor LoadRestrictionsNone deploy/k8s/overlays/local | kubeconform -strict -ignore-missing-schemas -
 ```
+
+To run the whole platform on a local kind cluster, see `deploy/k8s/README.md` (`deploy/local/kind/up.sh`).

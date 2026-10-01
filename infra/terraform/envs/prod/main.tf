@@ -30,8 +30,22 @@ module "platform" {
   system_node_min     = 3
   system_node_max     = 5
   user_node_vm_size   = "Standard_D8ds_v5"
-  user_node_min       = 3
-  user_node_max       = 10
+  # per zone: 1-4 nodes in each of zones 1, 2, 3 (3-12 in total)
+  user_pool_per_zone = true
+  user_node_min      = 1
+  user_node_max      = 4
+  aks_autoscaler_profile = {
+    expander                         = "least-waste"
+    scale_down_unneeded              = "10m"
+    scale_down_delay_after_add       = "10m"
+    scale_down_utilization_threshold = "0.5"
+  }
+  # the planning agent prefers spot nodes (tainted, min 0) and falls back to apps
+  agent_spot_pool = {
+    enabled   = true
+    vm_size   = "Standard_D4ds_v5"
+    max_count = 4
+  }
 
   # data
   acr_zone_redundancy            = true
@@ -41,6 +55,8 @@ module "platform" {
   postgres_backup_retention_days = 35
   postgres_geo_redundant_backup  = true
   log_retention_days             = 90
+  redis_sku_name                 = "Premium"
+  redis_capacity                 = 1
 
   # edge
   web_hostname                    = var.web_hostname

@@ -19,6 +19,8 @@ spec:
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace
+    - group: scheduling.k8s.io
+      kind: PriorityClass
   namespaceResourceWhitelist:
     - { group: "", kind: ConfigMap }
     - { group: "", kind: Service }
@@ -35,6 +37,11 @@ spec:
     - { group: networking.istio.io, kind: Gateway }
     - { group: networking.istio.io, kind: VirtualService }
     - { group: networking.istio.io, kind: DestinationRule }
+    # scaling (PLATFORM.md section 9): quota/limits, KEDA (AKS add-on CRDs)
+    - { group: "", kind: ResourceQuota }
+    - { group: "", kind: LimitRange }
+    - { group: keda.sh, kind: ScaledObject }
+    - { group: keda.sh, kind: TriggerAuthentication }
   orphanedResources:
     warn: true
   roles:

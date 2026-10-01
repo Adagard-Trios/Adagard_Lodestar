@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./styles/live.css";
+import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
   title: "Waypoint Lodestar",
@@ -22,7 +24,7 @@ export default function RootLayout({
         />
       </head>
       <body>
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

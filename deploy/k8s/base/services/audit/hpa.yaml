@@ -1,0 +1,56 @@
+# CPU and memory of the app container only (ContainerResource: the Istio
+# sidecar's usage does not skew the ratio). Memory is a guard rail; CPU drives.
+# Bounds here are prod-sized; overlays/dev and overlays/local shrink them.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: audit
+  labels:
+    app: audit
+    app.kubernetes.io/name: audit
+    app.kubernetes.io/part-of: lodestar
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: audit
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+  - type: ContainerResource
+    containerResource:
+      name: cpu
+      container: audit
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: ContainerResource
+    containerResource:
+      name: memory
+      container: audit
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleUp:
+      # react at once: double the pods, or add 4, every 15 s (whichever is more)
+      stabilizationWindowSeconds: 0
+      selectPolicy: Max
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+      - type: Pods
+        value: 4
+        periodSeconds: 15
+    scaleDown:
+      # wait 5 min of lower load, then remove at most 20 % (min 1 pod) per minute
+      stabilizationWindowSeconds: 300
+      selectPolicy: Max
+      policies:
+      - type: Percent
+        value: 20
+        periodSeconds: 60
+      - type: Pods
+        value: 1
+        periodSeconds: 60

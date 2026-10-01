@@ -1,0 +1,93 @@
+# Active LangGraph runs. Every graph superstep writes a checkpoint row
+# (agent.checkpoints, JSON field ts); a run paused at NEEDS_APPROVAL stops
+# writing, so threads with a checkpoint in the last 2 minutes are the runs
+# that are drafting right now. The agent has no Prometheus endpoint, and this
+# is the same table that makes runs survive restarts (PLATFORM.md section 4).
+# KEDA (AKS add-on; Helm chart on kind) owns the HPA it generates, named like
+# the Deployment so `kubectl get hpa` lists it with the others. CPU and memory
+# stay as triggers; the HPA takes the highest proposal of all three.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: agent
+  labels:
+    app: agent
+    app.kubernetes.io/name: agent
+    app.kubernetes.io/part-of: lodestar
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: agent
+  minReplicaCount: 2
+  maxReplicaCount: 8
+  pollingInterval: 15
+  advanced:
+    restoreToOriginalReplicaCount: false
+    horizontalPodAutoscalerConfig:
+      name: agent
+      behavior:
+        scaleUp:
+          # react at once: double the pods, or add 4, every 15 s (whichever is more)
+          stabilizationWindowSeconds: 0
+          selectPolicy: Max
+          policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 15
+          - type: Pods
+            value: 4
+            periodSeconds: 15
+        scaleDown:
+          # wait 5 min of lower load, then remove at most 20 % (min 1 pod) per minute
+          stabilizationWindowSeconds: 300
+          selectPolicy: Max
+          policies:
+          - type: Percent
+            value: 20
+            periodSeconds: 60
+          - type: Pods
+            value: 1
+            periodSeconds: 60
+  triggers:
+  - type: cpu
+    metricType: Utilization
+    metadata:
+      value: '65'
+      containerName: agent
+  - type: memory
+    metricType: Utilization
+    metadata:
+      value: '85'
+      containerName: agent
+  - type: postgresql
+    name: agent-load
+    metricType: AverageValue
+    metadata:
+      host: POSTGRES_HOST
+      port: '5432'
+      userName: svc_agent
+      dbName: lodestar
+      sslmode: require
+      query: >-
+        SELECT COUNT(DISTINCT thread_id) FROM agent.checkpoints WHERE (checkpoint->>'ts')::timestamptz > now() - interval '2 minutes'
+      targetQueryValue: '2'
+      activationTargetQueryValue: '0'
+    authenticationRef:
+      name: agent-postgres
+---
+# Password of the service's own login role (svc_agent): Key Vault secret
+# db-password-agent, synced by the agent SecretProviderClass into agent-secrets.
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: agent-postgres
+  labels:
+    app: agent
+    app.kubernetes.io/name: agent
+    app.kubernetes.io/part-of: lodestar
+spec:
+  secretTargetRef:
+  - parameter: password
+    name: agent-secrets
+    key: DB_PASSWORD

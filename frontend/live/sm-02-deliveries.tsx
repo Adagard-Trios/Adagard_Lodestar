@@ -1,0 +1,211 @@
+'use client';
+// SM-02 Deliveries, live. Markup and classes from the generated design (frontend/screens/sm-02-deliveries.tsx).
+// Data: the outlet's TripStops (with Trip, Order and POD) — the API returns only stops of the outlet in the
+// token — the next delivery's ETA band and late risk, its order thread, the week's orders, and unread
+// Notifications ("Got it" marks them read). Realtime: the store:<outlet> room pushes eta_update and
+// credit_note_issued, which refresh the screen.
+import { useMemo, useState } from 'react';
+import Btn from '@/components/live/Btn';
+import { StoreTop, useMyOutlet } from '@/components/live/chrome';
+import { Ic } from '@/components/live/icons';
+import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
+import { useAuth } from '@/lib/auth/AuthProvider';
+import { daysAgo, fmtClock, fmtDay, fmtRunDate, fmtTime, title } from '@/lib/format';
+import { useAction, useQuery } from '@/lib/odata/hooks';
+import type { Notification, Order, Trip, TripStop } from '@/lib/odata/types';
+
+const PILL: Record<string, [string, string]> = {
+  RECEIVED: ['m-pill--brand', 'Received'], PLANNED: ['m-pill--brand', 'Planned'], LOADED: ['m-pill--loaded', 'Loaded'],
+  ENROUTE: ['m-pill--info', 'On the way'], DELIVERED: ['m-pill--ok', 'Delivered'], DEFERRED: ['m-pill--warn', 'Deferred'],
+  EXCEPTION: ['m-pill--bad', 'Exception'], CANCELLED: ['', 'Cancelled'],
+};
+const STEPS = ['RECEIVED', 'PLANNED', 'LOADED', 'ENROUTE', 'DELIVERED'];
+
+function Thread({ order, stop, trip }: { order: Order; stop?: TripStop; trip?: Trip }) {
+  const at = Math.max(0, STEPS.indexOf(order.status === 'DEFERRED' || order.status === 'EXCEPTION' ? 'PLANNED' : order.status));
+  const times = [fmtDay(order.orderedAt), order.status === 'RECEIVED' ? '' : 'planned', trip?.bay ? `bay ${trip.bay}` : '', trip?.departTime ? fmtClock(trip.departTime) : '', stop?.arrivalActual ? fmtClock(stop.arrivalActual) : stop?.etaModelBandEarly ? `${fmtClock(stop.etaModelBandEarly)}–${fmtClock(stop.etaModelBandLate)}` : ''];
+  return (
+    <div className="thread thread--wide">
+      {STEPS.flatMap((st, i) => {
+        const done = i < at || order.status === 'DELIVERED';
+        const now = i === at && order.status !== 'DELIVERED';
+        const step = (
+          <div key={st} className={`thread__step ${done ? 'is-done' : now ? 'is-now' : ''}`}>
+            <div className="thread__node">{done ? <Ic n="check" /> : now ? <Ic n="box" /> : null}</div>
+            <div className="thread__label">{['Received', 'Planned', 'Loading', 'En route', 'Delivered'][i]}</div>
+            <div className="thread__time">{now ? 'now' : times[i]}</div>
+          </div>
+        );
+        return i < STEPS.length - 1 ? [step, <div key={`${st}-bar`} className={`thread__bar${i < at || order.status === 'DELIVERED' ? ' is-done' : ''}`} />] : [step];
+      })}
+    </div>
+  );
+}
+
+export default function LiveSm02Deliveries() {
+  const { session } = useAuth();
+  const outlet = useMyOutlet();
+  const outletId = session?.outletId;
+  const [range, setRange] = useState<7 | 28>(7);
+
+  const stops = useQuery<TripStop[]>(outletId ? `store-stops:${outletId}` : null, async c =>
+    (await c.list<TripStop>('TripStops', { filter: `outletId eq '${outletId}'`, expand: 'trip,order,pod', orderby: 'etaPlan desc', top: 20 })).value,
+  { refreshOn: ['eta_update', 'credit_note_issued', 'notification'] });
+  const orders = useQuery<Order[]>(outletId ? `store-week:${outletId}:${range}` : null, async c =>
+    (await c.list<Order>('Orders', { filter: `outletId eq '${outletId}' and runDate ge ${daysAgo(range)}T00:00:00Z`, expand: 'tripStop', orderby: 'runDate desc,id', top: 60 })).value,
+  { refreshOn: ['eta_update', 'notification'] });
+  const notes = useQuery<Notification[]>('store-unread', async c =>
+    (await c.list<Notification>('Notifications', { filter: 'readAt eq null', orderby: 'sentAt desc', top: 3 })).value,
+  { refreshOn: ['notification', 'credit_note_issued', 'eta_update'] });
+  const markRead = useAction<string, unknown>((c, id) => c.action('Notifications', id, 'MarkRead'), { onSuccess: () => void notes.refresh() });
+
+  // The delivery to show: the next one not yet delivered, else the latest.
+  const sorted = useMemo(() => [...(stops.data ?? [])].sort((a, b) => String(a.etaPlan ?? '').localeCompare(String(b.etaPlan ?? ''))), [stops.data]);
+  const open = sorted.filter(s => s.status !== 'DELIVERED');
+  const current = open[0] ?? sorted[sorted.length - 1];
+  const sameRun = current ? sorted.filter(s => s.tripId === current.tripId && s.outletId === current.outletId) : [];
+  const trip = current?.trip;
+  const order = current?.order;
+  const risk = current?.lateRiskPct ?? null;
+  const o = outlet.data;
+  const units = sameRun.reduce((s, x) => s + (x.order?.units ?? 0), 0);
+
+  return (
+    <div className="frame frame--desktop mode-store" data-name="SM-02 Deliveries · desktop">
+      <div className="s-shell">
+        <StoreTop active="deliveries" avatarLk="L128" />
+        <div className="d-main">
+          <div className="d-head">
+            <div className="d-head__txt">
+              <div className="d-eyebrow">
+                {current ? fmtRunDate(trip?.runDate ?? current.etaPlan) : 'No delivery yet'}
+                <span className="m-sep" />{` ${sameRun.length} order${sameRun.length === 1 ? '' : 's'} `}
+                {trip && <><span className="m-sep" />{` ${trip.vehicleId} `}</>}
+              </div>
+              <div className="d-h1">{current?.status === 'DELIVERED' ? 'Latest delivery' : "Today's delivery"}</div>
+            </div>
+            {trip && <span className={`m-pill ${PILL[trip.status === 'ENROUTE' ? 'ENROUTE' : trip.status === 'COMPLETE' ? 'DELIVERED' : 'LOADED'][0]}`}><span className="dot" />{title(trip.status)}{trip.bay ? ` · Bay ${trip.bay}` : ''}</span>}
+          </div>
+          <ErrorBanner error={stops.error ?? orders.error ?? notes.error ?? markRead.error} onRetry={() => { void stops.refresh(); void orders.refresh(); }} />
+          <div className="hstack" style={{ gap: '18px', alignItems: 'stretch' }}>
+            <div className="d-card" style={{ flex: '1' }} data-testid="next-delivery">
+              {!stops.data && !stops.error && <Skeleton rows={2} />}
+              {stops.data && !current && <Empty title="No deliveries yet" text="Your next delivery shows here once it is planned." icon="van-2" />}
+              {current && (
+                <>
+                  <div className="arr">
+                    <div className="vstack" style={{ gap: '10px', width: '430px', flexShrink: '0' }}>
+                      <span className="d-kpi__l">{current.status === 'DELIVERED' ? 'Arrived' : 'Expected arrival'} · you&apos;re stop {current.stopSeq}</span>
+                      <span className="arr__v" data-testid="eta">
+                        {current.arrivalActual ? fmtClock(current.arrivalActual) : current.etaModelBandEarly && current.etaModelBandLate ? `${fmtClock(current.etaModelBandEarly)}–${fmtClock(current.etaModelBandLate)}` : fmtClock(current.etaModel ?? current.etaPlan)}
+                      </span>
+                      <span className="d-sub">
+                        {"ETA "}<b style={{ color: 'var(--text)' }}>~{fmtClock(current.etaModel ?? current.etaPlan)}</b>
+                        {current.etaPlan ? ` · plan ${fmtClock(current.etaPlan)}` : ''}
+                        {trip ? <> · <span className="id">{trip.vehicleId}</span></> : null}
+                        {trip?.departTime ? ` · departs ~${fmtClock(trip.departTime)}` : ''}
+                      </span>
+                      {risk !== null && current.status !== 'DELIVERED' && (
+                        <span className={`m-tag ${risk >= 30 ? 'm-tag--warn' : 'm-tag--ok'}`}><span className="dot" />{risk >= 30 ? 'At risk' : 'On time'} for your {o?.windowClose ?? ''} window · late risk {risk}%</span>
+                      )}
+                    </div>
+                    <div className="arr__plan">
+                      <span className="d-kpi__l" style={{ paddingBottom: '2px' }}>{"Receiving plan"}</span>
+                      <div className="plan-i"><span className="plan-i__lead"><Ic n="people" /></span><span><b>Staff at the door</b> from {current.etaModelBandEarly ? fmtClock(current.etaModelBandEarly) : o?.windowOpen}</span></div>
+                      {sameRun.some(s => s.order?.tempClass === 'CHILLED') && (
+                        <div className="plan-i"><span className="plan-i__lead plan-i__lead--cold"><Ic n="snow" /></span><span><b>Chilled first</b>, to the cold room ({sameRun.filter(s => s.order?.tempClass === 'CHILLED').map(s => <span key={s.id} className="id">{s.orderId}</span>)})</span></div>
+                      )}
+                      {o?.accessNote && <div className="plan-i"><span className="plan-i__lead plan-i__lead--plain"><Ic n="van-3" /></span><span>{o.accessNote}</span></div>}
+                    </div>
+                  </div>
+                  <div className="arr__foot">
+                    {order && <Thread order={order} stop={current} trip={trip} />}
+                    <div className="spacer" />
+                    <div className="vstack" style={{ gap: '8px' }}>
+                      {sameRun.map(s => (
+                        <div key={s.id} className="ord-mini">
+                          {s.order?.tempClass === 'CHILLED' ? <span className="m-tag m-tag--cold"><Ic n="snow" />{"Chilled"}</span> : <span className="m-tag"><span className="dot" />{"Dry"}</span>}
+                          <span className="id" style={{ color: 'var(--text)' }}>{s.orderId}</span>
+                          {s.pod && s.pod.unitsDelivered !== s.pod.unitsOrdered
+                            ? <span style={{ color: 'var(--st-deferred-fg)', fontWeight: '700' }}>{s.pod.unitsDelivered} of {s.pod.unitsOrdered}</span>
+                            : <span>{s.order?.units ?? 0} units</span>}
+                        </div>
+                      ))}
+                      <span className="t-3" style={{ fontSize: '12.5px' }}>{units} units in this delivery</span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="d-panel">
+              {notes.data?.length === 0 && (
+                <div className="d-card"><div className="ncard" style={{ gap: '6px' }}><span className="ncard__meta"><Ic n="check" className="ic ic--sm" />{"Nothing needs your attention"}</span></div></div>
+              )}
+              {notes.data?.map(n => (
+                <div key={n.id} className="d-card d-card--warn" data-notification={n.id}>
+                  <div className="ncard">
+                    <span className="ncard__meta"><Ic n="alert" className="ic ic--sm" />Needs your attention · {fmtTime(n.sentAt)}</span>
+                    <span className="ncard__t">{title(n.type)}</span>
+                    <span className="ncard__p">{String((n.payload as Record<string, unknown> | null)?.message ?? (n.payload as Record<string, unknown> | null)?.description ?? '')}</span>
+                    <div className="hstack" style={{ gap: '10px', marginTop: '4px' }}>
+                      <Btn className="d-btn d-btn--primary" style={{ height: '36px' }} busy={markRead.pending} onClick={() => void markRead.run(n.id)}>{"Got it"}</Btn>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div className="d-card" data-lk="L124">
+                <div className="ncard" style={{ gap: '6px' }}>
+                  <span className="ncard__meta" style={{ color: 'var(--brand-600)' }}><Ic n="clock" className="ic ic--sm" />{"Next orders close at 4:00 PM"}</span>
+                  <span className="ncard__p">Start from your last order. <b style={{ color: 'var(--brand-600)' }}>{"Start the next order"}</b></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="d-card" style={{ flex: '1' }}>
+            <div className="d-card__head">
+              <span className="d-card__title">{range === 7 ? 'This week' : 'Last 4 weeks'}</span>
+              <span style={{ fontSize: '13px', color: 'var(--text-3)' }}>{"every order, delivery and receipt in one list"}</span>
+              <div className="spacer" />
+              <div className="m-seg" style={{ margin: '0', width: '260px' }}>
+                {([7, 28] as const).map(r => (
+                  <span key={r} className={`m-seg__i lv-click${range === r ? ' is-on' : ''}`} style={{ height: '30px', fontSize: '13px' }} role="button" tabIndex={0}
+                    onClick={e => { e.stopPropagation(); setRange(r); }} onKeyDown={e => { if (e.key === 'Enter') setRange(r); }}>
+                    {r === 7 ? 'This week' : 'Last 4 weeks'}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="wk-row wk-row--head" data-lk="L125">
+              <span className="c" style={{ width: '120px' }}>{"Delivery day"}</span>
+              <span className="c" style={{ width: '130px' }}>{"Order"}</span>
+              <span className="c" style={{ width: '120px' }}>{"Temperature"}</span>
+              <span className="c" style={{ width: '110px' }}>{"Units"}</span>
+              <span className="c" style={{ width: '150px' }}>{"Status"}</span>
+              <span className="c" style={{ width: '150px' }}>{"Arrival"}</span>
+              <span className="c" style={{ flex: '1' }}>{"Receipt"}</span>
+            </div>
+            {!orders.data && !orders.error && <Skeleton rows={3} />}
+            {orders.data?.length === 0 && <Empty title="No orders in this period" />}
+            {orders.data?.map(x => {
+              const [cls, label] = PILL[x.status] ?? ['', x.status];
+              const st = x.tripStop;
+              return (
+                <div key={x.id} className={`wk-row${st && st.id === current?.id ? ' wk-row--sel' : ''}`} data-order={x.id}>
+                  <span className="c" style={{ width: '120px' }}>{fmtRunDate(x.runDate)}</span>
+                  <span className="c id" style={{ width: '130px' }}>{x.id}</span>
+                  <span className="c" style={{ width: '120px' }}>{x.tempClass === 'CHILLED' ? <span className="m-tag m-tag--cold"><span className="dot" />{"Chilled"}</span> : <span className="m-tag"><span className="dot" />{"Ambient"}</span>}</span>
+                  <span className="c" style={{ width: '110px' }}>{x.units}</span>
+                  <span className="c" style={{ width: '150px' }}><span className={`m-pill ${cls}`}><span className="dot" />{label}</span></span>
+                  <span className="c" style={{ width: '150px' }}>{st?.arrivalActual ? fmtClock(st.arrivalActual) : st?.etaModelBandEarly ? `${fmtClock(st.etaModelBandEarly)}–${fmtClock(st.etaModelBandLate)}` : '—'}</span>
+                  <span className="c" style={{ flex: '1', color: x.status === 'DELIVERED' ? 'var(--st-delivered-fg)' : 'var(--text-3)', fontWeight: x.status === 'DELIVERED' ? '700' : undefined }}>
+                    {x.status === 'DELIVERED' ? 'Delivered · see receipts' : 'after delivery'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -35,7 +35,7 @@ describe('ZeroTrustGuard', () => {
     guard = new ZeroTrustGuard(instance(reflector), instance(verifier), instance(posture));
     request = { headers: { authorization: `Bearer ${TOKEN}` } };
     when(verifier.verify(TOKEN)).thenResolve(personas.nilanthi);
-    when(posture.check(anything())).thenResolve();
+    when(posture.check(anything(), anything())).thenResolve();
     meta(IS_PUBLIC_KEY, undefined);
     meta(ALLOW_KEY, ['dispatcher']);
     meta(SCOPE_KEY, undefined);
@@ -51,7 +51,33 @@ describe('ZeroTrustGuard', () => {
   it('verifies the token, checks device posture and attaches the principal', async () => {
     await expect(guard.canActivate(http())).resolves.toBe(true);
     expect(request.principal).toBe(personas.nilanthi);
-    verify(posture.check(personas.nilanthi)).once();
+    verify(posture.check(personas.nilanthi, undefined)).once();
+  });
+
+  it('hands the X-Device-Id header to the posture check', async () => {
+    request.headers['x-device-id'] = 'DEV-RB-01';
+    when(verifier.verify(TOKEN)).thenResolve(personas.ruwan);
+    meta(ALLOW_KEY, ['driver']);
+    await expect(guard.canActivate(http())).resolves.toBe(true);
+    verify(posture.check(personas.ruwan, 'DEV-RB-01')).once();
+  });
+
+  it('401s with DeviceMismatch when the header names another phone (no principal attached)', async () => {
+    const real = new DevicePostureService({ issuers: [], audience: 'lodestar-api', fieldClientId: 'lodestar-field' }, {
+      findDevice: async (id: string) => ({ id, userId: 'ruwan', status: 'ACTIVE' }),
+    });
+    guard = new ZeroTrustGuard(instance(reflector), instance(verifier), real);
+    when(verifier.verify(TOKEN)).thenResolve(personas.ruwan);
+    meta(ALLOW_KEY, ['driver']);
+
+    request.headers['x-device-id'] = 'DEV-STOLEN';
+    const err = await guard.canActivate(http()).catch((e) => e);
+    expect(err).toBeInstanceOf(UnauthorizedException);
+    expect(err.getResponse()).toMatchObject({ code: 'DeviceMismatch' });
+    expect(request.principal).toBeUndefined();
+
+    request.headers['x-device-id'] = 'DEV-RB-01';
+    await expect(guard.canActivate(http())).resolves.toBe(true);
   });
 
   it('401s without a bearer token', async () => {
@@ -66,7 +92,7 @@ describe('ZeroTrustGuard', () => {
     await expect(guard.canActivate(http())).rejects.toThrow('Token expired');
 
     when(verifier.verify(TOKEN)).thenResolve(personas.ruwan);
-    when(posture.check(anything())).thenReject(new UnauthorizedException('Device is revoked'));
+    when(posture.check(anything(), anything())).thenReject(new UnauthorizedException('Device is revoked'));
     await expect(guard.canActivate(http())).rejects.toThrow('Device is revoked');
   });
 

@@ -111,8 +111,10 @@ export class FilterTranslator {
     const nullable = !o.prop.isRequired;
 
     if (value === null) {
-      if (op === 'eq') return { [f]: null };
-      if (op === 'ne') return { [f]: { not: null } };
+      // a required property is never null: eq null matches nothing, ne null everything
+      // (Prisma rejects a null comparison on a non-nullable column)
+      if (op === 'eq') return nullable ? { [f]: null } : nothing();
+      if (op === 'ne') return nullable ? { [f]: { not: null } } : {};
       throw ODataError.invalidQuery('$filter', `null can only be compared with eq or ne`);
     }
 

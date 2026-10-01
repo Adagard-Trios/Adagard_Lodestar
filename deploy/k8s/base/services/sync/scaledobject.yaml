@@ -1,0 +1,92 @@
+# OfflineEvents still pending plus those replayed in the last minute. After a
+# signal blackout every driver's queue lands at once (PushBatch), so the
+# replay rate leads CPU by a polling interval; the IS NULL arm counts a real
+# backlog if replay ever becomes asynchronous.
+# KEDA (AKS add-on; Helm chart on kind) owns the HPA it generates, named like
+# the Deployment so `kubectl get hpa` lists it with the others. CPU and memory
+# stay as triggers; the HPA takes the highest proposal of all three.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: sync
+  labels:
+    app: sync
+    app.kubernetes.io/name: sync
+    app.kubernetes.io/part-of: lodestar
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: sync
+  minReplicaCount: 3
+  maxReplicaCount: 15
+  pollingInterval: 15
+  advanced:
+    restoreToOriginalReplicaCount: false
+    horizontalPodAutoscalerConfig:
+      name: sync
+      behavior:
+        scaleUp:
+          # react at once: double the pods, or add 4, every 15 s (whichever is more)
+          stabilizationWindowSeconds: 0
+          selectPolicy: Max
+          policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 15
+          - type: Pods
+            value: 4
+            periodSeconds: 15
+        scaleDown:
+          # wait 5 min of lower load, then remove at most 20 % (min 1 pod) per minute
+          stabilizationWindowSeconds: 300
+          selectPolicy: Max
+          policies:
+          - type: Percent
+            value: 20
+            periodSeconds: 60
+          - type: Pods
+            value: 1
+            periodSeconds: 60
+  triggers:
+  - type: cpu
+    metricType: Utilization
+    metadata:
+      value: '70'
+      containerName: sync
+  - type: memory
+    metricType: Utilization
+    metadata:
+      value: '80'
+      containerName: sync
+  - type: postgresql
+    name: sync-load
+    metricType: AverageValue
+    metadata:
+      host: POSTGRES_HOST
+      port: '5432'
+      userName: svc_sync
+      dbName: lodestar
+      sslmode: require
+      query: >-
+        SELECT COUNT(*) FROM sync."OfflineEvent" WHERE "syncedAt" IS NULL OR "syncedAt" > now() - interval '1 minute'
+      targetQueryValue: '300'
+      activationTargetQueryValue: '0'
+    authenticationRef:
+      name: sync-postgres
+---
+# Password of the service's own login role (svc_sync): Key Vault secret
+# db-password-sync, synced by the sync SecretProviderClass into sync-secrets.
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: sync-postgres
+  labels:
+    app: sync
+    app.kubernetes.io/name: sync
+    app.kubernetes.io/part-of: lodestar
+spec:
+  secretTargetRef:
+  - parameter: password
+    name: sync-secrets
+    key: DB_PASSWORD

@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 # Waypoint Lodestar edge gateway. Build context: backend/apps/gateway
 FROM nginxinc/nginx-unprivileged:1.27-alpine
 

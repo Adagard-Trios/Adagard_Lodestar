@@ -41,6 +41,10 @@ docker compose up --build
 | http://localhost:8180/auth | Keycloak admin (dev only) |
 
 - **Sign in** as a persona: `fathima` (store manager), `nilanthi` (dispatcher), `kasun` (loader), `ruwan` (driver) or `admin`. Passwords come from `.env` (`LODESTAR_DEMO_PASSWORD`, `LODESTAR_ADMIN_PASSWORD`).
+- **Field app sign-in:** every phone is checked against the user's approved device (zero trust).
+  - **Seeded phones:** ruwan `DEV-RB-01`, kasun `DEV-KJ-01`, fathima `DEV-FR-01`, nilanthi `DEV-NP-01`. In the browser build at :8082, set `localStorage['lodestar.device-id']` to one of these before signing in.
+  - **Any other phone** asks for access (SM-32), and an admin approves it on ADM-05.
+- **Realm changes:** Keycloak imports `backend/identity/lodestar-realm.json` only when the realm doesn't exist yet. To apply an edit to a running stack, delete the `lodestar` realm in the admin console (http://localhost:8180/auth) and run `docker compose restart identity`. The users keep their fixed ids, so seeded data still lines up.
 - **Competition data** is never committed. To seed with it, put the CSVs in `./data/` (see `backend/prisma/DATA.md`). Without them, a small synthetic dataset is used.
 - **Quality stack:** `docker compose --profile qa up sonarqube`. See `docs/QA.md`.
 - **Architecture:** read `docs/architecture/PLATFORM.md`. It covers zero trust, OData conventions, the LangGraph planning agent (mock model for now), CI/CD (CircleCI on PRs, Jenkins on main, Argo CD to AKS) and Azure.

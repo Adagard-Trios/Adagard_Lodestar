@@ -1,6 +1,9 @@
 // Runtime for the generated Lodestar screens (src/screens). Each screen is laid out natively from the
 // design; this file makes it behave: taps navigate exactly like the Figma prototype, back arrows go back,
 // some screens advance by themselves, and "Read aloud" speaks on the device (no network needed).
+// Live screens (src/live/<key>.tsx) use the same pieces with real data: a Tap may run an action before
+// it navigates (`onPress`; return false to stay), go to a computed target (`to`, with route params),
+// and `showToast()` shows a short message.
 import { createContext, useContext, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,16 +12,30 @@ import { router } from 'expo-router';
 import * as Speech from 'expo-speech';
 import Svg, { Defs, LinearGradient, RadialGradient, Rect, Stop, SvgXml } from 'react-native-svg';
 
-export type Target = { to?: string; kind?: 'go' | 'nav' | 'back'; app?: string; screen?: string };
+export type Target = { to?: string; kind?: 'go' | 'nav' | 'back'; app?: string; screen?: string; params?: Record<string, string> };
+type Toast = Target & { text?: string; tone?: 'info' | 'error' };
 export type ScreenNav = { links: Record<string, Target>; auto?: Target; whole?: Target; parent?: string };
 
-const NavContext = createContext<{ nav: ScreenNav; notify: (t: Target) => void }>({ nav: { links: {} }, notify: () => {} });
+const NavContext = createContext<{ nav: ScreenNav; notify: (t: Toast) => void }>({ nav: { links: {} }, notify: () => {} });
 
-function go(t: Target | undefined, notify: (t: Target) => void) {
+// Messages from anywhere (live screens' actions): the mounted Frame shows the latest one.
+const toastSinks: ((t: Toast) => void)[] = [];
+
+/** Show a short message on the current screen ("Saved on this phone", errors). */
+export function showToast(text: string, tone: 'info' | 'error' = 'info') {
+  toastSinks.at(-1)?.({ text, tone });
+}
+
+/** Open a screen by key, like a prototype link (for live screens). */
+export function openScreen(to: string, params?: Record<string, string>, kind: Target['kind'] = 'go') {
+  go({ to, params, kind }, () => {});
+}
+
+function go(t: Target | undefined, notify: (t: Toast) => void) {
   if (!t) return;
   if (t.app) { notify(t); return; }
   if (!t.to) return;
-  const href = { pathname: '/s/[key]' as const, params: { key: t.to } };
+  const href = { pathname: '/s/[key]' as const, params: { ...t.params, key: t.to } };
   if (t.kind === 'back') { if (router.canGoBack()) router.back(); else router.replace(href); }
   else if (t.kind === 'nav') router.replace(href);
   else router.push(href);
@@ -39,7 +56,7 @@ const isLight = (c: string) => {
 };
 
 export function Frame({ bg, nav, children, style }: { bg: string; nav: ScreenNav; children: ReactNode; style?: StyleProp<ViewStyle> }) {
-  const [toast, setToast] = useState<Target | null>(null);
+  const [toast, setToast] = useState<Toast | null>(null);
   const ctx = useMemo(() => ({ nav, notify: setToast }), [nav]);
   useEffect(() => {
     if (!nav.auto) return;
@@ -52,6 +69,10 @@ export function Frame({ bg, nav, children, style }: { bg: string; nav: ScreenNav
     return () => clearTimeout(t);
   }, [toast]);
   useEffect(() => () => { Speech.stop(); }, []);
+  useEffect(() => {
+    toastSinks.push(setToast);
+    return () => { const i = toastSinks.lastIndexOf(setToast); if (i >= 0) toastSinks.splice(i, 1); };
+  }, []);
 
   const body = <View style={style}>{children}</View>;
   return (
@@ -63,10 +84,14 @@ export function Frame({ bg, nav, children, style }: { bg: string; nav: ScreenNav
         ) : body}
         {toast && (
           <View style={{ position: 'absolute', left: 16, right: 16, bottom: 32, alignItems: 'center', pointerEvents: 'box-none' }}>
-            <Pressable onPress={() => setToast(null)} style={{ paddingVertical: 12, paddingHorizontal: 16, borderRadius: 14, backgroundColor: '#141B4D', boxShadow: '0 12px 32px rgba(10,15,40,0.28)' }}>
-              <Text style={{ color: '#FFFFFF', fontFamily: 'Inter_600SemiBold', fontSize: 14, lineHeight: 20 }}>
-                Continues in <Text style={{ color: '#F5B83D', fontFamily: 'Inter_700Bold' }}>{toast.app}</Text>: {toast.screen}
-              </Text>
+            <Pressable accessibilityRole="alert" testID="toast" onPress={() => setToast(null)} style={{ paddingVertical: 12, paddingHorizontal: 16, borderRadius: 14, backgroundColor: toast.tone === 'error' ? '#7F1D1D' : '#141B4D', boxShadow: '0 12px 32px rgba(10,15,40,0.28)' }}>
+              {toast.text ? (
+                <Text style={{ color: '#FFFFFF', fontFamily: 'Inter_600SemiBold', fontSize: 14, lineHeight: 20 }}>{toast.text}</Text>
+              ) : (
+                <Text style={{ color: '#FFFFFF', fontFamily: 'Inter_600SemiBold', fontSize: 14, lineHeight: 20 }}>
+                  Continues in <Text style={{ color: '#F5B83D', fontFamily: 'Inter_700Bold' }}>{toast.app}</Text>: {toast.screen}
+                </Text>
+              )}
             </Pressable>
           </View>
         )}
@@ -75,17 +100,40 @@ export function Frame({ bg, nav, children, style }: { bg: string; nav: ScreenNav
   );
 }
 
+export type TapAction = () => unknown;
+
+// Runs a live screen's action; navigation follows unless it returns (or resolves to) false or throws.
+async function runAction(onPress: TapAction | undefined, notify: (t: Toast) => void): Promise<boolean> {
+  if (!onPress) return true;
+  try {
+    const r = await onPress();
+    return r !== false;
+  } catch (e) {
+    notify({ text: (e as Error)?.message || 'Something went wrong', tone: 'error' });
+    return false;
+  }
+}
+
 // A tappable box. `lk` is the link code the generator put on it; `say` is text to read aloud.
 // `group` marks a tappable card that holds other buttons (on the web a button can't contain a button).
-export function Tap({ lk, say, group, style, children }: { lk?: string; say?: string; group?: boolean; style?: StyleProp<ViewStyle>; children?: ReactNode }) {
+// Live screens: `onPress` runs first, `to` overrides the prototype target, `disabled` blocks the tap.
+export function Tap({ lk, say, group, style, children, onPress, to, disabled, testID }: {
+  lk?: string; say?: string; group?: boolean; style?: StyleProp<ViewStyle>; children?: ReactNode;
+  onPress?: TapAction; to?: Target | string | null; disabled?: boolean; testID?: string;
+}) {
   const { nav, notify } = useContext(NavContext);
-  const target = lk ? nav.links[lk] : undefined;
+  const target = to === null ? undefined : to !== undefined ? (typeof to === 'string' ? { to, kind: 'go' as const } : to) : lk ? nav.links[lk] : undefined;
   return (
     <Pressable
       accessibilityRole={group ? undefined : 'button'}
-      testID={lk ? 'lk-' + lk : say ? 'say' : undefined}
-      onPress={() => { if (say) speak(say); go(target, notify); }}
-      style={({ pressed }) => [style as ViewStyle, pressed && { opacity: 0.72 }]}
+      accessibilityState={disabled ? { disabled: true } : undefined}
+      testID={testID ?? (lk ? 'lk-' + lk : say ? 'say' : undefined)}
+      onPress={async () => {
+        if (disabled) return;
+        if (say) speak(say);
+        if (await runAction(onPress, notify)) go(target, notify);
+      }}
+      style={({ pressed }) => [style as ViewStyle, pressed && !disabled && { opacity: 0.72 }, disabled && { opacity: 0.5 }]}
     >
       {children}
     </Pressable>
@@ -93,9 +141,9 @@ export function Tap({ lk, say, group, style, children }: { lk?: string; say?: st
 }
 
 // A tappable run of text inside a paragraph.
-export function TapText({ lk, style, children }: { lk: string; style?: StyleProp<TextStyle>; children?: ReactNode }) {
+export function TapText({ lk, style, children, onPress }: { lk: string; style?: StyleProp<TextStyle>; children?: ReactNode; onPress?: TapAction }) {
   const { nav, notify } = useContext(NavContext);
-  return <Text style={style} testID={'lk-' + lk} onPress={() => go(nav.links[lk], notify)} suppressHighlighting>{children}</Text>;
+  return <Text style={style} testID={'lk-' + lk} onPress={async () => { if (await runAction(onPress, notify)) go(nav.links[lk], notify); }} suppressHighlighting>{children}</Text>;
 }
 
 // The screen's scrolling body: top bar, action bar and tab bar stay fixed around it.

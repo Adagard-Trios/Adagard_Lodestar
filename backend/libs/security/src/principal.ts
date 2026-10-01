@@ -1,6 +1,14 @@
 import type { JWTPayload } from 'jose';
 import { isRole, PRIVILEGED_ROLES, Role, Roles } from './roles';
 
+/** Why a field call was let through in enrollment mode, and which phone asked. */
+export interface DeviceEnrollmentGrant {
+  /** The X-Device-Id the phone presented (its per-install id). */
+  deviceId: string;
+  /** The posture failure that was waived for this call. */
+  reason: 'DeviceNotBound' | 'DeviceMismatch';
+}
+
 /**
  * The verified caller of a request, derived only from a signed access token.
  * Nothing in here comes from request bodies or headers other than the token.
@@ -20,6 +28,13 @@ export interface Principal {
   outletId?: string;
   vehicleId?: string;
   deviceId?: string;
+  /**
+   * Set only by the zero-trust guard when a field token is not bound to the
+   * phone that presents it (no `device_id` claim, or another one) and the call
+   * is one of the self-enrollment routes (POST/GET Devices, Me()). Such a caller
+   * sees only its own rows and may register only the presented install id.
+   */
+  enrollment?: DeviceEnrollmentGrant;
   isService: boolean;
   claims: JWTPayload;
 }
@@ -82,6 +97,8 @@ export function principalFromClaims(claims: JWTPayload): Principal {
 }
 
 export function isPrivileged(p: Principal): boolean {
+  // A call let through in enrollment mode never carries privileges, whatever its roles.
+  if (p.enrollment) return false;
   return p.roles.some((r) => PRIVILEGED_ROLES.includes(r));
 }
 

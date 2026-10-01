@@ -1,7 +1,7 @@
 import { anything, capture, instance, mock, verify, when } from 'ts-mockito';
 import { personas } from '../../../libs/security/test/principals';
 import { OfflineEventsSet } from './offline-events.set';
-import { OfflineEventInput, SyncService } from './sync.service';
+import { LEAVE_WITHOUT_POD, normalisePodExceptions, OfflineEventInput, SyncService } from './sync.service';
 
 interface OfflineEventDelegate {
   findUnique(a: any): Promise<any>;
@@ -95,6 +95,11 @@ describe('SyncService', () => {
       ['POD_SAVE with fractional units', pod({ orderId: 'ORD1', units: 1.5 })],
       ['POD_SAVE with units > unitsOrdered', pod({ orderId: 'ORD1', units: 11, unitsOrdered: 10 })],
       ['POD_SAVE with a non-integer unitsOrdered', pod({ orderId: 'ORD1', units: 1, unitsOrdered: 'ten' })],
+      ['POD_SAVE with a numeric receiverName', pod({ orderId: 'ORD1', units: 1, receiverName: 7 })],
+      ['POD_SAVE with a very long receiverName', pod({ orderId: 'ORD1', units: 1, receiverName: 'x'.repeat(121) })],
+      ['POD_SAVE with exceptions that are not a list', pod({ orderId: 'ORD1', units: 1, exceptions: 'SHORT' })],
+      ['POD_SAVE with an exception without a type', pod({ orderId: 'ORD1', units: 1, exceptions: [{ description: 'x' }] })],
+      ['POD_SAVE with too many exceptions', pod({ orderId: 'ORD1', units: 1, exceptions: new Array(21).fill('SHORT:x') })],
     ])('rejects %s with 400', (_label, evt) => {
       expect(() => service.validate([evt])).toThrow(expect.objectContaining({ status: 400, target: 'events' }));
     });
@@ -182,7 +187,110 @@ describe('SyncService', () => {
       ]);
       expect(capture(tripStop.findFirst).first()[0]).toEqual({ where: { tripId: 'T1', stopSeq: 2 } });
       expect(capture(tripStop.update).first()[0].data).toEqual({ arrivalActual: new Date('2026-04-07T03:00:00.000Z'), status: 'ENROUTE' });
-      expect(capture(tripStop.update).second()[0].data).toEqual({ leaveActual: new Date('2026-04-07T03:20:00.000Z'), status: 'DELIVERED' });
+      expect(capture(tripStop.findFirst).second()[0]).toEqual({ where: { tripId: 'T1', stopSeq: 2 }, include: { pod: { select: { id: true } } } });
+      // No POD stored or in the batch: the stop is not delivered.
+      expect(capture(tripStop.update).second()[0].data).toEqual({ leaveActual: new Date('2026-04-07T03:20:00.000Z'), status: 'EXCEPTION' });
+    });
+
+    describe('LEAVE and proof of delivery', () => {
+      const leave = (over: Partial<OfflineEventInput> = {}) =>
+        evt({ id: 'evt-leave-002', eventType: 'LEAVE', payload: { stopSeq: 2, time: '2026-04-07T03:20:00.000Z' }, savedAt: '2026-04-07T03:20:00.000Z', ...over });
+
+      it('delivers the stop when a POD is already stored', async () => {
+        when(tripStop.findFirst(anything())).thenResolve({ id: 'S2', orderId: 'ORD2', status: 'ENROUTE', pod: { id: 'P2' } });
+        const res = await service.pushBatch(personas.ruwan, [leave()]);
+        expect(res).toMatchObject({ synced: 1, conflicts: 0, needsReview: 0 });
+        expect(res.results[0]).toMatchObject({ status: 'APPLIED', conflict: null });
+        expect(capture(tripStop.update).last()[0]).toEqual({
+          where: { id: 'S2' },
+          data: { leaveActual: new Date('2026-04-07T03:20:00.000Z'), status: 'DELIVERED' },
+        });
+        expect(capture(offlineEvent.create).last()[0].data).not.toHaveProperty('conflictNote');
+      });
+
+      it('without any POD: stop goes to EXCEPTION, a conflict that needs review is returned and recorded', async () => {
+        when(tripStop.findFirst(anything())).thenResolve({ id: 'S2', orderId: 'ORD2', status: 'ENROUTE', pod: null });
+        const res = await service.pushBatch(personas.ruwan, [leave()]);
+
+        expect(res).toMatchObject({ synced: 1, conflicts: 1, needsReview: 1 });
+        expect(res.results[0]).toEqual({ id: 'evt-leave-002', eventType: 'LEAVE', status: 'APPLIED', conflict: LEAVE_WITHOUT_POD, needsReview: true });
+        const data = capture(tripStop.update).last()[0].data;
+        expect(data).toEqual({ leaveActual: new Date('2026-04-07T03:20:00.000Z'), status: 'EXCEPTION' });
+        expect(capture(offlineEvent.create).last()[0].data).toMatchObject({
+          id: 'evt-leave-002',
+          conflictResolved: false,
+          conflictNote: LEAVE_WITHOUT_POD,
+        });
+        verify(order.update(anything())).never();
+      });
+
+      it('a POD_SAVE later in the same batch delivers the stop, with no conflict', async () => {
+        when(tripStop.findFirst(anything())).thenResolve({ id: 'S2', orderId: 'ORD2', status: 'ENROUTE', pod: null, leaveActual: null });
+        const res = await service.pushBatch(personas.ruwan, [
+          // Sent first, but the LEAVE was saved earlier on the device.
+          evt({ id: 'evt-pod-0002', eventType: 'POD_SAVE', payload: { orderId: 'ORD2', units: 31, offline: true }, savedAt: '2026-04-07T03:25:00.000Z' }),
+          leave(),
+        ]);
+        expect(res).toMatchObject({ synced: 2, conflicts: 0, needsReview: 0 });
+        // LEAVE only stamps the time; the POD_SAVE is what delivers the stop.
+        expect(capture(tripStop.update).first()[0].data).toEqual({ leaveActual: new Date('2026-04-07T03:20:00.000Z') });
+        expect(capture(tripStop.update).second()[0].data).toMatchObject({ status: 'DELIVERED' });
+        verify(pod.upsert(anything())).once();
+      });
+
+      it('a POD_SAVE earlier in the batch is stored before the LEAVE (the offline photo POD of the scenario)', async () => {
+        let podStored = false;
+        when(pod.upsert(anything())).thenCall(async () => {
+          podStored = true;
+          return {};
+        });
+        when(tripStop.findFirst(anything())).thenCall(async () => ({
+          id: 'S2', orderId: 'ORD2', status: podStored ? 'DELIVERED' : 'ENROUTE', leaveActual: null, pod: podStored ? { id: 'P2' } : null,
+        }));
+        const res = await service.pushBatch(personas.ruwan, [
+          evt({ id: 'evt-pod-0002', eventType: 'POD_SAVE', payload: { orderId: 'ORD2', units: 58, offline: true }, savedAt: '2026-04-07T01:28:00.000Z' }),
+          leave(),
+        ]);
+        expect(res).toMatchObject({ synced: 2, conflicts: 0 });
+        expect(capture(tripStop.update).last()[0].data).toEqual({ leaveActual: new Date('2026-04-07T03:20:00.000Z'), status: 'DELIVERED' });
+      });
+
+      it('a POD_SAVE for another trip does not count', async () => {
+        when(tripStop.findFirst(anything())).thenCall(async (a: any) =>
+          a.where.tripId === 'T2' ? null : { id: 'S2', orderId: 'ORD2', status: 'ENROUTE', pod: null },
+        );
+        const res = await service.pushBatch(personas.ruwan, [
+          evt({ id: 'evt-pod-0002', tripId: 'T2', eventType: 'POD_SAVE', payload: { orderId: 'ORD2', units: 1 }, savedAt: '2026-04-07T03:25:00.000Z' }),
+          leave(),
+        ]);
+        expect(res.needsReview).toBe(1);
+        expect(capture(tripStop.update).last()[0].data.status).toBe('EXCEPTION');
+      });
+
+      it('stays idempotent: a replayed LEAVE is a DUPLICATE and changes nothing', async () => {
+        when(tripStop.findFirst(anything())).thenResolve({ id: 'S2', orderId: 'ORD2', status: 'ENROUTE', pod: null });
+        const first = await service.pushBatch(personas.ruwan, [leave()]);
+        expect(first.needsReview).toBe(1);
+        when(offlineEvent.findUnique(anything())).thenResolve({ id: 'evt-leave-002' });
+        const again = await service.pushBatch(personas.ruwan, [leave()]);
+        expect(again).toMatchObject({ synced: 0, duplicates: 1, conflicts: 0, needsReview: 0 });
+        verify(tripStop.update(anything())).once();
+        verify(offlineEvent.create(anything())).once();
+      });
+
+      it('does not downgrade a stop that is already delivered', async () => {
+        when(tripStop.findFirst(anything())).thenResolve({ id: 'S2', orderId: 'ORD2', status: 'DELIVERED', pod: null });
+        const res = await service.pushBatch(personas.ruwan, [leave()]);
+        expect(res.conflicts).toBe(0);
+        expect(capture(tripStop.update).last()[0].data.status).toBe('DELIVERED');
+      });
+
+      it('ignores a LEAVE for an unknown stop', async () => {
+        when(tripStop.findFirst(anything())).thenResolve(null);
+        const res = await service.pushBatch(personas.ruwan, [leave()]);
+        expect(res).toMatchObject({ synced: 1, conflicts: 0 });
+        verify(tripStop.update(anything())).never();
+      });
     });
 
     describe('POD_SAVE', () => {
@@ -246,6 +354,56 @@ describe('SyncService', () => {
         expect(order_).toEqual(['apply', 'record']);
       });
 
+      it('persists receiverName and exceptions from the payload on a new POD', async () => {
+        const evtWithDetails = evt({
+          id: 'evt-pod-0217',
+          eventType: 'POD_SAVE',
+          payload: {
+            orderId: 'ORD0104217',
+            units: 31,
+            unitsOrdered: 34,
+            receiverName: '  M. Ilyas ',
+            exceptions: [
+              { type: 'short', description: 'Yoghurt 80g: 2 of 6 cases not loaded' },
+              { type: 'DAMAGED', description: 'Whole chicken tray', photoUrl: '/uploads/dmg.jpg' },
+            ],
+          },
+          savedAt: '2026-04-07T01:28:00.000Z',
+        });
+        await service.pushBatch(personas.ruwan, [evtWithDetails]);
+        const [args] = capture(pod.upsert).last();
+        const exceptions = [
+          { type: 'SHORT', description: 'Yoghurt 80g: 2 of 6 cases not loaded', photoUrl: null },
+          { type: 'DAMAGED', description: 'Whole chicken tray', photoUrl: '/uploads/dmg.jpg' },
+        ];
+        expect(args.create).toMatchObject({ unitsDelivered: 31, unitsOrdered: 34, receiverName: 'M. Ilyas', exceptions });
+        expect(args.update).toMatchObject({ unitsDelivered: 31, receiverName: 'M. Ilyas', exceptions });
+      });
+
+      it('accepts the "TYPE:detail" exceptions of older queues (the scenario format)', async () => {
+        await service.pushBatch(personas.ruwan, [
+          evt({ id: 'evt-pod-0218', eventType: 'POD_SAVE', payload: { orderId: 'ORD0104217', units: 31, exceptions: ['SHORT:yoghurt', 'DAMAGED:chicken'] } }),
+        ]);
+        expect(capture(pod.upsert).last()[0].create.exceptions).toEqual([
+          { type: 'SHORT', description: 'yoghurt', photoUrl: null },
+          { type: 'DAMAGED', description: 'chicken', photoUrl: null },
+        ]);
+      });
+
+      it('a correction without receiverName or exceptions leaves the stored ones alone', async () => {
+        await service.pushBatch(personas.ruwan, [podEvt]);
+        const [args] = capture(pod.upsert).last();
+        expect(args.update).not.toHaveProperty('receiverName');
+        expect(args.update).not.toHaveProperty('exceptions');
+        expect(args.create).not.toHaveProperty('receiverName');
+        expect(args.create).not.toHaveProperty('exceptions');
+        // a blank name is not a name
+        await service.pushBatch(personas.ruwan, [{ ...podEvt, id: 'evt-pod-0110', payload: { ...podEvt.payload, receiverName: '   ', exceptions: [] } }]);
+        const [blank] = capture(pod.upsert).last();
+        expect(blank.update).not.toHaveProperty('receiverName');
+        expect(blank.update.exceptions).toEqual([]); // an explicit empty list clears them
+      });
+
       it('ignores a POD for an order that is not on the event trip', async () => {
         when(tripStop.findFirst(anything())).thenResolve(null);
         const res = await service.pushBatch(personas.ruwan, [podEvt]);
@@ -254,6 +412,15 @@ describe('SyncService', () => {
         verify(order.update(anything())).never();
       });
     });
+  });
+
+  it('getSyncStatus counts conflicts that still need review', async () => {
+    when(offlineEvent.findMany(anything())).thenResolve([
+      { syncedAt: new Date(), conflictResolved: false, conflictNote: LEAVE_WITHOUT_POD },
+      { syncedAt: new Date(), conflictResolved: true, conflictNote: 'Provisional deferral reversed' },
+    ]);
+    const res = await service.getSyncStatus('T1');
+    expect(res).toMatchObject({ conflicts: 2, needsReview: 1 });
   });
 
   it('getSyncStatus ANDs the trip with the scope and counts', async () => {
@@ -266,8 +433,24 @@ describe('SyncService', () => {
     ]);
     const scope = { trip: { is: { vehicleId: 'VEH057' } } };
     const res = await service.getSyncStatus('T1', scope as any);
-    expect(res).toEqual({ total: 3, synced: 2, pending: 1, conflicts: 1, lastSyncedAt: t2 });
+    expect(res).toEqual({ total: 3, synced: 2, pending: 1, conflicts: 1, needsReview: 0, lastSyncedAt: t2 });
     expect(capture(offlineEvent.findMany).last()[0].where).toEqual({ AND: [{ tripId: 'T1' }, scope] });
+  });
+});
+
+describe('normalisePodExceptions', () => {
+  it('normalises objects and TYPE:detail strings, and refuses bad shapes', () => {
+    expect(normalisePodExceptions([{ type: 'late', description: null }, 'WRONG_ITEM:a:b'])).toEqual([
+      { type: 'LATE', description: '', photoUrl: null },
+      { type: 'WRONG_ITEM', description: 'a:b', photoUrl: null },
+    ]);
+    expect(normalisePodExceptions([])).toEqual([]);
+    expect(normalisePodExceptions(null)).toBeNull();
+    expect(normalisePodExceptions([':x'])).toBeNull();
+    expect(normalisePodExceptions([42])).toBeNull();
+    expect(normalisePodExceptions([{ type: 'X', description: 5 }])).toBeNull();
+    expect(normalisePodExceptions([{ type: 'X', photoUrl: 5 }])).toBeNull();
+    expect(normalisePodExceptions([{ type: 'X', description: 'y'.repeat(501) }])).toBeNull();
   });
 });
 

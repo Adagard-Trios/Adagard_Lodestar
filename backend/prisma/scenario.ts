@@ -67,6 +67,10 @@ export const PEOPLE: Person[] = [
 export const DEVICES = [
   { id: 'DEV-RB-01', user: 'ruwan' as PersonKey, label: "Ruwan's Galaxy A14", platform: 'android', model: 'Galaxy A14', status: DeviceStatus.ACTIVE, registeredAt: ist('2026-03-30T08:15'), lastSeenAt: SIGNAL_BACK_AT },
   { id: 'DEV-KJ-01', user: 'kasun' as PersonKey, label: "Kasun's Redmi Note 12", platform: 'android', model: 'Redmi Note 12', status: DeviceStatus.ACTIVE, registeredAt: ist('2026-03-30T08:40'), lastSeenAt: ist('2026-04-07T03:40') },
+  // Store and dispatch phones run the field app too (receipt count, live board), so they are bound as well.
+  // Ids match the device_id user attributes in backend/identity/lodestar-realm.json.
+  { id: 'DEV-FR-01', user: 'fathima' as PersonKey, label: "Fathima's Galaxy A34", platform: 'android', model: 'Galaxy A34', status: DeviceStatus.ACTIVE, registeredAt: ist('2026-03-30T09:10'), lastSeenAt: ist('2026-04-07T07:05') },
+  { id: 'DEV-NP-01', user: 'nilanthi' as PersonKey, label: "Nilanthi's iPhone 13", platform: 'ios', model: 'iPhone 13', status: DeviceStatus.ACTIVE, registeredAt: ist('2026-03-30T09:25'), lastSeenAt: SIGNAL_BACK_AT },
 ];
 
 // ─────────────────────────────────────────────────────────────

@@ -26,6 +26,7 @@ replacements:
     fieldPaths:
     - data.OIDC_ISSUER
     - data.OIDC_JWKS_URI
+    - data.OIDC_JWKS_URL
     - data.OIDC_TOKEN_URL
     options:
       delimiter: /
@@ -89,6 +90,7 @@ replacements:
       name: lodestar-common
     fieldPaths:
     - data.PUBLIC_WEB_URL
+    - data.PUBLIC_BASE_URL
     options:
       delimiter: /
       index: 2
@@ -187,6 +189,21 @@ replacements:
       name: allow-https-egress
     fieldPaths:
     - spec.egress.1.to.0.ipBlock.cidr
+  - select:
+      kind: NetworkPolicy
+      name: allow-redis-egress
+    fieldPaths:
+    - spec.egress.0.to.0.ipBlock.cidr
+# Postgres Flexible Server FQDN for the KEDA postgresql scalers (agent, sync).
+- source:
+    kind: ConfigMap
+    name: azure-wiring
+    fieldPath: data.POSTGRES_HOST
+  targets:
+  - select:
+      kind: ScaledObject
+    fieldPaths:
+    - spec.triggers.[type=postgresql].metadata.host
 - source:
     kind: ConfigMap
     name: azure-wiring

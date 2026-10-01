@@ -68,4 +68,8 @@ export class ODataError extends Error {
   static conflict(message: string, target: string | null = null) {
     return new ODataError(409, 'Conflict', message, target);
   }
+
+  static unprocessable(code: string, message: string, target: string | null = null) {
+    return new ODataError(422, code, message, target);
+  }
 }

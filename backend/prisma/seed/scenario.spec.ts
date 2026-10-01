@@ -1,5 +1,7 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import {
-  CALENDAR_NOTES, HERO_OFFLINE_EVENTS, HERO_TRIP_ID, OUTLET_ANCHORS, PLAN_IDS, PLAN_PUBLISHED_AT, SCENARIO_DAY,
+  CALENDAR_NOTES, DEVICES, HERO_OFFLINE_EVENTS, HERO_TRIP_ID, OUTLET_ANCHORS, PLAN_IDS, PLAN_PUBLISHED_AT, SCENARIO_DAY,
   USER_IDS, VEHICLE_ANCHORS, applyScenario,
 } from '../scenario';
 import { generateSynthetic } from './synthetic';
@@ -29,6 +31,8 @@ describe('applyScenario', () => {
     expect(db.device.rows.map((d) => [d.id, d.userId, d.status])).toEqual([
       ['DEV-RB-01', USER_IDS.ruwan, 'ACTIVE'],
       ['DEV-KJ-01', USER_IDS.kasun, 'ACTIVE'],
+      ['DEV-FR-01', USER_IDS.fathima, 'ACTIVE'],
+      ['DEV-NP-01', USER_IDS.nilanthi, 'ACTIVE'],
     ]);
 
     const plg3 = db.plan.rows.find((p) => p.id === PLAN_IDS.plgV3);
@@ -133,5 +137,23 @@ describe('applyScenario', () => {
   it('anchors are consistent with the story', () => {
     expect(OUTLET_ANCHORS.find((o) => o.id === 'OUT108')).toMatchObject({ windowOpen: '04:00', windowClose: '07:45', depot: 'KANDY' });
     expect(VEHICLE_ANCHORS.find((v) => v.id === 'VEH057')).toMatchObject({ capacityKg: 1040, capacityM3: 7, weeklyLFuel: 450 });
+  });
+});
+
+describe('device posture: realm and scenario agree', () => {
+  // Every field-capable person (store manager, dispatcher, loader, driver) carries a device_id
+  // attribute in the realm, and that device is seeded ACTIVE for the same person, so their
+  // field-app tokens pass the posture check (PLATFORM.md §2.6).
+  const realm = JSON.parse(readFileSync(join(__dirname, '..', '..', 'identity', 'lodestar-realm.json'), 'utf8'));
+  const people = (realm.users as any[]).filter((u) => !u.username.startsWith('service-account-') && u.username !== 'admin');
+
+  it.each(people.map((u) => [u.username, u]))('%s has a device_id that is an ACTIVE seeded device of theirs', (username, u: any) => {
+    const deviceId = u.attributes?.device_id?.[0];
+    expect(deviceId).toMatch(/^DEV-[A-Z0-9-]+$/);
+    expect(DEVICES.find((d) => d.id === deviceId)).toMatchObject({ user: username, status: 'ACTIVE' });
+  });
+
+  it('covers fathima (store manager) and nilanthi (dispatcher)', () => {
+    expect(people.map((u) => u.username).sort()).toEqual(['fathima', 'kasun', 'nilanthi', 'ruwan']);
   });
 });

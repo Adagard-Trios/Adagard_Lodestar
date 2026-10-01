@@ -11,11 +11,15 @@ data:
   AUTH_PROVIDER: entra
   OIDC_ISSUER: https://login.microsoftonline.com/TENANT_ID/v2.0
   OIDC_JWKS_URI: https://login.microsoftonline.com/TENANT_ID/discovery/v2.0/keys
+  # same value under the name the agent (and libs/security first) reads
+  OIDC_JWKS_URL: https://login.microsoftonline.com/TENANT_ID/discovery/v2.0/keys
   OIDC_TOKEN_URL: https://login.microsoftonline.com/TENANT_ID/oauth2/v2.0/token
   OIDC_AUDIENCE: API_CLIENT_ID
   SVC_TOKEN_SCOPE: api://API_CLIENT_ID/.default
   SVC_TOKEN_REFRESH_SKEW_SECONDS: '60'
   PUBLIC_WEB_URL: https://WEB_HOST
+  # OData @odata.context / nextLink base (libs/odata)
+  PUBLIC_BASE_URL: https://WEB_HOST
   ODATA_MAX_TOP: '500'
   RUN_SEED: 'false'
   AUTH_SERVICE_URL: http://auth.lodestar.svc.cluster.local:3001
@@ -28,3 +32,6 @@ data:
   NOTIFICATIONS_SERVICE_URL: http://notifications.lodestar.svc.cluster.local:3008
   AUDIT_SERVICE_URL: http://audit.lodestar.svc.cluster.local:3009
   AGENT_SERVICE_URL: http://agent.lodestar.svc.cluster.local:8000
+  # names read by libs/security (HttpAuditSink) and planning (agent client)
+  AUDIT_URL: http://audit.lodestar.svc.cluster.local:3009
+  AGENT_URL: http://agent.lodestar.svc.cluster.local:8000

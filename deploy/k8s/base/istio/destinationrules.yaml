@@ -14,6 +14,12 @@ spec:
       baseEjectionTime: 30s
       maxEjectionPercent: 50
 ---
+# Socket.IO on notifications. Cross-replica delivery is the Redis adapter's job
+# (any pod can emit to any room), so websocket clients need no affinity. The
+# cookie hash only keeps Engine.IO's HTTP long-polling fallback (handshake +
+# polls must hit the same pod) on one replica; websocket-only clients ignore it.
+# Upgrades: HTTP/1.1 between sidecars (no h2 upgrade, which would break the
+# websocket Upgrade), long idle timeout, no outlier ejection on long streams.
 apiVersion: networking.istio.io/v1
 kind: DestinationRule
 metadata:
@@ -22,6 +28,8 @@ metadata:
 spec:
   host: notifications.lodestar.svc.cluster.local
   trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
     loadBalancer:
       consistentHash:
         httpCookie:
@@ -30,4 +38,14 @@ spec:
           ttl: 0s
     connectionPool:
       http:
+        h2UpgradePolicy: DO_NOT_UPGRADE
         idleTimeout: 3600s
+      tcp:
+        tcpKeepalive:
+          time: 300s
+          interval: 60s
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 10s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50

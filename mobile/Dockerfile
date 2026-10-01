@@ -1,9 +1,10 @@
+# syntax=docker/dockerfile:1.7
 # Browser build of the Lodestar field app (Store, Plan phone, Dock, Run), for demos and e2e tests.
 # The phones run the same code natively via Expo / EAS builds.
 FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci --fetch-retries=10 --fetch-retry-maxtimeout=600000 --fetch-timeout=600000
 COPY . .
 RUN npx expo export --platform web --output-dir dist
 

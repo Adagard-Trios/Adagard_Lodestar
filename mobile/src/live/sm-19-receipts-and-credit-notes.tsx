@@ -1,0 +1,226 @@
+// Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
+// SM-19 Receipts & credit notes · phone (P1, phone)
+import { Text, View, StyleSheet } from 'react-native';
+import { dayLabel, hm } from '@/lib/time';
+import { plural } from '@/lodestar/live';
+import { useClaims, useOutbox, usePods, useStoreDay } from '@/model/hooks';
+import { creditedUnits, isCredit, receiptFor, useNow } from '@/model/store-face';
+import { Frame, Icon, Scroll, Tap, type ScreenNav } from '@/lodestar/runtime';
+
+const nav: ScreenNav = {"links":{"L97":{"to":"sm-20-credit-note-detail","kind":"go"},"N0":{"to":"sm-11-today-order-day","kind":"nav"},"N1":{"to":"sm-12-orders","kind":"nav"},"N3":{"to":"sm-21-messages","kind":"nav"}}};
+
+const WEEK_MS = 7 * 86_400_000;
+
+export default function ScreenSm19ReceiptsAndCreditNotes() {
+  const claims = useClaims();
+  const day = useStoreDay();
+  const outlet = day.data?.outlet;
+  const pods = usePods();
+  const { items } = useOutbox();
+  const list = pods.data ?? [];
+  const credits = list.filter(isCredit);
+  const now = useNow();
+  const week = list.filter(p => now - Date.parse(p.savedAt) < WEEK_MS);
+  const creditedWeek = week.filter(isCredit).reduce((n, p) => n + creditedUnits(p), 0);
+  const mismatched = week.filter(isCredit).length;
+  const empty = !claims ? 'Sign in to see your receipts' : pods.loading && !pods.data ? 'Loading…' : pods.error && !pods.data ? 'No signal · nothing saved yet' : '';
+  return (
+    <Frame bg="#f4f5f9" nav={nav} style={s.v0}>
+      <View style={s.v37}>
+        <View style={s.v7}>
+          <View style={s.v2}>
+            <Icon xml={X0} width={36} height={36} style={s.v1} />
+          </View>
+          <View style={s.v5}>
+            <View>
+              <Text style={s.t3}>{"Receipts"}</Text>
+            </View>
+            <View>
+              <Text style={s.t4} numberOfLines={1}>{outlet ? `${outlet.name} · ${outlet.id}` : (claims?.outletId ?? '—')}</Text>
+            </View>
+          </View>
+          <View style={s.v6}>
+            <Icon xml={X1} width={20} height={20} style={s.v1} />
+          </View>
+        </View>
+        <Scroll style={s.v32} contentStyle={s.v33}>
+          <View style={s.v11}>
+            <View>
+              <Text style={s.t4}>{"Credited this week"}</Text>
+            </View>
+            <View>
+              <Text style={s.t9} testID="credited-week">{String(creditedWeek)}<Text style={s.t8}>{creditedWeek === 1 ? 'unit' : 'units'}</Text></Text>
+            </View>
+            <View>
+              <Text style={s.t10}>{empty || (!week.length ? 'No deliveries this week yet.' : mismatched ? `${plural(mismatched, 'delivery', 'deliveries')} this week with a difference, ${week.length - mismatched} matched.` : "Every receipt this week matches the driver's record.")}</Text>
+            </View>
+          </View>
+          <View style={s.v29}>
+            <View style={s.v15}>
+              <View style={s.v13}>
+                <Text style={s.t12}>{"Credit notes"}</Text>
+              </View>
+              <View style={s.v13}>
+                <Text style={s.t14}>{credits.length ? plural(credits.length, 'note') : ''}</Text>
+              </View>
+            </View>
+            <View style={s.v28}>
+              {credits.length ? credits.map((p, i) => {
+                const units = creditedUnits(p);
+                const lines = p.exceptions?.length ?? 0;
+                return (
+                  <Tap key={p.id} lk={i === 0 ? 'L97' : undefined} testID={i === 0 ? undefined : `credit-row-${i}`} style={i === 0 ? s.v25 : s.v27} to={{ to: 'sm-20-credit-note-detail', params: { pod: p.id } }}>
+                    <View style={i === 0 ? s.v16 : s.v26}>
+                      <Icon xml={i === 0 ? X2 : X4} width={22} height={22} style={s.v1} />
+                    </View>
+                    <View style={s.v22}>
+                      <View>
+                        <Text style={s.t18}><Text style={s.t17}>{p.creditNoteId ?? `Pending · ${p.tripStop?.orderId ?? p.id}`}</Text></Text>
+                      </View>
+                      <View style={s.v21}>
+                        <Text style={s.t19}>{dayLabel(p.savedAt)}</Text>
+                        <View style={s.v20} />
+                        <Text style={s.t19}>{lines ? plural(lines, 'line') : `${p.unitsDelivered} of ${p.unitsOrdered}`}</Text>
+                      </View>
+                    </View>
+                    <View style={s.v24}>
+                      <View>
+                        <Text style={s.t23}>{String(units)}</Text>
+                      </View>
+                      <View>
+                        <Text style={s.t4}>{units === 1 ? 'unit' : 'units'}</Text>
+                      </View>
+                    </View>
+                    <Icon xml={X3} width={18} height={18} style={s.v1} />
+                  </Tap>
+                );
+              }) : (
+                <Tap lk="L97" style={s.v31}>
+                  <View style={s.v22}>
+                    <Text style={s.t19}>{empty || 'No credit notes'}</Text>
+                  </View>
+                </Tap>
+              )}
+            </View>
+          </View>
+          <View style={s.v29}>
+            <View style={s.v15}>
+              <View style={s.v13}>
+                <Text style={s.t12}>{"Receipts"}</Text>
+              </View>
+              <View style={s.v13}>
+                <Text style={s.t14}>{list.length ? 'newest first' : ''}</Text>
+              </View>
+            </View>
+            <View style={s.v28}>
+              {list.length ? list.map((p, i) => {
+                const mine = receiptFor(items, p.tripStop?.orderId);
+                return (
+                  <Tap key={p.id} style={i === 0 ? s.v31 : s.v27} testID={`receipt-row-${i}`} to={{ to: 'sm-20-credit-note-detail', params: { pod: p.id } }}>
+                    <View style={s.v30}>
+                      <Icon xml={X5} width={22} height={22} style={s.v1} />
+                    </View>
+                    <View style={s.v22}>
+                      <View>
+                        <Text style={s.t18}>{dayLabel(p.savedAt)}</Text>
+                      </View>
+                      <View style={s.v21}>
+                        <Text style={s.t19}>{mine ? `You ${hm(mine.savedAt)}` : (p.receiverName ?? `Driver ${hm(p.savedAt)}`)}</Text>
+                        <View style={s.v20} />
+                        <Text style={s.t19}>{isCredit(p) ? `driver ${hm(p.savedAt)}` : 'matched'}</Text>
+                      </View>
+                    </View>
+                    <View style={s.v24}>
+                      <View>
+                        <Text style={s.t23}>{String(p.unitsDelivered)}</Text>
+                      </View>
+                      <View>
+                        <Text style={s.t4}>{`of ${p.unitsOrdered}`}</Text>
+                      </View>
+                    </View>
+                  </Tap>
+                );
+              }) : (
+                <View style={s.v31}>
+                  <View style={s.v22}>
+                    <Text style={s.t19}>{empty || 'No receipts yet'}</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          </View>
+        </Scroll>
+        <View style={s.v36}>
+          <Tap lk="N0" style={s.v34}>
+            <Icon xml={X6} width={22} height={22} style={s.v1} />
+            <Text style={s.t4}>{"Today"}</Text>
+          </Tap>
+          <Tap lk="N1" style={s.v34}>
+            <Icon xml={X7} width={22} height={22} style={s.v1} />
+            <Text style={s.t4}>{"Orders"}</Text>
+          </Tap>
+          <View style={s.v34}>
+            <Icon xml={X8} width={22} height={22} style={s.v1} />
+            <Text style={s.t35}>{"Receipts"}</Text>
+          </View>
+          <Tap lk="N3" style={s.v34}>
+            <Icon xml={X9} width={22} height={22} style={s.v1} />
+            <Text style={s.t4}>{"Messages"}</Text>
+          </Tap>
+        </View>
+      </View>
+    </Frame>
+  );
+}
+
+const X0 = "<svg viewBox=\"0 0 32 32\" width=\"36\" height=\"36\" fill=\"#000000\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"32\" height=\"32\" rx=\"8\" fill=\"#047857\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect><g transform=\"translate(7.36 7.36) scale(0.72)\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"><path d=\"M3 9l1.5-5h15L21 9\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M5 13v8h14v-8M10 21v-5h4v5\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></g></svg>";
+const X1 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#101828\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"20\" height=\"20\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9\" fill=\"none\" stroke=\"#101828\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M10.3 21a1.94 1.94 0 0 0 3.4 0\" fill=\"none\" stroke=\"#101828\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X2 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#b45309\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z\" fill=\"none\" stroke=\"#b45309\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M14 2v6h6M8 13h8M8 17h5\" fill=\"none\" stroke=\"#b45309\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X3 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"18\" height=\"18\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m9 18 6-6-6-6\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X4 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#475467\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z\" fill=\"none\" stroke=\"#475467\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M14 2v6h6M8 13h8M8 17h5\" fill=\"none\" stroke=\"#475467\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X5 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#047857\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M20 6 9 17l-5-5\" fill=\"none\" stroke=\"#047857\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X6 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M3 9l1.5-5h15L21 9\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M5 13v8h14v-8M10 21v-5h4v5\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X7 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M3.3 7 12 12l8.7-5M12 22V12\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X8 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M20 6 9 17l-5-5\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X9 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+
+const s = StyleSheet.create({
+  v0: {"flexDirection":"column","alignItems":"stretch","backgroundColor":"#ffffff","flex":1},
+  v1: {"flexShrink":0,"overflow":"hidden"},
+  v2: {"flexDirection":"row","justifyContent":"center","alignItems":"center","flexShrink":0,"width":40,"height":40,"borderRadius":20},
+  t3: {"color":"#101828","fontSize":15,"lineHeight":22.5,"fontFamily":"Inter_700Bold"},
+  t4: {"color":"#636c80","fontSize":13,"lineHeight":19.5,"fontFamily":"Inter_600SemiBold"},
+  v5: {"flexDirection":"column","alignItems":"center","flexGrow":1,"flexShrink":1,"flexBasis":"0%"},
+  v6: {"flexDirection":"row","justifyContent":"center","alignItems":"center","flexShrink":0,"width":40,"height":40,"backgroundColor":"#ffffff","borderRadius":20,"boxShadow":"rgba(0, 0, 0, 0.06) 0px 1px 2px 0px"},
+  v7: {"flexDirection":"row","alignItems":"center","rowGap":10,"columnGap":10,"flexShrink":0,"paddingRight":16,"paddingLeft":16,"height":52},
+  t8: {"fontSize":20,"lineHeight":20,"letterSpacing":-0.2,"fontFamily":"PlusJakartaSans_700Bold"},
+  t9: {"color":"#101828","fontSize":48,"lineHeight":48,"letterSpacing":-1.4,"fontVariant":["tabular-nums"],"fontFamily":"PlusJakartaSans_800ExtraBold"},
+  t10: {"color":"#475467","fontSize":14,"lineHeight":20.3,"fontFamily":"Inter_400Regular"},
+  v11: {"flexDirection":"column","alignItems":"stretch","rowGap":10,"columnGap":10,"flexShrink":0,"paddingTop":20,"paddingRight":20,"marginRight":16,"paddingBottom":20,"paddingLeft":20,"marginLeft":16,"backgroundColor":"#ffffff","borderRadius":24,"boxShadow":"rgba(15, 20, 50, 0.04) 0px 1px 2px 0px, rgba(15, 20, 50, 0.06) 0px 8px 24px 0px"},
+  t12: {"color":"#101828","fontSize":13,"lineHeight":19.5,"fontFamily":"Inter_700Bold"},
+  v13: {"flexShrink":1},
+  t14: {"color":"#636c80","fontSize":13,"lineHeight":19.5,"fontFamily":"Inter_700Bold"},
+  v15: {"flexDirection":"row","justifyContent":"space-between","alignItems":"baseline","paddingRight":20,"paddingLeft":20},
+  v16: {"flexDirection":"row","justifyContent":"center","alignItems":"center","flexShrink":0,"width":44,"height":44,"backgroundColor":"#fff4e0","borderRadius":14},
+  t17: {"letterSpacing":-0.2,"fontFamily":"JetBrainsMono_600SemiBold"},
+  t18: {"color":"#101828","fontSize":16,"lineHeight":20.8,"fontFamily":"Inter_700Bold"},
+  t19: {"color":"#475467","fontSize":13,"lineHeight":18.2,"fontFamily":"Inter_500Medium"},
+  v20: {"flexShrink":1,"width":3,"height":3,"backgroundColor":"#636c80","borderRadius":1.5,"opacity":0.6},
+  v21: {"flexDirection":"row","flexWrap":"wrap","alignItems":"center","rowGap":6,"columnGap":6},
+  v22: {"flexDirection":"column","alignItems":"stretch","rowGap":3,"columnGap":3,"flexGrow":1,"flexShrink":1,"flexBasis":"0%"},
+  t23: {"color":"#101828","fontSize":20,"lineHeight":30,"letterSpacing":-0.4,"fontVariant":["tabular-nums"],"fontFamily":"PlusJakartaSans_800ExtraBold"},
+  v24: {"flexDirection":"column","alignItems":"flex-end","rowGap":2,"columnGap":2,"flexShrink":0},
+  v25: {"flexDirection":"row","alignItems":"center","rowGap":14,"columnGap":14,"paddingTop":10,"paddingRight":16,"paddingBottom":10,"paddingLeft":16,"minHeight":56,"backgroundColor":"#eef0ff"},
+  v26: {"flexDirection":"row","justifyContent":"center","alignItems":"center","flexShrink":0,"width":44,"height":44,"backgroundColor":"#eff1f7","borderRadius":14},
+  v27: {"flexDirection":"row","alignItems":"center","rowGap":14,"columnGap":14,"paddingTop":10,"paddingRight":16,"paddingBottom":10,"paddingLeft":16,"minHeight":56,"borderTopWidth":1,"borderTopColor":"#eceef3"},
+  v28: {"flexDirection":"column","alignItems":"stretch","flexShrink":1,"marginRight":16,"marginLeft":16,"backgroundColor":"#ffffff","borderRadius":20,"boxShadow":"rgba(15, 20, 50, 0.04) 0px 1px 2px 0px","overflow":"hidden"},
+  v29: {"flexDirection":"column","alignItems":"stretch","rowGap":8,"columnGap":8,"flexShrink":0},
+  v30: {"flexDirection":"row","justifyContent":"center","alignItems":"center","flexShrink":0,"width":44,"height":44,"backgroundColor":"#e8f8f0","borderRadius":14},
+  v31: {"flexDirection":"row","alignItems":"center","rowGap":14,"columnGap":14,"paddingTop":10,"paddingRight":16,"paddingBottom":10,"paddingLeft":16,"minHeight":56},
+  v32: {"flexGrow":1,"flexShrink":1,"flexBasis":"0%"},
+  v33: {"flexDirection":"column","alignItems":"stretch","rowGap":16,"columnGap":16,"paddingTop":4,"paddingBottom":16},
+  v34: {"flexDirection":"column","alignItems":"center","rowGap":3,"columnGap":3,"flexGrow":1,"flexShrink":1,"flexBasis":"0%","paddingTop":4,"paddingBottom":4},
+  t35: {"color":"#3b4cca","fontSize":13,"lineHeight":19.5,"fontFamily":"Inter_700Bold"},
+  v36: {"flexDirection":"row","alignItems":"stretch","flexShrink":0,"paddingTop":6,"backgroundColor":"#ffffff","borderTopWidth":1,"borderTopColor":"#eceef3"},
+  v37: {"flexDirection":"column","alignItems":"stretch","flexGrow":1,"flexShrink":1,"flexBasis":"0%","backgroundColor":"#f4f5f9"},
+});

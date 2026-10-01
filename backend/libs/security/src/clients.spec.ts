@@ -130,27 +130,83 @@ describe('DevicePostureService', () => {
     verify(lookup.findDevice(anything())).never();
   });
 
+  const RB = 'DEV-RB-01';
+  /** The OData error code a posture failure carries (the exception filter uses it). */
+  const codeOf = async (p: Promise<unknown>) => ((await p.catch((e) => e)) as UnauthorizedException).getResponse() as { code: string };
+
   it('accepts an active device of the same user and caches it', async () => {
     when(lookup.findDevice('DEV-RB-01')).thenResolve({ id: 'DEV-RB-01', userId: 'ruwan', status: 'ACTIVE' });
-    await posture.check(personas.ruwan);
-    await posture.check(personas.ruwan);
+    await posture.check(personas.ruwan, RB);
+    await posture.check(personas.ruwan, RB);
     verify(lookup.findDevice('DEV-RB-01')).once();
     now = 31_000;
-    await posture.check(personas.ruwan);
+    await posture.check(personas.ruwan, RB);
     verify(lookup.findDevice('DEV-RB-01')).twice();
   });
 
   it('rejects missing, unknown, revoked and foreign devices', async () => {
-    await expect(posture.check({ ...personas.ruwan, deviceId: undefined })).rejects.toThrow('not bound to a device');
+    await expect(posture.check({ ...personas.ruwan, deviceId: undefined }, RB)).rejects.toThrow('not bound to a device');
     when(lookup.findDevice('DEV-RB-01')).thenResolve(null);
-    await expect(posture.check(personas.ruwan)).rejects.toThrow('not registered');
+    await expect(posture.check(personas.ruwan, RB)).rejects.toThrow('not registered');
     posture.invalidate('DEV-RB-01');
     when(lookup.findDevice('DEV-RB-01')).thenResolve({ id: 'DEV-RB-01', userId: 'ruwan', status: 'REVOKED' });
-    await expect(posture.check(personas.ruwan)).rejects.toThrow('Device is revoked');
+    await expect(posture.check(personas.ruwan, RB)).rejects.toThrow('Device is revoked');
+    expect(await codeOf(posture.check(personas.ruwan, RB))).toMatchObject({ code: 'DeviceInactive' });
     posture.invalidate('DEV-RB-01');
     when(lookup.findDevice('DEV-RB-01')).thenResolve({ id: 'DEV-RB-01', userId: 'kasun', status: 'ACTIVE' });
-    await expect(posture.check(personas.ruwan)).rejects.toBeInstanceOf(UnauthorizedException);
-    await expect(new DevicePostureService(config).check(personas.ruwan)).rejects.toThrow('registry unavailable');
+    await expect(posture.check(personas.ruwan, RB)).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(new DevicePostureService(config).check(personas.ruwan, RB)).rejects.toThrow('registry unavailable');
+  });
+
+  describe('X-Device-Id binding', () => {
+    beforeEach(() => when(lookup.findDevice(anything())).thenCall(async (id: string) => ({ id, userId: id === 'DEV-FR-01' ? 'fathima' : id === 'DEV-NP-01' ? 'nilanthi' : 'ruwan', status: 'ACTIVE' })));
+
+    it('401 DeviceMismatch when the header names another device, before the registry is read', async () => {
+      const err = await posture.check(personas.ruwan, 'DEV-SOMEONE-ELSE').catch((e) => e);
+      expect(err).toBeInstanceOf(UnauthorizedException);
+      expect(err.getStatus()).toBe(401);
+      expect(err.getResponse()).toMatchObject({ code: 'DeviceMismatch', message: expect.stringMatching(/X-Device-Id/) });
+      verify(lookup.findDevice(anything())).never();
+    });
+
+    it('takes the first value of a repeated header and ignores blank values', async () => {
+      await expect(posture.check(personas.ruwan, [RB, 'DEV-X'])).resolves.toBeUndefined();
+      expect(await codeOf(posture.check(personas.ruwan, ['DEV-X', RB]))).toMatchObject({ code: 'DeviceMismatch' });
+      expect(await codeOf(posture.check(personas.ruwan, '   '))).toMatchObject({ code: 'DeviceHeaderRequired' });
+    });
+
+    it('requires the header by default (REQUIRE_DEVICE_HEADER unset or true)', async () => {
+      expect(await codeOf(posture.check(personas.ruwan))).toMatchObject({ code: 'DeviceHeaderRequired' });
+      const strict = new DevicePostureService({ ...config, requireDeviceHeader: true }, instance(lookup), () => now);
+      expect(await codeOf(strict.check(personas.ruwan, undefined))).toMatchObject({ code: 'DeviceHeaderRequired' });
+    });
+
+    it('accepts a missing header when REQUIRE_DEVICE_HEADER=false, but still checks a present one', async () => {
+      const lenient = new DevicePostureService({ ...config, requireDeviceHeader: false }, instance(lookup), () => now);
+      await expect(lenient.check(personas.ruwan)).resolves.toBeUndefined();
+      expect(await codeOf(lenient.check(personas.ruwan, 'DEV-X'))).toMatchObject({ code: 'DeviceMismatch' });
+      // the registry is still consulted without the header
+      when(lookup.findDevice(RB)).thenResolve({ id: RB, userId: 'ruwan', status: 'REVOKED' });
+      lenient.invalidate(RB);
+      expect(await codeOf(lenient.check(personas.ruwan))).toMatchObject({ code: 'DeviceInactive' });
+    });
+
+    it('keeps posture on for store managers and dispatchers using the field app', async () => {
+      const fathima = { ...personas.fathima, clientId: 'lodestar-field', deviceId: 'DEV-FR-01' };
+      const nilanthi = { ...personas.nilanthi, clientId: 'lodestar-field', deviceId: 'DEV-NP-01' };
+      await expect(posture.check(fathima, 'DEV-FR-01')).resolves.toBeUndefined();
+      await expect(posture.check(nilanthi, 'DEV-NP-01')).resolves.toBeUndefined();
+      expect(await codeOf(posture.check({ ...fathima, deviceId: undefined }, 'DEV-FR-01'))).toMatchObject({ code: 'DeviceNotBound' });
+      expect(await codeOf(posture.check(fathima, 'DEV-NP-01'))).toMatchObject({ code: 'DeviceMismatch' });
+      // nilanthi's token naming fathima's phone: header matches the claim, but the device is not hers
+      expect(await codeOf(posture.check({ ...nilanthi, deviceId: 'DEV-FR-01' }, 'DEV-FR-01'))).toMatchObject({ code: 'DeviceNotOwned' });
+    });
+
+    it('never applies to web or service tokens, header or not', async () => {
+      await expect(posture.check(personas.fathima, 'DEV-ANY')).resolves.toBeUndefined();
+      await expect(posture.check(personas.agent)).resolves.toBeUndefined();
+      verify(lookup.findDevice(anything())).never();
+    });
   });
 
   it('reads devices from the Device table', async () => {

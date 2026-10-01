@@ -1,8 +1,9 @@
-import { Logger } from '@nestjs/common';
-import { OnGatewayConnection, OnGatewayDisconnect, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
+import { Logger, OnModuleDestroy } from '@nestjs/common';
+import { OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { PrismaService } from '@lodestar/prisma';
 import { bearerToken, DevicePostureService, isPrivileged, JwtVerifier, Principal, Roles } from '@lodestar/security';
+import { attachRedisAdapter, RedisAdapterHandle } from './redis-adapter';
 
 /** Depot rooms are upper-case (dispatcher:KANDY, loader:KANDY); other ids are kept as given. */
 export function canonicalRoom(room: string): string {
@@ -25,8 +26,9 @@ const WS_ORIGINS =(process.env.WS_CORS_ORIGINS ?? 'https://localhost:8443,http:/
  *   loader:<depot>       — loader sees bay queue updates
  */
 @WebSocketGateway({ cors: { origin: WS_ORIGINS, credentials: true }, path: '/ws/' })
-export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class NotificationsGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect, OnModuleDestroy {
   private readonly logger = new Logger(NotificationsGateway.name);
+  private redis?: RedisAdapterHandle;
 
   @WebSocketServer()
   server: Server;
@@ -37,13 +39,26 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     private readonly prisma: PrismaService,
   ) {}
 
+  /**
+   * With REDIS_URL set, room emits fan out across replicas through Redis
+   * (PLATFORM.md section 9). Unset: the in-memory adapter (one instance).
+   */
+  afterInit(server: Server) {
+    this.redis = attachRedisAdapter(server);
+    this.redis?.ready.catch((err: Error) => this.logger.error(`Socket.IO Redis adapter not attached: ${err.message}`));
+  }
+
+  async onModuleDestroy() {
+    await this.redis?.close();
+  }
+
   async handleConnection(client: Socket) {
     try {
       const raw = client.handshake.auth?.token ?? bearerToken(client.handshake.headers?.authorization);
       const token = typeof raw === 'string' ? raw.replace(/^Bearer\s+/i, '') : undefined;
       if (!token) throw new Error('missing token');
       const principal = await this.verifier.verify(token);
-      await this.posture.check(principal);
+      await this.posture.check(principal, client.handshake.auth?.deviceId ?? client.handshake.headers?.['x-device-id']);
       client.data.principal = principal;
       client.join(`user:${principal.sub}`);
 

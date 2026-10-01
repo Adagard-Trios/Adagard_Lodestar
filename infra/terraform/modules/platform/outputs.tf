@@ -44,6 +44,10 @@ output "postgres_fqdn" {
   value = module.postgres.fqdn
 }
 
+output "redis_hostname" {
+  value = module.redis.hostname
+}
+
 output "log_analytics_workspace_id" {
   value = module.monitoring.workspace_id
 }
@@ -95,6 +99,7 @@ output "kustomize_azure_env" {
     "FRONTDOOR_ID=${module.frontdoor.frontdoor_id}",
     "PRIVATE_LINK_SUBNET=${module.network.private_link_subnet_name}",
     "POSTGRES_CIDR=${var.subnets.postgres}",
+    "POSTGRES_HOST=${module.postgres.fqdn}",
     "PRIVATE_ENDPOINT_CIDR=${var.subnets.private_endpoints}",
     "WEB_HOST=${var.web_hostname}",
     "FIELD_HOST=${var.field_hostname}",

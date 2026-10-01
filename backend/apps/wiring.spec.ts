@@ -37,6 +37,7 @@ function fakePrisma() {
     create: jest.fn(),
     update: jest.fn(),
     updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+    deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
     upsert: jest.fn(),
     groupBy: jest.fn().mockResolvedValue([]),
     aggregate: jest.fn().mockResolvedValue({ _sum: {}, _count: {} }),
@@ -45,16 +46,18 @@ function fakePrisma() {
     $connect: jest.fn(),
     $disconnect: jest.fn(),
     $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
+    $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(proxy)),
     onModuleInit: async () => undefined,
     onModuleDestroy: async () => undefined,
   };
-  return new Proxy(base, {
+  const proxy: any = new Proxy(base, {
     get(target, key) {
       if (key in target) return target[key as string];
       if (typeof key === 'symbol' || key === 'then' || key.startsWith('on') || key === 'constructor') return undefined;
       return (delegates[key] ??= delegate());
     },
   });
+  return proxy;
 }
 
 const SERVICES: { name: string; module: Type<unknown>; sets: string[] }[] = [
@@ -211,6 +214,84 @@ describe('end-to-end behaviour (orders)', () => {
     expect(audit.record).toHaveBeenLastCalledWith(
       expect.objectContaining({ actor: 'nilanthi', action: 'Orders.SetStatus', entitySet: 'Orders', entityKey: 'ORD1', outcome: 'SUCCESS' }),
     );
+  });
+
+  describe('field app (lodestar-field tokens)', () => {
+    const fathimaField = () =>
+      token({ sub: 'fathima', roles: ['store_manager'], outlet_id: 'OUT106', device_id: 'DEV-FR-01', azp: 'lodestar-field' } as any);
+    const activeDevice = () => prisma.device.findUnique.mockResolvedValue({ id: 'DEV-FR-01', userId: 'fathima', status: 'ACTIVE' });
+
+    afterEach(() => prisma.device.findUnique.mockResolvedValue(null));
+
+    it('401 DeviceMismatch when X-Device-Id names another phone, 401 DeviceHeaderRequired without it', async () => {
+      activeDevice();
+      const tok = await fathimaField();
+      const other = await request(app.getHttpServer()).get('/odata/v4/Orders').set('Authorization', `Bearer ${tok}`).set('X-Device-Id', 'DEV-1234ABCD').expect(401);
+      expect(other.body.error).toMatchObject({ code: 'DeviceMismatch' });
+      expect(other.headers['www-authenticate']).toMatch(/^Bearer/);
+      const none = await request(app.getHttpServer()).get('/odata/v4/Orders').set('Authorization', `Bearer ${tok}`).expect(401);
+      expect(none.body.error.code).toBe('DeviceHeaderRequired');
+      await request(app.getHttpServer()).get('/odata/v4/Orders').set('Authorization', `Bearer ${tok}`).set('X-Device-Id', 'DEV-FR-01').expect(200);
+    });
+
+    it('ConfirmReceipt: records the count once; the retry with the same Idempotency-Key is replayed, a changed body is 422', async () => {
+      activeDevice();
+      const tok = await fathimaField();
+      const rows = new Map<string, any>();
+      const idem = prisma.ordersIdempotencyKey;
+      idem.findUnique.mockImplementation(async (a: any) => rows.get(`${a.where.userId_key.userId}|${a.where.userId_key.key}`) ?? null);
+      idem.create.mockImplementation(async (a: any) => void rows.set(`${a.data.userId}|${a.data.key}`, a.data));
+      idem.update.mockImplementation(async (a: any) => {
+        const id = `${a.where.userId_key.userId}|${a.where.userId_key.key}`;
+        rows.set(id, { ...rows.get(id), ...JSON.parse(JSON.stringify(a.data)) });
+      });
+
+      const order = { id: 'ORD0104217', outletId: 'OUT106', status: 'DELIVERED', units: 34, updatedAt: new Date(1) };
+      prisma.order.findFirst.mockResolvedValue(order);
+      prisma.order.findUnique.mockResolvedValue({ ...order, unitsReceived: null, tripStop: { pod: { id: 'POD-ORD0104217', creditNoteId: 'CN-2604-0441', exceptions: [] } } });
+      prisma.order.update.mockImplementation(async (a: any) => ({ ...order, ...a.data, updatedAt: new Date(2) }));
+      prisma.pOD.update.mockResolvedValue({});
+      const updatesBefore = prisma.order.update.mock.calls.length;
+
+      const body = { unitsReceived: 31, unitsExpected: 34, note: null, savedAt: '2026-04-07T07:05:00+05:30' };
+      const send = (b: object) =>
+        request(app.getHttpServer())
+          .post("/odata/v4/Orders('ORD0104217')/Lodestar.ConfirmReceipt")
+          .set('Authorization', `Bearer ${tok}`)
+          .set('X-Device-Id', 'DEV-FR-01')
+          .set('Idempotency-Key', '6f1d2c3b-receipt')
+          .send(b);
+
+      const first = await send(body).expect(200);
+      expect(first.headers['idempotent-replay']).toBeUndefined();
+      expect(first.body).toMatchObject({ id: 'ORD0104217', status: 'DELIVERED', unitsReceived: 31, unitsExpected: 34, creditNoteId: 'CN-2604-0441', receivedBy: 'fathima' });
+      expect(audit.record).toHaveBeenLastCalledWith(expect.objectContaining({ actor: 'fathima', client: 'lodestar-field', action: 'Orders.ConfirmReceipt', entityKey: 'ORD0104217' }));
+
+      const again = await send(body).expect(200);
+      expect(again.headers['idempotent-replay']).toBe('true');
+      expect(again.body).toEqual(first.body);
+      expect(prisma.order.update.mock.calls.length - updatesBefore).toBe(1);
+      expect(audit.record).toHaveBeenLastCalledWith(expect.objectContaining({ action: 'Orders.ConfirmReceipt.Replay' }));
+
+      const changed = await send({ ...body, unitsReceived: 30 }).expect(422);
+      expect(changed.body.error.code).toBe('IdempotencyKeyReused');
+      expect(prisma.order.update.mock.calls.length - updatesBefore).toBe(1);
+
+      prisma.order.findFirst.mockResolvedValue(null);
+      prisma.order.findUnique.mockResolvedValue(null);
+      prisma.order.update.mockReset();
+    });
+
+    it('ConfirmReceipt is for store managers only', async () => {
+      const nilanthi = await token({ sub: 'nilanthi', roles: ['dispatcher'], depot: ['KANDY'] });
+      prisma.order.findFirst.mockResolvedValueOnce({ id: 'ORD1', outletId: 'OUT106', status: 'DELIVERED', updatedAt: new Date(1) });
+      const res = await request(app.getHttpServer())
+        .post("/odata/v4/Orders('ORD1')/Lodestar.ConfirmReceipt")
+        .set('Authorization', `Bearer ${nilanthi}`)
+        .send({ unitsReceived: 1, unitsExpected: 1, savedAt: '2026-04-07T07:05:00+05:30' })
+        .expect(403);
+      expect(res.body.error.code).toBe('Forbidden');
+    });
   });
 
   it('rejects tokens for another audience or issuer', async () => {

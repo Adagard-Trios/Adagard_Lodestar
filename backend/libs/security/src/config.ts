@@ -10,6 +10,9 @@ import { readFileSync } from 'fs';
  *                      defaults to the Keycloak certs endpoint of the first issuer)
  *   OIDC_AUDIENCE      required `aud` (default lodestar-api)
  *   FIELD_CLIENT_ID    the device-bound public client (default lodestar-field)
+ *   REQUIRE_DEVICE_HEADER  field-client calls must send X-Device-Id equal to the token's device_id claim
+ *                      (default true; set false/0/no to accept calls without the header — a header that is
+ *                      present is always checked)
  *
  * Service identity (outgoing calls), two modes:
  *   Local (Keycloak)   OIDC_TOKEN_URL + OIDC_CLIENT_ID + OIDC_CLIENT_SECRET (or OIDC_CLIENT_SECRET_FILE)
@@ -25,6 +28,8 @@ export interface OidcConfig {
   clientId?: string;
   clientSecret?: string;
   fieldClientId: string;
+  /** Field-client calls must carry X-Device-Id (REQUIRE_DEVICE_HEADER, default true). */
+  requireDeviceHeader?: boolean;
   /** Azure workload identity: file holding the federated token used as client assertion. */
   federatedTokenFile?: string;
   /** `scope` for the token request (Entra: e.g. api://lodestar-api/.default). */
@@ -44,6 +49,12 @@ export function readSecret(env: NodeJS.ProcessEnv, name: string): string | undef
   return env[name] || undefined;
 }
 
+/** Boolean env flag: false/0/no/off disable it; anything else (or unset) keeps the default. */
+export function envFlag(value: string | undefined, fallback: boolean): boolean {
+  if (value === undefined || value.trim() === '') return fallback;
+  return !/^(false|0|no|off)$/i.test(value.trim());
+}
+
 export function loadOidcConfig(env: NodeJS.ProcessEnv = process.env): OidcConfig {
   const issuers = (env.OIDC_ISSUER ?? '')
     .split(',')
@@ -60,6 +71,7 @@ export function loadOidcConfig(env: NodeJS.ProcessEnv = process.env): OidcConfig
       audience: env.OIDC_AUDIENCE || 'lodestar-api',
       clientId: env.AZURE_CLIENT_ID || env.OIDC_CLIENT_ID || undefined,
       fieldClientId: env.FIELD_CLIENT_ID || 'lodestar-field',
+      requireDeviceHeader: envFlag(env.REQUIRE_DEVICE_HEADER, true),
       federatedTokenFile,
       tokenScope: env.SVC_TOKEN_SCOPE || undefined,
     };
@@ -73,6 +85,7 @@ export function loadOidcConfig(env: NodeJS.ProcessEnv = process.env): OidcConfig
     clientId: env.OIDC_CLIENT_ID || env.SERVICE_CLIENT_ID || undefined,
     clientSecret: readSecret(env, 'OIDC_CLIENT_SECRET') ?? readSecret(env, 'SERVICE_CLIENT_SECRET'),
     fieldClientId: env.FIELD_CLIENT_ID || 'lodestar-field',
+    requireDeviceHeader: envFlag(env.REQUIRE_DEVICE_HEADER, true),
     tokenScope: env.SVC_TOKEN_SCOPE || undefined,
   };
 }

@@ -47,6 +47,8 @@ export interface EntitySetOptions {
   updatable?: string[];
   /** Default $orderby, e.g. 'runDate desc,id' */
   defaultOrderBy?: string;
+  /** POST honours Idempotency-Key (needs ODataModule `idempotency`); see idempotency.ts. */
+  idempotentCreate?: boolean;
 }
 
 export interface ParamSpec {
@@ -61,6 +63,8 @@ export interface OperationOptions {
   params?: Record<string, string | ParamSpec>;
   /** EDM return type: Lodestar.Plan, Collection(Lodestar.Order), Lodestar.ChainCheck, Edm.String… */
   returns?: string;
+  /** Actions only: honour Idempotency-Key (needs ODataModule `idempotency`); see idempotency.ts. */
+  idempotent?: boolean;
 }
 
 export interface OperationMeta extends OperationOptions {
@@ -169,7 +173,7 @@ export class ODataEntitySet {
   }
 
   /** Conditional update (key + ETag in `where`); returns the number of rows changed. */
-  async updateWhere(where: Where, data: Record<string, any>): Promise<number> {
+  async updateWhere(where: Where, data: Record<string, any>, _ctx?: WriteContext): Promise<number> {
     return (await this.delegate.updateMany({ where, data })).count;
   }
 }

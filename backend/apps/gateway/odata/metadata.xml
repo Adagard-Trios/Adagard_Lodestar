@@ -104,6 +104,7 @@
         <Property Name="role" Type="Lodestar.Role" Nullable="false"/>
         <Property Name="depot" Type="Lodestar.Depot"/>
         <Property Name="outletId" Type="Edm.String"/>
+        <Property Name="vehicleId" Type="Edm.String"/>
         <Property Name="phone" Type="Edm.String"/>
         <Property Name="isActive" Type="Edm.Boolean" Nullable="false"/>
         <Property Name="createdAt" Type="Edm.DateTimeOffset" Nullable="false"/>
@@ -177,6 +178,13 @@
         <Property Name="notes" Type="Edm.String"/>
         <Property Name="createdAt" Type="Edm.DateTimeOffset" Nullable="false"/>
         <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <Property Name="unitsReceived" Type="Edm.Int32"/>
+        <Property Name="unitsExpected" Type="Edm.Int32"/>
+        <Property Name="receiptNote" Type="Edm.String"/>
+        <Property Name="receiptSavedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="receivedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="receivedBy" Type="Edm.String"/>
+        <Property Name="creditNoteId" Type="Edm.String"/>
         <NavigationProperty Name="outlet" Type="Lodestar.Outlet" Nullable="false"/>
         <NavigationProperty Name="tripStop" Type="Lodestar.TripStop"/>
         <NavigationProperty Name="deferralLog" Type="Lodestar.DeferralLog"/>
@@ -491,6 +499,14 @@
       <Action Name="Cancel" IsBound="true">
         <Parameter Name="bindingParameter" Type="Lodestar.Order" Nullable="false"/>
         <Parameter Name="reason" Type="Edm.String"/>
+        <ReturnType Type="Lodestar.Order"/>
+      </Action>
+      <Action Name="ConfirmReceipt" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.Order" Nullable="false"/>
+        <Parameter Name="unitsReceived" Type="Edm.Int32" Nullable="false"/>
+        <Parameter Name="unitsExpected" Type="Edm.Int32" Nullable="false"/>
+        <Parameter Name="note" Type="Edm.String"/>
+        <Parameter Name="savedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
         <ReturnType Type="Lodestar.Order"/>
       </Action>
       <Function Name="Summary" IsBound="true">
