@@ -66,6 +66,8 @@ services:
   audit: *node-small
   agent:
     mem_limit: 320m
+  ocr:
+    mem_limit: 400m
   frontend:
     mem_limit: 384m
     environment:

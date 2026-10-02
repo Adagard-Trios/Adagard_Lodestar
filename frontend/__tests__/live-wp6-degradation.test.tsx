@@ -99,7 +99,8 @@ describe('DSP-A1 Blackout view', () => {
     const panel = screen.getByTestId('blackout-panel');
     expect(panel).toHaveTextContent('Last ping at Above Ramboda · reefer 3 °C');
     expect(panel).toHaveTextContent('Predicted · not confirmed');
-    expect(screen.getByTestId('call-driver')).toHaveAttribute('href', 'tel:+94770000001');
+    // the phone number comes from the directory, which answers on its own
+    expect(await screen.findByTestId('call-driver')).toHaveAttribute('href', 'tel:+94770000001');
     expect(view.calls.find(c => c.path === 'Notifications')!.query.$filter).toBe("type in ('BLACKOUT_DETECTED','SIGNAL_LOST','SIGNAL_BACK')");
   });
 
@@ -266,7 +267,8 @@ describe('DSP-A2 Reconcile conflict', () => {
 
   it('shows the sync, the dispatcher\'s provisional deferral against the field record, and what was applied', async () => {
     const view = renderLive(<Reconcile />, { handler: handler() });
-    expect(await screen.findByTestId('a2-title')).toHaveTextContent('1 conflict needs your decision');
+    // the title waits for the sync records before it counts the conflicts
+    await waitFor(() => expect(screen.getByTestId('a2-title')).toHaveTextContent('1 conflict needs your decision'));
     expect(await screen.findByText(/back online at 13:10/)).toBeInTheDocument();
     expect(screen.getByText(/near Near Pussellawa · 5 records received/)).toBeInTheDocument();
     expect(screen.getByText('Offline 12:30 to 13:10 · 0 h 40 m')).toBeInTheDocument();
@@ -275,7 +277,8 @@ describe('DSP-A2 Reconcile conflict', () => {
     expect(screen.getByText('Recommended: keep the delivery')).toBeInTheDocument();
     // synced without conflict: the arrival and the other POD (status changes are not records)
     expect(screen.getByText('Synced without conflict').closest('.d-card')!.querySelectorAll('.g-li')).toHaveLength(2);
-    expect(view.calls.find(c => c.path === 'Deferrals')!.query.$filter).toBe("orderId in ('ORDT9')");
+    // the sidebar's open-deferral count ($top=0) is not the screen's read
+    expect(view.calls.find(c => c.path === 'Deferrals' && c.query.$top !== '0')!.query.$filter).toBe("orderId in ('ORDT9')");
   });
 
   it('"Resolve: keep the delivery" dismisses the open provisional deferral and tells the store and the driver', async () => {

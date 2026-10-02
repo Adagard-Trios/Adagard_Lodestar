@@ -140,7 +140,7 @@ export default function LiveDspA2ReconcileConflict() {
                 {syncedAt && <><span className="m-sep" />{` ${fmtDay(syncedAt)}, ${fmtClock(syncedAt)}`}</>}
               </div>
               <div className="d-h1" data-testid="a2-title">
-                {!main ? 'No sync conflicts' : needYou ? `${needYou} conflict${needYou === 1 ? '' : 's'} need${needYou === 1 ? 's' : ''} your decision` : 'Conflict resolved: field evidence kept'}
+                {loading ? 'Loading the sync…' : !main ? 'No sync conflicts' : needYou ? `${needYou} conflict${needYou === 1 ? '' : 's'} need${needYou === 1 ? 's' : ''} your decision` : 'Conflict resolved: field evidence kept'}
               </div>
             </div>
             {ops.trips.data && <span className="m-pill m-pill--ok"><span className="dot" />{reporting} reporting live</span>}

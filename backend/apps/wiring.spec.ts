@@ -203,7 +203,7 @@ describe('end-to-end behaviour (orders)', () => {
   it('records a successful action in the audit log before answering', async () => {
     const nilanthi = await token({ sub: 'nilanthi', roles: ['dispatcher'], depot: ['KANDY'] });
     prisma.order.findFirst.mockResolvedValueOnce({ id: 'ORD1', status: 'PLANNED', updatedAt: new Date(1) });
-    prisma.order.findUnique.mockResolvedValueOnce({ id: 'ORD1' });
+    prisma.order.findUnique.mockResolvedValueOnce({ id: 'ORD1', status: 'PLANNED', updatedAt: new Date(1) });
     prisma.order.update.mockResolvedValueOnce({ id: 'ORD1', status: 'LOADED', updatedAt: new Date(2) });
     const res = await request(app.getHttpServer())
       .post("/odata/v4/Orders('ORD1')/Lodestar.SetStatus")

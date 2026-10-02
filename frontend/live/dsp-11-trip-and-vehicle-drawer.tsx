@@ -37,7 +37,7 @@ function Meter({ label, used, cap, unit, digits = 0 }: { label: string; used: nu
 }
 
 export default function LiveDsp11TripAndVehicleDrawer() {
-  const { tripsFilter } = usePlanScope();
+  const { tripsFilter, loadingDate } = usePlanScope();
   const [focus, setFocus] = useFocusId('trip');
 
   const first = useQuery<string | null>(!focus && tripsFilter ? `drawer-first-trip:${tripsFilter}` : null, async c =>
@@ -79,7 +79,7 @@ export default function LiveDsp11TripAndVehicleDrawer() {
         <div className="dx-drawer__head">
           <span className={`dx-lead${reefer ? ' dx-lead--cold' : ''}`} style={{ width: '44px', height: '44px' }}><Ic n={v?.type === 'VAN' ? 'van' : 'truck'} /></span>
           <div className="vstack" style={{ gap: '3px', flex: '1', minWidth: '0' }}>
-            <span className="d-h1" style={{ fontSize: '24px' }}>{t ? `${t.vehicleId} · Trip ${t.tripNumber}` : trip.loading || first.loading ? 'Loading…' : 'Trip'}</span>
+            <span className="d-h1" style={{ fontSize: '24px' }}>{t ? `${t.vehicleId} · Trip ${t.tripNumber}` : trip.loading || first.loading || (!focus && loadingDate) ? 'Loading…' : 'Trip'}</span>
             {t && (
               <span className="x-meta">
                 {reefer ? 'Reefer' : 'Dry'} {v?.type === 'VAN' ? 'van' : 'truck'}<span className="m-sep" />
@@ -92,7 +92,8 @@ export default function LiveDsp11TripAndVehicleDrawer() {
         </div>
         <div className="dx-drawer__body lo-fit">
           <ErrorBanner error={trip.error ?? first.error} onRetry={() => { void trip.refresh(); void first.refresh(); }} />
-          {!t && !trip.error && (id || first.loading ? <Skeleton rows={4} label="Loading the trip…" /> : <Empty title="No trip selected" text="There are no trips on the board for this run date." icon="truck" />)}
+          {/* the run date still loading is not "no trip" */}
+          {!t && !trip.error && (id || first.loading || (!focus && loadingDate) ? <Skeleton rows={4} label="Loading the trip…" /> : <Empty title="No trip selected" text="There are no trips on the board for this run date." icon="truck" />)}
           {t && (
             <>
               {day3.length > 1 && (

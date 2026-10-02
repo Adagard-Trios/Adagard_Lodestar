@@ -98,7 +98,9 @@ export default function LiveDsp10LogPhoneOrder() {
             : filled.some(l => !lineOk(l)) ? 'Every line needs an item, a whole quantity and its weight in kg.'
               : !readBack ? 'Read the order back to the caller.'
                 : late && !lineCheck ? 'The cutoff has passed: flag it for a line check to log it as a late order.'
-                  : null;
+                  // the m³ sent is estimated from the outlet's earlier orders: never send the default while they load
+                  : history.loading ? 'Working out the volume from the outlet’s earlier orders…'
+                    : null;
 
   const save = useAction<void, Order>(async c => {
     if (!outlet || !runDate) throw new Error('Choose the outlet.');

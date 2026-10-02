@@ -12,6 +12,7 @@ services:
   notifications: { image: "${REGISTRY}/lodestar-notifications:${TAG}" }
   audit:         { image: "${REGISTRY}/lodestar-audit:${TAG}" }
   agent:         { image: "${REGISTRY}/lodestar-agent:${TAG}" }
+  ocr:           { image: "${REGISTRY}/lodestar-ocr:${TAG}" }
   gateway:       { image: "${REGISTRY}/lodestar-gateway:${TAG}", build: { args: { GIT_SHA: "${TAG}" } } }
   frontend:      { image: "${REGISTRY}/lodestar-frontend:${TAG}" }
   mobile-web:    { image: "${REGISTRY}/lodestar-mobile-web:${TAG}" }

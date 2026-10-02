@@ -235,7 +235,7 @@ export class TripsService {
         order: { select: { unitsReceived: true, unitsExpected: true, receiptNote: true, receivedBy: true, receiptSavedAt: true, creditNoteId: true } },
       },
     });
-    const status = podOutcome(podData) === 'STOP_FAILED' ? OrderStatus.DELIVERED : OrderStatus.DELIVERED;
+    const status = podOutcome(podData) === 'STOP_FAILED' ? OrderStatus.EXCEPTION : OrderStatus.DELIVERED;
     const left = leaveActual ?? new Date();
     const storeCounted = !before?.pod && !!before?.order && (before.order.unitsExpected ?? 0) > (before.order.unitsReceived ?? Infinity);
     const exceptions = podData.exceptions !== undefined || storeCounted

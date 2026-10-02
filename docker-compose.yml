@@ -264,6 +264,21 @@ services:
       # read the owning services directly inside the app network (each still checks the token)
       LODESTAR_SERVICE_URLS: Orders=http://orders:3002,Outlets=http://outlets:3005,Calendar=http://outlets:3005,DistrictTravel=http://outlets:3005,ServiceAllowances=http://outlets:3005,Vehicles=http://fleet:3004
 
+  # ---------------------------------------------------------------- OCR (RapidOCR / PP-OCR mobile, CPU only)
+  # "Read from photo · confirm": camera screens send a photo, the value is pre-filled, the person confirms.
+  ocr:
+    <<: *hardened
+    build: { context: ./backend/apps/ocr, dockerfile: Dockerfile }
+    restart: unless-stopped
+    environment:
+      OIDC_ISSUER: ${PUBLIC_ORIGIN:-https://localhost:8443}/auth/realms/lodestar
+      OIDC_JWKS_URL: http://identity:8080/auth/realms/lodestar/protocol/openid-connect/certs
+      OIDC_AUDIENCE: lodestar-api
+      OCR_THREADS: "2"
+    networks: [app]
+    depends_on:
+      identity: { condition: service_healthy }
+
   # ---------------------------------------------------------------- edge
   gateway:
     build: { context: ./backend/apps/gateway }
