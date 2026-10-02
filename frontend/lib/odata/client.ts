@@ -5,6 +5,9 @@
 //  - PATCH sends If-Match with the entity's ETag (@odata.etag).
 //  - Errors surface the OData error body {error: {code, message, target, details}}.
 //  - A 401 renews the session once and retries; if that fails, the user is sent to sign in.
+//  - Every answer (or the lack of one) is reported to lib/desk-status, which drives the offline banner (DSP-24),
+//    service unavailable (SM-36) and no access to this depot (DSP-36).
+import { reportForbidden, reportNetworkError, reportResponse } from '../desk-status';
 
 export type Primitive = string | number | boolean | null;
 export type EntityKey = string | number | Record<string, Primitive>;
@@ -143,13 +146,16 @@ export class ODataClient {
       if (token) headers.Authorization = `Bearer ${token}`;
       if (init.body !== undefined) headers['Content-Type'] = 'application/json';
       try {
-        return await this.fetchImpl(url, {
+        const res = await this.fetchImpl(url, {
           method,
           headers,
           body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
           credentials: 'omit', // bearer tokens only; no ambient cookies
         });
+        reportResponse(res.status);
+        return res;
       } catch (err) {
+        reportNetworkError();
         throw new ODataError(0, { code: 'NetworkError', message: `The Lodestar API is not reachable (${(err as Error).message})` });
       }
     };
@@ -168,7 +174,11 @@ export class ODataClient {
         throw await toError(res);
       }
     }
-    if (!res.ok) throw await toError(res);
+    if (!res.ok) {
+      const error = await toError(res);
+      if (error.status === 403) reportForbidden(error);
+      throw error;
+    }
     const etag = res.headers.get('ETag') ?? undefined;
     if (res.status === 204) return { data: undefined as T, status: 204, etag };
     const text = await res.text();

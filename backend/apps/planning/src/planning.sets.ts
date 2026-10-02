@@ -323,6 +323,16 @@ export class AgentRunsSet extends ODataEntitySet {
     return run;
   }
 
+  /**
+   * GET AgentRuns/Lodestar.AgentConfig() — the planning agent's model, fallback and the guardrails it enforces
+   * (DSP-16 models and fallbacks, ADM-17 planning agent guardrails). Read-only, from the agent's own GET /config
+   * with the caller's token.
+   */
+  @ODataFunction({ name: 'AgentConfig', binding: 'collection', roles: [Roles.Dispatcher, Roles.Admin], returns: 'Edm.Untyped' })
+  agentConfig(ctx: OperationContext) {
+    return this.agent.config(this.authorization(ctx.headers));
+  }
+
   /** POST AgentRuns('…')/Lodestar.Ask {question} — "Ask the planning agent" (DSP-39/40). */
   @ODataAction({
     name: 'Ask',

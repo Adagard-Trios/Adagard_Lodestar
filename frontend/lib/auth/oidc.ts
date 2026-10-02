@@ -13,7 +13,7 @@ export const CALLBACK_PATH = '/signin-callback';
 /** The slice of oidc-client-ts the app uses; tests pass a fake. */
 export interface UserManagerLike {
   getUser(): Promise<User | null>;
-  signinRedirect(args?: { state?: unknown }): Promise<void>;
+  signinRedirect(args?: { state?: unknown; prompt?: string }): Promise<void>;
   signinRedirectCallback(url?: string): Promise<User>;
   signinSilent(): Promise<User | null>;
   signoutRedirect(args?: { id_token_hint?: string; post_logout_redirect_uri?: string }): Promise<void>;

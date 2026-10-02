@@ -115,3 +115,44 @@ export function isEntryPath(path: string): boolean {
 export function initials(name: string): string {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join('') || '?';
 }
+
+/** Who a session that ended (could not be renewed) belonged to, for "Your session ended" (DSP-35). */
+export interface EndedSession {
+  name: string | null;
+  email: string | null;
+  /** Epoch seconds the session started (auth_time), when known. */
+  startedAt: number | null;
+  /** Epoch ms it ended. */
+  endedAt: number;
+}
+
+const ENDED_KEY = 'lodestar.sessionEnded';
+
+export function rememberEndedSession(s: Omit<EndedSession, 'endedAt'>, now = Date.now()) {
+  try {
+    window.sessionStorage.setItem(ENDED_KEY, JSON.stringify({ ...s, endedAt: now }));
+  } catch {
+    // storage blocked: the screen shows the generic text
+  }
+}
+
+export function readEndedSession(): EndedSession | null {
+  try {
+    const raw = window.sessionStorage.getItem(ENDED_KEY);
+    const v = raw ? (JSON.parse(raw) as EndedSession) : null;
+    return v && typeof v.endedAt === 'number' ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+export function forgetEndedSession() {
+  try {
+    window.sessionStorage.removeItem(ENDED_KEY);
+  } catch {
+    // nothing to forget
+  }
+}
+
+/** The screen a face shows when its session ended, if it has one (only Lodestar Plan designs it: DSP-35). */
+export const SESSION_ENDED_SCREEN: Partial<Record<Face, string>> = { plan: '/plan/dsp-35-session-expired' };

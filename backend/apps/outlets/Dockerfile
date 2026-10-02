@@ -18,6 +18,8 @@ COPY prisma/schema.prisma ./prisma/schema.prisma
 RUN npx prisma generate
 COPY libs ./libs
 COPY apps/outlets ./apps/outlets
+# The admin CSV import (ADM-14) reuses the seed's CSV reader and row mappers.
+COPY prisma/seed ./prisma/seed
 RUN npx nest build outlets
 
 # ---- 2. deps: production dependencies only (no dev tooling in the image) ----

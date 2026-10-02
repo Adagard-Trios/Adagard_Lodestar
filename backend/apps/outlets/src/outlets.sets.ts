@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
-import { EntitySet, ODataEntitySet, ODataError, ODataFunction, OperationContext } from '@lodestar/odata';
+import { EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, OperationContext } from '@lodestar/odata';
 import { HUMAN_ROLES, Roles } from '@lodestar/security';
+import { DataImportService, ImportFile } from './data-import.service';
 import { OutletsService } from './outlets.service';
 
 const EVERYONE = [...HUMAN_ROLES, Roles.Service];
@@ -132,5 +133,42 @@ export class ServiceAllowancesSet extends ODataEntitySet {
       throw ODataError.badRequest('minutes must be between 1 and 240', 'minutes');
     }
     return patch;
+  }
+}
+
+/**
+ * DataImports: reference-data CSV imports (ADM-14 data imports, ADM-15 import check failed). Admins only.
+ *  - POST DataImports/Lodestar.Import {file, csv, fileName?} checks the whole file with the seed's row mappers and
+ *    file-level checks and applies it only when every row passes (all or nothing, seed-style upserts). The result
+ *    (counts, checks, rejected rows with plain-words reasons) is the new row; the CSV itself is never stored.
+ *  - file: outlets | vehicles | calendar | district_travel | service_allowance. vehicles.csv writes the fleet
+ *    reference columns (never status, workshop note or fuel used), as the seed does.
+ */
+@Injectable()
+@EntitySet({
+  name: 'DataImports',
+  model: 'DataImport',
+  read: [Roles.Admin],
+  abac: {}, // admins only
+  search: ['file', 'fileName', 'byName'],
+  defaultOrderBy: 'importedAt desc',
+})
+export class DataImportsSet extends ODataEntitySet {
+  constructor(
+    prisma: PrismaService,
+    private readonly imports: DataImportService,
+  ) {
+    super(prisma);
+  }
+
+  @ODataAction({
+    name: 'Import',
+    binding: 'collection',
+    roles: [Roles.Admin],
+    params: { file: { type: 'Edm.String', required: true }, csv: { type: 'Edm.String', required: true }, fileName: 'Edm.String' },
+    returns: 'Lodestar.DataImport',
+  })
+  import(ctx: OperationContext) {
+    return this.imports.import(ctx.params.file as ImportFile, ctx.params.csv as string, ctx.params.fileName as string | undefined, ctx.principal);
   }
 }

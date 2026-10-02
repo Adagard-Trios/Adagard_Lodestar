@@ -2,12 +2,15 @@
 // DSP-08 Today overview, live. Markup and classes from the generated design (frontend/screens/dsp-08-today-overview.tsx).
 // Data: Orders ($count by status), Trips, Vehicles, Plans of the run date per depot, the exceptions list
 // (Orders/TripStops/Notifications) and the morning's notifications as the timeline. Updates on realtime events.
+// Offline (DSP-24): when the desk loses the API, the offline banner shows under the header, the numbers freeze at
+// what was last loaded and are marked "Not live". DSP-24 renders this screen with `offlineView`.
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { DEPOT_NAME, dayFilter, fmtClock, fmtNum, fmtRunDate, fmtTime, pct } from '@/lib/format';
 import { useQuery } from '@/lib/odata/hooks';
 import type { Notification, Plan, Trip, Vehicle } from '@/lib/odata/types';
 import { PlanSide, useCount } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
+import { OfflineBanner, useOffline } from '@/components/live/offline';
 import { usePlanScope, useExceptions, type ExceptionItem } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { useRealtimeStatus } from '@/lib/odata/hooks';
@@ -83,8 +86,11 @@ const DOT: Record<string, string> = {
   SIGNAL_BACK: 'var(--st-delivered-fg)',
 };
 
-export default function LiveDsp08TodayOverview() {
+export default function LiveDsp08TodayOverview({ offlineView = false }: { offlineView?: boolean } = {}) {
   const { session } = useAuth();
+  const conn = useOffline();
+  const frozen = conn.offline;
+  const asAt = conn.lastOkAt ? fmtClock(new Date(conn.lastOkAt)) : conn.since ? fmtClock(new Date(conn.since)) : null;
   const scope = usePlanScope();
   const { runDate, ordersFilter, tripsFilter, active } = scope;
   const live = useRealtimeStatus();
@@ -116,9 +122,9 @@ export default function LiveDsp08TodayOverview() {
   const open = exceptions.data?.length ?? 0;
 
   return (
-    <div className="frame frame--desktop mode-dispatcher" data-name="DSP-08 Today overview · desktop">
+    <div className="frame frame--desktop mode-dispatcher" data-name={offlineView ? 'DSP-24 Offline banner · desktop' : 'DSP-08 Today overview · desktop'}>
       <div className="d-app">
-        <PlanSide active="N0" bellLk="L148" />
+        <PlanSide active="N0" bellLk={offlineView ? undefined : 'L148'} />
         <div className="dx-main">
           <div className="d-head">
             <div className="d-head__txt">
@@ -129,31 +135,42 @@ export default function LiveDsp08TodayOverview() {
               </div>
               <div className="d-h1">{greeting}{firstName ? `, ${firstName}` : ''}</div>
             </div>
-            <span className="d-btn" data-lk="L149"><Ic n="navigate" />Open live operations</span>
+            {frozen
+              ? <span className="d-btn d-btn--disabled" aria-disabled="true"><Ic n="navigate" />Open live operations</span>
+              : <span className="d-btn" data-lk="L149"><Ic n="navigate" />Open live operations</span>}
             <span className="d-btn d-btn--primary" data-lk="L147"><Ic n="alert" />{open ? `Triage ${open} exception${open === 1 ? '' : 's'}` : 'Exceptions inbox'}</span>
           </div>
-          {scope.dateError && <ErrorBanner error={scope.dateError} />}
+          <OfflineBanner lk={offlineView ? 'L174' : undefined} always={offlineView} />
+          {scope.dateError && !frozen && <ErrorBanner error={scope.dateError} />}
           {scope.noPlans && <Empty title="No runs planned yet" text="Once orders are planned for a run date, today's picture shows here." icon="calendar" />}
           <div className="dx-hrow">
-            <div className="dx-hero" style={{ flex: '1.25' }}>
+            <div className={`dx-hero${frozen ? ' dx-hero--off' : ''}`} style={{ flex: '1.25' }} data-state={frozen ? 'offline' : 'live'}>
               <div className="dx-hero__l">
-                {runDate ? fmtRunDate(runDate) : ''} run · delivered so far
+                {runDate ? fmtRunDate(runDate) : ''} run · {frozen ? `delivered, as at ${asAt ?? 'last load'}` : 'delivered so far'}
                 <span className="spacer" />
-                <span className="m-tag" style={{ color: live === 'connected' ? '#6EE7B7' : '#B9C0E6' }} data-lk="L149">
-                  <span className="dot" />{live === 'connected' ? 'Live' : 'Reconnecting'} · {fmtClock(new Date())}
-                </span>
+                {frozen ? (
+                  <span className="m-pill m-pill--offline"><Ic n="wifi-off" />{"Not live"}</span>
+                ) : (
+                  <span className="m-tag" style={{ color: live === 'connected' ? '#6EE7B7' : '#B9C0E6' }} data-lk="L149">
+                    <span className="dot" />{live === 'connected' ? 'Live' : 'Reconnecting'} · {fmtClock(new Date())}
+                  </span>
+                )}
               </div>
-              <div className="dx-display" data-testid="delivered">{delivered ?? '…'}<small>of {total ?? '…'} orders</small></div>
-              <div className="dx-bar dx-bar--dark"><div className="dx-g-ok" style={{ width: `${pct(delivered, total)}%` }} /></div>
+              <div className="dx-display" data-testid="delivered" style={frozen ? { color: 'var(--text)' } : undefined}>{delivered ?? '…'}<small>of {total ?? '…'} orders</small></div>
+              {frozen ? (
+                <div className="dx-bar" style={{ background: 'transparent', boxShadow: 'inset 0 0 0 1.5px var(--st-offline-bd)' }}><div style={{ width: `${pct(delivered, total)}%`, background: '#A8A29E' }} /></div>
+              ) : (
+                <div className="dx-bar dx-bar--dark"><div className="dx-g-ok" style={{ width: `${pct(delivered, total)}%` }} /></div>
+              )}
               <div className="dx-stats">
-                <div className="dx-stat" style={{ borderColor: 'rgba(255,255,255,.12)' }}>
-                  <b>{onTime.data?.done ? `${pct(onTime.data.onTime, onTime.data.done)}%` : '—'}</b><span style={{ color: '#B9C0E6' }}>on time</span>
+                <div className="dx-stat" style={frozen ? undefined : { borderColor: 'rgba(255,255,255,.12)' }}>
+                  <b>{onTime.data?.done ? `${pct(onTime.data.onTime, onTime.data.done)}%` : '—'}</b><span style={frozen ? undefined : { color: '#B9C0E6' }}>on time</span>
                 </div>
-                <div className="dx-stat" style={{ borderColor: 'rgba(255,255,255,.12)' }}><b>{out}</b><span style={{ color: '#B9C0E6' }}>vehicles out</span></div>
-                <div className="dx-stat" style={{ borderColor: 'rgba(255,255,255,.12)' }}><b>{fmtNum(trips.data?.length ?? 0)}</b><span style={{ color: '#B9C0E6' }}>trips planned</span></div>
+                <div className="dx-stat" style={frozen ? undefined : { borderColor: 'rgba(255,255,255,.12)' }}><b>{out}</b><span style={frozen ? undefined : { color: '#B9C0E6' }}>vehicles out</span></div>
+                <div className="dx-stat" style={frozen ? undefined : { borderColor: 'rgba(255,255,255,.12)' }}><b>{fmtNum(trips.data?.length ?? 0)}</b><span style={frozen ? undefined : { color: '#B9C0E6' }}>trips planned</span></div>
               </div>
               <div className="dx-hero__m">
-                <b>{complete}</b> trips complete, <b>{out}</b> on the road.
+                {frozen ? 'Numbers freeze while the desk is offline. Nothing is guessed as delivered.' : <><b>{complete}</b> trips complete, <b>{out}</b> on the road.</>}
               </div>
             </div>
             <div className="dx-card" style={{ flex: '1' }}>

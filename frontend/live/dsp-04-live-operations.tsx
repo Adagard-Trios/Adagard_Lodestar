@@ -3,7 +3,7 @@
 // Data: Trips of the run date with their TripStops (ETA, late risk, status), Orders for the order thread, the
 // exceptions list, and realtime: the screen joins the trip:<id> rooms, so eta_update, signal_lost/back and
 // notifications refresh it as they happen (plus a 30 s safety poll). A signal loss, vehicle fault or sync conflict
-// opens its P5 screen (DSP-A1, DSP-B1, DSP-A2). The legend does not link to DSP-15 (the late-risk explainer is not built).
+// opens its P5 screen (DSP-A1, DSP-B1, DSP-A2). The legend opens DSP-15, the late-risk explainer.
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFocusId } from '@/lib/workday';
@@ -212,7 +212,7 @@ export default function LiveDsp04LiveOperations() {
               ))}
             </div>
             <div className="x-map">
-              <div className="x-maplegend" style={{ top: '14px', bottom: 'auto' }}>
+              <div className="x-maplegend" style={{ top: '14px', bottom: 'auto' }} data-lk="L162">
                 <span><i />{"Live position"}</span>
                 <span><i className="amber" />{"Late risk 30% or more"}</span>
                 <span><i className="dash" />{"Predicted, no signal"}</span>

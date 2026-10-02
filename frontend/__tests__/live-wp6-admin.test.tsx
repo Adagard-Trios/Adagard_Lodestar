@@ -240,7 +240,7 @@ describe('ADM-13 Calendar', () => {
     expect(cell('2026-03-31')).toHaveTextContent('31Mar');
     expect(within(month).getByText('W15')).toBeInTheDocument();
     expect(within(month).getByText('Monsoon all month')).toBeInTheDocument();
-    expect(screen.queryByText('Replace calendar.csv')).not.toBeInTheDocument();
+    expect(screen.getByText('Replace calendar.csv').closest('[data-lk]')).toHaveAttribute('data-lk', 'L66');
   });
 
   it('lists what is coming up: festivals with their ramp, paydays, the monsoon run and the calendar end', async () => {

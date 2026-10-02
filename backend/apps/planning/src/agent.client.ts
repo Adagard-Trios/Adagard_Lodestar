@@ -28,6 +28,7 @@ export const AGENT_FETCH = Symbol('AGENT_FETCH');
  *   GET  /runs/{id}                                 → run view
  *   POST /runs/{id}/resume {decision, edits?, comment?}
  *   POST /ask {runId, question}
+ *   GET  /config                                    → model, fallback, guardrails (read-only)
  */
 @Injectable()
 export class AgentClient {
@@ -53,6 +54,11 @@ export class AgentClient {
 
   ask(runId: string, question: string, authorization: string) {
     return this.call<Record<string, unknown>>('POST', '/ask', authorization, { runId, question });
+  }
+
+  /** The agent's model, fallback and guardrails (DSP-16, ADM-17). Read-only; dispatcher or admin token. */
+  config(authorization: string) {
+    return this.call<Record<string, unknown>>('GET', '/config', authorization);
   }
 
   private async call<T>(method: string, path: string, authorization: string, body?: unknown): Promise<T> {

@@ -7,7 +7,7 @@ One Postgres database with one schema per service; a service reads and writes on
 | Schema (owning service) | Tables |
 |---|---|
 | `auth` | User, Device |
-| `outlets` | Outlet, Calendar, DistrictTravel, ServiceAllowance |
+| `outlets` | Outlet, Calendar, DistrictTravel, DataImport, ServiceAllowance |
 | `fleet` | Vehicle |
 | `orders` | Order, OrderLineItem, OrdersIdempotencyKey |
 | `trips` | Trip, TripStop, POD, LoadRecord, TripsIdempotencyKey |
@@ -32,8 +32,12 @@ erDiagram
     string phone
     string refreshToken
     bool isActive
+    The ///
+    receiving ///
+    json preferences
     datetime createdAt
     datetime updatedAt
+    Relations //
   }
   Outlet {
     string id PK
@@ -52,6 +56,7 @@ erDiagram
     float lng
     bool isActive
     datetime updatedAt
+    Relations //
   }
   Vehicle {
     string id PK
@@ -67,6 +72,7 @@ erDiagram
     VehicleStatus status
     string workshopNote
     datetime updatedAt
+    Relations //
   }
   Order {
     string id PK
@@ -87,6 +93,7 @@ erDiagram
     string lateReason
     datetime createdAt
     datetime updatedAt
+    Store //
     int unitsReceived
     int unitsExpected
     string receiptNote
@@ -94,6 +101,7 @@ erDiagram
     datetime receivedAt
     string receivedBy
     string creditNoteId UK
+    Relations //
   }
   OrderLineItem {
     string id PK
@@ -125,6 +133,7 @@ erDiagram
     string planId FK
     datetime createdAt
     datetime updatedAt
+    Relations //
   }
   TripStop {
     string id PK
@@ -203,6 +212,8 @@ erDiagram
     string recipientId FK
     string tripId FK
     string type
+    DEFERRAL_SUGGESTED //
+    SHORTFALL_ACK //
     NotificationChannel channel
     json payload
     datetime sentAt
@@ -227,6 +238,21 @@ erDiagram
     int interStopMin
     float distKm
     datetime updatedAt
+  }
+  DataImport {
+    string id PK
+    string file
+    string fileName
+    int rows
+    int passed
+    bool applied
+    int created
+    int updated
+    json problems
+    json checks
+    string importedBy
+    string byName
+    datetime importedAt
   }
   ServiceAllowance {
     Brand brand
@@ -273,6 +299,8 @@ erDiagram
     string platform
     string model
     DeviceStatus status
+    A ///
+    Its ///
     bool sharedDemo
     datetime registeredAt
     datetime lastSeenAt

@@ -58,7 +58,7 @@ QA extras: `docker compose --profile qa up sonarqube` (SonarQube at host 9000).
 ## 3. API: OData v4 for data, OData actions for commands
 
 - Base path per service behind the gateway: `/odata/v4/` (the gateway routes by entity set). Every service also serves `/odata/v4/$metadata` for its own entity sets. The gateway serves the merged service document at `/odata/v4/`.
-- Entity sets (PascalCase plural): `Orders`, `OrderLineItems`, `Plans`, `Deferrals`, `Vehicles`, `Outlets`, `Calendar`, `DistrictTravel`, `ServiceAllowances`, `Trips`, `TripStops`, `PODs`, `LoadRecords`, `OfflineEvents`, `Notifications`, `AuditEntries`, `Users`, `Devices`, `AgentRuns`.
+- Entity sets (PascalCase plural): `Orders`, `OrderLineItems`, `Plans`, `Deferrals`, `Vehicles`, `Outlets`, `Calendar`, `DistrictTravel`, `ServiceAllowances`, `Trips`, `TripStops`, `PODs`, `LoadRecords`, `OfflineEvents`, `Notifications`, `AuditEntries`, `Users`, `Devices`, `AgentRuns`, `DataImports`.
 - Supported query options:
   - `$filter`: `eq ne gt ge lt le and or not`, `in`, `contains startswith endswith tolower toupper`, parentheses, null, dates/datetimes, enums as strings.
   - `$select`, `$orderby`, `$top`, `$skip`, `$count=true`, `$expand` (one level, with nested `$select`/`$filter`), `$search` (simple, on configured text fields).
@@ -96,6 +96,7 @@ The graph (`backend/apps/agent`), one run per depot and run date:
   - `GET /runs/{id}`
   - `POST /runs/{id}/resume {decision, edits?}`
   - `POST /ask {runId, question}`: the "Ask the planning agent" panel (DSP-39/40); it may propose an edit as a new draft.
+  - `GET /config` (dispatcher, admin): model, fallback and the guardrails it enforces, read-only (DSP-16, ADM-17; `AgentRuns/Lodestar.AgentConfig()`).
 - `planning` exposes these to clients as the OData entity set `AgentRuns`.
 
 ## 4b. Order cut-off

@@ -12,6 +12,7 @@ import { useEntity } from '@/lib/odata/hooks';
 import type { Outlet } from '@/lib/odata/types';
 import { depotFilter, useDepot, useRunDate } from '@/lib/workday';
 import { Ic, type IconName } from './icons';
+import { OfflineSideItem } from './offline';
 
 /** `$count` of a set with a filter (null = don't ask). Cached per key by useQuery's identity. */
 export function useCount(set: string, filter: string | undefined | null, refreshOn?: string[]) {
@@ -70,8 +71,12 @@ function SideFoot({ role, avatarStyle }: { role: string; avatarStyle?: React.CSS
   );
 }
 
-/** Lodestar Plan sidebar (DSP boards). `active` is the item's code: N0 Today … N7 Fleet & outlets. */
-export function PlanSide({ active, bellLk }: { active: string; bellLk?: string }) {
+/**
+ * Lodestar Plan sidebar (DSP boards). `active` is the item's code: N0 Today … N7 Fleet & outlets. `bellLk` and
+ * `brandLk` keep a screen's design links on the bell and the logo. While the desk is offline the sidebar shows the
+ * DSP-24 offline marker.
+ */
+export function PlanSide({ active, bellLk, brandLk }: { active: string; bellLk?: string; brandLk?: string }) {
   const { depot, depots, setDepot, active: inView } = useDepot();
   const { runDate } = useRunDate('Plans');
   const scope = depotFilter('outlet/depot', inView);
@@ -87,16 +92,18 @@ export function PlanSide({ active, bellLk }: { active: string; bellLk?: string }
     { code: 'N6', icon: 'chart', label: 'Capacity outlook' },
     { sect: 'Records' },
     { code: 'N7', icon: 'truck', label: 'Fleet & outlets' },
-    // N8 Intelligence (DSP-16) and N9 Settings (DSP-20) are not built (no model registry or settings API): left out.
+    { code: 'N8', icon: 'sparkle-plus', label: 'Intelligence' },
+    { code: 'N9', icon: 'cog', label: 'Settings' },
   ];
   return (
     <aside className="d-side">
       <div className="d-side__brand" style={{ whiteSpace: 'nowrap', paddingRight: '0' }}>
-        <svg viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#3B4CCA" /><g transform="translate(7.36 7.36) scale(0.72)" fill="none" stroke="#FFFFFF" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></g></svg>
+        <svg viewBox="0 0 32 32" {...(brandLk ? { 'data-lk': brandLk } : {})}><rect width="32" height="32" rx="8" fill="#3B4CCA" /><g transform="translate(7.36 7.36) scale(0.72)" fill="none" stroke="#FFFFFF" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></g></svg>
         Lodestar Plan
         <span className="dx-bell" {...(bellLk ? { 'data-lk': bellLk } : {})}><Ic n="bell" /></span>
       </div>
       <SideItems items={items} active={active} />
+      <OfflineSideItem />
       <div className="d-side__sect">Depots</div>
       {depots.map(d => (
         <div
@@ -137,8 +144,9 @@ export function AdminSide({ active }: { active: string }) {
     { code: 'N6', icon: 'sliders', label: 'Operating rules' },
     { code: 'N7', icon: 'calendar', label: 'Calendar' },
     { sect: 'Data and trust' },
-    // N8 Data imports (ADM-14) and N10 Planning agent guardrails (ADM-17) are not built (no import or guardrail API): left out.
+    { code: 'N8', icon: 'upload', label: 'Data imports' },
     { code: 'N9', icon: 'history', label: 'Audit log' },
+    { code: 'N10', icon: 'sparkle-plus', label: 'Planning agent' },
     { code: 'N11', icon: 'message', label: 'Notifications' },
   ];
   return (

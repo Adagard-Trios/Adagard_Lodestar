@@ -62,6 +62,11 @@
       "url": "ServiceAllowances"
     },
     {
+      "name": "DataImports",
+      "kind": "EntitySet",
+      "url": "DataImports"
+    },
+    {
       "name": "Trips",
       "kind": "EntitySet",
       "url": "Trips"

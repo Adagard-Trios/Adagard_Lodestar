@@ -4,8 +4,9 @@
 // planner enforces in code (order cutoff 16:00 in libs/platform; 270/480 minute budgets, 2 trips, one brand and
 // one district per trip, protected deferrals, weight and volume, reefer-only chilled lines in the agent's
 // heuristics/planner): they have no endpoint and cannot be changed here, which is what the lock shows.
-// Not drawn: rule versions, the second-approver proposal (banner and "Proposed v8" card), "Version history",
-// "Propose a change" and "Loading starts": Lodestar keeps no rule versions and no loading-start setting.
+// The design's banner (L299, to DSP-20 settings) says how rules change: Lodestar keeps no rule versions, so it
+// states the real process instead of a pending "v8". Not drawn: the "Proposed v8" card, "Version history",
+// "Propose a change" and "Loading starts" (no rule versions and no loading-start setting).
 import type { ReactNode } from 'react';
 import { AdminSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
@@ -49,6 +50,12 @@ export default function LiveAdm12OperatingRules() {
               <div className="d-eyebrow">{"Operating rules"}</div>
               <div className="d-h1">{"Operating rules"}</div>
             </div>
+          </div>
+          <div className="dx-banner dx-banner--warn" data-lk="L299">
+            <Ic n="branch" />
+            <span><b>{"Rule changes need a release and a second approver."}</b>{" The planner and the planning agent enforce these rules in code, so nobody can change them from a screen. A dispatcher's own alert rules and on-call hours live in Lodestar Plan settings."}</span>
+            <span className="spacer" />
+            <span className="d-btn" style={{ height: '34px' }}><Ic n="eye" />{"Plan settings"}</span>
           </div>
           <div className="dx-hrow" style={{ flex: '1', minHeight: '0' }}>
             <div className="dx-col" style={{ flex: '1' }}>

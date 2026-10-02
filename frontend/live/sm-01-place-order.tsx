@@ -5,26 +5,24 @@
 // in the user's token (the API refuses any other outlet). The Calendar row of the run date feeds the festival card.
 // After a run's 4:00 PM cutoff the API still takes the order and moves it to the next open operating run; the
 // screen then shows the run date and note the API returned instead of moving on.
-import { useMemo, useState } from 'react';
+// The lines are kept in this browser tab as the store edits them (components/live/order-draft.ts). When the server
+// cannot be reached on Submit (network error or 5xx), the screen moves to SM-36 Service unavailable, which keeps
+// the draft and sends it as soon as the server answers; "Keep editing" there comes back here with the draft.
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useScreenNav } from '@/components/ScreenShell';
 import Btn from '@/components/live/Btn';
 import { StoreTop, useMyOutlet } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
+import { clearOrderDraft, isUnreachable, loadOrderDraft, saveOrderDraft, sendOrderDraft, type DraftLine, type OrderDraft } from '@/components/live/order-draft';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { addDays, DEPOT_NAME, fmtNum, fmtRunDate, isoDay } from '@/lib/format';
 import { useAction, useQuery } from '@/lib/odata/hooks';
 import type { Order, OrderLineItem, TempClass } from '@/lib/odata/types';
 
-interface Line {
-  key: string;
-  name: string;
-  last: number;
-  qty: number;
-  /** kg per unit */
-  unitKg: number;
-}
+type Line = DraftLine;
+export const SERVICE_UNAVAILABLE = '/store/sm-36-service-unavailable';
 
 const DEFAULT_M3_PER_KG = 0.0045;
 const tomorrow = () => addDays(new Date().toISOString().slice(0, 10), 1);
@@ -121,15 +119,18 @@ export default function LiveSm01PlaceOrder() {
   const { session } = useAuth();
   const outlet = useMyOutlet();
   const outletId = session?.outletId;
-  const [runDate, setRunDate] = useState(nextOpenRun);
+  // a draft kept in this tab (edited earlier, or waiting on SM-36) comes back as it was
+  const [saved] = useState(() => loadOrderDraft(outletId));
+  const [runDate, setRunDate] = useState(() => (saved && saved.runDate >= tomorrow() ? saved.runDate : nextOpenRun()));
+  const [sent, setSent] = useState<NonNullable<OrderDraft['sent']>>(saved?.sent ?? {});
   const [moved, setMoved] = useState<Order[] | null>(null);
 
   const history = useQuery<Order[]>(outletId ? `order-base:${outletId}` : null, async c =>
     (await c.list<Order>('Orders', { filter: `outletId eq '${outletId}' and status ne 'CANCELLED'`, expand: 'lineItems', orderby: 'runDate desc', top: 12 })).value);
   const lastDry = history.data?.find(o => o.tempClass === 'AMBIENT');
   const lastChilled = history.data?.find(o => o.tempClass === 'CHILLED');
-  const [dry, setDry] = useState<Line[] | null>(null);
-  const [chilled, setChilled] = useState<Line[] | null>(null);
+  const [dry, setDry] = useState<Line[] | null>(saved?.dry ?? null);
+  const [chilled, setChilled] = useState<Line[] | null>(saved?.chilled ?? null);
   const dryLines = dry ?? toLines(lastDry);
   const chilledLines = chilled ?? toLines(lastChilled);
   // the order the lines start from: "Last Tue" column, "started from last Tuesday"
@@ -156,35 +157,41 @@ export default function LiveSm01PlaceOrder() {
   const msLeft = cutoff.getTime() - new Date().getTime();
   const late = msLeft <= 0;
 
+  const draftNow = (): OrderDraft | null =>
+    outletId && outlet.data ? { outletId, brand: outlet.data.brand, runDate, dry: dryLines, chilled: chilledLines, ratio, savedAt: Date.now(), sent } : null;
+  const edited = dry !== null || chilled !== null;
+  useEffect(() => {
+    if (!edited || !outletId || !outlet.data) return;
+    saveOrderDraft({ outletId, brand: outlet.data.brand, runDate, dry: dry ?? toLines(lastDry), chilled: chilled ?? toLines(lastChilled), ratio, savedAt: Date.now(), sent });
+  }, [edited, outletId, outlet.data, runDate, dry, chilled, lastDry, lastChilled, ratio, sent]);
+
   const submit = useAction<void, Order[]>(async c => {
-    const o = outlet.data;
-    if (!o || !outletId) throw new Error('Your outlet could not be loaded.');
-    const created: Order[] = [];
-    for (const [tempClass, lines] of [['AMBIENT', dryLines], ['CHILLED', chilledLines]] as Array<[TempClass, Line[]]>) {
-      const items = lines.filter(l => l.qty > 0);
-      if (!items.length) continue;
-      const kg = Math.round(items.reduce((s, l) => s + l.qty * l.unitKg, 0) * 10) / 10;
-      created.push(await c.create<Order>('Orders', {
-        outletId,
-        runDate: `${runDate}T00:00:00.000Z`,
-        brand: o.brand,
-        tempClass,
-        units: items.reduce((s, l) => s + l.qty, 0),
-        kg,
-        m3: Math.round(kg * ratio * 100) / 100,
-        lineItems: items.map(l => ({ name: l.name, qty: l.qty, kg: Math.round(l.qty * l.unitKg * 10) / 10, tempClass })),
-      }));
-    }
+    const draft = draftNow();
+    if (!draft) throw new Error('Your outlet could not be loaded.');
+    const created = await sendOrderDraft(c, draft, (tempClass, order) => {
+      // remember each class that went through, so a retry after a failure never sends it twice
+      setSent(s => ({ ...s, [tempClass]: order.id }));
+      draft.sent = { ...draft.sent, [tempClass]: order.id };
+    }).catch(e => {
+      if (isUnreachable(e)) saveOrderDraft({ ...draft, savedAt: Date.now() });
+      throw e;
+    });
     if (!created.length) throw new Error('Add at least one item with a quantity.');
     return created;
   }, {
     onSuccess: created => {
+      clearOrderDraft(outletId);
       nav.notify(`Received: ${created.map(o => o.id).join(', ')}`);
       // the API moved an order placed after the cutoff to a later run: say so before moving on
       if (created.some(o => isoDay(o.runDate) !== runDate)) setMoved(created);
       else router.push('/store/sm-27-orders-and-history');
     },
   });
+
+  // the server is not there: SM-36 keeps the draft and sends it when the server answers
+  useEffect(() => {
+    if (isUnreachable(submit.error)) router.push(`${SERVICE_UNAVAILABLE}?from=${encodeURIComponent('/store/sm-01-place-order')}`);
+  }, [submit.error, router]);
 
   const o = outlet.data;
   const h = Math.max(0, Math.floor(msLeft / 3_600_000));

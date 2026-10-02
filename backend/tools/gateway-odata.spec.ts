@@ -12,7 +12,7 @@ describe('gateway OData documents', () => {
     expect(sets.sort()).toEqual(
       [
         'Orders', 'OrderLineItems', 'Plans', 'Deferrals', 'Vehicles', 'Outlets', 'Calendar', 'DistrictTravel', 'ServiceAllowances',
-        'Trips', 'TripStops', 'PODs', 'LoadRecords', 'OfflineEvents', 'Notifications', 'AuditEntries', 'Users', 'Devices', 'AgentRuns',
+        'Trips', 'TripStops', 'PODs', 'LoadRecords', 'OfflineEvents', 'Notifications', 'AuditEntries', 'Users', 'Devices', 'AgentRuns', 'DataImports',
       ].sort(),
     );
     expect(doc.value).toContainEqual({ name: 'Me', kind: 'FunctionImport', url: 'Me' });

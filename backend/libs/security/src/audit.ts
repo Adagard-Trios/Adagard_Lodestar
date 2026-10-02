@@ -101,7 +101,8 @@ export class HttpAuditSink implements AuditSink {
   }
 }
 
-const REDACT = /pass(word)?|secret|token|signature|authorization|photo(data|base64)/i;
+// csv: uploaded reference files (ADM-14) are never copied into the audit log, only their SHA-256.
+const REDACT = /pass(word)?|secret|token|signature|authorization|photo(data|base64)|^csv$/i;
 const MAX_PAYLOAD_CHARS = 4096;
 
 /** Removes secrets and bulky fields from a request body before it is audited. */

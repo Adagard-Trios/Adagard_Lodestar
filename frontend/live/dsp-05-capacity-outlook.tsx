@@ -279,7 +279,7 @@ export default function LiveDsp05CapacityOutlook() {
             </div>
             <div className="x-col" style={{ width: '316px', flexShrink: '0', gap: '14px' }}>
               <div className="x-handled" style={{ background: 'transparent', padding: '4px 6px', flexDirection: 'column', gap: '4px' }}>
-                <span className="x-sect"><Ic n="chart" className="ic ic--sm" />{"Forecast model"}</span>
+                <span className="x-sect" data-lk="L165"><Ic n="chart" className="ic ic--sm" />{"Forecast model"}</span>
                 <span>{"Weekly demand by depot from 2024 to 2026 history (Datathon Task 2A), with festival_ramp, payday and operating days. "}<b className="t-2">{"Advisory:"}</b>{" Lodestar never books vehicles or defers orders on its own."}</span>
               </div>
             </div>

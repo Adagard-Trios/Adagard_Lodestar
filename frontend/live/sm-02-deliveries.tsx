@@ -185,7 +185,7 @@ export default function LiveSm02Deliveries() {
   return (
     <div className="frame frame--desktop mode-store" data-name="SM-02 Deliveries · desktop">
       <div className="s-shell">
-        <StoreTop active="deliveries" />
+        <StoreTop active="deliveries" avatarLk="L128" />
         <div className="d-main">
           <div className="d-head">
             <div className="d-head__txt">

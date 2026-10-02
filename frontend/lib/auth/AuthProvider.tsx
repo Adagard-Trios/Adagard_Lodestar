@@ -5,15 +5,18 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { User } from 'oidc-client-ts';
 import { runtimeConfig } from '../config';
 import { createUserManager, type UserManagerLike } from './oidc';
-import { returnPath, sessionFrom, type Session } from './session';
+import { forgetEndedSession, rememberEndedSession, returnPath, sessionFrom, type Session } from './session';
 
 export type AuthStatus = 'loading' | 'anonymous' | 'authenticated';
 
 export interface AuthApi {
   status: AuthStatus;
   session: Session | null;
-  /** Starts the Keycloak login. `returnTo` is a local path to come back to after sign-in. */
-  login(returnTo?: string): Promise<void>;
+  /**
+   * Starts the Keycloak login. `returnTo` is a local path to come back to after sign-in; `prompt: 'login'` asks
+   * for the credentials again even when Keycloak still knows the user ("Use another account").
+   */
+  login(returnTo?: string, opts?: { prompt?: 'login' }): Promise<void>;
   logout(): Promise<void>;
   /** A valid access token (renewed first if it is about to expire), or null when signed out. */
   getAccessToken(): Promise<string | null>;
@@ -21,6 +24,13 @@ export interface AuthApi {
   renew(): Promise<string | null>;
   /** Finishes the redirect back from Keycloak and returns where to go next. */
   completeLogin(url?: string): Promise<string>;
+  /**
+   * True once a session this tab had could not be renewed (refresh token refused or expired): the desk then shows
+   * "Your session ended" (DSP-35) instead of jumping straight to the sign-in page.
+   */
+  expired?: boolean;
+  /** Ends the current session locally because it cannot be renewed (sets `expired`). */
+  expire?(): Promise<void>;
 }
 
 const AuthContext = createContext<AuthApi | null>(null);
@@ -37,6 +47,7 @@ export function AuthProvider({ children, manager }: { children: ReactNode; manag
   const um = useRef<UserManagerLike | null>(manager ?? null);
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [session, setSession] = useState<Session | null>(null);
+  const [expired, setExpired] = useState(false);
   const renewing = useRef<Promise<string | null> | null>(null);
   const completing = useRef<Promise<string> | null>(null);
 
@@ -49,24 +60,44 @@ export function AuthProvider({ children, manager }: { children: ReactNode; manag
     const s = toSession(user);
     setSession(s);
     setStatus(s ? 'authenticated' : 'anonymous');
+    if (s) {
+      setExpired(false);
+      forgetEndedSession();
+    }
   }, []);
+
+  /** The tab had a session that can no longer be renewed: forget the tokens, remember who it was (DSP-35). */
+  const endSession = useCallback(async (user: User | null) => {
+    if (user) {
+      const profile = (user.profile ?? {}) as Record<string, unknown>;
+      const s = user.access_token ? sessionFrom(user.access_token, profile, user.expires_at) : null;
+      rememberEndedSession({ name: s?.name ?? null, email: s?.email ?? s?.username ?? null, startedAt: typeof profile.auth_time === 'number' ? profile.auth_time : null });
+      setExpired(true);
+    }
+    await mgr().removeUser().catch(() => undefined);
+    apply(null);
+  }, [apply, mgr]);
 
   const renew = useCallback((): Promise<string | null> => {
     renewing.current ??= (async () => {
+      const before = await mgr().getUser().catch(() => null);
       try {
         const user = await mgr().signinSilent();
+        if (!user || user.expired) {
+          await endSession(before);
+          return null;
+        }
         apply(user);
-        return user && !user.expired ? user.access_token : null;
+        return user.access_token;
       } catch {
-        await mgr().removeUser().catch(() => undefined);
-        apply(null);
+        await endSession(before);
         return null;
       } finally {
         renewing.current = null;
       }
     })();
     return renewing.current;
-  }, [apply, mgr]);
+  }, [apply, endSession, mgr]);
 
   useEffect(() => {
     let alive = true;
@@ -95,12 +126,21 @@ export function AuthProvider({ children, manager }: { children: ReactNode; manag
     const user = await mgr().getUser().catch(() => null);
     if (!user) return null;
     const left = user.expires_at ? user.expires_at - Date.now() / 1000 : Infinity;
-    if (user.expired || left < EXPIRY_MARGIN_S) return user.refresh_token ? renew() : null;
+    if (user.expired || left < EXPIRY_MARGIN_S) {
+      if (user.refresh_token) return renew();
+      await endSession(user);
+      return null;
+    }
     return user.access_token;
-  }, [mgr, renew]);
+  }, [endSession, mgr, renew]);
 
-  const login = useCallback(async (returnTo?: string) => {
-    await mgr().signinRedirect({ state: { returnTo: returnTo ?? null } });
+  const expire = useCallback(async () => {
+    const user = await mgr().getUser().catch(() => null);
+    await endSession(user);
+  }, [endSession, mgr]);
+
+  const login = useCallback(async (returnTo?: string, opts?: { prompt?: 'login' }) => {
+    await mgr().signinRedirect({ state: { returnTo: returnTo ?? null }, ...(opts?.prompt ? { prompt: opts.prompt } : {}) });
   }, [mgr]);
 
   const logout = useCallback(async () => {
@@ -127,8 +167,8 @@ export function AuthProvider({ children, manager }: { children: ReactNode; manag
   }, [apply, mgr]);
 
   const api = useMemo<AuthApi>(
-    () => ({ status, session, login, logout, getAccessToken, renew, completeLogin }),
-    [status, session, login, logout, getAccessToken, renew, completeLogin],
+    () => ({ status, session, login, logout, getAccessToken, renew, completeLogin, expired, expire }),
+    [status, session, login, logout, getAccessToken, renew, completeLogin, expired, expire],
   );
   return <AuthContext.Provider value={api}>{children}</AuthContext.Provider>;
 }

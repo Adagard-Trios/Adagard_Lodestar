@@ -142,6 +142,26 @@ export class KeycloakAdminClient {
     return values.length ? values : null;
   }
 
+  /**
+   * 2-step verification status (DSP-07): the user's OTP credentials and whether Keycloak will ask them to set
+   * one up at the next sign-in (required action CONFIGURE_TOTP). Labels and dates only, never secrets.
+   */
+  async twoFactor(userId: string): Promise<{ otp: Array<{ label: string | null; createdAt: string | null }>; setupRequired: boolean }> {
+    const id = encodeURIComponent(userId);
+    const creds = await this.call('GET', `/users/${id}/credentials`);
+    if (!creds.ok) throw new ODataError(502, 'BadGateway', `Could not read the sign-in methods of ${userId} (HTTP ${creds.status})`);
+    const list = ((await creds.json()) ?? []) as Array<{ type?: string; userLabel?: string; createdDate?: number }>;
+    const user = await this.call('GET', `/users/${id}`);
+    if (!user.ok) throw new ODataError(502, 'BadGateway', `Could not read identity ${userId} (HTTP ${user.status})`);
+    const rep = ((await user.json()) ?? {}) as { requiredActions?: string[] };
+    return {
+      otp: list
+        .filter((c) => c.type === 'otp')
+        .map((c) => ({ label: c.userLabel ?? null, createdAt: typeof c.createdDate === 'number' ? new Date(c.createdDate).toISOString() : null })),
+      setupRequired: (rep.requiredActions ?? []).includes('CONFIGURE_TOTP'),
+    };
+  }
+
   async setEnabled(userId: string, enabled: boolean): Promise<void> {
     const res = await this.call('PUT', `/users/${encodeURIComponent(userId)}`, { enabled });
     if (!res.ok && res.status !== 404) throw new ODataError(502, 'BadGateway', `Identity provider answered HTTP ${res.status}`);

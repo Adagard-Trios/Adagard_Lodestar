@@ -17,6 +17,7 @@ export const ENTITY_SET_OWNERS: Readonly<Record<string, string>> = {
   Calendar: 'outlets',
   DistrictTravel: 'outlets',
   ServiceAllowances: 'outlets',
+  DataImports: 'outlets',
   Trips: 'trips',
   TripStops: 'trips',
   PODs: 'trips',

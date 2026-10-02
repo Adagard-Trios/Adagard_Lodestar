@@ -9,7 +9,7 @@ import Btn from '@/components/live/Btn';
 import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { idleSummary, Lane, useBoardCards } from '@/components/live/board';
-import { useAgentRun, usePlanScope } from '@/components/live/plan-data';
+import { infeasibility, useAgentRun, usePlanScope } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { fmtNum, fmtRunDate, fmtTime, title } from '@/lib/format';
 import { useQuery } from '@/lib/odata/hooks';
@@ -34,6 +34,9 @@ export default function LiveDsp02PlanBoard() {
   const p = plan.data;
   const deferrals = draft?.deferrals ?? [];
   const review = draft?.needsReview ?? [];
+  // the draft cannot serve the run as the rules stand: DSP-23 Plan infeasible says why
+  const blocked = draft ? infeasibility(run.data) : null;
+  const openInfeasible = () => router.push('/plan/dsp-23-plan-infeasible');
   const totalOrders = (orders.data ?? []).filter(o => o.status !== 'CANCELLED').length;
   const planned = showing === 'draft' ? cards.reduce((s, c) => s + c.stops, 0) : (orders.data ?? []).filter(o => !['RECEIVED', 'DEFERRED', 'CANCELLED'].includes(o.status)).length;
   const toApprove = Boolean(draft) || p?.status === 'NEEDS_APPROVAL' || p?.status === 'DRAFT';
@@ -80,6 +83,21 @@ export default function LiveDsp02PlanBoard() {
               <span className="d-btn d-btn--primary" data-lk="L3"><Ic n="history" />Review deferrals{deferrals.length ? ` (${deferrals.length})` : ''}</span>
             </div>
             <ErrorBanner error={trips.error ?? fleet.error ?? run.error} onRetry={() => { void trips.refresh(); void fleet.refresh(); }} />
+            {blocked && (
+              <div className="lv-banner lv-banner--warn" role="status" data-testid="plan-infeasible">
+                <Ic n="alert" />
+                <div className="lv-banner__txt">
+                  <b>{"This draft can't serve every order as the rules stand"}</b>
+                  <span>
+                    {blocked.review.length ? `${blocked.review.length} protected order${blocked.review.length === 1 ? '' : 's'} could not be placed` : ''}
+                    {blocked.review.length && blocked.violations.length ? ' · ' : ''}
+                    {blocked.violations.length ? `${blocked.violations.length} rule conflict${blocked.violations.length === 1 ? '' : 's'} left` : ''}
+                    {blocked.shortM3 > 0 ? ` · ${fmtNum(blocked.shortM3, 1)} m³ chilled short` : ''}
+                  </span>
+                </div>
+                <Btn className="d-btn d-btn--ghost lv-btn" onClick={openInfeasible}>{"See why"}<Ic n="chevron-right" /></Btn>
+              </div>
+            )}
             <div className="x-board" data-testid="board">
               <div className="x-lanehead">
                 <span style={{ width: '168px' }}>{"Vehicle · minutes"}</span>
@@ -139,7 +157,8 @@ export default function LiveDsp02PlanBoard() {
                 </div>
               ))}
               {review.length > 0 && (
-                <div className="x-hlink">
+                <div className="x-hlink lv-click" role="link" tabIndex={0} data-testid="to-review"
+                  onClick={e => { e.stopPropagation(); openInfeasible(); }} onKeyDown={e => { if (e.key === 'Enter') openInfeasible(); }}>
                   <div className="vstack" style={{ gap: '2px', minWidth: '0' }}>
                     <div>{review.length} orders to review</div>
                     <span style={{ fontSize: '12.5px', whiteSpace: 'nowrap' }}>{review.slice(0, 2).map(r => r.orderId).join(' · ')}</span>

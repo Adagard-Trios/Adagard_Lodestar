@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, OperationContext, WriteContext } from '@lodestar/odata';
-import { ALL_ROLES, DEVICE_ID_PATTERN, isPrivileged, Roles } from '@lodestar/security';
+import { ALL_ROLES, DEVICE_ID_PATTERN, HUMAN_ROLES, isPrivileged, Roles } from '@lodestar/security';
 import { DeviceStatus } from '@prisma/client';
 import { AuthService, REALM_ROLE } from './auth.service';
 
@@ -16,6 +16,8 @@ import { AuthService, REALM_ROLE } from './auth.service';
   abac: { depot: (depots) => ({ depot: { in: depots } }) },
   navigation: ['outlet', 'devices'],
   search: ['name', 'email'],
+  // Personal settings are never part of the directory: only the user reads them (MyPreferences).
+  hidden: ['preferences'],
   insertable: ['id', 'email', 'name', 'role', 'depot', 'outletId', 'vehicleId', 'phone'],
   updatable: ['name', 'role', 'depot', 'outletId', 'vehicleId', 'phone', 'isActive'],
   defaultOrderBy: 'name',
@@ -70,6 +72,34 @@ export class UsersSet extends ODataEntitySet {
   @ODataFunction({ name: 'Me', binding: 'unbound', roles: ALL_ROLES, returns: 'Edm.Untyped' })
   me(ctx: OperationContext) {
     return this.auth.me(ctx.principal);
+  }
+
+  /**
+   * GET /odata/v4/Users/Lodestar.MyPreferences() — the caller's own settings (DSP-20, DSP-33, SM-30). Nobody
+   * else's, admins included: the row is always the token subject's. Bound to Users so the gateway routes it to
+   * auth, but open to every human role (store managers and field roles cannot list Users).
+   */
+  @ODataFunction({ name: 'MyPreferences', binding: 'collection', roles: HUMAN_ROLES, returns: 'Edm.Untyped' })
+  myPreferences(ctx: OperationContext) {
+    return this.auth.myPreferences(ctx.principal);
+  }
+
+  /** POST /odata/v4/Users/Lodestar.SaveMyPreferences {preferences} — merges sections into the caller's own settings. */
+  @ODataAction({
+    name: 'SaveMyPreferences',
+    binding: 'collection',
+    roles: HUMAN_ROLES,
+    params: { preferences: { type: 'Edm.Untyped', required: true } },
+    returns: 'Edm.Untyped',
+  })
+  saveMyPreferences(ctx: OperationContext) {
+    return this.auth.saveMyPreferences(ctx.principal, ctx.params.preferences);
+  }
+
+  /** GET /odata/v4/Users/Lodestar.MyTwoFactor() — whether the caller has an authenticator app in Keycloak (DSP-07). */
+  @ODataFunction({ name: 'MyTwoFactor', binding: 'collection', roles: HUMAN_ROLES, returns: 'Edm.Untyped' })
+  myTwoFactor(ctx: OperationContext) {
+    return this.auth.myTwoFactor(ctx.principal);
   }
 }
 

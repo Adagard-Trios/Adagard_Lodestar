@@ -93,3 +93,17 @@ export function useFocusId(kind: 'outlet' | 'vehicle' | 'user' | 'device' | 'aud
   const setId = useCallback((v: string | null) => write(key, v), [key]);
   return [id, setId] as const;
 }
+
+/** Orders for a run close at 4:00 PM Colombo time on the day before the run. */
+export const CUTOFF_LABEL = '4:00 PM';
+
+/** The 4:00 PM (Colombo, UTC+05:30) cutoff for a run date (YYYY-MM-DD). */
+export function cutoffFor(runDate: string): Date {
+  const prev = new Date(new Date(`${runDate}T00:00:00Z`).getTime() - 86_400_000).toISOString().slice(0, 10);
+  return new Date(`${prev}T16:00:00+05:30`);
+}
+
+/** Today's date in Colombo (YYYY-MM-DD). */
+export function colomboDay(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Colombo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+}

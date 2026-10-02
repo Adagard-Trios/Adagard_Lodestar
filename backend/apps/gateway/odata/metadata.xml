@@ -378,6 +378,24 @@
         <Property Name="distKm" Type="Edm.Double"/>
         <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
       </EntityType>
+      <EntityType Name="DataImport">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="id" Type="Edm.String" Nullable="false"/>
+        <Property Name="file" Type="Edm.String" Nullable="false"/>
+        <Property Name="fileName" Type="Edm.String"/>
+        <Property Name="rows" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="passed" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="applied" Type="Edm.Boolean" Nullable="false"/>
+        <Property Name="created" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="updated" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="problems" Type="Edm.Untyped" Nullable="false"/>
+        <Property Name="checks" Type="Edm.Untyped" Nullable="false"/>
+        <Property Name="importedBy" Type="Edm.String" Nullable="false"/>
+        <Property Name="byName" Type="Edm.String"/>
+        <Property Name="importedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+      </EntityType>
       <EntityType Name="ServiceAllowance">
         <Key>
           <PropertyRef Name="brand"/>
@@ -483,6 +501,19 @@
         <Property Name="deferred" Type="Edm.Int32"/>
         <Property Name="delivered" Type="Edm.Int32"/>
       </ComplexType>
+      <Function Name="MyPreferences" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.User)" Nullable="false"/>
+        <ReturnType Type="Edm.Untyped"/>
+      </Function>
+      <Action Name="SaveMyPreferences" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.User)" Nullable="false"/>
+        <Parameter Name="preferences" Type="Edm.Untyped" Nullable="false"/>
+        <ReturnType Type="Edm.Untyped"/>
+      </Action>
+      <Function Name="MyTwoFactor" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.User)" Nullable="false"/>
+        <ReturnType Type="Edm.Untyped"/>
+      </Function>
       <Action Name="Revoke" IsBound="true">
         <Parameter Name="bindingParameter" Type="Lodestar.Device" Nullable="false"/>
         <Parameter Name="reason" Type="Edm.String"/>
@@ -575,6 +606,10 @@
         <Parameter Name="overrideReason" Type="Edm.String"/>
         <ReturnType Type="Lodestar.AgentRun"/>
       </Action>
+      <Function Name="AgentConfig" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.AgentRun)" Nullable="false"/>
+        <ReturnType Type="Edm.Untyped"/>
+      </Function>
       <Action Name="Ask" IsBound="true">
         <Parameter Name="bindingParameter" Type="Lodestar.AgentRun" Nullable="false"/>
         <Parameter Name="question" Type="Edm.String" Nullable="false"/>
@@ -599,6 +634,13 @@
         <Parameter Name="bindingParameter" Type="Lodestar.Outlet" Nullable="false"/>
         <ReturnType Type="Edm.Boolean"/>
       </Function>
+      <Action Name="Import" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.DataImport)" Nullable="false"/>
+        <Parameter Name="file" Type="Edm.String" Nullable="false"/>
+        <Parameter Name="csv" Type="Edm.String" Nullable="false"/>
+        <Parameter Name="fileName" Type="Edm.String"/>
+        <ReturnType Type="Lodestar.DataImport"/>
+      </Action>
       <Action Name="SetStatus" IsBound="true">
         <Parameter Name="bindingParameter" Type="Lodestar.Trip" Nullable="false"/>
         <Parameter Name="status" Type="Lodestar.TripStatus" Nullable="false"/>
@@ -731,6 +773,7 @@
         <EntitySet Name="Calendar" EntityType="Lodestar.Calendar"/>
         <EntitySet Name="DistrictTravel" EntityType="Lodestar.DistrictTravel"/>
         <EntitySet Name="ServiceAllowances" EntityType="Lodestar.ServiceAllowance"/>
+        <EntitySet Name="DataImports" EntityType="Lodestar.DataImport"/>
         <EntitySet Name="Trips" EntityType="Lodestar.Trip">
           <NavigationPropertyBinding Path="vehicle" Target="Vehicles"/>
           <NavigationPropertyBinding Path="driver" Target="Users"/>

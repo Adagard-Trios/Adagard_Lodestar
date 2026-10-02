@@ -259,9 +259,9 @@ describe('DSP-11 Trip and vehicle drawer', () => {
     expect(stops).toHaveTextContent('Back at Peliyagoda, reload for Trip 2');
     expect(stops).toHaveTextContent('Trip 2 Fresh · District U, 3 stops, 100 min');
     expect(screen.getByTestId('load-order').textContent).toBe('OUTT06 → OUTT11');
-    // no move / swap / lock commands exist in the services
-    expect(screen.queryByText('Lock this trip')).not.toBeInTheDocument();
-    expect(screen.queryByText('Swap vehicle')).not.toBeInTheDocument();
+    // the designed footer: "Lock this trip" returns to the plan board (L157)
+    expect(screen.getByText('Lock this trip').closest('[data-lk]')).toHaveAttribute('data-lk', 'L157');
+    expect(screen.getByText('Swap vehicle')).toBeInTheDocument();
   });
 
   it('the trip tabs switch to the vehicle’s other trip', async () => {
@@ -326,8 +326,9 @@ describe('DSP-14 Notifications panel', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'Needs you 1' }));
     expect(document.querySelectorAll('[data-notification]')).toHaveLength(1);
-    // dispatcher settings (DSP-20) are not built: the panel has no link to them
-    expect(screen.queryByText('Alert rules')).not.toBeInTheDocument();
+    // the footer opens the dispatcher's alert rules in DSP-20 (L57)
+    fireEvent.click(screen.getByText('Alert rules'));
+    expect(router.push).toHaveBeenCalledWith('/plan/dsp-20-settings');
   });
 
   it('“Mark all read” marks each unread notification read and reloads', async () => {

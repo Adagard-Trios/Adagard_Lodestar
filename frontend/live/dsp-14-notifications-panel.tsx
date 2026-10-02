@@ -123,7 +123,11 @@ export default function LiveDsp14NotificationsPanel() {
           {earlier.length > 0 && <div className="dx-grp" style={{ padding: '0 26px' }}>{earlier.every(n => fmtDay(n.sentAt) === today) ? 'Earlier today' : 'Earlier'}</div>}
           {earlier.map(row)}
         </div>
-        {/* The design's footer ("Alert rules" → DSP-20 settings, on-call rules) is left out: dispatcher settings are not built. */}
+        <div className="dx-drawer__foot" data-lk="L57">
+          <span className="dx-t13">{"Phone alerts follow your on-call rules"}</span>
+          <span className="spacer" />
+          <span className="d-btn"><Ic n="cog" />{"Alert rules"}</span>
+        </div>
       </div>
     </div>
   );

@@ -4,7 +4,10 @@ import { Ic } from '@/components/live/icons';
 import { useSignInEntry } from '@/components/live/SignInEntry';
 import Btn from '@/components/live/Btn';
 
-/** Keycloak hosts the sign-in form; this screen is the entry point to it. */
+/**
+ * Keycloak hosts the sign-in form; this screen is the entry point to it. "Continue" (the design's L144 to DSP-07)
+ * opens Keycloak, which asks for the 2-step code itself when the account has an authenticator; DSP-07 shows the status.
+ */
 export default function LiveDsp06SignIn() {
   const entry = useSignInEntry('plan');
   return (
@@ -74,7 +77,7 @@ export default function LiveDsp06SignIn() {
                 {" You enter your work email and password on the Waypoint sign-in page, then come straight back to the plan."}
               </span>
             </div>
-            <Btn as="div" className="dx-bigbtn" testId="sign-in" busy={entry.busy} disabled={entry.loading} onClick={entry.start}>
+            <Btn as="div" className="dx-bigbtn" testId="sign-in" lk="L144" busy={entry.busy} disabled={entry.loading} onClick={entry.start}>
               {entry.label}<Ic n="arrow-right" />
             </Btn>
             <div className="between dx-t13"><span data-lk="L145">{"Trouble signing in? Call the Peliyagoda IT desk."}</span></div>

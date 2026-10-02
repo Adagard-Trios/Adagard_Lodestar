@@ -2,14 +2,17 @@
 // DSP-01 Cutoff queue, live. Markup and classes from the generated design (frontend/screens/dsp-01-cutoff-queue.tsx).
 // Data: Orders of the run date (paged, filter chips, $search), Vehicles for capacity. "Agent drafting" starts a
 // planning-agent run (POST AgentRuns) and follows the design link to DSP-22.
-import { useState } from 'react';
+// Before the 4:00 PM cutoff, while the run the queue fills for has no orders yet in the depot(s) in view, the
+// queue is the designed empty state DSP-21 (Empty queue before cutoff): the screen moves there.
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useScreenNav } from '@/components/ScreenShell';
 import Btn from '@/components/live/Btn';
-import { PlanSide } from '@/components/live/chrome';
+import { PlanSide, useCount } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
-import { usePlanScope, useStartAgentRun } from '@/components/live/plan-data';
+import { useOpenRun, usePlanScope, useStartAgentRun } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton, Spinner } from '@/components/live/states';
-import { BRAND_LETTER, DEPOT_NAME, fmtNum, fmtRunDate, title } from '@/lib/format';
+import { BRAND_LETTER, dayFilter, DEPOT_NAME, fmtNum, fmtRunDate, title } from '@/lib/format';
 import { useEntitySet, useQuery } from '@/lib/odata/hooks';
 import type { Order, Vehicle } from '@/lib/odata/types';
 import { depotFilter, useAgentRunId, useFocusId } from '@/lib/workday';
@@ -23,6 +26,18 @@ const CHIP_FILTER: Record<Chip, string | undefined> = {
   flagged: "(deferredYesterday eq true or status eq 'EXCEPTION' or deferralScore ge 91)",
 };
 const LIVE_STATUSES = "status ne 'CANCELLED'";
+export const EMPTY_QUEUE = '/plan/dsp-21-empty-queue-before-cutoff';
+
+/**
+ * DSP-01 shows DSP-21 instead when, before the open run's cutoff, that run has no orders in view. `inView` is the
+ * run date DSP-01 shows; `queued` its order count, `openCount` the open run's (when it is another date).
+ */
+export function isEmptyBeforeCutoff(p: { before: boolean; openRun: string; inView: string | undefined; queued: number | undefined; openCount: number | undefined }): boolean {
+  if (!p.before) return false;
+  if (p.inView === p.openRun) return p.queued === 0;
+  if (!p.inView || p.inView < p.openRun) return p.openCount === 0;
+  return false; // a later run date is pinned: show its queue
+}
 
 const isProtected = (o: Order) => o.deferredYesterday || (o.deferralScore ?? 0) >= 91;
 const DOCK: Record<string, string> = { REAR_DOCK: 'rear dock', STREET: 'street', MALL_BAY: 'mall bay' };
@@ -41,6 +56,7 @@ function Why({ o }: { o: Order }) {
 
 export default function LiveDsp01CutoffQueue() {
   const nav = useScreenNav();
+  const router = useRouter();
   const scope = usePlanScope();
   const { runDate, ordersFilter, active, depot } = scope;
   const [chip, setChip] = useState<Chip>('all');
@@ -58,6 +74,14 @@ export default function LiveDsp01CutoffQueue() {
     c.all<Order>('Orders', { filter: base!, select: 'id,brand,tempClass,m3,kg,status,deferredYesterday,deferralScore', expand: 'outlet($select=parking,dockType)' }),
   { refreshOn: ['notification'] });
   const fleet = useQuery<Vehicle[]>(`fleet:${active.join(',')}`, c => c.all<Vehicle>('Vehicles', { filter: depotFilter('depot', active) }));
+
+  const open = useOpenRun();
+  const otherRun = runDate !== open.runDate && (!runDate || runDate < open.runDate);
+  const openCount = useCount('Orders', otherRun && !scope.loadingDate ? [dayFilter('runDate', open.runDate), depotFilter('outlet/depot', active), LIVE_STATUSES].filter(Boolean).join(' and ') : null, ['notification']);
+  const emptyBeforeCutoff = !open.loading && !scope.loadingDate && isEmptyBeforeCutoff({ before: open.before, openRun: open.runDate, inView: runDate, queued: all.data?.length, openCount });
+  useEffect(() => {
+    if (emptyBeforeCutoff && !new URLSearchParams(window.location.search).get('runDate')) router.replace(EMPTY_QUEUE);
+  }, [emptyBeforeCutoff, router]);
 
   const orders = all.data ?? [];
   const brands = { FRESH: 0, STYLE: 0, TECH: 0 } as Record<string, number>;

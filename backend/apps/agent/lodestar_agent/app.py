@@ -13,6 +13,7 @@ from fastapi import Depends, FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from .agent_config import agent_config
 from .api.schemas import AskRequest, ResumeRequest, StartRunRequest, StartRunResponse
 from .auth import Principal, TokenVerifier, require_depot, require_roles
 from .checkpoint import create_checkpointing
@@ -132,6 +133,12 @@ def create_app(settings: Settings | None = None, runtime: AgentRuntime | None = 
         if runtime_ is None or not runtime_.checkpointing.ready():
             return JSONResponse(status_code=503, content={"status": "unavailable"})
         return {"status": "ready", "checkpointer": runtime_.checkpointing.kind}
+
+    # ------------------------------------------------------------ config (read-only)
+    @app.get("/config")
+    def config(request: Request, principal: Principal = Depends(require_roles("dispatcher", "admin"))):
+        """Model, fallback and guardrails (DSP-16 models and fallbacks, ADM-17 planning agent guardrails)."""
+        return agent_config(request.app.state.settings)
 
     # ------------------------------------------------------------ runs
     @app.post("/runs", status_code=status.HTTP_201_CREATED, response_model=StartRunResponse)

@@ -65,7 +65,7 @@ const SERVICES: { name: string; module: Type<unknown>; sets: string[] }[] = [
   { name: 'orders', module: OrdersApp, sets: ['Orders', 'OrderLineItems'] },
   { name: 'planning', module: PlanningApp, sets: ['Plans', 'Deferrals', 'AgentRuns'] },
   { name: 'fleet', module: FleetApp, sets: ['Vehicles'] },
-  { name: 'outlets', module: OutletsApp, sets: ['Outlets', 'Calendar', 'DistrictTravel', 'ServiceAllowances'] },
+  { name: 'outlets', module: OutletsApp, sets: ['Outlets', 'Calendar', 'DistrictTravel', 'ServiceAllowances', 'DataImports'] },
   { name: 'trips', module: TripsApp, sets: ['Trips', 'TripStops', 'PODs', 'LoadRecords'] },
   { name: 'sync', module: SyncApp, sets: ['OfflineEvents'] },
   { name: 'notifications', module: NotificationsApp, sets: ['Notifications'] },

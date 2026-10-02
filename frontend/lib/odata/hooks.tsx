@@ -6,6 +6,7 @@ import { useAuth, type AuthApi } from '../auth/AuthProvider';
 import { runtimeConfig } from '../config';
 import { createRealtime, roomsFor, type RealtimeHandler, type RealtimeHub, type RealtimeStatus } from '../realtime';
 import { ODataClient, ODataError, type EntityKey, type QueryOptions, type WithEtag } from './client';
+import { faceOfPath, SESSION_ENDED_SCREEN } from '../auth/session';
 
 export interface Api {
   client: ODataClient;
@@ -52,7 +53,12 @@ function createClient(bridge: AuthBridge) {
       getAccessToken: () => bridge.current.getAccessToken(),
       renew: () => bridge.current.renew(),
       loginRequired: () => {
-        void bridge.current.login(window.location.pathname + window.location.search);
+        // A face with a "session ended" screen (DSP-35) ends the session here; its route guard then shows that
+        // screen. Elsewhere, straight back to sign in.
+        const face = faceOfPath(window.location.pathname);
+        const auth = bridge.current;
+        if (face && SESSION_ENDED_SCREEN[face] && auth.expire) void auth.expire();
+        else void auth.login(window.location.pathname + window.location.search);
       },
     },
   });

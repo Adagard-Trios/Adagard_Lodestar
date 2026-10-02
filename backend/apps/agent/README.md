@@ -38,6 +38,7 @@ All routes except health need `Authorization: Bearer <RS256 JWT>` (issuer `OIDC_
 | GET | `/runs/{id}` | dispatcher, admin | run view: `plan`, `ruleChecks`, `violations`, `deferrals`, `needsReview`, `explanation`, `decisions`, `history`, `canPublish: false` |
 | POST | `/runs/{id}/resume` | dispatcher | `{decision: approve\|edit\|reject, edits?, comment?}`; edits: `{op: "move", orderId, vehicleId, tripNo?}` or `{op: "defer", orderId, reason}` |
 | POST | `/ask` | dispatcher | `{runId, question}` → `{answer, toolCalls, proposal}` |
+| GET | `/config` | dispatcher, admin | model (`AGENT_MODEL`, configured?, deployment), fallback, max redrafts, hard rules, limits, reason codes, what it reads; no secrets |
 | GET | `/health` | none | liveness |
 | GET | `/ready` | none | checkpoint DB reachable (503 if not) |
 

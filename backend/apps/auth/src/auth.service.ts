@@ -4,6 +4,7 @@ import { ODataError } from '@lodestar/odata';
 import { AUDIT_SINK, AuditOutcome, AuditSink, DevicePostureService, Principal } from '@lodestar/security';
 import { Depot, DeviceStatus, Prisma, Role, User } from '@prisma/client';
 import { KeycloakAdminClient } from './keycloak-admin.client';
+import { mergePreferences, Preferences, validatePreferences } from './preferences';
 
 /** Directory role (Prisma enum) → realm role (token). */
 export const REALM_ROLE: Record<Role, string> = {
@@ -106,6 +107,35 @@ export class AuthService {
       enrollment: p.enrollment ?? null,
       user,
     };
+  }
+
+  /** MyPreferences(): the signed-in user's own settings ({} when none are saved yet). */
+  async myPreferences(p: Principal): Promise<Preferences> {
+    const user = await this.prisma.user.findUnique({ where: { id: p.sub }, select: { preferences: true } });
+    if (!user) throw ODataError.notFound('You have no Lodestar directory entry');
+    return (user.preferences as Preferences | null) ?? {};
+  }
+
+  /** SaveMyPreferences({preferences}): merges the given sections into the signed-in user's own settings. */
+  async saveMyPreferences(p: Principal, input: unknown): Promise<Preferences> {
+    const patch = validatePreferences(input);
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({ where: { id: p.sub }, select: { preferences: true } });
+      if (!user) throw ODataError.notFound('You have no Lodestar directory entry');
+      const next = mergePreferences(user.preferences, patch);
+      await tx.user.update({ where: { id: p.sub }, data: { preferences: next as Prisma.InputJsonObject } });
+      return next;
+    });
+  }
+
+  /**
+   * MyTwoFactor(): 2-step verification status of the signed-in user (DSP-07). Keycloak owns the codes; this only
+   * reports whether an authenticator is set up. `available` is false when no identity admin API is configured.
+   */
+  async myTwoFactor(p: Principal) {
+    if (!this.keycloak.configured) return { available: false, enabled: false, setupRequired: false, otp: [] as Array<{ label: string | null; createdAt: string | null }> };
+    const status = await this.keycloak.twoFactor(p.sub);
+    return { available: true, enabled: status.otp.length > 0, setupRequired: status.setupRequired, otp: status.otp };
   }
 
   /** ADM-04: create the identity first, then the directory row with the same id. */

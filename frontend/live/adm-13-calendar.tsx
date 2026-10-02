@@ -3,9 +3,10 @@
 // Data: Calendar (one row per day: isOperating, festivalName, festivalRamp, isPayday, monsoon). The month grid is
 // the chosen month (default: this month, inside the calendar's range); "Coming up" lists the festivals, paydays,
 // the monsoon run and the calendar's end from today on.
-// Not drawn: "Replace calendar.csv" (Lodestar has no import endpoint).
+// "Replace calendar.csv" opens ADM-14 data imports.
 import { useState, type CSSProperties } from 'react';
 import { AdminSide } from '@/components/live/chrome';
+import { Ic } from '@/components/live/icons';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { addDays, isoDay, TIME_ZONE } from '@/lib/format';
 import { useQuery } from '@/lib/odata/hooks';
@@ -232,6 +233,7 @@ export default function LiveAdm13Calendar() {
                 </select>
               </span>
             )}
+            <span className="d-btn" data-lk="L66"><Ic n="upload" />{"Replace calendar.csv"}</span>
           </div>
           <ErrorBanner error={range.error ?? grid.error ?? ahead.error ?? monsoon.error} onRetry={() => { void range.refresh(); void grid.refresh(); void ahead.refresh(); }} />
           {r === null && <Empty title="No calendar yet" text="Lodestar has no calendar days." icon="calendar" />}

@@ -182,6 +182,9 @@ model User {
   phone        String?
   refreshToken String?
   isActive     Boolean  @default(true)
+  /// The signed-in user's own settings (DSP-20, DSP-33, SM-30): alert rules, notification channels, language,
+  /// receiving staff. Read and written only through Me-scoped operations (MyPreferences, SaveMyPreferences).
+  preferences  Json?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -485,6 +488,27 @@ model DistrictTravel {
   distKm         Float?
   updatedAt      DateTime @default(now()) @updatedAt
 
+  @@schema("outlets")
+}
+
+/// One reference-data CSV import (ADM-14/15): the check result and what was applied. The CSV itself is never
+/// stored; only counts, the checks and the rejected rows' reasons.
+model DataImport {
+  id         String   @id @default(cuid())
+  file       String // outlets | vehicles | calendar | district_travel | service_allowance
+  fileName   String? // the name of the uploaded file, for the screen
+  rows       Int // data rows checked (header excluded)
+  passed     Int // rows that passed every check
+  applied    Boolean // true when the whole file was clean and written
+  created    Int      @default(0)
+  updated    Int      @default(0)
+  problems   Json // [{row, key, column, value, reason}]
+  checks     Json // [{label, passed, detail}]
+  importedBy String // token subject
+  byName     String?
+  importedAt DateTime @default(now())
+
+  @@index([file, importedAt])
   @@schema("outlets")
 }
 

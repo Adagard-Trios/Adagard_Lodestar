@@ -2,20 +2,23 @@
 // DSP-22 Planning agent drafting, live. Markup and classes from the generated design
 // (frontend/screens/dsp-22-planning-agent-drafting.tsx).
 // Data: AgentRuns('…') polled while the LangGraph run drafts; its history drives the steps. When the run stops
-// at NEEDS_APPROVAL the screen moves on to the plan board (the design's auto-advance), where a human decides.
+// at NEEDS_APPROVAL the screen moves on to the plan board (the design's auto-advance), where a human decides —
+// or, when the draft cannot serve the run as the rules stand (protected orders it could not place, rule
+// violations left), to DSP-23 Plan infeasible, which says why.
 // Nothing goes live from here: the agent can never publish.
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Btn from '@/components/live/Btn';
 import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
-import { useAgentRun, usePlanScope, useStartAgentRun } from '@/components/live/plan-data';
+import { infeasibility, useAgentRun, usePlanScope, useStartAgentRun } from '@/components/live/plan-data';
 import { Empty, ErrorBanner } from '@/components/live/states';
 import { DEPOT_NAME, fmtNum, fmtRunDate, fmtTime, isoDay } from '@/lib/format';
 import type { AgentRunDetail } from '@/lib/odata/types';
 import { useAgentRunId } from '@/lib/workday';
 
 const BOARD = '/plan/dsp-02-plan-board';
+export const INFEASIBLE = '/plan/dsp-23-plan-infeasible';
 
 type Step = { node: string; label: (d: AgentRunDetail) => React.ReactNode; value?: (d: AgentRunDetail) => string };
 const cs = (d: AgentRunDetail) => (d.contextSummary ?? {}) as {
@@ -45,13 +48,15 @@ export default function LiveDsp22PlanningAgentDrafting() {
   const detail: AgentRunDetail = run.data?.detail ?? {};
   const done = new Set((detail.history ?? []).map(h => h.node));
   const ready = status === 'NEEDS_APPROVAL';
+  const blocked = ready && infeasibility(run.data) !== null;
+  const next = blocked ? INFEASIBLE : BOARD;
 
   useEffect(() => {
     if (ready) {
-      const t = setTimeout(() => router.push(BOARD), 1500);
+      const t = setTimeout(() => router.push(next), 1500);
       return () => clearTimeout(t);
     }
-  }, [ready, router]);
+  }, [ready, next, router]);
 
   const firstOpen = STEPS.findIndex(s => !done.has(s.node));
   const progress = ready || ['APPROVED', 'REJECTED'].includes(status) ? 100 : Math.round((Math.max(firstOpen, 0) / STEPS.length) * 100);
@@ -72,7 +77,7 @@ export default function LiveDsp22PlanningAgentDrafting() {
                 {run.data && <><span className="m-sep" />started {fmtTime(run.data.createdAt)}</>}
               </div>
               <div className="d-h1">
-                {ready ? 'Draft ready for your review' : status === 'FAILED' ? 'The planning agent stopped' : `Planning agent is drafting ${runDate ? fmtRunDate(runDate) : ''}`}
+                {blocked ? 'The draft cannot serve every order' : ready ? 'Draft ready for your review' : status === 'FAILED' ? 'The planning agent stopped' : `Planning agent is drafting ${runDate ? fmtRunDate(runDate) : ''}`}
               </div>
             </div>
             <span className="d-btn" data-lk="C"><Ic n="x" />{"Stop, plan manually"}</span>
@@ -102,7 +107,7 @@ export default function LiveDsp22PlanningAgentDrafting() {
                   <div className="hstack" style={{ gap: '16px', alignItems: 'flex-end' }}>
                     <span className="dx-display" data-testid="agent-status">{ready ? 'Ready' : status ? status.charAt(0) + status.slice(1).toLowerCase().replace('_', ' ') : 'Starting'}</span>
                     <span className="dx-t14" style={{ paddingBottom: '6px' }}>
-                      {ready ? 'opening the plan board for your review' : `step ${Math.min(Math.max(firstOpen, 0) + 1, STEPS.length)} of ${STEPS.length} · you can keep working`}
+                      {blocked ? 'opening why the plan can’t be built' : ready ? 'opening the plan board for your review' : `step ${Math.min(Math.max(firstOpen, 0) + 1, STEPS.length)} of ${STEPS.length} · you can keep working`}
                       {" · nothing goes live from here"}
                     </span>
                   </div>
@@ -122,7 +127,8 @@ export default function LiveDsp22PlanningAgentDrafting() {
                   </div>
                   {ready && (
                     <div className="hstack" style={{ gap: '10px' }}>
-                      <Btn className="d-btn d-btn--primary" onClick={() => router.push(BOARD)}><Ic n="grid" />{"Review on the plan board"}</Btn>
+                      {blocked && <Btn className="d-btn d-btn--primary" testId="see-infeasible" onClick={() => router.push(INFEASIBLE)}><Ic n="alert" />{"See why the plan can’t be built"}</Btn>}
+                      <Btn className={`d-btn${blocked ? '' : ' d-btn--primary'}`} onClick={() => router.push(BOARD)}><Ic n="grid" />{"Review on the plan board"}</Btn>
                     </div>
                   )}
                 </div>

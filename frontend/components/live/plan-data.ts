@@ -3,11 +3,11 @@
 // DSP-13) built from real records: orders in EXCEPTION, stops with a high late risk, and alert notifications
 // (vehicle and signal alerts, dock flags and vehicle faults, POD exceptions and failed stops, store receipt issues), and
 // the run's synced offline records with a conflict note (DSP-A2). p5Link() names the P5 screen that handles an item.
-import { dayFilter, fmtClock, fmtTime } from '@/lib/format';
+import { addDays, dayFilter, fmtClock, fmtTime } from '@/lib/format';
 import { useEffect, useRef } from 'react';
 import { useAction, useEntity, useQuery } from '@/lib/odata/hooks';
-import type { AgentRun, Notification, OfflineEvent, Order, TripStop } from '@/lib/odata/types';
-import { depotFilter, useDepot, useRunDate } from '@/lib/workday';
+import type { AgentRun, AgentRunDetail, Notification, OfflineEvent, Order, TripStop } from '@/lib/odata/types';
+import { colomboDay, cutoffFor, depotFilter, useDepot, useRunDate } from '@/lib/workday';
 
 export function usePlanScope() {
   const { runDate, loading, error, none } = useRunDate('Plans');
@@ -189,4 +189,53 @@ function useInterval(ms: number | null, fn: () => void) {
     const t = setInterval(() => ref.current(), ms);
     return () => clearInterval(t);
   }, [ms]);
+}
+
+/**
+ * The run the cutoff queue is filling for today: the first operating day (Calendar) from tomorrow (Colombo).
+ * `before` is true until today's 4:00 PM cutoff; after it the dispatcher plans the closed queue, so the empty
+ * state (DSP-21 Empty queue before cutoff) never applies in the evening.
+ */
+export function useOpenRun(now: Date = new Date()) {
+  const first = addDays(colomboDay(now), 1);
+  const cal = useQuery<string | null>(`open-run:${first}`, async c => {
+    const rows = await c.list<{ date: string; isOperating: boolean }>('Calendar', { filter: `date ge ${first}T00:00:00Z and isOperating eq true`, orderby: 'date', top: 1 });
+    return rows.value[0] ? String(rows.value[0].date).slice(0, 10) : null;
+  });
+  const runDate = cal.data ?? first;
+  const cutoff = cutoffFor(runDate);
+  return { runDate, cutoff, before: now < cutoffFor(first) && now < cutoff, msLeft: Math.max(0, cutoff.getTime() - now.getTime()), loading: cal.loading };
+}
+
+/** Why an agent draft cannot serve every order as the rules stand (DSP-23 Plan infeasible). */
+export interface Infeasibility {
+  /** Protected orders the agent could not place (never deferred: the dispatcher must decide). */
+  review: NonNullable<AgentRunDetail['needsReview']>;
+  /** Hard-rule violations left after the redraft budget. */
+  violations: NonNullable<AgentRunDetail['violations']>;
+  /** Chilled m³ that does not fit the available reefers (0 when it fits). */
+  shortM3: number;
+  demandM3: number;
+  capacityM3: number;
+  vehiclesDown: string[];
+}
+
+/** The draft's infeasibility, or null when the draft serves the run (or there is no finished draft). */
+export function infeasibility(run: AgentRun | null | undefined): Infeasibility | null {
+  const d = run?.detail;
+  if (!d) return null;
+  const review = d.needsReview ?? [];
+  const violations = d.violations ?? [];
+  if (!review.length && !violations.length) return null;
+  const cs = (d.contextSummary ?? {}) as { chilledDemand?: { m3?: number }; reeferCapacity?: { m3?: number }; vehiclesDown?: string[] };
+  const demandM3 = Number(cs.chilledDemand?.m3 ?? 0);
+  const capacityM3 = Number(cs.reeferCapacity?.m3 ?? 0);
+  return {
+    review,
+    violations,
+    demandM3,
+    capacityM3,
+    shortM3: Math.max(0, Math.round((demandM3 - capacityM3) * 10) / 10),
+    vehiclesDown: Array.isArray(cs.vehiclesDown) ? cs.vehiclesDown : [],
+  };
 }

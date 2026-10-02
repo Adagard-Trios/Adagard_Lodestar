@@ -297,7 +297,7 @@ export interface AgentRunDetail {
   ruleChecks?: Array<{ rule: string; label: string; passed: boolean; violations: number }>;
   violations?: Array<{ rule: string; tripId: string; vehicleId: string; orderIds: string[]; reason: string; detail: string }>;
   deferrals?: Array<{ orderId: string; outletId: string; reason: string; score: number; suggested: boolean; m3: number; rank: number }>;
-  needsReview?: Array<{ orderId: string; outletId?: string; reason?: string; score?: number }>;
+  needsReview?: Array<{ orderId: string; outletId?: string; reason?: string; score?: number; detail?: string }>;
   explanation?: { text: string; did: string[]; checked: string[] };
   decisions?: Array<{ decision: string; by?: string; at?: string; version?: number }>;
   history?: Array<{ node: string; at: string; note?: string }>;

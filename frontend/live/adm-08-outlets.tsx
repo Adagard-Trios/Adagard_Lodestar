@@ -1,7 +1,7 @@
 'use client';
 // ADM-08 Outlets, live. Markup and classes from the generated design (frontend/screens/adm-08-outlets.tsx).
 // Data: Outlets (paged, brand/access chips, depot filter, $search on id, name, district, address). A row opens
-// the outlet in ADM-09. The design's "Import CSV" (ADM-14) is left out: there is no import API.
+// the outlet in ADM-09. "Import CSV" opens ADM-14 data imports.
 import { useState } from 'react';
 import Btn from '@/components/live/Btn';
 import { AdminSide, useCount } from '@/components/live/chrome';
@@ -48,6 +48,7 @@ export default function LiveAdm08Outlets() {
               <div className="d-h1">{"Outlets"}</div>
               <div className="d-sub">{"The planning agent reads these rows for every draft. Change a window here, not in a plan."}</div>
             </div>
+            <span className="d-btn" data-lk="L295"><Ic n="upload" />{"Import CSV"}</span>
           </div>
           <div className="dx-card" style={{ flex: '1', minHeight: '0' }} data-testid="outlets">
             <div className="dx-card__head" style={{ minHeight: '62px' }}>

@@ -14,6 +14,7 @@ export default function Btn({
   children,
   title,
   testId,
+  lk,
 }: {
   as?: 'span' | 'div';
   className?: string;
@@ -24,6 +25,8 @@ export default function Btn({
   children: ReactNode;
   title?: string;
   testId?: string;
+  /** The design's link code on this element. The click runs the action (it does not bubble), so the code is kept for traceability only. */
+  lk?: string;
 }) {
   const off = Boolean(disabled || busy);
   const run = (e: MouseEvent | KeyboardEvent) => {
@@ -41,6 +44,7 @@ export default function Btn({
       style={off ? { ...style, opacity: 0.6, cursor: 'default' } : { ...style, cursor: 'pointer' }}
       title={title}
       data-testid={testId}
+      data-lk={lk}
       onClick={run}
       onKeyDown={e => {
         if (e.key === 'Enter' || e.key === ' ') run(e);

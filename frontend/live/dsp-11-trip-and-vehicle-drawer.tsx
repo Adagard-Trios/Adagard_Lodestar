@@ -4,8 +4,8 @@
 // trip, which is what the plan board's "Trip 1 · departs …" header opens. Data: Trips('…') with vehicle, plan and
 // stops (outlet, order sizes), the vehicle's other trips that day (tabs and the minutes budget) and
 // DistrictTravel for the drive times. The plan board behind the drawer is a plain backdrop.
-// Not shown, because the services have no such commands: "Move a stop", "Swap vehicle" and "Lock this trip"; the
-// "Vehicle" tab (the design gives it no content).
+// Footer as designed: "Lock this trip" returns to the plan board (DSP-02), where the trip is edited and approved;
+// "Move a stop" and "Swap vehicle" carry no link in the design. Not shown: the "Vehicle" tab (the design gives it no content).
 import { budget } from '@/components/live/board';
 import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
@@ -189,6 +189,12 @@ export default function LiveDsp11TripAndVehicleDrawer() {
               </div>
             </>
           )}
+        </div>
+        <div className="dx-drawer__foot">
+          <span className="d-btn"><Ic n="split" />{"Move a stop"}</span>
+          <span className="d-btn d-btn--ghost">{"Swap vehicle"}</span>
+          <span className="spacer" />
+          <span className="d-btn d-btn--primary" data-lk="L157"><Ic n="lock" />{"Lock this trip"}</span>
         </div>
       </div>
     </div>
