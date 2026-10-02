@@ -14,17 +14,21 @@ One system, five faces on one URL:
 
 ## Live demo
 
-**URL:** _to be added once the Azure VM is up_ (`https://<label>.<region>.cloudapp.azure.com`, see [deploy/azure-demo](deploy/azure-demo/README.md)).
+**URL:** https://waypoint-lodestar.eastasia.cloudapp.azure.com
 
-| Role | User | Password |
-|---|---|---|
-| Store manager (OUT106, Nuwara Eliya) | `fathima` | _set when the VM is created_ |
-| Dispatcher (both depots) | `nilanthi` | _set when the VM is created_ |
-| Loader (Kandy) | `kasun` | _set when the VM is created_ |
-| Driver (VEH057, Kandy) | `ruwan` | _set when the VM is created_ |
-| Admin | `admin` | _set when the VM is created_ |
+Open the URL, pick a role on the start page and sign in. One account per role works on the desk website and in the phone apps.
 
-On a local install the passwords are `lodestar-dev-only` (personas) and `lodestar-admin-dev-only` (admin).
+| Role | App | Username | Password |
+|---|---|---|---|
+| Store manager (OUT106, Nuwara Eliya) | Lodestar Store (desk, or the phone app) | `fathima` | `Waypoint-Judge-2026` |
+| Dispatcher (both depots) | Lodestar Plan (desk) | `nilanthi` | `Waypoint-Judge-2026` |
+| Loader (Kandy) | Lodestar Dock (phone or bay tablet) | `kasun` | `Waypoint-Judge-2026` |
+| Driver (VEH057, Kandy) | Lodestar Run (phone) | `ruwan` | `Waypoint-Judge-2026` |
+| Admin | Lodestar Admin (desk) | `admin` | not published: it can approve phones and change accounts. Ask the team (the submission form lists our contact). |
+
+The judge walkthrough below needs only the four role accounts. Driver and loader screens are designed for a phone: use a phone or a 390 px wide browser window.
+
+On a local install (`docker compose up`) the passwords are `lodestar-dev-only` (the four roles) and `lodestar-admin-dev-only` (admin).
 
 ## Run it locally
 
