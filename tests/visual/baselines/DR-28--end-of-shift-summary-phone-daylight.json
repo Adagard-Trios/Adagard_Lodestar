@@ -1,0 +1,592 @@
+{
+ "id": "DR-28",
+ "name": "DR-28 End of shift summary · phone · daylight",
+ "board": "P4",
+ "device": "phone",
+ "key": "dr-28-end-of-shift-summary-daylight",
+ "live": {
+  "app": "field",
+  "path": "s/dr-28-end-of-shift-summary-daylight"
+ },
+ "viewport": {
+  "width": 374,
+  "height": 758
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "End of shift",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 110.3,
+    "y": 15.8,
+    "w": 82.9,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|End of shift#0"
+  },
+  {
+   "kind": "text",
+   "text": "All synced",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 279.4,
+    "y": 17.3,
+    "w": 66.6,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(4, 120, 87)",
+    "backgroundColor": "rgb(227, 246, 236)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 12px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|All synced#0"
+  },
+  {
+   "kind": "text",
+   "text": "Shift done",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 102,
+    "y": 78,
+    "w": 181.7,
+    "h": 47
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "38px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Shift done#0"
+  },
+  {
+   "kind": "text",
+   "text": "Back at Kandy Hub 9:32 · out since 3:40",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 36,
+    "y": 139,
+    "w": 266.9,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(52, 64, 84)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Back at Kandy Hub 9:32 · out since 3:40#0"
+  },
+  {
+   "kind": "text",
+   "text": "2",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 32,
+    "y": 211.3,
+    "w": 13.9,
+    "h": 30
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|2#0"
+  },
+  {
+   "kind": "text",
+   "text": "Stops",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 32,
+    "y": 249.3,
+    "w": 36.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Stops#0"
+  },
+  {
+   "kind": "text",
+   "text": "3",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 146.3,
+    "y": 211.3,
+    "w": 13.9,
+    "h": 30
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|3#0"
+  },
+  {
+   "kind": "text",
+   "text": "Orders",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 146.3,
+    "y": 249.3,
+    "w": 43,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Orders#0"
+  },
+  {
+   "kind": "text",
+   "text": "1",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 260.7,
+    "y": 211.3,
+    "w": 13.9,
+    "h": 30
+   },
+   "style": {
+    "color": "rgb(180, 35, 24)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|1#0"
+  },
+  {
+   "kind": "text",
+   "text": "Exception",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 260.7,
+    "y": 249.3,
+    "w": 62.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Exception#0"
+  },
+  {
+   "kind": "text",
+   "text": "Logged",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 298.8,
+    "w": 47.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Logged#0"
+  },
+  {
+   "kind": "text",
+   "text": "VEH057",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 308,
+    "y": 298.8,
+    "w": 46,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|VEH057#0"
+  },
+  {
+   "kind": "text",
+   "text": "Distance",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 32,
+    "y": 339,
+    "w": 62,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(52, 64, 84)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Distance#0"
+  },
+  {
+   "kind": "text",
+   "text": "170 km",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 286.5,
+    "y": 339,
+    "w": 55.5,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|170 km#0"
+  },
+  {
+   "kind": "text",
+   "text": "Fuel used",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 32,
+    "y": 387.5,
+    "w": 68.5,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(52, 64, 84)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Fuel used#0"
+  },
+  {
+   "kind": "text",
+   "text": "17 L",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 310.1,
+    "y": 387.5,
+    "w": 31.9,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|17 L#0"
+  },
+  {
+   "kind": "text",
+   "text": "Fuel this week",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 32,
+    "y": 435.3,
+    "w": 101.1,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(52, 64, 84)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Fuel this week#0"
+  },
+  {
+   "kind": "text",
+   "text": "315 / 450 L",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 257.4,
+    "y": 435.3,
+    "w": 84.6,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|315 / 450 L#0"
+  },
+  {
+   "kind": "text",
+   "text": "Exception",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 32,
+    "y": 501,
+    "w": 69.8,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(52, 64, 84)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Exception#1"
+  },
+  {
+   "kind": "text",
+   "text": "1 chicken tray damaged",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 165.2,
+    "y": 501,
+    "w": 176.8,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|1 chicken tray damaged#0"
+  },
+  {
+   "kind": "text",
+   "text": "Next run · Wed 8 Apr",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 84,
+    "y": 558.8,
+    "w": 161.9,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Next run · Wed 8 Apr#0"
+  },
+  {
+   "kind": "text",
+   "text": "Plan arrives the evening before",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 84,
+    "y": 583.6,
+    "w": 193.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(52, 64, 84)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "500",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Plan arrives the evening before#0"
+  },
+  {
+   "kind": "text",
+   "text": "Close shift",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 159.5,
+    "y": 711.3,
+    "w": 87,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Close shift#0"
+  }
+ ]
+}

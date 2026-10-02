@@ -1,0 +1,117 @@
+{
+ "id": "SM-09",
+ "name": "SM-09 Onboarding 3 · phone",
+ "board": "P1",
+ "device": "phone",
+ "key": "sm-09-onboarding-3",
+ "live": {
+  "app": "field",
+  "path": "s/sm-09-onboarding-3"
+ },
+ "viewport": {
+  "width": 374,
+  "height": 758
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "3 of 3",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 20,
+    "y": 13.3,
+    "w": 36.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|3 of 3#0"
+  },
+  {
+   "kind": "text",
+   "text": "Confirm what arrived",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 445,
+    "w": 294.7,
+    "h": 38
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Confirm what arrived#0"
+  },
+  {
+   "kind": "text",
+   "text": "Count at the dock, report anything short or damaged with a photo, and the credit note is raised for you.",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 492.6,
+    "w": 315.6,
+    "h": 62.5
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Count at the dock, report anything short or damaged with a photo, and the credit note is raised for you.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Get started",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 139.9,
+    "y": 711.3,
+    "w": 94.1,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Get started#0"
+  }
+ ]
+}

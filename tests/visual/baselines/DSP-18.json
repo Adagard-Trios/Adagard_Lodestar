@@ -1,0 +1,2368 @@
+{
+ "id": "DSP-18",
+ "name": "DSP-18 Outlet profile · desktop",
+ "board": "P2",
+ "device": "desktop",
+ "key": "dsp-18-outlet-profile",
+ "live": {
+  "app": "desk",
+  "face": "plan",
+  "path": "/plan/dsp-18-outlet-profile"
+ },
+ "viewport": {
+  "width": 1438,
+  "height": 858
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Lodestar Plan",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 62,
+    "y": 24,
+    "w": 106.5,
+    "h": 21
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "2px 0px 22px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Lodestar Plan#0"
+  },
+  {
+   "kind": "text",
+   "text": "Today",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 84.5,
+    "w": 41.5,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Today#0"
+  },
+  {
+   "kind": "text",
+   "text": "Cutoff queue",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 124.5,
+    "w": 88.5,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Cutoff queue#0"
+  },
+  {
+   "kind": "text",
+   "text": "90",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 184.1,
+    "y": 125,
+    "w": 15.9,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgb(238, 240, 246)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 7px",
+    "margin": "0px 0px 0px 26.6094px",
+    "gap": "normal"
+   },
+   "key": "text|90#0"
+  },
+  {
+   "kind": "text",
+   "text": "Plan board",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 164.5,
+    "w": 72.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Plan board#0"
+  },
+  {
+   "kind": "text",
+   "text": "Deferrals",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 204.5,
+    "w": 62.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Deferrals#0"
+  },
+  {
+   "kind": "text",
+   "text": "2",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 191.2,
+    "y": 205,
+    "w": 7.6,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(26, 19, 0)",
+    "backgroundColor": "rgb(245, 184, 61)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 7px",
+    "margin": "0px 0px 0px 58.7031px",
+    "gap": "normal"
+   },
+   "key": "text|2#0"
+  },
+  {
+   "kind": "text",
+   "text": "Live operations",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 244.5,
+    "w": 103.8,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Live operations#0"
+  },
+  {
+   "kind": "text",
+   "text": "Exceptions",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 284.5,
+    "w": 74.7,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Exceptions#0"
+  },
+  {
+   "kind": "text",
+   "text": "Capacity outlook",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 324.5,
+    "w": 114.8,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Capacity outlook#0"
+  },
+  {
+   "kind": "text",
+   "text": "Records",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 24,
+    "y": 373,
+    "w": 48.2,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "18px 10px 6px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Records#0"
+  },
+  {
+   "kind": "text",
+   "text": "Fleet & outlets",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 408.5,
+    "w": 97.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(59, 76, 202)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Fleet & outlets#0"
+  },
+  {
+   "kind": "text",
+   "text": "Intelligence",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 448.5,
+    "w": 78.6,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Intelligence#0"
+  },
+  {
+   "kind": "text",
+   "text": "Settings",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 488.5,
+    "w": 55.9,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Settings#0"
+  },
+  {
+   "kind": "text",
+   "text": "Depots",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 24,
+    "y": 537,
+    "w": 41.8,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "18px 10px 6px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Depots#0"
+  },
+  {
+   "kind": "text",
+   "text": "Peliyagoda DC",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 572.5,
+    "w": 98.7,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Peliyagoda DC#0"
+  },
+  {
+   "kind": "text",
+   "text": "35/38",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 166.1,
+    "y": 573,
+    "w": 35.4,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgb(238, 240, 246)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 7px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|35/38#0"
+  },
+  {
+   "kind": "text",
+   "text": "Kandy Hub",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 612.5,
+    "w": 74.8,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Kandy Hub#0"
+  },
+  {
+   "kind": "text",
+   "text": "22/22",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 165.1,
+    "y": 613,
+    "w": 34.9,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgb(238, 240, 246)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 7px",
+    "margin": "0px 0px 0px 21.2656px",
+    "gap": "normal"
+   },
+   "key": "text|22/22#0"
+  },
+  {
+   "kind": "text",
+   "text": "NP",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 31.8,
+    "y": 801.8,
+    "w": 18.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(26, 19, 0)",
+    "backgroundColor": "rgb(245, 184, 61)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "800",
+    "borderRadius": "50%",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|NP#0"
+  },
+  {
+   "kind": "text",
+   "text": "Nilanthi Perera",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 68,
+    "y": 792,
+    "w": 93.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Nilanthi Perera#0"
+  },
+  {
+   "kind": "text",
+   "text": "Dispatcher · 2 depots",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 68,
+    "y": 811.5,
+    "w": 131.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Dispatcher · 2 depots#0"
+  },
+  {
+   "kind": "text",
+   "text": "Fleet & outlets Outlets Gampaha Peliyagoda DC Mon 6 Apr, 5:40 PM",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 260,
+    "y": 23,
+    "w": 487.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Fleet & outlets Outlets Gampaha Peliyagoda DC Mon 6 Apr, 5:40 PM#0"
+  },
+  {
+   "kind": "text",
+   "text": "Waypoint Fresh Ja-Ela",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 260,
+    "y": 43.5,
+    "w": 272.6,
+    "h": 33
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "26px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Waypoint Fresh Ja-Ela#0"
+  },
+  {
+   "kind": "text",
+   "text": "OUT028",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 532.6,
+    "y": 52.5,
+    "w": 63.7,
+    "h": 23
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "18px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|OUT028#0"
+  },
+  {
+   "kind": "text",
+   "text": "Message store",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1071.6,
+    "y": 46.9,
+    "w": 100.8,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "12px",
+    "padding": "0px 16px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Message store#0"
+  },
+  {
+   "kind": "text",
+   "text": "View Tuesday's order",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1245.4,
+    "y": 46.9,
+    "w": 148.6,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "12px",
+    "padding": "0px 16px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|View Tuesday's order#0"
+  },
+  {
+   "kind": "text",
+   "text": "Consecutive-skip guard",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 306,
+    "y": 117.4,
+    "w": 162.4,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(185, 192, 230)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Consecutive-skip guard#0"
+  },
+  {
+   "kind": "text",
+   "text": "Protected",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 284,
+    "y": 141.4,
+    "w": 226,
+    "h": 61
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "48px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Protected#0"
+  },
+  {
+   "kind": "text",
+   "text": "for Tue 7 Apr",
+   "tag": "small",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 516,
+    "y": 172.4,
+    "w": 106,
+    "h": 23
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "18px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px 0px 0px 6px",
+    "gap": "normal"
+   },
+   "key": "text|for Tue 7 Apr#0"
+  },
+  {
+   "kind": "text",
+   "text": "Deferred on the run (CAP-REEFER). Score on Tuesday, so the planning agent won't propose it and deferring again needs a m",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 284,
+    "y": 210.4,
+    "w": 559.6,
+    "h": 38
+   },
+   "style": {
+    "color": "rgb(221, 225, 245)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Deferred on the run (CAP-REEFER). Score on Tuesday, so the planning agent won't propose it and deferring again needs a m#0"
+  },
+  {
+   "kind": "text",
+   "text": "Mon 6 Apr",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 392,
+    "y": 210.4,
+    "w": 71,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(255, 203, 92)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Mon 6 Apr#0"
+  },
+  {
+   "kind": "text",
+   "text": "91",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 639.3,
+    "y": 210.4,
+    "w": 15.1,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(255, 203, 92)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|91#0"
+  },
+  {
+   "kind": "text",
+   "text": "+40",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 284,
+    "y": 264.4,
+    "w": 43.6,
+    "h": 30
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|+40#0"
+  },
+  {
+   "kind": "text",
+   "text": "deferred yesterday",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 284,
+    "y": 297,
+    "w": 119.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(185, 192, 230)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|deferred yesterday#0"
+  },
+  {
+   "kind": "text",
+   "text": "+24",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 487.4,
+    "y": 264.4,
+    "w": 43.6,
+    "h": 30
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|+24#0"
+  },
+  {
+   "kind": "text",
+   "text": "2 days since served",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 487.4,
+    "y": 297,
+    "w": 125.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(185, 192, 230)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|2 days since served#0"
+  },
+  {
+   "kind": "text",
+   "text": "+27",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 690.8,
+    "y": 264.4,
+    "w": 43.6,
+    "h": 30
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|+27#0"
+  },
+  {
+   "kind": "text",
+   "text": "chilled, Fresh, cover",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 690.8,
+    "y": 297,
+    "w": 126.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(185, 192, 230)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|chilled, Fresh, cover#0"
+  },
+  {
+   "kind": "text",
+   "text": "Next delivery",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 937.3,
+    "y": 108.6,
+    "w": 108.3,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Next delivery#0"
+  },
+  {
+   "kind": "text",
+   "text": "Draft v3",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1327.3,
+    "y": 111.6,
+    "w": 50.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(59, 76, 202)",
+    "backgroundColor": "rgb(238, 240, 255)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 12px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Draft v3#0"
+  },
+  {
+   "kind": "text",
+   "text": "Run",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 937.3,
+    "y": 158.9,
+    "w": 25.6,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Run#0"
+  },
+  {
+   "kind": "text",
+   "text": "Tue 7 Apr",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1323.1,
+    "y": 158.9,
+    "w": 66.9,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Tue 7 Apr#0"
+  },
+  {
+   "kind": "text",
+   "text": "Order",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 937.3,
+    "y": 199.4,
+    "w": 37.8,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Order#0"
+  },
+  {
+   "kind": "text",
+   "text": "· 7 lines",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1332.5,
+    "y": 198.9,
+    "w": 57.5,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|· 7 lines#0"
+  },
+  {
+   "kind": "text",
+   "text": "ORD0104173",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1249.9,
+    "y": 198.9,
+    "w": 82.6,
+    "h": 18
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|ORD0104173#0"
+  },
+  {
+   "kind": "text",
+   "text": "Load",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 937.3,
+    "y": 239.4,
+    "w": 32.9,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Load#0"
+  },
+  {
+   "kind": "text",
+   "text": "Chilled 1.5 m³ · 338 kg",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1233.9,
+    "y": 239.4,
+    "w": 156.1,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Chilled 1.5 m³ · 338 kg#0"
+  },
+  {
+   "kind": "text",
+   "text": "Vehicle",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 937.3,
+    "y": 279.4,
+    "w": 48.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Vehicle#0"
+  },
+  {
+   "kind": "text",
+   "text": "VEH006 Trip 1 · stop 3",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1234.7,
+    "y": 279.4,
+    "w": 155.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|VEH006 Trip 1 · stop 3#0"
+  },
+  {
+   "kind": "text",
+   "text": "Channel",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 937.3,
+    "y": 319.4,
+    "w": 54.5,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Channel#0"
+  },
+  {
+   "kind": "text",
+   "text": "Store app",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1324,
+    "y": 319.4,
+    "w": 66,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Store app#0"
+  },
+  {
+   "kind": "text",
+   "text": "Access and window",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 280,
+    "y": 400.6,
+    "w": 163.5,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Access and window#0"
+  },
+  {
+   "kind": "text",
+   "text": "Unloading",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 280,
+    "y": 450.9,
+    "w": 67.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Unloading#0"
+  },
+  {
+   "kind": "text",
+   "text": "Street, no dock",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 650.7,
+    "y": 450.9,
+    "w": 103.8,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Street, no dock#0"
+  },
+  {
+   "kind": "text",
+   "text": "Parking",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 280,
+    "y": 491.4,
+    "w": 50.2,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Parking#0"
+  },
+  {
+   "kind": "text",
+   "text": "Normal, any vehicle",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 619.1,
+    "y": 491.4,
+    "w": 135.4,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Normal, any vehicle#0"
+  },
+  {
+   "kind": "text",
+   "text": "Window",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 280,
+    "y": 531.4,
+    "w": 53.6,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Window#0"
+  },
+  {
+   "kind": "text",
+   "text": "03:00–08:00",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 662.1,
+    "y": 530.4,
+    "w": 92.4,
+    "h": 18
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|03:00–08:00#0"
+  },
+  {
+   "kind": "text",
+   "text": "Service allowance",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 280,
+    "y": 571.4,
+    "w": 120.5,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Service allowance#0"
+  },
+  {
+   "kind": "text",
+   "text": "16 min · predicted 17",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 607.8,
+    "y": 571.4,
+    "w": 146.8,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|16 min · predicted 17#0"
+  },
+  {
+   "kind": "text",
+   "text": "From Peliyagoda",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 280,
+    "y": 611.4,
+    "w": 110.4,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|From Peliyagoda#0"
+  },
+  {
+   "kind": "text",
+   "text": "37 min · Gampaha",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 629.9,
+    "y": 611.4,
+    "w": 124.7,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|37 min · Gampaha#0"
+  },
+  {
+   "kind": "text",
+   "text": "Dispatcher note the agent uses",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 320,
+    "y": 660.4,
+    "w": 197.6,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(59, 76, 202)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Dispatcher note the agent uses#0"
+  },
+  {
+   "kind": "text",
+   "text": "Unload at the kerb outside the store. An early window from 3:00 makes it a good first stop.",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 294,
+    "y": 684.9,
+    "w": 424,
+    "h": 38
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Unload at the kerb outside the store. An early window from 3:00 makes it a good first stop.#0"
+  },
+  {
+   "kind": "text",
+   "text": "N. Perera · used in draft v3",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 294,
+    "y": 729.9,
+    "w": 164.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|N. Perera · used in draft v3#0"
+  },
+  {
+   "kind": "text",
+   "text": "Delivery record",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 812.5,
+    "y": 400.6,
+    "w": 125.6,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Delivery record#0"
+  },
+  {
+   "kind": "text",
+   "text": "last 12 run days, Sundays closed",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1190,
+    "y": 404,
+    "w": 200,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|last 12 run days, Sundays closed#0"
+  },
+  {
+   "kind": "text",
+   "text": "Tue 24",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 812.5,
+    "y": 478.4,
+    "w": 42.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Tue 24#0"
+  },
+  {
+   "kind": "text",
+   "text": "Wed 25",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 861,
+    "y": 478.4,
+    "w": 47,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Wed 25#0"
+  },
+  {
+   "kind": "text",
+   "text": "Thu 26",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 914,
+    "y": 478.4,
+    "w": 43.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Thu 26#0"
+  },
+  {
+   "kind": "text",
+   "text": "Fri 27",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 967,
+    "y": 478.4,
+    "w": 34.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Fri 27#0"
+  },
+  {
+   "kind": "text",
+   "text": "Sat 28",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1011.8,
+    "y": 478.4,
+    "w": 39.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Sat 28#0"
+  },
+  {
+   "kind": "text",
+   "text": "Mon 30",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1058.3,
+    "y": 478.4,
+    "w": 47.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Mon 30#0"
+  },
+  {
+   "kind": "text",
+   "text": "Tue 31",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1112.3,
+    "y": 478.4,
+    "w": 39.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Tue 31#0"
+  },
+  {
+   "kind": "text",
+   "text": "Wed 1",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1161.2,
+    "y": 478.4,
+    "w": 36.6,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Wed 1#0"
+  },
+  {
+   "kind": "text",
+   "text": "Thu 2",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1209.3,
+    "y": 478.4,
+    "w": 35.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Thu 2#0"
+  },
+  {
+   "kind": "text",
+   "text": "Fri 3",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1260.8,
+    "y": 478.4,
+    "w": 27.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Fri 3#0"
+  },
+  {
+   "kind": "text",
+   "text": "Sat 4",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1305.9,
+    "y": 478.4,
+    "w": 32,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Sat 4#0"
+  },
+  {
+   "kind": "text",
+   "text": "Mon 6",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1349.8,
+    "y": 478.4,
+    "w": 38.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Mon 6#0"
+  },
+  {
+   "kind": "text",
+   "text": "96%",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 812.5,
+    "y": 512.2,
+    "w": 53,
+    "h": 30
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|96%#0"
+  },
+  {
+   "kind": "text",
+   "text": "on time, last 30 runs",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 812.5,
+    "y": 544.8,
+    "w": 127.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|on time, last 30 runs#0"
+  },
+  {
+   "kind": "text",
+   "text": "1.4",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1011.4,
+    "y": 512.2,
+    "w": 37.2,
+    "h": 30
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|1.4#0"
+  },
+  {
+   "kind": "text",
+   "text": "m³",
+   "tag": "small",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1051.5,
+    "y": 522.2,
+    "w": 18.9,
+    "h": 18
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px 0px 0px 3px",
+    "gap": "normal"
+   },
+   "key": "text|m³#0"
+  },
+  {
+   "kind": "text",
+   "text": "typical chilled order",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1011.4,
+    "y": 544.8,
+    "w": 124.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|typical chilled order#0"
+  },
+  {
+   "kind": "text",
+   "text": "2",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1210.2,
+    "y": 512.2,
+    "w": 13.9,
+    "h": 30
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|2#1"
+  },
+  {
+   "kind": "text",
+   "text": "skips in 60 days",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1210.2,
+    "y": 544.8,
+    "w": 101.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|skips in 60 days#0"
+  },
+  {
+   "kind": "text",
+   "text": "Skip history",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 812.5,
+    "y": 582.3,
+    "w": 77.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "900",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Skip history#0"
+  },
+  {
+   "kind": "text",
+   "text": "Mon 6 Apr score 34 · N. Perera",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 812.5,
+    "y": 626.3,
+    "w": 308.8,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Mon 6 Apr score 34 · N. Perera#0"
+  },
+  {
+   "kind": "text",
+   "text": "CAP-REEFER",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 897.9,
+    "y": 625.5,
+    "w": 75,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(255, 203, 92)",
+    "backgroundColor": "rgb(20, 27, 77)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "12.5px",
+    "fontWeight": "700",
+    "borderRadius": "7px",
+    "padding": "0px 8px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|CAP-REEFER#0"
+  },
+  {
+   "kind": "text",
+   "text": "Protected next run",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1271.5,
+    "y": 626.1,
+    "w": 118.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(180, 83, 9)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "5px"
+   },
+   "key": "text|Protected next run#0"
+  },
+  {
+   "kind": "text",
+   "text": "Tue 17 Mar score 28 · N. Perera",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 812.5,
+    "y": 666.8,
+    "w": 280.6,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Tue 17 Mar score 28 · N. Perera#0"
+  },
+  {
+   "kind": "text",
+   "text": "WINDOW",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 900.3,
+    "y": 666,
+    "w": 45,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(255, 203, 92)",
+    "backgroundColor": "rgb(20, 27, 77)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "12.5px",
+    "fontWeight": "700",
+    "borderRadius": "7px",
+    "padding": "0px 8px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|WINDOW#0"
+  },
+  {
+   "kind": "text",
+   "text": "Served Wed 18 Mar",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1263.7,
+    "y": 666.6,
+    "w": 126.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(4, 120, 87)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "5px"
+   },
+   "key": "text|Served Wed 18 Mar#0"
+  }
+ ]
+}

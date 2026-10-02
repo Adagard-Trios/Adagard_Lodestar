@@ -1,0 +1,1293 @@
+{
+ "id": "DSP-22",
+ "name": "DSP-22 Planning agent drafting · desktop",
+ "board": "P2",
+ "device": "desktop",
+ "key": "dsp-22-planning-agent-drafting",
+ "live": {
+  "app": "desk",
+  "face": "plan",
+  "path": "/plan/dsp-22-planning-agent-drafting"
+ },
+ "viewport": {
+  "width": 1438,
+  "height": 858
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Lodestar Plan",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 62,
+    "y": 24,
+    "w": 106.5,
+    "h": 21
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "2px 0px 22px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Lodestar Plan#0"
+  },
+  {
+   "kind": "text",
+   "text": "Today",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 84.5,
+    "w": 41.5,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Today#0"
+  },
+  {
+   "kind": "text",
+   "text": "Cutoff queue",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 124.5,
+    "w": 88.5,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Cutoff queue#0"
+  },
+  {
+   "kind": "text",
+   "text": "90",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 184.1,
+    "y": 125,
+    "w": 15.9,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgb(238, 240, 246)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 7px",
+    "margin": "0px 0px 0px 26.6094px",
+    "gap": "normal"
+   },
+   "key": "text|90#0"
+  },
+  {
+   "kind": "text",
+   "text": "Plan board",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 164.5,
+    "w": 72.9,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(59, 76, 202)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Plan board#0"
+  },
+  {
+   "kind": "text",
+   "text": "Deferrals",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 204.5,
+    "w": 62.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Deferrals#0"
+  },
+  {
+   "kind": "text",
+   "text": "2",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 191.2,
+    "y": 205,
+    "w": 7.6,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(26, 19, 0)",
+    "backgroundColor": "rgb(245, 184, 61)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 7px",
+    "margin": "0px 0px 0px 58.7031px",
+    "gap": "normal"
+   },
+   "key": "text|2#0"
+  },
+  {
+   "kind": "text",
+   "text": "Live operations",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 244.5,
+    "w": 103.8,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Live operations#0"
+  },
+  {
+   "kind": "text",
+   "text": "Exceptions",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 284.5,
+    "w": 74.7,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Exceptions#0"
+  },
+  {
+   "kind": "text",
+   "text": "Capacity outlook",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 324.5,
+    "w": 114.8,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Capacity outlook#0"
+  },
+  {
+   "kind": "text",
+   "text": "Records",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 24,
+    "y": 373,
+    "w": 48.2,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "18px 10px 6px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Records#0"
+  },
+  {
+   "kind": "text",
+   "text": "Fleet & outlets",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 408.5,
+    "w": 96.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Fleet & outlets#0"
+  },
+  {
+   "kind": "text",
+   "text": "Intelligence",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 448.5,
+    "w": 78.6,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Intelligence#0"
+  },
+  {
+   "kind": "text",
+   "text": "Settings",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 488.5,
+    "w": 55.9,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Settings#0"
+  },
+  {
+   "kind": "text",
+   "text": "Depots",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 24,
+    "y": 537,
+    "w": 41.8,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "18px 10px 6px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Depots#0"
+  },
+  {
+   "kind": "text",
+   "text": "Peliyagoda DC",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 572.5,
+    "w": 98.7,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Peliyagoda DC#0"
+  },
+  {
+   "kind": "text",
+   "text": "35/38",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 166.1,
+    "y": 573,
+    "w": 35.4,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgb(238, 240, 246)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 7px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|35/38#0"
+  },
+  {
+   "kind": "text",
+   "text": "Kandy Hub",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 612.5,
+    "w": 74.8,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Kandy Hub#0"
+  },
+  {
+   "kind": "text",
+   "text": "22/22",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 165.1,
+    "y": 613,
+    "w": 34.9,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgb(238, 240, 246)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 7px",
+    "margin": "0px 0px 0px 21.2656px",
+    "gap": "normal"
+   },
+   "key": "text|22/22#0"
+  },
+  {
+   "kind": "text",
+   "text": "NP",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 31.8,
+    "y": 801.8,
+    "w": 18.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(26, 19, 0)",
+    "backgroundColor": "rgb(245, 184, 61)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "800",
+    "borderRadius": "50%",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|NP#0"
+  },
+  {
+   "kind": "text",
+   "text": "Nilanthi Perera",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 68,
+    "y": 792,
+    "w": 93.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Nilanthi Perera#0"
+  },
+  {
+   "kind": "text",
+   "text": "Dispatcher · 2 depots",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 68,
+    "y": 811.5,
+    "w": 131.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Dispatcher · 2 depots#0"
+  },
+  {
+   "kind": "text",
+   "text": "Peliyagoda DC Tue 7 Apr run started by the 4:00 PM cutoff",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 260,
+    "y": 23,
+    "w": 399,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Peliyagoda DC Tue 7 Apr run started by the 4:00 PM cutoff#0"
+  },
+  {
+   "kind": "text",
+   "text": "Planning agent is drafting Tue 7 Apr",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 260,
+    "y": 43.5,
+    "w": 418.4,
+    "h": 33
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "26px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Planning agent is drafting Tue 7 Apr#0"
+  },
+  {
+   "kind": "text",
+   "text": "Stop, plan manually",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1259.5,
+    "y": 46.9,
+    "w": 134.5,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "12px",
+    "padding": "0px 16px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Stop, plan manually#0"
+  },
+  {
+   "kind": "text",
+   "text": "Ready ~4:20",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 284,
+    "y": 108.4,
+    "w": 277.8,
+    "h": 61
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "48px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Ready ~4:20#0"
+  },
+  {
+   "kind": "text",
+   "text": "step 4 of 6 · you can keep working · nothing goes live from here",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 577.8,
+    "y": 138.4,
+    "w": 422.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px 0px 6px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|step 4 of 6 · you can keep working · nothing goes live from here#0"
+  },
+  {
+   "kind": "text",
+   "text": "from store app and phone, access and windows",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 428,
+    "y": 214.5,
+    "w": 332.9,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14.5px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|from store app and phone, access and windows#0"
+  },
+  {
+   "kind": "text",
+   "text": "Read 90 orders",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 320,
+    "y": 214.5,
+    "w": 108,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Read 90 orders#0"
+  },
+  {
+   "kind": "text",
+   "text": "90 of 90",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 994.7,
+    "y": 214.6,
+    "w": 53.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px 0px 0px 221.781px",
+    "gap": "normal"
+   },
+   "key": "text|90 of 90#0"
+  },
+  {
+   "kind": "text",
+   "text": "3 in workshop, VEH004 VEH021 VEH030",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 449.8,
+    "y": 259,
+    "w": 284.7,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14.5px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|3 in workshop, VEH004 VEH021 VEH030#0"
+  },
+  {
+   "kind": "text",
+   "text": "Checked the fleet:",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 320,
+    "y": 259,
+    "w": 129.8,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Checked the fleet:#0"
+  },
+  {
+   "kind": "text",
+   "text": "35 / 38 ready",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 964.1,
+    "y": 259.1,
+    "w": 83.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px 0px 0px 217.594px",
+    "gap": "normal"
+   },
+   "key": "text|35 / 38 ready#0"
+  },
+  {
+   "kind": "text",
+   "text": "11 dry Fresh orders onto dry trucks",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 457.7,
+    "y": 303,
+    "w": 241.4,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14.5px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|11 dry Fresh orders onto dry trucks#0"
+  },
+  {
+   "kind": "text",
+   "text": "Freed reefer space:",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 320,
+    "y": 303,
+    "w": 137.7,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Freed reefer space:#0"
+  },
+  {
+   "kind": "text",
+   "text": "+6.2 m³",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 998.5,
+    "y": 303.1,
+    "w": 49.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px 0px 0px 287.406px",
+    "gap": "normal"
+   },
+   "key": "text|+6.2 m³#0"
+  },
+  {
+   "kind": "text",
+   "text": "6 reefer trucks and 2 vans, 1 brand and 1 district a trip",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 415.4,
+    "y": 347,
+    "w": 371.8,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14.5px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|6 reefer trucks and 2 vans, 1 brand and 1 district a trip#0"
+  },
+  {
+   "kind": "text",
+   "text": "Packing trips:",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 318,
+    "y": 347,
+    "w": 97.4,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Packing trips:#0"
+  },
+  {
+   "kind": "text",
+   "text": "working",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 998.8,
+    "y": 347.1,
+    "w": 49.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px 0px 0px 199.5px",
+    "gap": "normal"
+   },
+   "key": "text|working#0"
+  },
+  {
+   "kind": "text",
+   "text": "Checking the 7 booklet rules: weight, volume, 270 min, 2 trips, fuel, van_only, mall",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 320,
+    "y": 391,
+    "w": 560.8,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14.5px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Checking the 7 booklet rules: weight, volume, 270 min, 2 trips, fuel, van_only, mall#0"
+  },
+  {
+   "kind": "text",
+   "text": "Ranking deferral candidates if anything is left over, OUT028 protected",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 320,
+    "y": 435,
+    "w": 478.4,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14.5px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Ranking deferral candidates if anything is left over, OUT028 protected#0"
+  },
+  {
+   "kind": "text",
+   "text": "Queued next",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1108,
+    "y": 112.4,
+    "w": 81.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(59, 76, 202)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Queued next#0"
+  },
+  {
+   "kind": "text",
+   "text": "Kandy Hub · 55 orders",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1108,
+    "y": 142.9,
+    "w": 174.1,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Kandy Hub · 55 orders#0"
+  },
+  {
+   "kind": "text",
+   "text": "The agent starts it when Peliyagoda finishes.",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1108,
+    "y": 176.9,
+    "w": 236.9,
+    "h": 38
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|The agent starts it when Peliyagoda finishes.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Your locks are kept",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1108,
+    "y": 271.9,
+    "w": 120.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Your locks are kept#0"
+  },
+  {
+   "kind": "text",
+   "text": "Locked trips and manual moves stay as you left them. Protected outlets can't be proposed for deferral.",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1108,
+    "y": 302.4,
+    "w": 264.6,
+    "h": 59
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Locked trips and manual moves stay as you left them. Protected outlets can't be proposed for deferral.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Draft only",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1108,
+    "y": 418.4,
+    "w": 62.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Draft only#0"
+  },
+  {
+   "kind": "text",
+   "text": "The agent can't publish, message stores or unlock protected outlets. You review and approve on the plan board.",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1108,
+    "y": 448.9,
+    "w": 268.2,
+    "h": 59
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|The agent can't publish, message stores or unlock protected outlets. You review and approve on the plan board.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Vehicle · Fresh minutes",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 260,
+    "y": 546.9,
+    "w": 147.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Vehicle · Fresh minutes#0"
+  },
+  {
+   "kind": "text",
+   "text": "Trip 1 · departs 3:30 AM",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 442,
+    "y": 546.9,
+    "w": 151.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Trip 1 · departs 3:30 AM#0"
+  },
+  {
+   "kind": "text",
+   "text": "Trip 2 · max 2 trips a day",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 933,
+    "y": 546.9,
+    "w": 154.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Trip 2 · max 2 trips a day#0"
+  }
+ ]
+}

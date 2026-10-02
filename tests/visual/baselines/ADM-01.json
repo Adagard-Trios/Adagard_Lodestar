@@ -1,0 +1,418 @@
+{
+ "id": "ADM-01",
+ "name": "ADM-01 Sign in · desktop",
+ "board": "P6",
+ "device": "desktop",
+ "key": "adm-01-sign-in",
+ "live": {
+  "app": "desk",
+  "face": "admin",
+  "path": "/admin/adm-01-sign-in"
+ },
+ "viewport": {
+  "width": 1438,
+  "height": 858
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Lodestar Admin",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 104,
+    "y": 53,
+    "w": 154.8,
+    "h": 25
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "12px"
+   },
+   "key": "text|Lodestar Admin#0"
+  },
+  {
+   "kind": "text",
+   "text": "Keep the keys,",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 56,
+    "y": 101,
+    "w": 259.3,
+    "h": 47
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "38px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Keep the keys,#0"
+  },
+  {
+   "kind": "text",
+   "text": "keep the thread.",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 56,
+    "y": 143.5,
+    "w": 291.2,
+    "h": 47
+   },
+   "style": {
+    "color": "rgb(255, 203, 92)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "38px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|keep the thread.#0"
+  },
+  {
+   "kind": "text",
+   "text": "People, devices and master data behind Lodestar Plan, Dock, Run and Store. Changes here reach every face.",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 56,
+    "y": 211.1,
+    "w": 497.2,
+    "h": 44.8
+   },
+   "style": {
+    "color": "rgb(203, 213, 225)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|People, devices and master data behind Lodestar Plan, Dock, Run and Store. Changes here reach every face.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Waypoint Group HQ, Peliyagoda",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 78,
+    "y": 791.5,
+    "w": 196.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(148, 163, 184)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "7px"
+   },
+   "key": "text|Waypoint Group HQ, Peliyagoda#0"
+  },
+  {
+   "kind": "text",
+   "text": "Every action signed and logged",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 314.7,
+    "y": 791.5,
+    "w": 193.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(148, 163, 184)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "7px"
+   },
+   "key": "text|Every action signed and logged#0"
+  },
+  {
+   "kind": "text",
+   "text": "Waypoint Group · Lodestar Admin",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 839,
+    "y": 175.1,
+    "w": 211.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Waypoint Group · Lodestar Admin#0"
+  },
+  {
+   "kind": "text",
+   "text": "Sign in to the admin console",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 839,
+    "y": 198.6,
+    "w": 301.9,
+    "h": 80.4
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "34px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Sign in to the admin console#0"
+  },
+  {
+   "kind": "text",
+   "text": "For operations systems admins only. Dispatchers, loaders, drivers and store staff sign in to their own app.",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 839,
+    "y": 286.3,
+    "w": 365,
+    "h": 38
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|For operations systems admins only. Dispatchers, loaders, drivers and store staff sign in to their own app.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Continue with Waypoint single sign-on",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 890.5,
+    "y": 364.3,
+    "w": 307.1,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "800",
+    "borderRadius": "16px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Continue with Waypoint single sign-on#0"
+  },
+  {
+   "kind": "text",
+   "text": "or use your work email",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 957.8,
+    "y": 423.3,
+    "w": 142.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "12px"
+   },
+   "key": "text|or use your work email#0"
+  },
+  {
+   "kind": "text",
+   "text": "Work email",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 839,
+    "y": 464.8,
+    "w": 71.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Work email#0"
+  },
+  {
+   "kind": "text",
+   "text": "dilini.wickramasinghe@waypoint.lk",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 883,
+    "y": 504.1,
+    "w": 247.6,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "borderRadius": "14px",
+    "padding": "0px 16px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|dilini.wickramasinghe@waypoint.lk#0"
+  },
+  {
+   "kind": "text",
+   "text": "Next you confirm with your security key or the authenticator code on your work phone. There is no way to skip it.",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 887,
+    "y": 576.3,
+    "w": 313.8,
+    "h": 56.5
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13.5px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Next you confirm with your security key or the authenticator code on your work phone. There is no way to skip it.#0"
+  },
+  {
+   "kind": "text",
+   "text": "2-step verification is required.",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 887,
+    "y": 576.3,
+    "w": 200,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|2-step verification is required.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Lost your security key? Call the Peliyagoda IT desk.",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 839,
+    "y": 672.1,
+    "w": 316.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Lost your security key? Call the Peliyagoda IT desk.#0"
+  }
+ ]
+}

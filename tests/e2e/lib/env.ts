@@ -12,7 +12,7 @@ export const MOBILE_URL = env('E2E_MOBILE_URL', `${BASE_URL}/field/`);
 /** OData root behind the gateway. */
 export const ODATA = `${BASE_URL}/odata/v4`;
 
-export const KEYCLOAK_URL = env('E2E_KEYCLOAK_URL', 'http://localhost:8180');
+export const KEYCLOAK_URL = env('E2E_KEYCLOAK_URL', `${BASE_URL}/auth`); // Keycloak sits behind the gateway at /auth
 export const REALM = env('E2E_REALM', 'lodestar');
 /** Public web client. Tokens come from the password grant when the client allows it, else auth code + PKCE. */
 export const CLIENT_ID = env('E2E_CLIENT_ID', 'lodestar-web');

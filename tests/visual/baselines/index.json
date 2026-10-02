@@ -1,0 +1,2419 @@
+[
+ {
+  "name": "SM-04 Splash · phone",
+  "board": "P1",
+  "id": "SM-04",
+  "baseline": "SM-04",
+  "device": "phone",
+  "key": "sm-04-splash",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 6
+ },
+ {
+  "name": "SM-05 Sign in · phone",
+  "board": "P1",
+  "id": "SM-05",
+  "baseline": "SM-05",
+  "device": "phone",
+  "key": "sm-05-sign-in",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 20
+ },
+ {
+  "name": "SM-06 Verify code · phone",
+  "board": "P1",
+  "id": "SM-06",
+  "baseline": "SM-06",
+  "device": "phone",
+  "key": "sm-06-verify-code",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 22
+ },
+ {
+  "name": "SM-07 Onboarding 1 · phone",
+  "board": "P1",
+  "id": "SM-07",
+  "baseline": "SM-07",
+  "device": "phone",
+  "key": "sm-07-onboarding-1",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 5
+ },
+ {
+  "name": "SM-08 Onboarding 2 · phone",
+  "board": "P1",
+  "id": "SM-08",
+  "baseline": "SM-08",
+  "device": "phone",
+  "key": "sm-08-onboarding-2",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 5
+ },
+ {
+  "name": "SM-09 Onboarding 3 · phone",
+  "board": "P1",
+  "id": "SM-09",
+  "baseline": "SM-09",
+  "device": "phone",
+  "key": "sm-09-onboarding-3",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 4
+ },
+ {
+  "name": "SM-10 Allow notifications · phone",
+  "board": "P1",
+  "id": "SM-10",
+  "baseline": "SM-10",
+  "device": "phone",
+  "key": "sm-10-allow-notifications",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 11
+ },
+ {
+  "name": "SM-11 Today · order day · phone",
+  "board": "P1",
+  "id": "SM-11",
+  "baseline": "SM-11",
+  "device": "phone",
+  "key": "sm-11-today-order-day",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 30
+ },
+ {
+  "name": "SM-13 New order · phone",
+  "board": "P1",
+  "id": "SM-13",
+  "baseline": "SM-13",
+  "device": "phone",
+  "key": "sm-13-new-order",
+  "viewport": {
+   "width": 374,
+   "height": 1014
+  },
+  "elements": 48
+ },
+ {
+  "name": "SM-14 Review & submit · phone",
+  "board": "P1",
+  "id": "SM-14",
+  "baseline": "SM-14",
+  "device": "phone",
+  "key": "sm-14-review-and-submit",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 24
+ },
+ {
+  "name": "SM-01 Received · phone",
+  "board": "P1",
+  "id": "SM-01",
+  "baseline": "SM-01--received-phone",
+  "device": "phone",
+  "key": "sm-01-received",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 33
+ },
+ {
+  "name": "SM-12 Orders · phone",
+  "board": "P1",
+  "id": "SM-12",
+  "baseline": "SM-12",
+  "device": "phone",
+  "key": "sm-12-orders",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 33
+ },
+ {
+  "name": "SM-15 Order detail · phone",
+  "board": "P1",
+  "id": "SM-15",
+  "baseline": "SM-15",
+  "device": "phone",
+  "key": "sm-15-order-detail",
+  "viewport": {
+   "width": 374,
+   "height": 1014
+  },
+  "elements": 40
+ },
+ {
+  "name": "SM-02 Order status & ETA · phone",
+  "board": "P1",
+  "id": "SM-02",
+  "baseline": "SM-02--order-status-and-eta-phone",
+  "device": "phone",
+  "key": "sm-02-order-status-and-eta",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 35
+ },
+ {
+  "name": "SM-16 Why this window · sheet · phone",
+  "board": "P1",
+  "id": "SM-16",
+  "baseline": "SM-16",
+  "device": "phone",
+  "key": "sm-16-why-this-window-sheet",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 25
+ },
+ {
+  "name": "SM-17 Deferral notice · OUT027 · phone",
+  "board": "P1",
+  "id": "SM-17",
+  "baseline": "SM-17",
+  "device": "phone",
+  "key": "sm-17-deferral-notice-out027",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 29
+ },
+ {
+  "name": "SM-03 Confirm receipt · count",
+  "board": "P1",
+  "id": "SM-03",
+  "baseline": "SM-03--confirm-receipt-count",
+  "device": "phone",
+  "key": "sm-03-confirm-receipt-count",
+  "viewport": {
+   "width": 374,
+   "height": 1014
+  },
+  "elements": 52
+ },
+ {
+  "name": "SM-18 Report issue · phone",
+  "board": "P1",
+  "id": "SM-18",
+  "baseline": "SM-18",
+  "device": "phone",
+  "key": "sm-18-report-issue",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 23
+ },
+ {
+  "name": "SM-03 Receipt confirmed",
+  "board": "P1",
+  "id": "SM-03",
+  "baseline": "SM-03--receipt-confirmed",
+  "device": "phone",
+  "key": "sm-03-receipt-confirmed",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 36
+ },
+ {
+  "name": "SM-19 Receipts & credit notes · phone",
+  "board": "P1",
+  "id": "SM-19",
+  "baseline": "SM-19",
+  "device": "phone",
+  "key": "sm-19-receipts-and-credit-notes",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 34
+ },
+ {
+  "name": "SM-20 Credit note detail · phone",
+  "board": "P1",
+  "id": "SM-20",
+  "baseline": "SM-20",
+  "device": "phone",
+  "key": "sm-20-credit-note-detail",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 27
+ },
+ {
+  "name": "SM-21 Messages · phone",
+  "board": "P1",
+  "id": "SM-21",
+  "baseline": "SM-21",
+  "device": "phone",
+  "key": "sm-21-messages",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 31
+ },
+ {
+  "name": "SM-22 Profile & settings · phone",
+  "board": "P1",
+  "id": "SM-22",
+  "baseline": "SM-22",
+  "device": "phone",
+  "key": "sm-22-profile-and-settings",
+  "viewport": {
+   "width": 374,
+   "height": 1014
+  },
+  "elements": 35
+ },
+ {
+  "name": "SM-23 Orders closed · phone",
+  "board": "P1",
+  "id": "SM-23",
+  "baseline": "SM-23",
+  "device": "phone",
+  "key": "sm-23-orders-closed",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 18
+ },
+ {
+  "name": "SM-24 No delivery today · phone",
+  "board": "P1",
+  "id": "SM-24",
+  "baseline": "SM-24",
+  "device": "phone",
+  "key": "sm-24-no-delivery-today",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 15
+ },
+ {
+  "name": "SM-25 Offline · draft saved · phone",
+  "board": "P1",
+  "id": "SM-25",
+  "baseline": "SM-25",
+  "device": "phone",
+  "key": "sm-25-offline-draft-saved",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 22
+ },
+ {
+  "name": "SM-26 Sign in · desktop",
+  "board": "P1",
+  "id": "SM-26",
+  "baseline": "SM-26",
+  "device": "desktop",
+  "key": "sm-26-sign-in",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 28
+ },
+ {
+  "name": "SM-02 Deliveries · desktop",
+  "board": "P1",
+  "id": "SM-02",
+  "baseline": "SM-02--deliveries-desktop",
+  "device": "desktop",
+  "key": "sm-02-deliveries",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 101
+ },
+ {
+  "name": "SM-01 Place order · desktop",
+  "board": "P1",
+  "id": "SM-01",
+  "baseline": "SM-01--place-order-desktop",
+  "device": "desktop",
+  "key": "sm-01-place-order",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 162
+ },
+ {
+  "name": "SM-27 Orders & history · desktop",
+  "board": "P1",
+  "id": "SM-27",
+  "baseline": "SM-27",
+  "device": "desktop",
+  "key": "sm-27-orders-and-history",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 136
+ },
+ {
+  "name": "SM-28 Receipts & credit notes · desktop",
+  "board": "P1",
+  "id": "SM-28",
+  "baseline": "SM-28",
+  "device": "desktop",
+  "key": "sm-28-receipts-and-credit-notes",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 120
+ },
+ {
+  "name": "SM-29 Messages · desktop",
+  "board": "P1",
+  "id": "SM-29",
+  "baseline": "SM-29",
+  "device": "desktop",
+  "key": "sm-29-messages",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 67
+ },
+ {
+  "name": "SM-30 Settings · desktop",
+  "board": "P1",
+  "id": "SM-30",
+  "baseline": "SM-30",
+  "device": "desktop",
+  "key": "sm-30-settings",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 67
+ },
+ {
+  "name": "SM-31 Can't sign in · phone",
+  "board": "P1",
+  "id": "SM-31",
+  "baseline": "SM-31",
+  "device": "phone",
+  "key": "sm-31-can-t-sign-in",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 19
+ },
+ {
+  "name": "SM-32 Access request sent · phone",
+  "board": "P1",
+  "id": "SM-32",
+  "baseline": "SM-32",
+  "device": "phone",
+  "key": "sm-32-access-request-sent",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 20
+ },
+ {
+  "name": "SM-33 Session expired · phone",
+  "board": "P1",
+  "id": "SM-33",
+  "baseline": "SM-33",
+  "device": "phone",
+  "key": "sm-33-session-expired",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 11
+ },
+ {
+  "name": "SM-34 Update required · phone",
+  "board": "P1",
+  "id": "SM-34",
+  "baseline": "SM-34",
+  "device": "phone",
+  "key": "sm-34-update-required",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 13
+ },
+ {
+  "name": "SM-35 Reset access · desktop",
+  "board": "P1",
+  "id": "SM-35",
+  "baseline": "SM-35",
+  "device": "desktop",
+  "key": "sm-35-reset-access",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 24
+ },
+ {
+  "name": "SM-36 Service unavailable · desktop",
+  "board": "P1",
+  "id": "SM-36",
+  "baseline": "SM-36",
+  "device": "desktop",
+  "key": "sm-36-service-unavailable",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 53
+ },
+ {
+  "name": "SM-37 Voice and language · phone",
+  "board": "P1",
+  "id": "SM-37",
+  "baseline": "SM-37",
+  "device": "phone",
+  "key": "sm-37-voice-and-language",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 31
+ },
+ {
+  "name": "SM-38 Voice pack downloading · phone",
+  "board": "P1",
+  "id": "SM-38",
+  "baseline": "SM-38",
+  "device": "phone",
+  "key": "sm-38-voice-pack-downloading",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 21
+ },
+ {
+  "name": "SM-39 Deferral notice speaking · phone",
+  "board": "P1",
+  "id": "SM-39",
+  "baseline": "SM-39",
+  "device": "phone",
+  "key": "sm-39-deferral-notice-speaking",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 25
+ },
+ {
+  "name": "DSP-06 Sign in · desktop",
+  "board": "P2",
+  "id": "DSP-06",
+  "baseline": "DSP-06",
+  "device": "desktop",
+  "key": "dsp-06-sign-in",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 16
+ },
+ {
+  "name": "DSP-07 2-step verification · desktop",
+  "board": "P2",
+  "id": "DSP-07",
+  "baseline": "DSP-07",
+  "device": "desktop",
+  "key": "dsp-07-2-step-verification",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 20
+ },
+ {
+  "name": "DSP-08 Today overview · desktop",
+  "board": "P2",
+  "id": "DSP-08",
+  "baseline": "DSP-08",
+  "device": "desktop",
+  "key": "dsp-08-today-overview",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 103
+ },
+ {
+  "name": "DSP-01 Cutoff queue",
+  "board": "P2",
+  "id": "DSP-01",
+  "baseline": "DSP-01",
+  "device": "desktop",
+  "key": "dsp-01-cutoff-queue",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 163
+ },
+ {
+  "name": "DSP-09 Order detail drawer · desktop",
+  "board": "P2",
+  "id": "DSP-09",
+  "baseline": "DSP-09",
+  "device": "desktop",
+  "key": "dsp-09-order-detail-drawer",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 217
+ },
+ {
+  "name": "DSP-10 Log phone order · desktop",
+  "board": "P2",
+  "id": "DSP-10",
+  "baseline": "DSP-10",
+  "device": "desktop",
+  "key": "dsp-10-log-phone-order",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 189
+ },
+ {
+  "name": "DSP-02 Plan board",
+  "board": "P2",
+  "id": "DSP-02",
+  "baseline": "DSP-02",
+  "device": "desktop",
+  "key": "dsp-02-plan-board",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 223
+ },
+ {
+  "name": "DSP-11 Trip and vehicle drawer · desktop",
+  "board": "P2",
+  "id": "DSP-11",
+  "baseline": "DSP-11",
+  "device": "desktop",
+  "key": "dsp-11-trip-and-vehicle-drawer",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 289
+ },
+ {
+  "name": "DSP-03 Deferral decision",
+  "board": "P2",
+  "id": "DSP-03",
+  "baseline": "DSP-03",
+  "device": "desktop",
+  "key": "dsp-03-deferral-decision",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 137
+ },
+ {
+  "name": "DSP-39 Ask the planning agent · desktop",
+  "board": "P2",
+  "id": "DSP-39",
+  "baseline": "DSP-39",
+  "device": "desktop",
+  "key": "dsp-39-ask-the-planning-agent",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 176
+ },
+ {
+  "name": "DSP-40 Agent proposal in draft · desktop",
+  "board": "P2",
+  "id": "DSP-40",
+  "baseline": "DSP-40",
+  "device": "desktop",
+  "key": "dsp-40-agent-proposal-in-draft",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 187
+ },
+ {
+  "name": "DSP-12 Approve and go live · desktop",
+  "board": "P2",
+  "id": "DSP-12",
+  "baseline": "DSP-12",
+  "device": "desktop",
+  "key": "dsp-12-approve-and-go-live",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 259
+ },
+ {
+  "name": "DSP-04 Live operations",
+  "board": "P2",
+  "id": "DSP-04",
+  "baseline": "DSP-04",
+  "device": "desktop",
+  "key": "dsp-04-live-operations",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 141
+ },
+ {
+  "name": "DSP-13 Exceptions inbox · desktop",
+  "board": "P2",
+  "id": "DSP-13",
+  "baseline": "DSP-13",
+  "device": "desktop",
+  "key": "dsp-13-exceptions-inbox",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 93
+ },
+ {
+  "name": "DSP-14 Notifications panel · desktop",
+  "board": "P2",
+  "id": "DSP-14",
+  "baseline": "DSP-14",
+  "device": "desktop",
+  "key": "dsp-14-notifications-panel",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 140
+ },
+ {
+  "name": "DSP-05 Capacity outlook",
+  "board": "P2",
+  "id": "DSP-05",
+  "baseline": "DSP-05",
+  "device": "desktop",
+  "key": "dsp-05-capacity-outlook",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 143
+ },
+ {
+  "name": "DSP-15 Late-risk explainer · desktop",
+  "board": "P2",
+  "id": "DSP-15",
+  "baseline": "DSP-15",
+  "device": "desktop",
+  "key": "dsp-15-late-risk-explainer",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 186
+ },
+ {
+  "name": "DSP-16 Models and fallbacks · desktop",
+  "board": "P2",
+  "id": "DSP-16",
+  "baseline": "DSP-16",
+  "device": "desktop",
+  "key": "dsp-16-models-and-fallbacks",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 83
+ },
+ {
+  "name": "DSP-17 Deferral log · desktop",
+  "board": "P2",
+  "id": "DSP-17",
+  "baseline": "DSP-17",
+  "device": "desktop",
+  "key": "dsp-17-deferral-log",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 142
+ },
+ {
+  "name": "DSP-18 Outlet profile · desktop",
+  "board": "P2",
+  "id": "DSP-18",
+  "baseline": "DSP-18",
+  "device": "desktop",
+  "key": "dsp-18-outlet-profile",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 94
+ },
+ {
+  "name": "DSP-19 Fleet and vehicle profile · desktop",
+  "board": "P2",
+  "id": "DSP-19",
+  "baseline": "DSP-19",
+  "device": "desktop",
+  "key": "dsp-19-fleet-and-vehicle-profile",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 136
+ },
+ {
+  "name": "DSP-20 Settings · desktop",
+  "board": "P2",
+  "id": "DSP-20",
+  "baseline": "DSP-20",
+  "device": "desktop",
+  "key": "dsp-20-settings",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 109
+ },
+ {
+  "name": "DSP-21 Empty queue before cutoff · desktop",
+  "board": "P2",
+  "id": "DSP-21",
+  "baseline": "DSP-21",
+  "device": "desktop",
+  "key": "dsp-21-empty-queue-before-cutoff",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 41
+ },
+ {
+  "name": "DSP-22 Planning agent drafting · desktop",
+  "board": "P2",
+  "id": "DSP-22",
+  "baseline": "DSP-22",
+  "device": "desktop",
+  "key": "dsp-22-planning-agent-drafting",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 51
+ },
+ {
+  "name": "DSP-23 Plan infeasible · desktop",
+  "board": "P2",
+  "id": "DSP-23",
+  "baseline": "DSP-23",
+  "device": "desktop",
+  "key": "dsp-23-plan-infeasible",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 55
+ },
+ {
+  "name": "DSP-24 Offline banner · desktop",
+  "board": "P2",
+  "id": "DSP-24",
+  "baseline": "DSP-24",
+  "device": "desktop",
+  "key": "dsp-24-offline-banner",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 89
+ },
+ {
+  "name": "DSP-34 Reset access · desktop",
+  "board": "P2",
+  "id": "DSP-34",
+  "baseline": "DSP-34",
+  "device": "desktop",
+  "key": "dsp-34-reset-access",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 24
+ },
+ {
+  "name": "DSP-35 Session expired · desktop",
+  "board": "P2",
+  "id": "DSP-35",
+  "baseline": "DSP-35",
+  "device": "desktop",
+  "key": "dsp-35-session-expired",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 144
+ },
+ {
+  "name": "DSP-36 No access to this depot · desktop",
+  "board": "P2",
+  "id": "DSP-36",
+  "baseline": "DSP-36",
+  "device": "desktop",
+  "key": "dsp-36-no-access-to-this-depot",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 121
+ },
+ {
+  "name": "DSP-25 Splash · phone",
+  "board": "P2",
+  "id": "DSP-25",
+  "baseline": "DSP-25",
+  "device": "phone",
+  "key": "dsp-25-splash",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 3
+ },
+ {
+  "name": "DSP-26 Sign in · phone",
+  "board": "P2",
+  "id": "DSP-26",
+  "baseline": "DSP-26",
+  "device": "phone",
+  "key": "dsp-26-sign-in",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 7
+ },
+ {
+  "name": "DSP-27 Alerts · phone",
+  "board": "P2",
+  "id": "DSP-27",
+  "baseline": "DSP-27",
+  "device": "phone",
+  "key": "dsp-27-alerts",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 26
+ },
+ {
+  "name": "DSP-28 Approve re-plan · phone",
+  "board": "P2",
+  "id": "DSP-28",
+  "baseline": "DSP-28",
+  "device": "phone",
+  "key": "dsp-28-approve-re-plan",
+  "viewport": {
+   "width": 374,
+   "height": 1014
+  },
+  "elements": 31
+ },
+ {
+  "name": "DSP-29 Live routes · phone",
+  "board": "P2",
+  "id": "DSP-29",
+  "baseline": "DSP-29",
+  "device": "phone",
+  "key": "dsp-29-live-routes",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 35
+ },
+ {
+  "name": "DSP-30 Vehicle detail · phone",
+  "board": "P2",
+  "id": "DSP-30",
+  "baseline": "DSP-30",
+  "device": "phone",
+  "key": "dsp-30-vehicle-detail",
+  "viewport": {
+   "width": 374,
+   "height": 1014
+  },
+  "elements": 26
+ },
+ {
+  "name": "DSP-31 Call or SMS driver · phone",
+  "board": "P2",
+  "id": "DSP-31",
+  "baseline": "DSP-31",
+  "device": "phone",
+  "key": "dsp-31-call-or-sms-driver",
+  "viewport": {
+   "width": 374,
+   "height": 1014
+  },
+  "elements": 41
+ },
+ {
+  "name": "DSP-32 Plans · phone",
+  "board": "P2",
+  "id": "DSP-32",
+  "baseline": "DSP-32",
+  "device": "phone",
+  "key": "dsp-32-plans",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 29
+ },
+ {
+  "name": "DSP-33 Me and alert rules · phone",
+  "board": "P2",
+  "id": "DSP-33",
+  "baseline": "DSP-33",
+  "device": "phone",
+  "key": "dsp-33-me-and-alert-rules",
+  "viewport": {
+   "width": 374,
+   "height": 1014
+  },
+  "elements": 31
+ },
+ {
+  "name": "DSP-37 Can't sign in · phone",
+  "board": "P2",
+  "id": "DSP-37",
+  "baseline": "DSP-37",
+  "device": "phone",
+  "key": "dsp-37-can-t-sign-in",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 16
+ },
+ {
+  "name": "DSP-38 Update required · phone",
+  "board": "P2",
+  "id": "DSP-38",
+  "baseline": "DSP-38",
+  "device": "phone",
+  "key": "dsp-38-update-required",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 12
+ },
+ {
+  "name": "LD-05 Splash · phone",
+  "board": "P3",
+  "id": "LD-05",
+  "baseline": "LD-05",
+  "device": "phone",
+  "key": "ld-05-splash",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 4
+ },
+ {
+  "name": "LD-06 Sign in · phone",
+  "board": "P3",
+  "id": "LD-06",
+  "baseline": "LD-06",
+  "device": "phone",
+  "key": "ld-06-sign-in",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 21
+ },
+ {
+  "name": "LD-07 Start shift · phone",
+  "board": "P3",
+  "id": "LD-07",
+  "baseline": "LD-07",
+  "device": "phone",
+  "key": "ld-07-start-shift",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 25
+ },
+ {
+  "name": "LD-08 Quick tips · phone",
+  "board": "P3",
+  "id": "LD-08",
+  "baseline": "LD-08",
+  "device": "phone",
+  "key": "ld-08-quick-tips",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 14
+ },
+ {
+  "name": "LD-01 Dock queue",
+  "board": "P3",
+  "id": "LD-01",
+  "baseline": "LD-01",
+  "device": "phone",
+  "key": "ld-01-dock-queue",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 42
+ },
+ {
+  "name": "LD-09 Pre-cool check · phone",
+  "board": "P3",
+  "id": "LD-09",
+  "baseline": "LD-09",
+  "device": "phone",
+  "key": "ld-09-pre-cool-check",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 23
+ },
+ {
+  "name": "LD-02 Load sheet · Phone",
+  "board": "P3",
+  "id": "LD-02",
+  "baseline": "LD-02--load-sheet-phone",
+  "device": "phone",
+  "key": "ld-02-load-sheet",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 34
+ },
+ {
+  "name": "LD-10 Scan a line · phone",
+  "board": "P3",
+  "id": "LD-10",
+  "baseline": "LD-10",
+  "device": "phone",
+  "key": "ld-10-scan-a-line",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 14
+ },
+ {
+  "name": "LD-11 Type a code · phone",
+  "board": "P3",
+  "id": "LD-11",
+  "baseline": "LD-11",
+  "device": "phone",
+  "key": "ld-11-type-a-code",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 23
+ },
+ {
+  "name": "LD-03 Flag shortfall",
+  "board": "P3",
+  "id": "LD-03",
+  "baseline": "LD-03--flag-shortfall",
+  "device": "phone",
+  "key": "ld-03-flag-shortfall",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 34
+ },
+ {
+  "name": "LD-03 Flag acknowledged",
+  "board": "P3",
+  "id": "LD-03",
+  "baseline": "LD-03--flag-acknowledged",
+  "device": "phone",
+  "key": "ld-03-flag-acknowledged",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 27
+ },
+ {
+  "name": "LD-12 Plan changed · phone",
+  "board": "P3",
+  "id": "LD-12",
+  "baseline": "LD-12",
+  "device": "phone",
+  "key": "ld-12-plan-changed",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 27
+ },
+ {
+  "name": "LD-13 Flags tab · phone",
+  "board": "P3",
+  "id": "LD-13",
+  "baseline": "LD-13",
+  "device": "phone",
+  "key": "ld-13-flags-tab",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 29
+ },
+ {
+  "name": "LD-14 Re-plan received · phone",
+  "board": "P3",
+  "id": "LD-14",
+  "baseline": "LD-14",
+  "device": "phone",
+  "key": "ld-14-re-plan-received",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 32
+ },
+ {
+  "name": "LD-04 Release vehicle",
+  "board": "P3",
+  "id": "LD-04",
+  "baseline": "LD-04",
+  "device": "phone",
+  "key": "ld-04-release-vehicle",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 26
+ },
+ {
+  "name": "LD-15 Handover confirmed · phone",
+  "board": "P3",
+  "id": "LD-15",
+  "baseline": "LD-15",
+  "device": "phone",
+  "key": "ld-15-handover-confirmed",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 25
+ },
+ {
+  "name": "LD-16 Shift summary · phone",
+  "board": "P3",
+  "id": "LD-16",
+  "baseline": "LD-16",
+  "device": "phone",
+  "key": "ld-16-shift-summary",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 40
+ },
+ {
+  "name": "LD-17 Offline dock Wi-Fi · phone",
+  "board": "P3",
+  "id": "LD-17",
+  "baseline": "LD-17",
+  "device": "phone",
+  "key": "ld-17-offline-dock-wi-fi",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 25
+ },
+ {
+  "name": "LD-18 Plan locked · phone",
+  "board": "P3",
+  "id": "LD-18",
+  "baseline": "LD-18",
+  "device": "phone",
+  "key": "ld-18-plan-locked",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 21
+ },
+ {
+  "name": "LD-19 Empty queue · phone",
+  "board": "P3",
+  "id": "LD-19",
+  "baseline": "LD-19",
+  "device": "phone",
+  "key": "ld-19-empty-queue",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 20
+ },
+ {
+  "name": "LD-24 Can't sign in · phone",
+  "board": "P3",
+  "id": "LD-24",
+  "baseline": "LD-24",
+  "device": "phone",
+  "key": "ld-24-can-t-sign-in",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 17
+ },
+ {
+  "name": "LD-25 Signed out at shift end · phone",
+  "board": "P3",
+  "id": "LD-25",
+  "baseline": "LD-25",
+  "device": "phone",
+  "key": "ld-25-signed-out-at-shift-end",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 19
+ },
+ {
+  "name": "LD-26 Update required · phone",
+  "board": "P3",
+  "id": "LD-26",
+  "baseline": "LD-26",
+  "device": "phone",
+  "key": "ld-26-update-required",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 18
+ },
+ {
+  "name": "LD-28 Voice and language · phone",
+  "board": "P3",
+  "id": "LD-28",
+  "baseline": "LD-28",
+  "device": "phone",
+  "key": "ld-28-voice-and-language",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 30
+ },
+ {
+  "name": "LD-29 Voice pack downloading · phone",
+  "board": "P3",
+  "id": "LD-29",
+  "baseline": "LD-29",
+  "device": "phone",
+  "key": "ld-29-voice-pack-downloading",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 26
+ },
+ {
+  "name": "LD-30 Load sheet speaking · phone",
+  "board": "P3",
+  "id": "LD-30",
+  "baseline": "LD-30",
+  "device": "phone",
+  "key": "ld-30-load-sheet-speaking",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 29
+ },
+ {
+  "name": "LD-20 Shared sign in · tablet",
+  "board": "P3",
+  "id": "LD-20",
+  "baseline": "LD-20",
+  "device": "tablet",
+  "key": "ld-20-shared-sign-in",
+  "viewport": {
+   "width": 1004,
+   "height": 748
+  },
+  "elements": 42
+ },
+ {
+  "name": "LD-21 Bay overview · tablet",
+  "board": "P3",
+  "id": "LD-21",
+  "baseline": "LD-21",
+  "device": "tablet",
+  "key": "ld-21-bay-overview",
+  "viewport": {
+   "width": 1004,
+   "height": 748
+  },
+  "elements": 58
+ },
+ {
+  "name": "LD-02 Load sheet · Tablet",
+  "board": "P3",
+  "id": "LD-02",
+  "baseline": "LD-02--load-sheet-tablet",
+  "device": "tablet",
+  "key": "ld-02-load-sheet-tablet",
+  "viewport": {
+   "width": 1004,
+   "height": 748
+  },
+  "elements": 66
+ },
+ {
+  "name": "LD-22 Release checklist · tablet",
+  "board": "P3",
+  "id": "LD-22",
+  "baseline": "LD-22",
+  "device": "tablet",
+  "key": "ld-22-release-checklist",
+  "viewport": {
+   "width": 1004,
+   "height": 748
+  },
+  "elements": 50
+ },
+ {
+  "name": "LD-23 Plan changed · tablet",
+  "board": "P3",
+  "id": "LD-23",
+  "baseline": "LD-23",
+  "device": "tablet",
+  "key": "ld-23-plan-changed",
+  "viewport": {
+   "width": 1004,
+   "height": 748
+  },
+  "elements": 50
+ },
+ {
+  "name": "LD-27 Tablet locked · tablet",
+  "board": "P3",
+  "id": "LD-27",
+  "baseline": "LD-27",
+  "device": "tablet",
+  "key": "ld-27-tablet-locked",
+  "viewport": {
+   "width": 1004,
+   "height": 748
+  },
+  "elements": 30
+ },
+ {
+  "name": "DR-05 Splash · phone",
+  "board": "P4",
+  "id": "DR-05",
+  "baseline": "DR-05",
+  "device": "phone",
+  "key": "dr-05-splash",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 5
+ },
+ {
+  "name": "DR-06 Sign in · phone",
+  "board": "P4",
+  "id": "DR-06",
+  "baseline": "DR-06",
+  "device": "phone",
+  "key": "dr-06-sign-in",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 18
+ },
+ {
+  "name": "DR-07 Verify code · phone",
+  "board": "P4",
+  "id": "DR-07",
+  "baseline": "DR-07",
+  "device": "phone",
+  "key": "dr-07-verify-code",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 23
+ },
+ {
+  "name": "DR-29 Can't sign in · phone",
+  "board": "P4",
+  "id": "DR-29",
+  "baseline": "DR-29",
+  "device": "phone",
+  "key": "dr-29-can-t-sign-in",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 12
+ },
+ {
+  "name": "DR-08 Permissions · phone",
+  "board": "P4",
+  "id": "DR-08",
+  "baseline": "DR-08",
+  "device": "phone",
+  "key": "dr-08-permissions",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 15
+ },
+ {
+  "name": "DR-09 Language · phone",
+  "board": "P4",
+  "id": "DR-09",
+  "baseline": "DR-09",
+  "device": "phone",
+  "key": "dr-09-language",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 15
+ },
+ {
+  "name": "DR-10 First-run tips · phone",
+  "board": "P4",
+  "id": "DR-10",
+  "baseline": "DR-10",
+  "device": "phone",
+  "key": "dr-10-first-run-tips",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 10
+ },
+ {
+  "name": "DR-32 Run moved to a new phone · phone",
+  "board": "P4",
+  "id": "DR-32",
+  "baseline": "DR-32",
+  "device": "phone",
+  "key": "dr-32-run-moved-to-a-new-phone",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 15
+ },
+ {
+  "name": "DR-11 Load handover received · phone",
+  "board": "P4",
+  "id": "DR-11",
+  "baseline": "DR-11",
+  "device": "phone",
+  "key": "dr-11-load-handover-received",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 26
+ },
+ {
+  "name": "DR-12 Pre-trip vehicle check · phone",
+  "board": "P4",
+  "id": "DR-12",
+  "baseline": "DR-12",
+  "device": "phone",
+  "key": "dr-12-pre-trip-vehicle-check",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 23
+ },
+ {
+  "name": "DR-13 Saving run for offline · phone",
+  "board": "P4",
+  "id": "DR-13",
+  "baseline": "DR-13",
+  "device": "phone",
+  "key": "dr-13-saving-run-for-offline",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 17
+ },
+ {
+  "name": "DR-14 Run ready · available offline · phone",
+  "board": "P4",
+  "id": "DR-14",
+  "baseline": "DR-14",
+  "device": "phone",
+  "key": "dr-14-run-ready-available-offline",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 16
+ },
+ {
+  "name": "DR-01 Today's run",
+  "board": "P4",
+  "id": "DR-01",
+  "baseline": "DR-01--today-s-run",
+  "device": "phone",
+  "key": "dr-01-today-s-run",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 29
+ },
+ {
+  "name": "DR-01 Today's run · Daylight",
+  "board": "P4",
+  "id": "DR-01",
+  "baseline": "DR-01--today-s-run-daylight",
+  "device": "phone",
+  "key": "dr-01-today-s-run-daylight",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 29
+ },
+ {
+  "name": "DR-15 Route overview · phone",
+  "board": "P4",
+  "id": "DR-15",
+  "baseline": "DR-15--route-overview-phone",
+  "device": "phone",
+  "key": "dr-15-route-overview",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 31
+ },
+ {
+  "name": "DR-15 Route overview · phone · daylight",
+  "board": "P4",
+  "id": "DR-15",
+  "baseline": "DR-15--route-overview-phone-daylight",
+  "device": "phone",
+  "key": "dr-15-route-overview-daylight",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 31
+ },
+ {
+  "name": "DR micro-state · Vehicle moving",
+  "board": "P4",
+  "baseline": null,
+  "reason": "no screen id (component state)"
+ },
+ {
+  "name": "DR-36 En route · driving mode · phone",
+  "board": "P4",
+  "id": "DR-36",
+  "baseline": "DR-36",
+  "device": "phone",
+  "key": "dr-36-en-route-driving-mode",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 22
+ },
+ {
+  "name": "DR-37 Reefer temperature alert · phone",
+  "board": "P4",
+  "id": "DR-37",
+  "baseline": "DR-37",
+  "device": "phone",
+  "key": "dr-37-reefer-temperature-alert",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 25
+ },
+ {
+  "name": "DR-38 Report a delay · phone",
+  "board": "P4",
+  "id": "DR-38",
+  "baseline": "DR-38",
+  "device": "phone",
+  "key": "dr-38-report-a-delay",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 31
+ },
+ {
+  "name": "DR-02 Stop arrival",
+  "board": "P4",
+  "id": "DR-02",
+  "baseline": "DR-02",
+  "device": "phone",
+  "key": "dr-02-stop-arrival",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 32
+ },
+ {
+  "name": "DR-17 Report a problem · phone",
+  "board": "P4",
+  "id": "DR-17",
+  "baseline": "DR-17",
+  "device": "phone",
+  "key": "dr-17-report-a-problem",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 13
+ },
+ {
+  "name": "DR-18 Problem detail · damaged goods · phone",
+  "board": "P4",
+  "id": "DR-18",
+  "baseline": "DR-18",
+  "device": "phone",
+  "key": "dr-18-problem-detail-damaged-goods",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 23
+ },
+ {
+  "name": "DR-03 Proof of delivery",
+  "board": "P4",
+  "id": "DR-03",
+  "baseline": "DR-03",
+  "device": "phone",
+  "key": "dr-03-proof-of-delivery",
+  "viewport": {
+   "width": 374,
+   "height": 1014
+  },
+  "elements": 45
+ },
+ {
+  "name": "DR-16 Store code entry · phone",
+  "board": "P4",
+  "id": "DR-16",
+  "baseline": "DR-16",
+  "device": "phone",
+  "key": "dr-16-store-code-entry",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 23
+ },
+ {
+  "name": "DR-19 Stop 2 arrival · Hawa Eliya · phone",
+  "board": "P4",
+  "id": "DR-19",
+  "baseline": "DR-19",
+  "device": "phone",
+  "key": "dr-19-stop-2-arrival-hawa-eliya",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 23
+ },
+ {
+  "name": "DR-20 Stop 2 proof of delivery · phone",
+  "board": "P4",
+  "id": "DR-20",
+  "baseline": "DR-20",
+  "device": "phone",
+  "key": "dr-20-stop-2-proof-of-delivery",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 21
+ },
+ {
+  "name": "DR-04 Run complete",
+  "board": "P4",
+  "id": "DR-04",
+  "baseline": "DR-04",
+  "device": "phone",
+  "key": "dr-04-run-complete",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 28
+ },
+ {
+  "name": "DR-21 Records · phone",
+  "board": "P4",
+  "id": "DR-21",
+  "baseline": "DR-21",
+  "device": "phone",
+  "key": "dr-21-records",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 28
+ },
+ {
+  "name": "DR-22 Record detail · POD · phone",
+  "board": "P4",
+  "id": "DR-22",
+  "baseline": "DR-22",
+  "device": "phone",
+  "key": "dr-22-record-detail-pod",
+  "viewport": {
+   "width": 374,
+   "height": 1014
+  },
+  "elements": 24
+ },
+ {
+  "name": "DR-23 Dispatch notices · phone",
+  "board": "P4",
+  "id": "DR-23",
+  "baseline": "DR-23",
+  "device": "phone",
+  "key": "dr-23-dispatch-notices",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 23
+ },
+ {
+  "name": "DR-24 Settings · me · phone",
+  "board": "P4",
+  "id": "DR-24",
+  "baseline": "DR-24",
+  "device": "phone",
+  "key": "dr-24-settings-me",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 22
+ },
+ {
+  "name": "DR-33 Voice and language · phone",
+  "board": "P4",
+  "id": "DR-33",
+  "baseline": "DR-33",
+  "device": "phone",
+  "key": "dr-33-voice-and-language",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 21
+ },
+ {
+  "name": "DR-25 Connection banner states · phone components",
+  "board": "P4",
+  "baseline": null,
+  "reason": "component sheet, not a screen"
+ },
+ {
+  "name": "DR-26 Sync in progress · phone",
+  "board": "P4",
+  "id": "DR-26",
+  "baseline": "DR-26",
+  "device": "phone",
+  "key": "dr-26-sync-in-progress",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 32
+ },
+ {
+  "name": "DR-27 Sync conflict notice · phone",
+  "board": "P4",
+  "id": "DR-27",
+  "baseline": "DR-27",
+  "device": "phone",
+  "key": "dr-27-sync-conflict-notice",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 20
+ },
+ {
+  "name": "DR-28 End of shift summary · phone",
+  "board": "P4",
+  "id": "DR-28",
+  "baseline": "DR-28--end-of-shift-summary-phone",
+  "device": "phone",
+  "key": "dr-28-end-of-shift-summary",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 23
+ },
+ {
+  "name": "DR-28 End of shift summary · phone · daylight",
+  "board": "P4",
+  "id": "DR-28",
+  "baseline": "DR-28--end-of-shift-summary-phone-daylight",
+  "device": "phone",
+  "key": "dr-28-end-of-shift-summary-daylight",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 23
+ },
+ {
+  "name": "DR-30 Session expired while offline · phone",
+  "board": "P4",
+  "id": "DR-30",
+  "baseline": "DR-30",
+  "device": "phone",
+  "key": "dr-30-session-expired-while-offline",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 20
+ },
+ {
+  "name": "DR-31 Update required · phone",
+  "board": "P4",
+  "id": "DR-31",
+  "baseline": "DR-31",
+  "device": "phone",
+  "key": "dr-31-update-required",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 13
+ },
+ {
+  "name": "DR-34 Voice pack downloading · phone",
+  "board": "P4",
+  "id": "DR-34",
+  "baseline": "DR-34",
+  "device": "phone",
+  "key": "dr-34-voice-pack-downloading",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 17
+ },
+ {
+  "name": "DR-35 Stop arrival speaking · phone",
+  "board": "P4",
+  "id": "DR-35",
+  "baseline": "DR-35",
+  "device": "phone",
+  "key": "dr-35-stop-arrival-speaking",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 36
+ },
+ {
+  "name": "DR-A1 Offline run",
+  "board": "P5",
+  "id": "DR-A1",
+  "baseline": "DR-A1",
+  "device": "phone",
+  "key": "dr-a1-offline-run",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 30
+ },
+ {
+  "name": "DR-A2 POD saved offline",
+  "board": "P5",
+  "id": "DR-A2",
+  "baseline": "DR-A2",
+  "device": "phone",
+  "key": "dr-a2-pod-saved-offline",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 26
+ },
+ {
+  "name": "DR-A3 Sync queue",
+  "board": "P5",
+  "id": "DR-A3",
+  "baseline": "DR-A3",
+  "device": "phone",
+  "key": "dr-a3-sync-queue",
+  "viewport": {
+   "width": 374,
+   "height": 1014
+  },
+  "elements": 47
+ },
+ {
+  "name": "SM-A1 Store · in progress, low signal",
+  "board": "P5",
+  "id": "SM-A1",
+  "baseline": "SM-A1--store-in-progress-low-signal",
+  "device": "phone",
+  "key": "sm-a1-store-in-progress-low-signal",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 29
+ },
+ {
+  "name": "SM-A1 Store · recorded offline",
+  "board": "P5",
+  "id": "SM-A1",
+  "baseline": "SM-A1--store-recorded-offline",
+  "device": "phone",
+  "key": "sm-a1-store-recorded-offline",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 34
+ },
+ {
+  "name": "DSP-A1 Blackout view",
+  "board": "P5",
+  "id": "DSP-A1",
+  "baseline": "DSP-A1",
+  "device": "desktop",
+  "key": "dsp-a1-blackout-view",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 125
+ },
+ {
+  "name": "DSP-A1b Provisional deferral",
+  "board": "P5",
+  "id": "DSP-A1b",
+  "baseline": "DSP-A1b",
+  "device": "desktop",
+  "key": "dsp-a1b-provisional-deferral",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 99
+ },
+ {
+  "name": "DSP-A2 Reconcile conflict",
+  "board": "P5",
+  "id": "DSP-A2",
+  "baseline": "DSP-A2",
+  "device": "desktop",
+  "key": "dsp-a2-reconcile-conflict",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 124
+ },
+ {
+  "name": "LD-B1 Vehicle can't depart",
+  "board": "P5",
+  "id": "LD-B1",
+  "baseline": "LD-B1",
+  "device": "phone",
+  "key": "ld-b1-vehicle-can-t-depart",
+  "viewport": {
+   "width": 374,
+   "height": 1014
+  },
+  "elements": 47
+ },
+ {
+  "name": "SM-B1 Store · later arrival notice",
+  "board": "P5",
+  "id": "SM-B1",
+  "baseline": "SM-B1",
+  "device": "phone",
+  "key": "sm-b1-store-later-arrival-notice",
+  "viewport": {
+   "width": 374,
+   "height": 758
+  },
+  "elements": 27
+ },
+ {
+  "name": "DSP-B1 Re-plan diff",
+  "board": "P5",
+  "id": "DSP-B1",
+  "baseline": "DSP-B1",
+  "device": "desktop",
+  "key": "dsp-b1-re-plan-diff",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 105
+ },
+ {
+  "name": "ADM-01 Sign in · desktop",
+  "board": "P6",
+  "id": "ADM-01",
+  "baseline": "ADM-01",
+  "device": "desktop",
+  "key": "adm-01-sign-in",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 16
+ },
+ {
+  "name": "ADM-02 Overview · desktop",
+  "board": "P6",
+  "id": "ADM-02",
+  "baseline": "ADM-02",
+  "device": "desktop",
+  "key": "adm-02-overview",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 90
+ },
+ {
+  "name": "ADM-03 People and roles · desktop",
+  "board": "P6",
+  "id": "ADM-03",
+  "baseline": "ADM-03",
+  "device": "desktop",
+  "key": "adm-03-people-and-roles",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 143
+ },
+ {
+  "name": "ADM-04 Add or edit person · desktop",
+  "board": "P6",
+  "id": "ADM-04",
+  "baseline": "ADM-04",
+  "device": "desktop",
+  "key": "adm-04-add-or-edit-person",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 175
+ },
+ {
+  "name": "ADM-05 Access requests · desktop",
+  "board": "P6",
+  "id": "ADM-05",
+  "baseline": "ADM-05",
+  "device": "desktop",
+  "key": "adm-05-access-requests",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 74
+ },
+ {
+  "name": "ADM-06 Devices · desktop",
+  "board": "P6",
+  "id": "ADM-06",
+  "baseline": "ADM-06",
+  "device": "desktop",
+  "key": "adm-06-devices",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 111
+ },
+ {
+  "name": "ADM-07 Lost phone · desktop",
+  "board": "P6",
+  "id": "ADM-07",
+  "baseline": "ADM-07",
+  "device": "desktop",
+  "key": "adm-07-lost-phone",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 131
+ },
+ {
+  "name": "ADM-08 Outlets · desktop",
+  "board": "P6",
+  "id": "ADM-08",
+  "baseline": "ADM-08",
+  "device": "desktop",
+  "key": "adm-08-outlets",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 165
+ },
+ {
+  "name": "ADM-09 Edit outlet · desktop",
+  "board": "P6",
+  "id": "ADM-09",
+  "baseline": "ADM-09",
+  "device": "desktop",
+  "key": "adm-09-edit-outlet",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 193
+ },
+ {
+  "name": "ADM-10 Vehicles · desktop",
+  "board": "P6",
+  "id": "ADM-10",
+  "baseline": "ADM-10",
+  "device": "desktop",
+  "key": "adm-10-vehicles",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 131
+ },
+ {
+  "name": "ADM-11 Vehicle status · desktop",
+  "board": "P6",
+  "id": "ADM-11",
+  "baseline": "ADM-11",
+  "device": "desktop",
+  "key": "adm-11-vehicle-status",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 157
+ },
+ {
+  "name": "ADM-12 Operating rules · desktop",
+  "board": "P6",
+  "id": "ADM-12",
+  "baseline": "ADM-12",
+  "device": "desktop",
+  "key": "adm-12-operating-rules",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 86
+ },
+ {
+  "name": "ADM-13 Calendar · desktop",
+  "board": "P6",
+  "id": "ADM-13",
+  "baseline": "ADM-13",
+  "device": "desktop",
+  "key": "adm-13-calendar",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 139
+ },
+ {
+  "name": "ADM-14 Data imports · desktop",
+  "board": "P6",
+  "id": "ADM-14",
+  "baseline": "ADM-14",
+  "device": "desktop",
+  "key": "adm-14-data-imports",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 81
+ },
+ {
+  "name": "ADM-15 Import check failed · desktop",
+  "board": "P6",
+  "id": "ADM-15",
+  "baseline": "ADM-15",
+  "device": "desktop",
+  "key": "adm-15-import-check-failed",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 71
+ },
+ {
+  "name": "ADM-16 Audit log · desktop",
+  "board": "P6",
+  "id": "ADM-16",
+  "baseline": "ADM-16",
+  "device": "desktop",
+  "key": "adm-16-audit-log",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 95
+ },
+ {
+  "name": "ADM-17 Planning agent guardrails · desktop",
+  "board": "P6",
+  "id": "ADM-17",
+  "baseline": "ADM-17",
+  "device": "desktop",
+  "key": "adm-17-planning-agent-guardrails",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 68
+ },
+ {
+  "name": "ADM-18 Notifications and integrations · desktop",
+  "board": "P6",
+  "id": "ADM-18",
+  "baseline": "ADM-18",
+  "device": "desktop",
+  "key": "adm-18-notifications-and-integrations",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 73
+ },
+ {
+  "name": "ADM-19 Audit entry detail · desktop",
+  "board": "P6",
+  "id": "ADM-19",
+  "baseline": "ADM-19",
+  "device": "desktop",
+  "key": "adm-19-audit-entry-detail",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 150
+ },
+ {
+  "name": "ADM-20 Chain check result · desktop",
+  "board": "P6",
+  "id": "ADM-20",
+  "baseline": "ADM-20",
+  "device": "desktop",
+  "key": "adm-20-chain-check-result",
+  "viewport": {
+   "width": 1438,
+   "height": 858
+  },
+  "elements": 80
+ }
+]

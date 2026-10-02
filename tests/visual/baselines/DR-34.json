@@ -1,0 +1,442 @@
+{
+ "id": "DR-34",
+ "name": "DR-34 Voice pack downloading · phone",
+ "board": "P4",
+ "device": "phone",
+ "key": "dr-34-voice-pack-downloading",
+ "live": {
+  "app": "field",
+  "path": "s/dr-34-voice-pack-downloading"
+ },
+ "viewport": {
+  "width": 374,
+  "height": 758
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Tue 7 Apr",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 152.1,
+    "y": 15.8,
+    "w": 69.8,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Tue 7 Apr#0"
+  },
+  {
+   "kind": "text",
+   "text": "Getting the voice for read-aloud",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 36,
+    "y": 83,
+    "w": 245.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(127, 137, 163)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Getting the voice for read-aloud#0"
+  },
+  {
+   "kind": "text",
+   "text": "සිංහල",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 108.8,
+    "y": 83,
+    "w": 41.6,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(127, 137, 163)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Noto Sans Sinhala\", \"Nirmala UI\", Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|සිංහල#0"
+  },
+  {
+   "kind": "text",
+   "text": "64",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 36,
+    "y": 104.5,
+    "w": 54.7,
+    "h": 61
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "48px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|64#0"
+  },
+  {
+   "kind": "text",
+   "text": "%",
+   "tag": "small",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 94.7,
+    "y": 133.5,
+    "w": 20.7,
+    "h": 25
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px 0px 0px 4px",
+    "gap": "normal"
+   },
+   "key": "text|%#0"
+  },
+  {
+   "kind": "text",
+   "text": "Kandy Hub Wi-Fi",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 218.4,
+    "y": 136.8,
+    "w": 107.6,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(108, 196, 245)",
+    "backgroundColor": "rgb(11, 34, 51)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 12px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Kandy Hub Wi-Fi#0"
+  },
+  {
+   "kind": "text",
+   "text": "24 of 38 MB · once only · about 20 seconds left",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 36,
+    "y": 188.5,
+    "w": 289.6,
+    "h": 37.3
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|24 of 38 MB · once only · about 20 seconds left#0"
+  },
+  {
+   "kind": "text",
+   "text": "Speaks from this phone",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 84,
+    "y": 270.1,
+    "w": 184.6,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Speaks from this phone#0"
+  },
+  {
+   "kind": "text",
+   "text": "No signal needed for the 4 h 02 m above Ramboda",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 84,
+    "y": 294.9,
+    "w": 252,
+    "h": 34.2
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "500",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|No signal needed for the 4 h 02 m above Ramboda#0"
+  },
+  {
+   "kind": "text",
+   "text": "Only when the van is stopped",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 84,
+    "y": 347.3,
+    "w": 230.1,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Only when the van is stopped#0"
+  },
+  {
+   "kind": "text",
+   "text": "A short chime while moving",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 84,
+    "y": 372.1,
+    "w": 171.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "500",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|A short chime while moving#0"
+  },
+  {
+   "kind": "text",
+   "text": "Your run works without it; text is always shown",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 64,
+    "y": 426.3,
+    "w": 272,
+    "h": 37.3
+   },
+   "style": {
+    "color": "rgb(94, 224, 168)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Your run works without it; text is always shown#0"
+  },
+  {
+   "kind": "text",
+   "text": "Leave now and it finishes next time you are on depot Wi-Fi.",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 64,
+    "y": 468.8,
+    "w": 260.5,
+    "h": 37.3
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Leave now and it finishes next time you are on depot Wi-Fi.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Until it is ready, stops show",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 537.4,
+    "w": 173.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Until it is ready, stops show#0"
+  },
+  {
+   "kind": "text",
+   "text": "Voice not downloaded, text still works",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 70.3,
+    "y": 578.9,
+    "w": 259.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 16px 0px 14px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Voice not downloaded, text still works#0"
+  },
+  {
+   "kind": "text",
+   "text": "Continue",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 133.4,
+    "y": 659.3,
+    "w": 75.2,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(17, 21, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Continue#0"
+  },
+  {
+   "kind": "text",
+   "text": "Skip voice for today",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 116,
+    "y": 719.8,
+    "w": 141.9,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Skip voice for today#0"
+  }
+ ]
+}

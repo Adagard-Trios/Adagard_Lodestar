@@ -1,0 +1,1393 @@
+{
+ "id": "DSP-23",
+ "name": "DSP-23 Plan infeasible · desktop",
+ "board": "P2",
+ "device": "desktop",
+ "key": "dsp-23-plan-infeasible",
+ "live": {
+  "app": "desk",
+  "face": "plan",
+  "path": "/plan/dsp-23-plan-infeasible"
+ },
+ "viewport": {
+  "width": 1438,
+  "height": 858
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Lodestar Plan",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 62,
+    "y": 24,
+    "w": 106.5,
+    "h": 21
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "2px 0px 22px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Lodestar Plan#0"
+  },
+  {
+   "kind": "text",
+   "text": "Today",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 84.5,
+    "w": 41.5,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Today#0"
+  },
+  {
+   "kind": "text",
+   "text": "Cutoff queue",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 124.5,
+    "w": 88.5,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Cutoff queue#0"
+  },
+  {
+   "kind": "text",
+   "text": "90",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 184.1,
+    "y": 125,
+    "w": 15.9,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgb(238, 240, 246)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 7px",
+    "margin": "0px 0px 0px 26.6094px",
+    "gap": "normal"
+   },
+   "key": "text|90#0"
+  },
+  {
+   "kind": "text",
+   "text": "Plan board",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 164.5,
+    "w": 72.9,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(59, 76, 202)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Plan board#0"
+  },
+  {
+   "kind": "text",
+   "text": "Deferrals",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 204.5,
+    "w": 62.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Deferrals#0"
+  },
+  {
+   "kind": "text",
+   "text": "2",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 191.2,
+    "y": 205,
+    "w": 7.6,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(26, 19, 0)",
+    "backgroundColor": "rgb(245, 184, 61)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 7px",
+    "margin": "0px 0px 0px 58.7031px",
+    "gap": "normal"
+   },
+   "key": "text|2#0"
+  },
+  {
+   "kind": "text",
+   "text": "Live operations",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 244.5,
+    "w": 103.8,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Live operations#0"
+  },
+  {
+   "kind": "text",
+   "text": "Exceptions",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 284.5,
+    "w": 74.7,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Exceptions#0"
+  },
+  {
+   "kind": "text",
+   "text": "Capacity outlook",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 324.5,
+    "w": 114.8,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Capacity outlook#0"
+  },
+  {
+   "kind": "text",
+   "text": "Records",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 24,
+    "y": 373,
+    "w": 48.2,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "18px 10px 6px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Records#0"
+  },
+  {
+   "kind": "text",
+   "text": "Fleet & outlets",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 408.5,
+    "w": 96.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Fleet & outlets#0"
+  },
+  {
+   "kind": "text",
+   "text": "Intelligence",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 448.5,
+    "w": 78.6,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Intelligence#0"
+  },
+  {
+   "kind": "text",
+   "text": "Settings",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 488.5,
+    "w": 55.9,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Settings#0"
+  },
+  {
+   "kind": "text",
+   "text": "Depots",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 24,
+    "y": 537,
+    "w": 41.8,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "18px 10px 6px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Depots#0"
+  },
+  {
+   "kind": "text",
+   "text": "Peliyagoda DC",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 572.5,
+    "w": 98.7,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Peliyagoda DC#0"
+  },
+  {
+   "kind": "text",
+   "text": "35/38",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 166.1,
+    "y": 573,
+    "w": 35.4,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgb(238, 240, 246)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 7px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|35/38#0"
+  },
+  {
+   "kind": "text",
+   "text": "Kandy Hub",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 52,
+    "y": 612.5,
+    "w": 74.8,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Kandy Hub#0"
+  },
+  {
+   "kind": "text",
+   "text": "22/22",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 165.1,
+    "y": 613,
+    "w": 34.9,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgb(238, 240, 246)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 7px",
+    "margin": "0px 0px 0px 21.2656px",
+    "gap": "normal"
+   },
+   "key": "text|22/22#0"
+  },
+  {
+   "kind": "text",
+   "text": "NP",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 31.8,
+    "y": 801.8,
+    "w": 18.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(26, 19, 0)",
+    "backgroundColor": "rgb(245, 184, 61)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "800",
+    "borderRadius": "50%",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|NP#0"
+  },
+  {
+   "kind": "text",
+   "text": "Nilanthi Perera",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 68,
+    "y": 792,
+    "w": 93.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Nilanthi Perera#0"
+  },
+  {
+   "kind": "text",
+   "text": "Dispatcher · 2 depots",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 68,
+    "y": 811.5,
+    "w": 131.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Dispatcher · 2 depots#0"
+  },
+  {
+   "kind": "text",
+   "text": "Peliyagoda DC Re-run with your constraint Mon 6 Apr, 5:02 PM",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 260,
+    "y": 23,
+    "w": 425.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Peliyagoda DC Re-run with your constraint Mon 6 Apr, 5:02 PM#0"
+  },
+  {
+   "kind": "text",
+   "text": "No plan serves all 90 without deferrals",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 260,
+    "y": 43.5,
+    "w": 455.5,
+    "h": 33
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "26px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|No plan serves all 90 without deferrals#0"
+  },
+  {
+   "kind": "text",
+   "text": "Edit constraints",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1084.5,
+    "y": 46.9,
+    "w": 107.1,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "12px",
+    "padding": "0px 16px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Edit constraints#0"
+  },
+  {
+   "kind": "text",
+   "text": "Go back to draft v3",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1264.6,
+    "y": 46.9,
+    "w": 129.4,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "12px",
+    "padding": "0px 16px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Go back to draft v3#0"
+  },
+  {
+   "kind": "text",
+   "text": "Constraint you set",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 260,
+    "y": 101.6,
+    "w": 116.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Constraint you set#0"
+  },
+  {
+   "kind": "text",
+   "text": "Serve all 90 · no deferrals",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 400.4,
+    "y": 101.6,
+    "w": 162.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgb(20, 27, 77)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 14px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Serve all 90 · no deferrals#0"
+  },
+  {
+   "kind": "text",
+   "text": "Planning agent tried 3 ways in 41 s",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 606.5,
+    "y": 102,
+    "w": 212.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Planning agent tried 3 ways in 41 s#0"
+  },
+  {
+   "kind": "text",
+   "text": "Plan can't be built",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 306,
+    "y": 169.4,
+    "w": 120.9,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(180, 35, 24)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Plan can't be built#0"
+  },
+  {
+   "kind": "text",
+   "text": "2.4 m³",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 284,
+    "y": 193.4,
+    "w": 140.5,
+    "h": 61
+   },
+   "style": {
+    "color": "rgb(180, 35, 24)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "48px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|2.4 m³#0"
+  },
+  {
+   "kind": "text",
+   "text": "chilled won't fit",
+   "tag": "small",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 430.5,
+    "y": 224.4,
+    "w": 132,
+    "h": 23
+   },
+   "style": {
+    "color": "rgb(180, 35, 24)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "18px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px 0px 0px 6px",
+    "gap": "normal"
+   },
+   "key": "text|chilled won't fit#0"
+  },
+  {
+   "kind": "text",
+   "text": "usable 109.8",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 300,
+    "y": 283.4,
+    "w": 76.2,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12.5px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|usable 109.8#0"
+  },
+  {
+   "kind": "text",
+   "text": "freed 6.2",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 406.2,
+    "y": 283.4,
+    "w": 54.7,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12.5px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|freed 6.2#0"
+  },
+  {
+   "kind": "text",
+   "text": "short 2.4 of 118.4 m³",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 490.8,
+    "y": 283.4,
+    "w": 124.6,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12.5px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|short 2.4 of 118.4 m³#0"
+  },
+  {
+   "kind": "text",
+   "text": "Why, in order of impact",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 280,
+    "y": 356.4,
+    "w": 189.6,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Why, in order of impact#0"
+  },
+  {
+   "kind": "text",
+   "text": "CAP-REEFER",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 288,
+    "y": 414.8,
+    "w": 75,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(255, 203, 92)",
+    "backgroundColor": "rgb(20, 27, 77)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "12.5px",
+    "fontWeight": "700",
+    "borderRadius": "7px",
+    "padding": "0px 8px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|CAP-REEFER#0"
+  },
+  {
+   "kind": "text",
+   "text": "Reefers carry 116.0 m³, the run needs 118.4",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 385,
+    "y": 410.1,
+    "w": 314.2,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Reefers carry 116.0 m³, the run needs 118.4#0"
+  },
+  {
+   "kind": "text",
+   "text": "Usable 109.8 m³ inside 3:30 to 8:00, plus 6.2 freed by moving 11 dry Fresh orders.",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 385,
+    "y": 433.6,
+    "w": 539.9,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Usable 109.8 m³ inside 3:30 to 8:00, plus 6.2 freed by moving 11 dry Fresh orders.#0"
+  },
+  {
+   "kind": "text",
+   "text": "VEH-DOWN",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 288,
+    "y": 486.3,
+    "w": 60,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(255, 203, 92)",
+    "backgroundColor": "rgb(20, 27, 77)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "12.5px",
+    "fontWeight": "700",
+    "borderRadius": "7px",
+    "padding": "0px 8px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|VEH-DOWN#0"
+  },
+  {
+   "kind": "text",
+   "text": "VEH004 is in the workshop",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 370,
+    "y": 481.6,
+    "w": 199,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|VEH004 is in the workshop#0"
+  },
+  {
+   "kind": "text",
+   "text": "Its 33.4 m³ would close the gap. Return not confirmed.",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 370,
+    "y": 505.1,
+    "w": 361.6,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Its 33.4 m³ would close the gap. Return not confirmed.#0"
+  },
+  {
+   "kind": "text",
+   "text": "CAP-TIME",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 288,
+    "y": 557.8,
+    "w": 60,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(255, 203, 92)",
+    "backgroundColor": "rgb(20, 27, 77)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "12.5px",
+    "fontWeight": "700",
+    "borderRadius": "7px",
+    "padding": "0px 8px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|CAP-TIME#0"
+  },
+  {
+   "kind": "text",
+   "text": "No reefer can add a 3rd trip",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 370,
+    "y": 553.1,
+    "w": 199.7,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|No reefer can add a 3rd trip#0"
+  },
+  {
+   "kind": "text",
+   "text": "All 8 reefers already make 2 trips; a 3rd breaks the 2-trip rule.",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 370,
+    "y": 576.6,
+    "w": 408.1,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|All 8 reefers already make 2 trips; a 3rd breaks the 2-trip rule.#0"
+  },
+  {
+   "kind": "text",
+   "text": "WINDOW",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 288,
+    "y": 629.3,
+    "w": 45,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(255, 203, 92)",
+    "backgroundColor": "rgb(20, 27, 77)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "12.5px",
+    "fontWeight": "700",
+    "borderRadius": "7px",
+    "padding": "0px 8px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|WINDOW#0"
+  },
+  {
+   "kind": "text",
+   "text": "Leaving before 3:30 doesn't help",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 355,
+    "y": 624.6,
+    "w": 241.9,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Leaving before 3:30 doesn't help#0"
+  },
+  {
+   "kind": "text",
+   "text": "Docks load from 2:45; Fresh windows close by 8:00.",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 355,
+    "y": 648.1,
+    "w": 347.4,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Docks load from 2:45; Fresh windows close by 8:00.#0"
+  },
+  {
+   "kind": "text",
+   "text": "What you can do",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1050,
+    "y": 356.4,
+    "w": 135.6,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|What you can do#0"
+  },
+  {
+   "kind": "text",
+   "text": "Allow 2 deferrals",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1068,
+    "y": 412.1,
+    "w": 123.9,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Allow 2 deferrals#0"
+  },
+  {
+   "kind": "text",
+   "text": "Back to draft v3: OUT027 (22) and OUT043 (27) to Wed. OUT028 stays protected.",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1068,
+    "y": 439.6,
+    "w": 287.8,
+    "h": 38
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Back to draft v3: OUT027 (22) and OUT043 (27) to Wed. OUT028 stays protected.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Choose who waits yourself",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1068,
+    "y": 522.6,
+    "w": 198.2,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Choose who waits yourself#0"
+  },
+  {
+   "kind": "text",
+   "text": "Open the deferral decision with every candidate and score.",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1068,
+    "y": 550.1,
+    "w": 248.4,
+    "h": 38
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Open the deferral decision with every candidate and score.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Hire a reefer for Tuesday",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1068,
+    "y": 633.1,
+    "w": 180.7,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Hire a reefer for Tuesday#0"
+  },
+  {
+   "kind": "text",
+   "text": "Outside Lodestar. The outlook already asks for one Wed to Sat.",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1068,
+    "y": 660.6,
+    "w": 285.9,
+    "h": 38
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Outside Lodestar. The outlook already asks for one Wed to Sat.#0"
+  }
+ ]
+}

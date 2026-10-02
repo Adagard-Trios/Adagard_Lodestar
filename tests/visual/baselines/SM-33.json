@@ -1,0 +1,292 @@
+{
+ "id": "SM-33",
+ "name": "SM-33 Session expired · phone",
+ "board": "P1",
+ "device": "phone",
+ "key": "sm-33-session-expired",
+ "live": {
+  "app": "field",
+  "path": "s/sm-33-session-expired"
+ },
+ "viewport": {
+  "width": 374,
+  "height": 758
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Lodestar Store",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 133.3,
+    "y": 6,
+    "w": 107.5,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Lodestar Store#0"
+  },
+  {
+   "kind": "text",
+   "text": "Nuwara Eliya · OUT106",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 115.6,
+    "y": 28.5,
+    "w": 142.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Nuwara Eliya · OUT106#0"
+  },
+  {
+   "kind": "text",
+   "text": "You've been signed out",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 46.5,
+    "y": 198,
+    "w": 281,
+    "h": 33
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "26px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|You've been signed out#0"
+  },
+  {
+   "kind": "text",
+   "text": "For security, Lodestar signs you out after a long time without use, or after a change to your account.",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 40,
+    "y": 242.1,
+    "w": 294,
+    "h": 64
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|For security, Lodestar signs you out after a long time without use, or after a change to your account.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Tue 7 Apr order · draft",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 90,
+    "y": 355.6,
+    "w": 170.5,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Tue 7 Apr order · draft#0"
+  },
+  {
+   "kind": "text",
+   "text": "92 units saved 2:12 PM",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 90,
+    "y": 380.4,
+    "w": 154.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "500",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|92 units saved 2:12 PM#0"
+  },
+  {
+   "kind": "text",
+   "text": "Kept",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 313,
+    "y": 367.9,
+    "w": 29,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(4, 120, 87)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "5px"
+   },
+   "key": "text|Kept#0"
+  },
+  {
+   "kind": "text",
+   "text": "Orders close at 4:00 PM",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 60,
+    "y": 457.6,
+    "w": 165.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(180, 83, 9)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Orders close at 4:00 PM#0"
+  },
+  {
+   "kind": "text",
+   "text": "1 h 40 m",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 251,
+    "y": 443.6,
+    "w": 89,
+    "h": 30
+   },
+   "style": {
+    "color": "rgb(180, 83, 9)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|1 h 40 m#0"
+  },
+  {
+   "kind": "text",
+   "text": "Sign in again to send the draft. It takes about a minute.",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 34,
+    "y": 487.6,
+    "w": 295.3,
+    "h": 37.3
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Sign in again to send the draft. It takes about a minute.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Sign in again",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 136.7,
+    "y": 711.3,
+    "w": 100.6,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Sign in again#0"
+  }
+ ]
+}

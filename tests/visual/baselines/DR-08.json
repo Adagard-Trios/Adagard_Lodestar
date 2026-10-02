@@ -1,0 +1,392 @@
+{
+ "id": "DR-08",
+ "name": "DR-08 Permissions · phone",
+ "board": "P4",
+ "device": "phone",
+ "key": "dr-08-permissions",
+ "live": {
+  "app": "field",
+  "path": "s/dr-08-permissions"
+ },
+ "viewport": {
+  "width": 374,
+  "height": 758
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Set up",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 163.7,
+    "y": 15.8,
+    "w": 46.6,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Set up#0"
+  },
+  {
+   "kind": "text",
+   "text": "Step 1 of 3",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 20,
+    "y": 63,
+    "w": 65.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(127, 137, 163)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Step 1 of 3#0"
+  },
+  {
+   "kind": "text",
+   "text": "Three things the app needs",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 84.5,
+    "w": 282,
+    "h": 71.6
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Three things the app needs#0"
+  },
+  {
+   "kind": "text",
+   "text": "Location",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 90,
+    "y": 186.7,
+    "w": 67.7,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Location#0"
+  },
+  {
+   "kind": "text",
+   "text": "Saves arrival time and place at each stop, even with no signal.",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 90,
+    "y": 211.5,
+    "w": 174.3,
+    "h": 52.4
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "500",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Saves arrival time and place at each stop, even with no signal.#0"
+  },
+  {
+   "kind": "text",
+   "text": "On",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 311.9,
+    "y": 217.1,
+    "w": 18.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(94, 224, 168)",
+    "backgroundColor": "rgb(13, 42, 32)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 12px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|On#0"
+  },
+  {
+   "kind": "text",
+   "text": "Camera",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 90,
+    "y": 290,
+    "w": 60.8,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Camera#0"
+  },
+  {
+   "kind": "text",
+   "text": "Photos of damaged goods and proof of delivery.",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 90,
+    "y": 314.8,
+    "w": 163.2,
+    "h": 34.2
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "500",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Photos of damaged goods and proof of delivery.#0"
+  },
+  {
+   "kind": "text",
+   "text": "On",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 311.9,
+    "y": 311.4,
+    "w": 18.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(94, 224, 168)",
+    "backgroundColor": "rgb(13, 42, 32)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 12px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|On#1"
+  },
+  {
+   "kind": "text",
+   "text": "Notifications",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 90,
+    "y": 375.2,
+    "w": 100.8,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Notifications#0"
+  },
+  {
+   "kind": "text",
+   "text": "Plan changes from dispatch, even with the app closed.",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 90,
+    "y": 400,
+    "w": 144,
+    "h": 52.4
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "500",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Plan changes from dispatch, even with the app closed.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Allow",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 280.9,
+    "y": 404.1,
+    "w": 41.1,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgb(26, 35, 64)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "16px",
+    "padding": "0px 20px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Allow#0"
+  },
+  {
+   "kind": "text",
+   "text": "Location only while on shift",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 64,
+    "y": 500.6,
+    "w": 186.5,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(108, 196, 245)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Location only while on shift#0"
+  },
+  {
+   "kind": "text",
+   "text": "It stops the moment you tap End shift.",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 64,
+    "y": 522.9,
+    "w": 250.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|It stops the moment you tap End shift.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Continue",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 133.4,
+    "y": 711.3,
+    "w": 75.2,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(17, 21, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Continue#0"
+  }
+ ]
+}

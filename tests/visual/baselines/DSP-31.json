@@ -1,0 +1,1042 @@
+{
+ "id": "DSP-31",
+ "name": "DSP-31 Call or SMS driver · phone",
+ "board": "P2",
+ "device": "phone",
+ "key": "dsp-31-call-or-sms-driver",
+ "live": {
+  "app": "field",
+  "path": "s/dsp-31-call-or-sms-driver"
+ },
+ "viewport": {
+  "width": 374,
+  "height": 1014
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Live",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 40,
+    "y": 16,
+    "w": 32.2,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(59, 76, 202)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "2px"
+   },
+   "key": "text|Live#0"
+  },
+  {
+   "kind": "text",
+   "text": "VEH057",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 159.3,
+    "y": 16,
+    "w": 63.7,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px 58px 0px 0px",
+    "gap": "normal"
+   },
+   "key": "text|VEH057#0"
+  },
+  {
+   "kind": "text",
+   "text": "Reefer van · Ruwan Bandara",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 38,
+    "y": 83.3,
+    "w": 176.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(87, 83, 78)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Reefer van · Ruwan Bandara#0"
+  },
+  {
+   "kind": "text",
+   "text": "Predicted",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 261.9,
+    "y": 83.3,
+    "w": 61.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(87, 83, 78)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 12px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Predicted#0"
+  },
+  {
+   "kind": "text",
+   "text": "Unknown since 4:38",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 38,
+    "y": 113,
+    "w": 227.6,
+    "h": 75.8
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "32px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Unknown since 4:38#0"
+  },
+  {
+   "kind": "text",
+   "text": "Last seen at Ramboda, on track. Known signal-loss zone; coverage usually returns near Pussellawa. Never shown as on time",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 38,
+    "y": 198.7,
+    "w": 279.7,
+    "h": 77.9
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Last seen at Ramboda, on track. Known signal-loss zone; coverage usually returns near Pussellawa. Never shown as on time#0"
+  },
+  {
+   "kind": "text",
+   "text": "Trip 1 · Fresh · Nuwara Eliya",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 20,
+    "y": 487.8,
+    "w": 172.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Trip 1 · Fresh · Nuwara Eliya#0"
+  },
+  {
+   "kind": "text",
+   "text": "196 / 270 min",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 269.4,
+    "y": 487.8,
+    "w": 84.6,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|196 / 270 min#0"
+  },
+  {
+   "kind": "text",
+   "text": "Departed Kandy Hub",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 525.7,
+    "w": 157.9,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Departed Kandy Hub#0"
+  },
+  {
+   "kind": "text",
+   "text": "Loaded 3 orders · 988 kg · 4.6 m³",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 86,
+    "y": 549.8,
+    "w": 206.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Loaded 3 orders · 988 kg · 4.6 m³#0"
+  },
+  {
+   "kind": "text",
+   "text": "3:40",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 311.7,
+    "y": 537.6,
+    "w": 30.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|3:40#0"
+  },
+  {
+   "kind": "text",
+   "text": "Ramboda · last ping",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 590.7,
+    "w": 148.5,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Ramboda · last ping#0"
+  },
+  {
+   "kind": "text",
+   "text": "On track · reefer 3 °C",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 86,
+    "y": 614.8,
+    "w": 130.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|On track · reefer 3 °C#0"
+  },
+  {
+   "kind": "text",
+   "text": "4:38",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 312,
+    "y": 602.6,
+    "w": 30,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|4:38#0"
+  },
+  {
+   "kind": "text",
+   "text": "1",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 49.9,
+    "y": 674.8,
+    "w": 6.2,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(87, 83, 78)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "800",
+    "borderRadius": "14px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|1#0"
+  },
+  {
+   "kind": "text",
+   "text": "Nuwara Eliya",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 140.9,
+    "y": 655.3,
+    "w": 102,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Nuwara Eliya#0"
+  },
+  {
+   "kind": "text",
+   "text": "OUT106",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 86,
+    "y": 654.3,
+    "w": 54.9,
+    "h": 21
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "15.5px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|OUT106#0"
+  },
+  {
+   "kind": "text",
+   "text": "Predicted · plan 5:31 · late risk 12%",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 86,
+    "y": 679.5,
+    "w": 183.4,
+    "h": 34.2
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Predicted · plan 5:31 · late risk 12%#0"
+  },
+  {
+   "kind": "text",
+   "text": "~6:35",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 303.9,
+    "y": 676.3,
+    "w": 38.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(87, 83, 78)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|~6:35#0"
+  },
+  {
+   "kind": "text",
+   "text": "2",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 48.5,
+    "y": 757.4,
+    "w": 9,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(87, 83, 78)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "800",
+    "borderRadius": "14px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|2#0"
+  },
+  {
+   "kind": "text",
+   "text": "Hawa Eliya",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 140.9,
+    "y": 737.9,
+    "w": 86.1,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Hawa Eliya#0"
+  },
+  {
+   "kind": "text",
+   "text": "OUT108",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 86,
+    "y": 736.9,
+    "w": 54.9,
+    "h": 21
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "15.5px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|OUT108#0"
+  },
+  {
+   "kind": "text",
+   "text": "Predicted · window to 7:45 · late risk 18%",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 86,
+    "y": 762,
+    "w": 196.7,
+    "h": 34.2
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Predicted · window to 7:45 · late risk 18%#0"
+  },
+  {
+   "kind": "text",
+   "text": "~7:25",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 305.8,
+    "y": 758.9,
+    "w": 36.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(87, 83, 78)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|~7:25#0"
+  },
+  {
+   "kind": "text",
+   "text": "Call or SMS Ruwan",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 128,
+    "y": 915.3,
+    "w": 149.9,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Call or SMS Ruwan#0"
+  },
+  {
+   "kind": "text",
+   "text": "Warn stores: possible delay",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 87.7,
+    "y": 975.8,
+    "w": 198.5,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Warn stores: possible delay#0"
+  },
+  {
+   "kind": "text",
+   "text": "Reach Ruwan Bandara",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 446.2,
+    "w": 230.1,
+    "h": 28
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "22px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Reach Ruwan Bandara#0"
+  },
+  {
+   "kind": "text",
+   "text": "No data signal since 4:38. A call may connect on 2G; an SMS waits and lands when he is back in coverage.",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 20,
+    "y": 480.6,
+    "w": 322.1,
+    "h": 57.6
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|No data signal since 4:38. A call may connect on 2G; an SMS waits and lands when he is back in coverage.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Call Ruwan",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 565.8,
+    "w": 84.2,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Call Ruwan#0"
+  },
+  {
+   "kind": "text",
+   "text": "Mobile · 077 ••• 4521",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 86,
+    "y": 589.9,
+    "w": 133.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Mobile · 077 ••• 4521#0"
+  },
+  {
+   "kind": "text",
+   "text": "Voice",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 277.7,
+    "y": 577.7,
+    "w": 34.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Voice#0"
+  },
+  {
+   "kind": "text",
+   "text": "Call Kandy Hub desk",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 630.8,
+    "w": 156.6,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Call Kandy Hub desk#0"
+  },
+  {
+   "kind": "text",
+   "text": "Shift lead · bay K2",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 86,
+    "y": 654.9,
+    "w": 111.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Shift lead · bay K2#0"
+  },
+  {
+   "kind": "text",
+   "text": "Voice",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 277.7,
+    "y": 642.7,
+    "w": 34.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Voice#1"
+  },
+  {
+   "kind": "text",
+   "text": "Quick SMS",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 698.5,
+    "w": 69.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Quick SMS#0"
+  },
+  {
+   "kind": "text",
+   "text": "edit before sending",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 230.9,
+    "y": 698.5,
+    "w": 123.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|edit before sending#0"
+  },
+  {
+   "kind": "text",
+   "text": "Reply 1 if on plan",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 48,
+    "y": 733.2,
+    "w": 105.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(59, 76, 202)",
+    "backgroundColor": "rgb(238, 240, 255)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 12px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Reply 1 if on plan#0"
+  },
+  {
+   "kind": "text",
+   "text": "Call me when you can",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 185.8,
+    "y": 733.2,
+    "w": 138.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 12px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Call me when you can#0"
+  },
+  {
+   "kind": "text",
+   "text": "Ruwan, Lodestar lost your signal at 4:38. Reply 1 if you are on plan, 2 if you need help. Nilanthi",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 32,
+    "y": 783,
+    "w": 306.1,
+    "h": 59
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14.5px",
+    "fontWeight": "400",
+    "borderRadius": "18px",
+    "padding": "14px 16px",
+    "margin": "0px 16px",
+    "gap": "12px"
+   },
+   "key": "text|Ruwan, Lodestar lost your signal at 4:38. Reply 1 if you are on plan, 2 if you need help. Nilanthi#0"
+  },
+  {
+   "kind": "text",
+   "text": "Send SMS",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 161.9,
+    "y": 901.3,
+    "w": 82.2,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Send SMS#0"
+  },
+  {
+   "kind": "text",
+   "text": "Cancel",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 162,
+    "y": 961.8,
+    "w": 50.1,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Cancel#0"
+  }
+ ]
+}

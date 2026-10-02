@@ -1,0 +1,742 @@
+{
+ "id": "SM-A1",
+ "name": "SM-A1 Store · in progress, low signal",
+ "board": "P5",
+ "device": "phone",
+ "key": "sm-a1-store-in-progress-low-signal",
+ "live": {
+  "app": "field",
+  "path": "s/sm-a1-store-in-progress-low-signal"
+ },
+ "viewport": {
+  "width": 374,
+  "height": 758
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Nuwara Eliya ·",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 106.8,
+    "y": 15.8,
+    "w": 107.3,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Nuwara Eliya ·#0"
+  },
+  {
+   "kind": "text",
+   "text": "OUT106",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 214.1,
+    "y": 15.8,
+    "w": 53.1,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "15px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|OUT106#0"
+  },
+  {
+   "kind": "text",
+   "text": "Today ·",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 57,
+    "w": 146.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Today ·#0"
+  },
+  {
+   "kind": "text",
+   "text": "ORD0104216",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 77.5,
+    "y": 57,
+    "w": 76.7,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|ORD0104216#0"
+  },
+  {
+   "kind": "text",
+   "text": "ORD0104217",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 174.4,
+    "y": 57,
+    "w": 76.7,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|ORD0104217#0"
+  },
+  {
+   "kind": "text",
+   "text": "Delivery in progress",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 80.5,
+    "w": 203.4,
+    "h": 28
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "22px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Delivery in progress#0"
+  },
+  {
+   "kind": "text",
+   "text": "Arrival window",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 37,
+    "y": 152.1,
+    "w": 94.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Arrival window#0"
+  },
+  {
+   "kind": "text",
+   "text": "Updates paused",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 220.6,
+    "y": 152.1,
+    "w": 103.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(87, 83, 78)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 12px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Updates paused#0"
+  },
+  {
+   "kind": "text",
+   "text": "6:15–6:55",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 37,
+    "y": 178.9,
+    "w": 212.5,
+    "h": 56
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "44px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|6:15–6:55#0"
+  },
+  {
+   "kind": "text",
+   "text": "Model ETA ~6:35 (plan 5:31, monsoon hill road). Last heard , on pace. The van is in a low-signal area.",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 37,
+    "y": 239.9,
+    "w": 275.8,
+    "h": 57.6
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Model ETA ~6:35 (plan 5:31, monsoon hill road). Last heard , on pace. The van is in a low-signal area.#0"
+  },
+  {
+   "kind": "text",
+   "text": "4:38 near Ramboda",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 153.8,
+    "y": 260.2,
+    "w": 134.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|4:38 near Ramboda#0"
+  },
+  {
+   "kind": "text",
+   "text": "2 orders · 1 van",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 20,
+    "y": 339.8,
+    "w": 95.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|2 orders · 1 van#0"
+  },
+  {
+   "kind": "text",
+   "text": "· Ruwan B.",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 284.2,
+    "y": 339.8,
+    "w": 69.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|· Ruwan B.#0"
+  },
+  {
+   "kind": "text",
+   "text": "VEH057",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 238.2,
+    "y": 339.8,
+    "w": 46,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|VEH057#0"
+  },
+  {
+   "kind": "text",
+   "text": "Received",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 27.7,
+    "y": 405.3,
+    "w": 57.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Received#0"
+  },
+  {
+   "kind": "text",
+   "text": "Mon 2:38",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 26.8,
+    "y": 428.9,
+    "w": 59.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Mon 2:38#0"
+  },
+  {
+   "kind": "text",
+   "text": "Planned",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 96.3,
+    "y": 405.3,
+    "w": 51,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Planned#0"
+  },
+  {
+   "kind": "text",
+   "text": "Mon 6:40",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 92,
+    "y": 428.9,
+    "w": 59.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Mon 6:40#0"
+  },
+  {
+   "kind": "text",
+   "text": "Loaded",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 163.6,
+    "y": 405.3,
+    "w": 46.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Loaded#0"
+  },
+  {
+   "kind": "text",
+   "text": "3:34",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 172.6,
+    "y": 428.9,
+    "w": 28.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|3:34#0"
+  },
+  {
+   "kind": "text",
+   "text": "En route",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 226.1,
+    "y": 405.3,
+    "w": 52,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|En route#0"
+  },
+  {
+   "kind": "text",
+   "text": "last 4:38",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 225.2,
+    "y": 428.9,
+    "w": 53.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|last 4:38#0"
+  },
+  {
+   "kind": "text",
+   "text": "Delivered",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 287.5,
+    "y": 405.3,
+    "w": 59.6,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Delivered#0"
+  },
+  {
+   "kind": "text",
+   "text": "·",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 315.5,
+    "y": 428.9,
+    "w": 3.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|·#0"
+  },
+  {
+   "kind": "text",
+   "text": "Van already at your door?",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 64,
+    "y": 490.4,
+    "w": 175,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(3, 105, 161)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Van already at your door?#0"
+  },
+  {
+   "kind": "text",
+   "text": "Receive and count as normal. Confirm your receipt now, and we'll match it to the driver's record when it syncs.",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 64,
+    "y": 512.7,
+    "w": 275.3,
+    "h": 57.6
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Receive and count as normal. Confirm your receipt now, and we'll match it to the driver's record when it syncs.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Confirm my receipt",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 124.4,
+    "y": 659.3,
+    "w": 157.3,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Confirm my receipt#0"
+  },
+  {
+   "kind": "text",
+   "text": "Call driver",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 78.3,
+    "y": 719.8,
+    "w": 73.3,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Call driver#0"
+  },
+  {
+   "kind": "text",
+   "text": "Call dispatch",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 244.4,
+    "y": 719.8,
+    "w": 93.3,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Call dispatch#0"
+  }
+ ]
+}

@@ -1,0 +1,592 @@
+{
+ "id": "DR-16",
+ "name": "DR-16 Store code entry · phone",
+ "board": "P4",
+ "device": "phone",
+ "key": "dr-16-store-code-entry",
+ "live": {
+  "app": "field",
+  "path": "s/dr-16-store-code-entry"
+ },
+ "viewport": {
+  "width": 374,
+  "height": 758
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Store code",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 123.1,
+    "y": 15.8,
+    "w": 79,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Store code#0"
+  },
+  {
+   "kind": "text",
+   "text": "Offline",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 302.3,
+    "y": 17.3,
+    "w": 42.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(214, 207, 199)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 12px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Offline#0"
+  },
+  {
+   "kind": "text",
+   "text": "Stop 1 · · instead of a signature",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 20,
+    "y": 63,
+    "w": 250.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(127, 137, 163)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Stop 1 · · instead of a signature#0"
+  },
+  {
+   "kind": "text",
+   "text": "OUT106",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 73.1,
+    "y": 63,
+    "w": 46,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(127, 137, 163)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|OUT106#0"
+  },
+  {
+   "kind": "text",
+   "text": "Ask M. Ilyas for today's store code",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 86.5,
+    "w": 296.5,
+    "h": 54.4
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "22px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Ask M. Ilyas for today's store code#0"
+  },
+  {
+   "kind": "text",
+   "text": "4",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 50,
+    "y": 172.3,
+    "w": 26.5,
+    "h": 51
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgb(18, 26, 46)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "40px",
+    "fontWeight": "800",
+    "borderRadius": "20px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|4#0"
+  },
+  {
+   "kind": "text",
+   "text": "7",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 134.5,
+    "y": 172.3,
+    "w": 22.6,
+    "h": 51
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgb(18, 26, 46)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "40px",
+    "fontWeight": "800",
+    "borderRadius": "20px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|7#0"
+  },
+  {
+   "kind": "text",
+   "text": "2",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 216.3,
+    "y": 172.3,
+    "w": 23.8,
+    "h": 51
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgb(18, 26, 46)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "40px",
+    "fontWeight": "800",
+    "borderRadius": "20px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|2#0"
+  },
+  {
+   "kind": "text",
+   "text": "9",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 298.7,
+    "y": 172.3,
+    "w": 24.2,
+    "h": 51
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgb(18, 26, 46)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "40px",
+    "fontWeight": "800",
+    "borderRadius": "20px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|9#0"
+  },
+  {
+   "kind": "text",
+   "text": "Matches · no signal needed",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 84,
+    "y": 257.3,
+    "w": 224.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(94, 224, 168)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "5px"
+   },
+   "key": "text|Matches · no signal needed#0"
+  },
+  {
+   "kind": "text",
+   "text": "OUT106",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 143.3,
+    "y": 256.3,
+    "w": 46,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(94, 224, 168)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|OUT106#1"
+  },
+  {
+   "kind": "text",
+   "text": "The store sees today's code in its Lodestar Store app. It changes every day.",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 44,
+    "y": 292.1,
+    "w": 284.3,
+    "h": 37.3
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|The store sees today's code in its Lodestar Store app. It changes every day.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Confirm with store code",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 104.2,
+    "y": 448.3,
+    "w": 197.5,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(17, 21, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Confirm with store code#0"
+  },
+  {
+   "kind": "text",
+   "text": "1",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 62.8,
+    "y": 519,
+    "w": 9.7,
+    "h": 30
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgb(26, 35, 64)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "700",
+    "borderRadius": "14px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|1#0"
+  },
+  {
+   "kind": "text",
+   "text": "2",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 179.8,
+    "y": 519,
+    "w": 14.3,
+    "h": 30
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgb(26, 35, 64)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "700",
+    "borderRadius": "14px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|2#1"
+  },
+  {
+   "kind": "text",
+   "text": "3",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 299,
+    "y": 519,
+    "w": 14.7,
+    "h": 30
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgb(26, 35, 64)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "700",
+    "borderRadius": "14px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|3#0"
+  },
+  {
+   "kind": "text",
+   "text": "4",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 59.8,
+    "y": 583,
+    "w": 15.7,
+    "h": 30
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgb(26, 35, 64)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "700",
+    "borderRadius": "14px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|4#1"
+  },
+  {
+   "kind": "text",
+   "text": "5",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 179.6,
+    "y": 583,
+    "w": 14.8,
+    "h": 30
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgb(26, 35, 64)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "700",
+    "borderRadius": "14px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|5#0"
+  },
+  {
+   "kind": "text",
+   "text": "6",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 299.1,
+    "y": 583,
+    "w": 14.5,
+    "h": 30
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgb(26, 35, 64)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "700",
+    "borderRadius": "14px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|6#0"
+  },
+  {
+   "kind": "text",
+   "text": "7",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 61,
+    "y": 647,
+    "w": 13.4,
+    "h": 30
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgb(26, 35, 64)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "700",
+    "borderRadius": "14px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|7#1"
+  },
+  {
+   "kind": "text",
+   "text": "8",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 179.4,
+    "y": 647,
+    "w": 15.2,
+    "h": 30
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgb(26, 35, 64)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "700",
+    "borderRadius": "14px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|8#0"
+  },
+  {
+   "kind": "text",
+   "text": "9",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 299.1,
+    "y": 647,
+    "w": 14.5,
+    "h": 30
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgb(26, 35, 64)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "700",
+    "borderRadius": "14px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|9#1"
+  },
+  {
+   "kind": "text",
+   "text": "0",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 178.5,
+    "y": 711,
+    "w": 17,
+    "h": 30
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgb(26, 35, 64)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "700",
+    "borderRadius": "14px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|0#0"
+  }
+ ]
+}

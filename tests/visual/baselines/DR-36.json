@@ -1,0 +1,567 @@
+{
+ "id": "DR-36",
+ "name": "DR-36 En route · driving mode · phone",
+ "board": "P4",
+ "device": "phone",
+ "key": "dr-36-en-route-driving-mode",
+ "live": {
+  "app": "field",
+  "path": "s/dr-36-en-route-driving-mode"
+ },
+ "viewport": {
+  "width": 374,
+  "height": 758
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Driving mode",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 42,
+    "y": 21.5,
+    "w": 91.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Driving mode#0"
+  },
+  {
+   "kind": "text",
+   "text": "· OK",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 311.1,
+    "y": 19.8,
+    "w": 30.9,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(94, 224, 168)",
+    "backgroundColor": "rgb(13, 42, 32)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 16px 0px 14px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|· OK#0"
+  },
+  {
+   "kind": "text",
+   "text": "Reefer 3 °C",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 220.3,
+    "y": 19.8,
+    "w": 82.8,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Reefer 3 °C#0"
+  },
+  {
+   "kind": "text",
+   "text": "Next stop · 1 of 2",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 20,
+    "y": 68,
+    "w": 112.7,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(127, 137, 163)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Next stop · 1 of 2#0"
+  },
+  {
+   "kind": "text",
+   "text": "Nuwara Eliya",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 87,
+    "w": 270.4,
+    "h": 58
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "46px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Nuwara Eliya#0"
+  },
+  {
+   "kind": "text",
+   "text": "· rear dock",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 80.2,
+    "y": 147.9,
+    "w": 91.9,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|· rear dock#0"
+  },
+  {
+   "kind": "text",
+   "text": "OUT106",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 20,
+    "y": 146.9,
+    "w": 60.2,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "17px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|OUT106#0"
+  },
+  {
+   "kind": "text",
+   "text": "~6:35",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 20,
+    "y": 177.4,
+    "w": 204.1,
+    "h": 96
+   },
+   "style": {
+    "color": "rgb(255, 203, 92)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "76px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|~6:35#0"
+  },
+  {
+   "kind": "text",
+   "text": "ETA",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 240.1,
+    "y": 209.8,
+    "w": 31.5,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|ETA#0"
+  },
+  {
+   "kind": "text",
+   "text": "likely 6:15–6:55",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 240.1,
+    "y": 236.8,
+    "w": 104.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|likely 6:15–6:55#0"
+  },
+  {
+   "kind": "text",
+   "text": "left 3:40",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 20,
+    "y": 343.7,
+    "w": 53.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(127, 137, 163)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "1px"
+   },
+   "key": "text|left 3:40#0"
+  },
+  {
+   "kind": "text",
+   "text": "Kandy Hub",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 323.8,
+    "w": 75.6,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Kandy Hub#0"
+  },
+  {
+   "kind": "text",
+   "text": "passed",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 157.5,
+    "y": 343.7,
+    "w": 45.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(127, 137, 163)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "1px"
+   },
+   "key": "text|passed#0"
+  },
+  {
+   "kind": "text",
+   "text": "Ramboda",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 148.2,
+    "y": 323.8,
+    "w": 64.4,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Ramboda#0"
+  },
+  {
+   "kind": "text",
+   "text": "~6:35",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 316.5,
+    "y": 343.7,
+    "w": 37.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(127, 137, 163)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "1px"
+   },
+   "key": "text|~6:35#1"
+  },
+  {
+   "kind": "text",
+   "text": "Nuwara Eliya",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 265.2,
+    "y": 323.8,
+    "w": 88.8,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Nuwara Eliya#1"
+  },
+  {
+   "kind": "text",
+   "text": "No signal since 4:38 · run saved on phone",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 69,
+    "y": 397.2,
+    "w": 239,
+    "h": 37.3
+   },
+   "style": {
+    "color": "rgb(214, 207, 199)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|No signal since 4:38 · run saved on phone#0"
+  },
+  {
+   "kind": "text",
+   "text": "Voice: next stop in 85 min",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 46,
+    "y": 475.3,
+    "w": 174.2,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Voice: next stop in 85 min#0"
+  },
+  {
+   "kind": "text",
+   "text": "Open in Maps",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 42,
+    "y": 513.6,
+    "w": 100.3,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(169, 180, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Open in Maps#0"
+  },
+  {
+   "kind": "text",
+   "text": "Arrived at stop 1",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 137.9,
+    "y": 619.1,
+    "w": 130.2,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(17, 21, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Arrived at stop 1#0"
+  },
+  {
+   "kind": "text",
+   "text": "Tap when parked · unlocks when the van stops",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 40,
+    "y": 668.8,
+    "w": 293.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(127, 137, 163)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Tap when parked · unlocks when the van stops#0"
+  },
+  {
+   "kind": "text",
+   "text": "Report a delay",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 144.1,
+    "y": 711.3,
+    "w": 117.8,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgb(26, 35, 64)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Report a delay#0"
+  }
+ ]
+}

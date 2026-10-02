@@ -1,0 +1,467 @@
+{
+ "id": "LD-26",
+ "name": "LD-26 Update required · phone",
+ "board": "P3",
+ "device": "phone",
+ "key": "ld-26-update-required",
+ "live": {
+  "app": "field",
+  "path": "s/ld-26-update-required"
+ },
+ "viewport": {
+  "width": 374,
+  "height": 758
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "· departs 3:40",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 143,
+    "y": 15.8,
+    "w": 107.5,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|· departs 3:40#0"
+  },
+  {
+   "kind": "text",
+   "text": "VEH057",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 89.8,
+    "y": 15.8,
+    "w": 53.1,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "15px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|VEH057#0"
+  },
+  {
+   "kind": "text",
+   "text": "13 of 22",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 296.3,
+    "y": 17.3,
+    "w": 49.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(52, 64, 84)",
+    "backgroundColor": "rgb(233, 236, 242)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 12px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|13 of 22#0"
+  },
+  {
+   "kind": "text",
+   "text": "Update ready · Lodestar Dock 2.5",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 92,
+    "y": 89.3,
+    "w": 209.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Update ready · Lodestar Dock 2.5#0"
+  },
+  {
+   "kind": "text",
+   "text": "Finish releasing VEH057 first, update after",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 36,
+    "y": 129,
+    "w": 297.3,
+    "h": 54.4
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "22px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Finish releasing VEH057 first, update after#0"
+  },
+  {
+   "kind": "text",
+   "text": "You're mid-load, so nothing stops now. The update is needed before your next shift and takes about 2 minutes.",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 36,
+    "y": 193.8,
+    "w": 288.4,
+    "h": 57.6
+   },
+   "style": {
+    "color": "rgb(52, 64, 84)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|You're mid-load, so nothing stops now. The update is needed before your next shift and takes about 2 minutes.#0"
+  },
+  {
+   "kind": "text",
+   "text": "What's new",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 32,
+    "y": 303.4,
+    "w": 83.2,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(52, 64, 84)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|What's new#0"
+  },
+  {
+   "kind": "text",
+   "text": "Faster cold-room scanning",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 141.2,
+    "y": 303.4,
+    "w": 200.8,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Faster cold-room scanning#0"
+  },
+  {
+   "kind": "text",
+   "text": "Your ticks",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 32,
+    "y": 351.9,
+    "w": 70,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(52, 64, 84)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Your ticks#0"
+  },
+  {
+   "kind": "text",
+   "text": "Saved, nothing lost",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 201.1,
+    "y": 351.9,
+    "w": 140.9,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Saved, nothing lost#0"
+  },
+  {
+   "kind": "text",
+   "text": "If you update now",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 32,
+    "y": 399.9,
+    "w": 127.3,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(52, 64, 84)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|If you update now#0"
+  },
+  {
+   "kind": "text",
+   "text": "Sheet pauses 2 min",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 197.2,
+    "y": 399.9,
+    "w": 144.8,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Sheet pauses 2 min#0"
+  },
+  {
+   "kind": "text",
+   "text": "Needed by",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 32,
+    "y": 447.9,
+    "w": 77.5,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(52, 64, 84)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Needed by#0"
+  },
+  {
+   "kind": "text",
+   "text": "Start of next shift",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 213.7,
+    "y": 447.9,
+    "w": 128.3,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Start of next shift#0"
+  },
+  {
+   "kind": "text",
+   "text": "We'll remind you after you release .",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 48,
+    "y": 498.7,
+    "w": 287.2,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(52, 64, 84)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|We'll remind you after you release .#0"
+  },
+  {
+   "kind": "text",
+   "text": "VEH057",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 281.1,
+    "y": 498.7,
+    "w": 49.6,
+    "h": 18
+   },
+   "style": {
+    "color": "rgb(52, 64, 84)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|VEH057#1"
+  },
+  {
+   "kind": "text",
+   "text": "Keep loading VEH057",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 115.3,
+    "y": 659.3,
+    "w": 175.4,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Keep loading VEH057#0"
+  },
+  {
+   "kind": "text",
+   "text": "Update now",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 160,
+    "y": 719.8,
+    "w": 86,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(52, 64, 84)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Update now#0"
+  }
+ ]
+}

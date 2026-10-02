@@ -1,0 +1,742 @@
+{
+ "id": "DSP-32",
+ "name": "DSP-32 Plans · phone",
+ "board": "P2",
+ "device": "phone",
+ "key": "dsp-32-plans",
+ "live": {
+  "app": "field",
+  "path": "s/dsp-32-plans"
+ },
+ "viewport": {
+  "width": 374,
+  "height": 758
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Tue 7 Apr · read-only on phone",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 20,
+    "y": 11,
+    "w": 194.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Tue 7 Apr · read-only on phone#0"
+  },
+  {
+   "kind": "text",
+   "text": "2 plans running",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 20,
+    "y": 32.5,
+    "w": 207,
+    "h": 38
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|2 plans running#0"
+  },
+  {
+   "kind": "text",
+   "text": "Running today",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 86.1,
+    "w": 91.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Running today#0"
+  },
+  {
+   "kind": "text",
+   "text": "Peliyagoda DC",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 123.6,
+    "w": 110.1,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Peliyagoda DC#0"
+  },
+  {
+   "kind": "text",
+   "text": "v3 + re-plan 3:49 · 88 orders · 22 vehicles",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 86,
+    "y": 147.7,
+    "w": 134.6,
+    "h": 34.2
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|v3 + re-plan 3:49 · 88 orders · 22 vehicles#0"
+  },
+  {
+   "kind": "text",
+   "text": "24/88",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 257.2,
+    "y": 131.1,
+    "w": 54.8,
+    "h": 23
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "18px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|24/88#0"
+  },
+  {
+   "kind": "text",
+   "text": "delivered",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 255.3,
+    "y": 159.1,
+    "w": 56.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|delivered#0"
+  },
+  {
+   "kind": "text",
+   "text": "Kandy Hub",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 206.1,
+    "w": 83.7,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Kandy Hub#0"
+  },
+  {
+   "kind": "text",
+   "text": "v3 · 55 orders · 12 vehicles",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 86,
+    "y": 230.3,
+    "w": 109.5,
+    "h": 34.2
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|v3 · 55 orders · 12 vehicles#0"
+  },
+  {
+   "kind": "text",
+   "text": "14/55",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 261,
+    "y": 213.6,
+    "w": 51,
+    "h": 23
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "18px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|14/55#0"
+  },
+  {
+   "kind": "text",
+   "text": "delivered",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 255.3,
+    "y": 241.6,
+    "w": 56.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|delivered#1"
+  },
+  {
+   "kind": "text",
+   "text": "Moved to Wed 8 Apr",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 20,
+    "y": 293.6,
+    "w": 128.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Moved to Wed 8 Apr#0"
+  },
+  {
+   "kind": "text",
+   "text": "2",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 345.8,
+    "y": 293.6,
+    "w": 8.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|2#0"
+  },
+  {
+   "kind": "text",
+   "text": "Kiribathgoda ·",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 331.5,
+    "w": 110.9,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Kiribathgoda ·#0"
+  },
+  {
+   "kind": "text",
+   "text": "OUT027",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 196.9,
+    "y": 330.5,
+    "w": 54.9,
+    "h": 21
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "15.5px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|OUT027#0"
+  },
+  {
+   "kind": "text",
+   "text": "CAP-REEFER · score 22 · store told",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 86,
+    "y": 355.6,
+    "w": 213.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|CAP-REEFER · score 22 · store told#0"
+  },
+  {
+   "kind": "text",
+   "text": "Horana ·",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 396.5,
+    "w": 67.4,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Horana ·#0"
+  },
+  {
+   "kind": "text",
+   "text": "OUT043",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 153.4,
+    "y": 395.5,
+    "w": 54.9,
+    "h": 21
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "15.5px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|OUT043#0"
+  },
+  {
+   "kind": "text",
+   "text": "CAP-REEFER · score 27 · store told",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 86,
+    "y": 420.6,
+    "w": 212.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|CAP-REEFER · score 27 · store told#0"
+  },
+  {
+   "kind": "text",
+   "text": "Next run",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 466.1,
+    "w": 54.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Next run#0"
+  },
+  {
+   "kind": "text",
+   "text": "Queue open for Wed 8 Apr",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 86,
+    "y": 503.6,
+    "w": 200,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Queue open for Wed 8 Apr#0"
+  },
+  {
+   "kind": "text",
+   "text": "Peliyagoda 3 orders · Kandy Hub 0 · closes 4:00 PM",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 86,
+    "y": 527.8,
+    "w": 221.1,
+    "h": 34.2
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Peliyagoda 3 orders · Kandy Hub 0 · closes 4:00 PM#0"
+  },
+  {
+   "kind": "text",
+   "text": "Full plans are approved on desktop",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 64,
+    "y": 605.1,
+    "w": 237.4,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(3, 105, 161)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Full plans are approved on desktop#0"
+  },
+  {
+   "kind": "text",
+   "text": "From the phone you approve the agent's re-plans and deferrals.",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 64,
+    "y": 627.4,
+    "w": 268.1,
+    "h": 37.3
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|From the phone you approve the agent's re-plans and deferrals.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Alerts",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 36.5,
+    "y": 733.5,
+    "w": 38.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "4px 0px",
+    "margin": "0px",
+    "gap": "3px"
+   },
+   "key": "text|Alerts#0"
+  },
+  {
+   "kind": "text",
+   "text": "1",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 68.3,
+    "y": 703.3,
+    "w": 4.9,
+    "h": 14
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgb(180, 35, 24)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "11px",
+    "fontWeight": "800",
+    "borderRadius": "999px",
+    "padding": "0px 5px",
+    "margin": "0px 0px 0px 6px",
+    "gap": "normal"
+   },
+   "key": "text|1#0"
+  },
+  {
+   "kind": "text",
+   "text": "Live",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 130.2,
+    "y": 733.5,
+    "w": 26.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "4px 0px",
+    "margin": "0px",
+    "gap": "3px"
+   },
+   "key": "text|Live#0"
+  },
+  {
+   "kind": "text",
+   "text": "Plans",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 213.3,
+    "y": 733.5,
+    "w": 34.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(59, 76, 202)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "4px 0px",
+    "margin": "0px",
+    "gap": "3px"
+   },
+   "key": "text|Plans#0"
+  },
+  {
+   "kind": "text",
+   "text": "Me",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 308.3,
+    "y": 733.5,
+    "w": 19.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "4px 0px",
+    "margin": "0px",
+    "gap": "3px"
+   },
+   "key": "text|Me#0"
+  }
+ ]
+}

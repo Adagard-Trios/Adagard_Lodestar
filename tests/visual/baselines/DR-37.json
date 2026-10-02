@@ -1,0 +1,642 @@
+{
+ "id": "DR-37",
+ "name": "DR-37 Reefer temperature alert · phone",
+ "board": "P4",
+ "device": "phone",
+ "key": "dr-37-reefer-temperature-alert",
+ "live": {
+  "app": "field",
+  "path": "s/dr-37-reefer-temperature-alert"
+ },
+ "viewport": {
+  "width": 374,
+  "height": 758
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Reefer ·",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 105.9,
+    "y": 15.8,
+    "w": 60.4,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Reefer ·#0"
+  },
+  {
+   "kind": "text",
+   "text": "VEH057",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 166.3,
+    "y": 15.8,
+    "w": 53.1,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "15px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|VEH057#0"
+  },
+  {
+   "kind": "text",
+   "text": "Offline",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 302.3,
+    "y": 17.3,
+    "w": 42.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(214, 207, 199)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 12px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Offline#0"
+  },
+  {
+   "kind": "text",
+   "text": "Chilled load · 3 chilled orders on board",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 20,
+    "y": 63,
+    "w": 240.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(127, 137, 163)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Chilled load · 3 chilled orders on board#0"
+  },
+  {
+   "kind": "text",
+   "text": "Reefer at 6 °C, needs ≤ 4 °C",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 20,
+    "y": 86.5,
+    "w": 284.2,
+    "h": 28
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "22px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Reefer at 6 °C, needs ≤ 4 °C#0"
+  },
+  {
+   "kind": "text",
+   "text": "6 °C",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 36,
+    "y": 140.9,
+    "w": 95.2,
+    "h": 61
+   },
+   "style": {
+    "color": "rgb(255, 194, 102)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "48px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|6 °C#0"
+  },
+  {
+   "kind": "text",
+   "text": "now",
+   "tag": "small",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 135.2,
+    "y": 169.9,
+    "w": 41.8,
+    "h": 25
+   },
+   "style": {
+    "color": "rgb(255, 194, 102)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px 0px 0px 4px",
+    "gap": "normal"
+   },
+   "key": "text|now#0"
+  },
+  {
+   "kind": "text",
+   "text": "Too warm",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 263.5,
+    "y": 173.1,
+    "w": 62.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(255, 194, 102)",
+    "backgroundColor": "rgb(46, 34, 8)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 12px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Too warm#0"
+  },
+  {
+   "kind": "text",
+   "text": "5:32",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 36,
+    "y": 272.9,
+    "w": 28.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(127, 137, 163)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|5:32#0"
+  },
+  {
+   "kind": "text",
+   "text": "dashed line = 4 °C limit",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 114.6,
+    "y": 272.9,
+    "w": 144.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(127, 137, 163)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|dashed line = 4 °C limit#0"
+  },
+  {
+   "kind": "text",
+   "text": "5:52",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 309.3,
+    "y": 272.9,
+    "w": 28.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(255, 194, 102)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|5:52#0"
+  },
+  {
+   "kind": "text",
+   "text": "What to do",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 326.4,
+    "w": 68.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|What to do#0"
+  },
+  {
+   "kind": "text",
+   "text": "keep driving until safe",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 213.7,
+    "y": 326.4,
+    "w": 140.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(127, 137, 163)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|keep driving until safe#0"
+  },
+  {
+   "kind": "text",
+   "text": "1",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 47.7,
+    "y": 370.9,
+    "w": 6.6,
+    "h": 21
+   },
+   "style": {
+    "color": "rgb(169, 180, 255)",
+    "backgroundColor": "rgb(22, 29, 61)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "800",
+    "borderRadius": "12px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|1#0"
+  },
+  {
+   "kind": "text",
+   "text": "Pull over when safe",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 84,
+    "y": 360.9,
+    "w": 152.1,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Pull over when safe#0"
+  },
+  {
+   "kind": "text",
+   "text": "Not on a bend or the narrow pass",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 84,
+    "y": 385.7,
+    "w": 206.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "500",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Not on a bend or the narrow pass#0"
+  },
+  {
+   "kind": "text",
+   "text": "2",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 46.2,
+    "y": 429.9,
+    "w": 9.5,
+    "h": 21
+   },
+   "style": {
+    "color": "rgb(169, 180, 255)",
+    "backgroundColor": "rgb(22, 29, 61)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "800",
+    "borderRadius": "12px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|2#0"
+  },
+  {
+   "kind": "text",
+   "text": "Check the rear door seal",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 84,
+    "y": 419.9,
+    "w": 190.7,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Check the rear door seal#0"
+  },
+  {
+   "kind": "text",
+   "text": "Close it fully, look for a gap",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 84,
+    "y": 444.7,
+    "w": 168.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "500",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Close it fully, look for a gap#0"
+  },
+  {
+   "kind": "text",
+   "text": "3",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 46.1,
+    "y": 488.8,
+    "w": 9.8,
+    "h": 21
+   },
+   "style": {
+    "color": "rgb(169, 180, 255)",
+    "backgroundColor": "rgb(22, 29, 61)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "800",
+    "borderRadius": "12px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|3#0"
+  },
+  {
+   "kind": "text",
+   "text": "Set the reefer to 2 °C",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 84,
+    "y": 478.9,
+    "w": 162,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Set the reefer to 2 °C#0"
+  },
+  {
+   "kind": "text",
+   "text": "It should read ≤ 4 °C in about 10 min",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 84,
+    "y": 503.7,
+    "w": 225,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "500",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|It should read ≤ 4 °C in about 10 min#0"
+  },
+  {
+   "kind": "text",
+   "text": "Logged on this phone at 5:52, sent to dispatch when signal returns.",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 44,
+    "y": 543.8,
+    "w": 307.3,
+    "h": 37.3
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Logged on this phone at 5:52, sent to dispatch when signal returns.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Checked, back to 3 °C",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 111.1,
+    "y": 651.3,
+    "w": 183.8,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(17, 21, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Checked, back to 3 °C#0"
+  },
+  {
+   "kind": "text",
+   "text": "Call dispatch when signal",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 109.5,
+    "y": 715.8,
+    "w": 183,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(214, 207, 199)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Call dispatch when signal#0"
+  }
+ ]
+}

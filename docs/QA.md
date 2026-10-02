@@ -139,7 +139,7 @@ Step 2 opens each screen as its persona (one Keycloak sign-in per app, in the sa
 | screenshot vs baseline, masked | at most **1 %** of unmasked pixels differ (a pixel differs when a channel is off by more than **25/255**) |
 | style-guide tokens vs desk CSS (computed in the live app); field app colour literals vs the design palette, its fonts vs the design typefaces | **exactly equal** |
 
-Masks: elements whose text has a digit, a weekday or a month name (times, dates, ids, counts, quantities) on either side are painted out of both images (+2 px) and never position-matched. A screen whose route renders the generated static mock (desk page without `LiveSwitch`, field key not in `LIVE`) is **not implemented** and fails; one that differs is **drifted** (live capture + diff image in the report). Results: `tests/visual/report/index.html` and `report.json`. No retries (verdicts are deterministic); thresholds are not to be raised to get green.
+Masks: elements whose text has a digit, a weekday or a month name (times, dates, ids, counts, quantities) on either side are painted out of both images (+2 px) and never position-matched. A screen whose route renders the generated static mock (desk page without `LiveSwitch`, field key not in `LIVE`) is **not implemented** and fails; one that differs is **drifted** (live capture + diff image in the report); one that could not be opened (sign-in or navigation failed) is **error** and fails. Results: `tests/visual/report/index.html` and `report.json`. No retries (verdicts are deterministic); thresholds are not to be raised to get green.
 
 ### SonarQube (local)
 

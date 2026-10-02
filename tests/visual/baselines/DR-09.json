@@ -1,0 +1,392 @@
+{
+ "id": "DR-09",
+ "name": "DR-09 Language · phone",
+ "board": "P4",
+ "device": "phone",
+ "key": "dr-09-language",
+ "live": {
+  "app": "field",
+  "path": "s/dr-09-language"
+ },
+ "viewport": {
+  "width": 374,
+  "height": 758
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Set up",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 163.7,
+    "y": 15.8,
+    "w": 46.6,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Set up#0"
+  },
+  {
+   "kind": "text",
+   "text": "Step 2 of 3 optional",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 20,
+    "y": 63,
+    "w": 137.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(127, 137, 163)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Step 2 of 3 optional#0"
+  },
+  {
+   "kind": "text",
+   "text": "Choose your language",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 84.5,
+    "w": 312.5,
+    "h": 38
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Choose your language#0"
+  },
+  {
+   "kind": "text",
+   "text": "A",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 46.2,
+    "y": 162.3,
+    "w": 15.7,
+    "h": 25
+   },
+   "style": {
+    "color": "rgb(169, 180, 255)",
+    "backgroundColor": "rgb(22, 29, 61)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "21px",
+    "fontWeight": "700",
+    "borderRadius": "14px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|A#0"
+  },
+  {
+   "kind": "text",
+   "text": "English",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 90,
+    "y": 154.1,
+    "w": 57.4,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|English#0"
+  },
+  {
+   "kind": "text",
+   "text": "Current",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 90,
+    "y": 178.9,
+    "w": 47.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "500",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Current#0"
+  },
+  {
+   "kind": "text",
+   "text": "අ",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 45.2,
+    "y": 231.3,
+    "w": 17.5,
+    "h": 25
+   },
+   "style": {
+    "color": "rgb(169, 180, 255)",
+    "backgroundColor": "rgb(22, 29, 61)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "21px",
+    "fontWeight": "700",
+    "borderRadius": "14px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|අ#0"
+  },
+  {
+   "kind": "text",
+   "text": "සිංහල",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 90,
+    "y": 223.1,
+    "w": 55.2,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|සිංහල#0"
+  },
+  {
+   "kind": "text",
+   "text": "Sinhala",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 90,
+    "y": 247.9,
+    "w": 45.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "500",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Sinhala#0"
+  },
+  {
+   "kind": "text",
+   "text": "அ",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 41,
+    "y": 300.3,
+    "w": 25.9,
+    "h": 25
+   },
+   "style": {
+    "color": "rgb(169, 180, 255)",
+    "backgroundColor": "rgb(22, 29, 61)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "21px",
+    "fontWeight": "700",
+    "borderRadius": "14px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|அ#0"
+  },
+  {
+   "kind": "text",
+   "text": "தமிழ்",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 90,
+    "y": 292.1,
+    "w": 50.2,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|தமிழ்#0"
+  },
+  {
+   "kind": "text",
+   "text": "Tamil",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 90,
+    "y": 316.9,
+    "w": 33,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "500",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Tamil#0"
+  },
+  {
+   "kind": "text",
+   "text": "Store names, order numbers and times stay the same in every language.",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 44,
+    "y": 368.1,
+    "w": 288.3,
+    "h": 37.3
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Store names, order numbers and times stay the same in every language.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Continue",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 133.4,
+    "y": 659.3,
+    "w": 75.2,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(17, 21, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Continue#0"
+  },
+  {
+   "kind": "text",
+   "text": "Skip for now",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 142.3,
+    "y": 719.8,
+    "w": 89.4,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Skip for now#0"
+  }
+ ]
+}

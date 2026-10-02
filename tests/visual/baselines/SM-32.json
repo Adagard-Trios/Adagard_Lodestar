@@ -1,0 +1,517 @@
+{
+ "id": "SM-32",
+ "name": "SM-32 Access request sent · phone",
+ "board": "P1",
+ "device": "phone",
+ "key": "sm-32-access-request-sent",
+ "live": {
+  "app": "field",
+  "path": "s/sm-32-access-request-sent"
+ },
+ "viewport": {
+  "width": 374,
+  "height": 758
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Access request",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 129.9,
+    "y": 6,
+    "w": 114.1,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Access request#0"
+  },
+  {
+   "kind": "text",
+   "text": "AR-2604-0112",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 141.5,
+    "y": 28.5,
+    "w": 91,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|AR-2604-0112#0"
+  },
+  {
+   "kind": "text",
+   "text": "Mon 6 Apr · 2:33 PM",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 36,
+    "y": 77,
+    "w": 128.6,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Mon 6 Apr · 2:33 PM#0"
+  },
+  {
+   "kind": "text",
+   "text": "Sent",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 309.3,
+    "y": 77,
+    "w": 28.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(4, 120, 87)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "5px"
+   },
+   "key": "text|Sent#0"
+  },
+  {
+   "kind": "text",
+   "text": "Number change sent to the Lodestar admin",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 36,
+    "y": 104.5,
+    "w": 262.3,
+    "h": 58.8
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Number change sent to the Lodestar admin#0"
+  },
+  {
+   "kind": "text",
+   "text": "For security, number changes are checked by a call to the store next morning.",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 36,
+    "y": 174.1,
+    "w": 282.8,
+    "h": 37.3
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|For security, number changes are checked by a call to the store next morning.#0"
+  },
+  {
+   "kind": "text",
+   "text": "What happens next",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 250.7,
+    "w": 123.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|What happens next#0"
+  },
+  {
+   "kind": "text",
+   "text": "Request sent",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 68,
+    "y": 295.2,
+    "w": 96,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Request sent#0"
+  },
+  {
+   "kind": "text",
+   "text": "2:33 PM",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 289.4,
+    "y": 297.2,
+    "w": 52.6,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|2:33 PM#0"
+  },
+  {
+   "kind": "text",
+   "text": "For Fathima Rizwan, OUT106 store manager",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 68,
+    "y": 319.7,
+    "w": 269.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|For Fathima Rizwan, OUT106 store manager#0"
+  },
+  {
+   "kind": "text",
+   "text": "Admin checks it's you",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 68,
+    "y": 355.5,
+    "w": 161.3,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Admin checks it's you#0"
+  },
+  {
+   "kind": "text",
+   "text": "Tue ~10 AM",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 265.1,
+    "y": 357.5,
+    "w": 76.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Tue ~10 AM#0"
+  },
+  {
+   "kind": "text",
+   "text": "A call to the store's landline",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 68,
+    "y": 380,
+    "w": 169.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|A call to the store's landline#0"
+  },
+  {
+   "kind": "text",
+   "text": "Code to your new number",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 68,
+    "y": 415.9,
+    "w": 128.1,
+    "h": 41.5
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Code to your new number#0"
+  },
+  {
+   "kind": "text",
+   "text": "Tue by 11 AM",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 254.5,
+    "y": 417.9,
+    "w": 87.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Tue by 11 AM#0"
+  },
+  {
+   "kind": "text",
+   "text": "Orders and settings carry over",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 68,
+    "y": 462.9,
+    "w": 187.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Orders and settings carry over#0"
+  },
+  {
+   "kind": "text",
+   "text": "Your saved draft order stays on this phone",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 64,
+    "y": 531.7,
+    "w": 242.1,
+    "h": 37.3
+   },
+   "style": {
+    "color": "rgb(3, 105, 161)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Your saved draft order stays on this phone#0"
+  },
+  {
+   "kind": "text",
+   "text": "For Tue 7 Apr, call Kandy Hub before 4:00 PM",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 64,
+    "y": 574.3,
+    "w": 277.8,
+    "h": 37.3
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|For Tue 7 Apr, call Kandy Hub before 4:00 PM#0"
+  },
+  {
+   "kind": "text",
+   "text": "Done",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 165.2,
+    "y": 659.3,
+    "w": 43.5,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Done#0"
+  },
+  {
+   "kind": "text",
+   "text": "Call Kandy Hub to order instead",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 73.5,
+    "y": 719.8,
+    "w": 226.9,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Call Kandy Hub to order instead#0"
+  }
+ ]
+}

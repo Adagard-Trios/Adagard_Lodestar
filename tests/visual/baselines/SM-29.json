@@ -1,0 +1,1693 @@
+{
+ "id": "SM-29",
+ "name": "SM-29 Messages · desktop",
+ "board": "P1",
+ "device": "desktop",
+ "key": "sm-29-messages",
+ "live": {
+  "app": "desk",
+  "face": "store",
+  "path": "/store/sm-29-messages"
+ },
+ "viewport": {
+  "width": 1438,
+  "height": 858
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Lodestar Store",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 66,
+    "y": 20.5,
+    "w": 116.5,
+    "h": 21
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Lodestar Store#0"
+  },
+  {
+   "kind": "text",
+   "text": "Waypoint Fresh Nuwara Eliya",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 236.5,
+    "y": 22.8,
+    "w": 184.6,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 12px 0px 8px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Waypoint Fresh Nuwara Eliya#0"
+  },
+  {
+   "kind": "text",
+   "text": "F",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 214,
+    "y": 23.5,
+    "w": 7,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgb(21, 128, 61)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12px",
+    "fontWeight": "800",
+    "borderRadius": "6px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|F#0"
+  },
+  {
+   "kind": "text",
+   "text": "OUT106",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 429.1,
+    "y": 22.8,
+    "w": 46,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|OUT106#0"
+  },
+  {
+   "kind": "text",
+   "text": "Order",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 573.1,
+    "y": 23,
+    "w": 38.6,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 14px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Order#0"
+  },
+  {
+   "kind": "text",
+   "text": "Deliveries",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 669.7,
+    "y": 23,
+    "w": 67.2,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 14px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Deliveries#0"
+  },
+  {
+   "kind": "text",
+   "text": "Receipts",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 795,
+    "y": 23,
+    "w": 58.6,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "10px",
+    "padding": "0px 14px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Receipts#0"
+  },
+  {
+   "kind": "text",
+   "text": "Messages",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 911.5,
+    "y": 23,
+    "w": 70.2,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(59, 76, 202)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "10px",
+    "padding": "0px 14px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Messages#0"
+  },
+  {
+   "kind": "text",
+   "text": "Tue 7 Apr · 8:44 AM",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1182.8,
+    "y": 22.8,
+    "w": 125.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Tue 7 Apr · 8:44 AM#0"
+  },
+  {
+   "kind": "text",
+   "text": "FR",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1384.9,
+    "y": 22.8,
+    "w": 16.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(26, 19, 0)",
+    "backgroundColor": "rgb(245, 184, 61)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "800",
+    "borderRadius": "50%",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|FR#0"
+  },
+  {
+   "kind": "text",
+   "text": "Structured notices from Kandy Hub, drivers and Lodestar nothing needs action",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 28,
+    "y": 87,
+    "w": 509.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Structured notices from Kandy Hub, drivers and Lodestar nothing needs action#0"
+  },
+  {
+   "kind": "text",
+   "text": "Messages",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 28,
+    "y": 107.5,
+    "w": 122.5,
+    "h": 33
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "26px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Messages#1"
+  },
+  {
+   "kind": "text",
+   "text": "All",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1049.7,
+    "y": 113.6,
+    "w": 16.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgb(20, 27, 77)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 14px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|All#0"
+  },
+  {
+   "kind": "text",
+   "text": "7",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1072.5,
+    "y": 113.6,
+    "w": 7.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|7#0"
+  },
+  {
+   "kind": "text",
+   "text": "Needs action",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1116.1,
+    "y": 113.6,
+    "w": 83.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 14px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Needs action#0"
+  },
+  {
+   "kind": "text",
+   "text": "0",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1205.6,
+    "y": 113.6,
+    "w": 9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|0#0"
+  },
+  {
+   "kind": "text",
+   "text": "Deliveries",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1250.6,
+    "y": 113.6,
+    "w": 63.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 14px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Deliveries#1"
+  },
+  {
+   "kind": "text",
+   "text": "Credits",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1350,
+    "y": 113.6,
+    "w": 46,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 14px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Credits#0"
+  },
+  {
+   "kind": "text",
+   "text": "Today · Tue 7 Apr",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 46,
+    "y": 170.4,
+    "w": 110,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "12px 18px 6px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Today · Tue 7 Apr#0"
+  },
+  {
+   "kind": "text",
+   "text": "Receipt matched",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 96,
+    "y": 210.9,
+    "w": 106.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Receipt matched#0"
+  },
+  {
+   "kind": "text",
+   "text": "8:40",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 459.6,
+    "y": 210.9,
+    "w": 30.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|8:40#0"
+  },
+  {
+   "kind": "text",
+   "text": "Your count agrees with the driver's record",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 96,
+    "y": 232.4,
+    "w": 297.6,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Your count agrees with the driver's record#0"
+  },
+  {
+   "kind": "text",
+   "text": "ORD0104216 · ORD0104217 · CN-2604-0441",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 96,
+    "y": 254,
+    "w": 273,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|ORD0104216 · ORD0104217 · CN-2604-0441#0"
+  },
+  {
+   "kind": "text",
+   "text": "Delivery",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 96,
+    "y": 301.1,
+    "w": 52.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Delivery#0"
+  },
+  {
+   "kind": "text",
+   "text": "6:33",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 460.4,
+    "y": 301.1,
+    "w": 29.6,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|6:33#0"
+  },
+  {
+   "kind": "text",
+   "text": "VEH057 arrived at your rear dock",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 96,
+    "y": 322.6,
+    "w": 235.1,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|VEH057 arrived at your rear dock#0"
+  },
+  {
+   "kind": "text",
+   "text": "Ruwan B. · stop 1 of 2",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 96,
+    "y": 344.2,
+    "w": 132.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Ruwan B. · stop 1 of 2#0"
+  },
+  {
+   "kind": "text",
+   "text": "Shortfall · you saw it 3:24",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 96,
+    "y": 391.4,
+    "w": 161,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Shortfall · you saw it 3:24#0"
+  },
+  {
+   "kind": "text",
+   "text": "3:21",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 463.5,
+    "y": 391.4,
+    "w": 26.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|3:21#0"
+  },
+  {
+   "kind": "text",
+   "text": "2 cases yoghurt 80 g short at loading",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 96,
+    "y": 412.9,
+    "w": 263.5,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|2 cases yoghurt 80 g short at loading#0"
+  },
+  {
+   "kind": "text",
+   "text": "Credited · follow-up booked Wed 8 Apr",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 96,
+    "y": 434.5,
+    "w": 240,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Credited · follow-up booked Wed 8 Apr#0"
+  },
+  {
+   "kind": "text",
+   "text": "Mon 6 Apr",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 46,
+    "y": 479.6,
+    "w": 66,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "12px 18px 6px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Mon 6 Apr#0"
+  },
+  {
+   "kind": "text",
+   "text": "Arrival window",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 96,
+    "y": 520.1,
+    "w": 95.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Arrival window#0"
+  },
+  {
+   "kind": "text",
+   "text": "6:40 PM",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 436,
+    "y": 520.1,
+    "w": 54,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|6:40 PM#0"
+  },
+  {
+   "kind": "text",
+   "text": "Tue 7 Apr: 6:15–6:55, you're stop 1",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 96,
+    "y": 541.6,
+    "w": 242.2,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Tue 7 Apr: 6:15–6:55, you're stop 1#0"
+  },
+  {
+   "kind": "text",
+   "text": "Plan published by Kandy Hub",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 96,
+    "y": 563.2,
+    "w": 180.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Plan published by Kandy Hub#0"
+  },
+  {
+   "kind": "text",
+   "text": "Orders received",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 96,
+    "y": 610.4,
+    "w": 101.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Orders received#0"
+  },
+  {
+   "kind": "text",
+   "text": "2:38 PM",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 437,
+    "y": 610.4,
+    "w": 53,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|2:38 PM#0"
+  },
+  {
+   "kind": "text",
+   "text": "2 orders, 92 units for Tue 7 Apr",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 96,
+    "y": 631.9,
+    "w": 218.5,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|2 orders, 92 units for Tue 7 Apr#0"
+  },
+  {
+   "kind": "text",
+   "text": "ORD0104216 · ORD0104217",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 96,
+    "y": 653.5,
+    "w": 168.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|ORD0104216 · ORD0104217#0"
+  },
+  {
+   "kind": "text",
+   "text": "New Year",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 96,
+    "y": 700.6,
+    "w": 60.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|New Year#0"
+  },
+  {
+   "kind": "text",
+   "text": "9:00 AM",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 434.8,
+    "y": 700.6,
+    "w": 55.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|9:00 AM#0"
+  },
+  {
+   "kind": "text",
+   "text": "Last run before the holiday is Sat 11 Apr",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 96,
+    "y": 722.1,
+    "w": 276.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Last run before the holiday is Sat 11 Apr#0"
+  },
+  {
+   "kind": "text",
+   "text": "Orders close Fri 10 Apr, 4:00 PM",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 96,
+    "y": 743.7,
+    "w": 199,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Orders close Fri 10 Apr, 4:00 PM#0"
+  },
+  {
+   "kind": "text",
+   "text": "Receipt matched",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 586,
+    "y": 186.6,
+    "w": 106.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(4, 120, 87)",
+    "backgroundColor": "rgb(232, 248, 240)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 12px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Receipt matched#1"
+  },
+  {
+   "kind": "text",
+   "text": "Tue 7 Apr · 8:40 AM · automatic",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1183.6,
+    "y": 186.6,
+    "w": 198.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Tue 7 Apr · 8:40 AM · automatic#0"
+  },
+  {
+   "kind": "text",
+   "text": "Your receipt agrees with the driver's record",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 554,
+    "y": 225.4,
+    "w": 599.8,
+    "h": 38
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Your receipt agrees with the driver's record#0"
+  },
+  {
+   "kind": "text",
+   "text": "Two independent records of the same delivery, so there is nothing to dispute.",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 554,
+    "y": 268.9,
+    "w": 547.7,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Two independent records of the same delivery, so there is nothing to dispute.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Your count · 7:10",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 592,
+    "y": 325.4,
+    "w": 105.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Your count · 7:10#0"
+  },
+  {
+   "kind": "text",
+   "text": "58 + 31",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 570,
+    "y": 352.9,
+    "w": 79.2,
+    "h": 30
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|58 + 31#0"
+  },
+  {
+   "kind": "text",
+   "text": "Dry 58 of 58 · chilled 31 of 34",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 570,
+    "y": 393.9,
+    "w": 188.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13.5px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Dry 58 of 58 · chilled 31 of 34#0"
+  },
+  {
+   "kind": "text",
+   "text": "VEH057 proof of delivery · 6:58",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1013,
+    "y": 325.4,
+    "w": 199.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|VEH057 proof of delivery · 6:58#0"
+  },
+  {
+   "kind": "text",
+   "text": "58 + 31",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 991,
+    "y": 352.9,
+    "w": 79.2,
+    "h": 30
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "24px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|58 + 31#1"
+  },
+  {
+   "kind": "text",
+   "text": "Made offline above Ramboda, synced 8:40",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 991,
+    "y": 393.9,
+    "w": 273.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13.5px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Made offline above Ramboda, synced 8:40#0"
+  },
+  {
+   "kind": "text",
+   "text": "Orders",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 554,
+    "y": 457.1,
+    "w": 46.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Orders#0"
+  },
+  {
+   "kind": "text",
+   "text": "dry · chilled",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 736.6,
+    "y": 457.1,
+    "w": 167.5,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|dry · chilled#0"
+  },
+  {
+   "kind": "text",
+   "text": "ORD0104216",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 654,
+    "y": 457.1,
+    "w": 82.6,
+    "h": 18
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|ORD0104216#0"
+  },
+  {
+   "kind": "text",
+   "text": "ORD0104217",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 774.4,
+    "y": 457.1,
+    "w": 82.6,
+    "h": 18
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|ORD0104217#0"
+  },
+  {
+   "kind": "text",
+   "text": "Credit note",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 554,
+    "y": 498.4,
+    "w": 74.9,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Credit note#0"
+  },
+  {
+   "kind": "text",
+   "text": "· 3 units · yoghurt × 2 short, chicken × 1 damaged",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 753.1,
+    "y": 498.4,
+    "w": 331.2,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|· 3 units · yoghurt × 2 short, chicken × 1 damaged#0"
+  },
+  {
+   "kind": "text",
+   "text": "CN-2604-0441",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 654,
+    "y": 498.4,
+    "w": 99.1,
+    "h": 18
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|CN-2604-0441#0"
+  },
+  {
+   "kind": "text",
+   "text": "Evidence",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 554,
+    "y": 539.7,
+    "w": 62.4,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Evidence#0"
+  },
+  {
+   "kind": "text",
+   "text": "Your photo 6:52 and the driver's photo 6:57, both attached",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 654,
+    "y": 539.7,
+    "w": 386.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Your photo 6:52 and the driver's photo 6:57, both attached#0"
+  },
+  {
+   "kind": "text",
+   "text": "Signed by",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 554,
+    "y": 581,
+    "w": 67.4,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Signed by#0"
+  },
+  {
+   "kind": "text",
+   "text": "M. Ilyas at the dock · confirmed by Fathima Rizwan",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 654,
+    "y": 581,
+    "w": 336.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|M. Ilyas at the dock · confirmed by Fathima Rizwan#0"
+  },
+  {
+   "kind": "text",
+   "text": "View credit note",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 570,
+    "y": 639.8,
+    "w": 111.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "12px",
+    "padding": "0px 16px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|View credit note#0"
+  },
+  {
+   "kind": "text",
+   "text": "Open order thread",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 723.3,
+    "y": 639.8,
+    "w": 124.8,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "12px",
+    "padding": "0px 16px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Open order thread#0"
+  }
+ ]
+}

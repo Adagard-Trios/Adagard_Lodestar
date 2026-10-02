@@ -1,0 +1,418 @@
+{
+ "id": "DSP-06",
+ "name": "DSP-06 Sign in · desktop",
+ "board": "P2",
+ "device": "desktop",
+ "key": "dsp-06-sign-in",
+ "live": {
+  "app": "desk",
+  "face": "plan",
+  "path": "/plan/dsp-06-sign-in"
+ },
+ "viewport": {
+  "width": 1438,
+  "height": 858
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Lodestar Plan",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 104,
+    "y": 53,
+    "w": 133.2,
+    "h": 25
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "12px"
+   },
+   "key": "text|Lodestar Plan#0"
+  },
+  {
+   "kind": "text",
+   "text": "Every order,",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 56,
+    "y": 143,
+    "w": 214.1,
+    "h": 47
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "38px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Every order,#0"
+  },
+  {
+   "kind": "text",
+   "text": "one thread.",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 56,
+    "y": 185.5,
+    "w": 204.9,
+    "h": 47
+   },
+   "style": {
+    "color": "rgb(255, 203, 92)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "38px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|one thread.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Review the agent's plans, approve them for docks, drivers and stores, and follow every order to the shelf.",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 56,
+    "y": 255.1,
+    "w": 471.5,
+    "h": 44.8
+   },
+   "style": {
+    "color": "rgb(185, 192, 230)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Review the agent's plans, approve them for docks, drivers and stores, and follow every order to the shelf.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Peliyagoda DC",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 78,
+    "y": 791.5,
+    "w": 90.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(142, 151, 196)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "7px"
+   },
+   "key": "text|Peliyagoda DC#0"
+  },
+  {
+   "kind": "text",
+   "text": "Kandy Hub",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 208.2,
+    "y": 791.5,
+    "w": 68,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(142, 151, 196)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "7px"
+   },
+   "key": "text|Kandy Hub#0"
+  },
+  {
+   "kind": "text",
+   "text": "Waypoint Group staff only",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 316.2,
+    "y": 791.5,
+    "w": 159.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(142, 151, 196)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "7px"
+   },
+   "key": "text|Waypoint Group staff only#0"
+  },
+  {
+   "kind": "text",
+   "text": "Waypoint Group · Lodestar Plan",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 839,
+    "y": 222.6,
+    "w": 198,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Waypoint Group · Lodestar Plan#0"
+  },
+  {
+   "kind": "text",
+   "text": "Sign in to plan the run",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 839,
+    "y": 246.1,
+    "w": 327.3,
+    "h": 43
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "34px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Sign in to plan the run#0"
+  },
+  {
+   "kind": "text",
+   "text": "Use your work email. Dispatchers and depot leads only.",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 839,
+    "y": 296.5,
+    "w": 367.8,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Use your work email. Dispatchers and depot leads only.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Work email",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 839,
+    "y": 338.5,
+    "w": 71.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Work email#0"
+  },
+  {
+   "kind": "text",
+   "text": "nilanthi.perera@waypoint.lk",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 883,
+    "y": 377.8,
+    "w": 196.5,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "borderRadius": "14px",
+    "padding": "0px 16px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|nilanthi.perera@waypoint.lk#0"
+  },
+  {
+   "kind": "text",
+   "text": "Continue",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 977.7,
+    "y": 450,
+    "w": 72.5,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "800",
+    "borderRadius": "16px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Continue#0"
+  },
+  {
+   "kind": "text",
+   "text": "or",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1022.5,
+    "y": 509,
+    "w": 13.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "12px"
+   },
+   "key": "text|or#0"
+  },
+  {
+   "kind": "text",
+   "text": "Sign in with Waypoint single sign-on",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 901.9,
+    "y": 565.5,
+    "w": 284.2,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "16px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Sign in with Waypoint single sign-on#0"
+  },
+  {
+   "kind": "text",
+   "text": "Trouble signing in? Call the Peliyagoda IT desk.",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 839,
+    "y": 624.5,
+    "w": 289.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Trouble signing in? Call the Peliyagoda IT desk.#0"
+  }
+ ]
+}

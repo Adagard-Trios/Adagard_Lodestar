@@ -1,0 +1,117 @@
+{
+ "id": "LD-05",
+ "name": "LD-05 Splash · phone",
+ "board": "P3",
+ "device": "phone",
+ "key": "ld-05-splash",
+ "live": {
+  "app": "field",
+  "path": "s/ld-05-splash"
+ },
+ "viewport": {
+  "width": 374,
+  "height": 758
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Lodestar Dock",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 58.5,
+    "y": 365,
+    "w": 257,
+    "h": 47
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "38px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Lodestar Dock#0"
+  },
+  {
+   "kind": "text",
+   "text": "Every order, one thread.",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 89.2,
+    "y": 427,
+    "w": 195.6,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(185, 192, 230)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "500",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Every order, one thread.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Downloading tonight's plan",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 94.5,
+    "y": 669.5,
+    "w": 184.9,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(185, 192, 230)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Downloading tonight's plan#0"
+  },
+  {
+   "kind": "text",
+   "text": "Waypoint Group",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 148.7,
+    "y": 711.5,
+    "w": 102.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(142, 151, 199)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "10px 0px 0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Waypoint Group#0"
+  }
+ ]
+}

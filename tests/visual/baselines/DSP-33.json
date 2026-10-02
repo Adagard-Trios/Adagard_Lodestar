@@ -1,0 +1,792 @@
+{
+ "id": "DSP-33",
+ "name": "DSP-33 Me and alert rules · phone",
+ "board": "P2",
+ "device": "phone",
+ "key": "dsp-33-me-and-alert-rules",
+ "live": {
+  "app": "field",
+  "path": "s/dsp-33-me-and-alert-rules"
+ },
+ "viewport": {
+  "width": 374,
+  "height": 1014
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "NP",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 35.2,
+    "y": 34,
+    "w": 25.5,
+    "h": 21
+   },
+   "style": {
+    "color": "rgb(26, 19, 0)",
+    "backgroundColor": "rgb(245, 184, 61)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "18px",
+    "fontWeight": "800",
+    "borderRadius": "50%",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|NP#0"
+  },
+  {
+   "kind": "text",
+   "text": "Nilanthi Perera",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 90,
+    "y": 9,
+    "w": 149.8,
+    "h": 28
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "22px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Nilanthi Perera#0"
+  },
+  {
+   "kind": "text",
+   "text": "Dispatcher · Peliyagoda office · both depots",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 90,
+    "y": 39.4,
+    "w": 239.8,
+    "h": 37.3
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Dispatcher · Peliyagoda office · both depots#0"
+  },
+  {
+   "kind": "text",
+   "text": "On call now",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 36,
+    "y": 122.2,
+    "w": 73.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(185, 192, 230)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|On call now#0"
+  },
+  {
+   "kind": "text",
+   "text": "until 7:00",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 36,
+    "y": 149,
+    "w": 169.1,
+    "h": 51
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "40px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|until 7:00#0"
+  },
+  {
+   "kind": "text",
+   "text": "AM",
+   "tag": "small",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 209.1,
+    "y": 170,
+    "w": 31.7,
+    "h": 25
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px 0px 0px 4px",
+    "gap": "normal"
+   },
+   "key": "text|AM#0"
+  },
+  {
+   "kind": "text",
+   "text": "Mon to Sat, 3:00 to 7:00 AM on operating days. Off Sun 12 to Tue 14 Apr for New Year.",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 36,
+    "y": 206,
+    "w": 292.1,
+    "h": 37.3
+   },
+   "style": {
+    "color": "rgb(221, 225, 245)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Mon to Sat, 3:00 to 7:00 AM on operating days. Off Sun 12 to Tue 14 Apr for New Year.#0"
+  },
+  {
+   "kind": "text",
+   "text": "What wakes me",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 284.6,
+    "w": 100.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|What wakes me#0"
+  },
+  {
+   "kind": "text",
+   "text": "4 of 5 on",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 298.7,
+    "y": 284.6,
+    "w": 55.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|4 of 5 on#0"
+  },
+  {
+   "kind": "text",
+   "text": "Vehicle can't depart",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 322.4,
+    "w": 152.3,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Vehicle can't depart#0"
+  },
+  {
+   "kind": "text",
+   "text": "Push and SMS · always",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 346.5,
+    "w": 142.6,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Push and SMS · always#0"
+  },
+  {
+   "kind": "text",
+   "text": "Late risk 30% or more",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 86,
+    "y": 387.4,
+    "w": 166.3,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Late risk 30% or more#0"
+  },
+  {
+   "kind": "text",
+   "text": "Push · rising risk only",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 411.5,
+    "w": 130.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Push · rising risk only#0"
+  },
+  {
+   "kind": "text",
+   "text": "Loader and store flags",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 452.4,
+    "w": 168.9,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Loader and store flags#0"
+  },
+  {
+   "kind": "text",
+   "text": "Push · shortfalls, blocked docks",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 476.5,
+    "w": 195,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Push · shortfalls, blocked docks#0"
+  },
+  {
+   "kind": "text",
+   "text": "Silent 15 min, unknown place",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 86,
+    "y": 517.1,
+    "w": 173.2,
+    "h": 39.1
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Silent 15 min, unknown place#0"
+  },
+  {
+   "kind": "text",
+   "text": "Push and call · outside known zones",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 561.4,
+    "w": 182.5,
+    "h": 34.2
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Push and call · outside known zones#0"
+  },
+  {
+   "kind": "text",
+   "text": "Known signal-loss zones",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 620.1,
+    "w": 189.8,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Known signal-loss zones#0"
+  },
+  {
+   "kind": "text",
+   "text": "Show as predicted, no alert",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 644.2,
+    "w": 168,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Show as predicted, no alert#0"
+  },
+  {
+   "kind": "text",
+   "text": "Account",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 691.7,
+    "w": 53.6,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Account#0"
+  },
+  {
+   "kind": "text",
+   "text": "Fingerprint unlock",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 729.6,
+    "w": 138.9,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Fingerprint unlock#0"
+  },
+  {
+   "kind": "text",
+   "text": "This phone only",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 753.7,
+    "w": 98.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|This phone only#0"
+  },
+  {
+   "kind": "text",
+   "text": "Backup on call",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 794.6,
+    "w": 110,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Backup on call#0"
+  },
+  {
+   "kind": "text",
+   "text": "Kandy Hub shift lead",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 818.7,
+    "w": 127.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Kandy Hub shift lead#0"
+  },
+  {
+   "kind": "text",
+   "text": "Sign out",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 859.6,
+    "w": 62.3,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Sign out#0"
+  },
+  {
+   "kind": "text",
+   "text": "Alerts stop on this phone",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 883.7,
+    "w": 153.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Alerts stop on this phone#0"
+  },
+  {
+   "kind": "text",
+   "text": "Alerts",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 36.5,
+    "y": 989.5,
+    "w": 38.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "4px 0px",
+    "margin": "0px",
+    "gap": "3px"
+   },
+   "key": "text|Alerts#0"
+  },
+  {
+   "kind": "text",
+   "text": "1",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 68.3,
+    "y": 959.3,
+    "w": 4.9,
+    "h": 14
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgb(180, 35, 24)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "11px",
+    "fontWeight": "800",
+    "borderRadius": "999px",
+    "padding": "0px 5px",
+    "margin": "0px 0px 0px 6px",
+    "gap": "normal"
+   },
+   "key": "text|1#0"
+  },
+  {
+   "kind": "text",
+   "text": "Live",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 130.2,
+    "y": 989.5,
+    "w": 26.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "4px 0px",
+    "margin": "0px",
+    "gap": "3px"
+   },
+   "key": "text|Live#0"
+  },
+  {
+   "kind": "text",
+   "text": "Plans",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 213.3,
+    "y": 989.5,
+    "w": 34.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "4px 0px",
+    "margin": "0px",
+    "gap": "3px"
+   },
+   "key": "text|Plans#0"
+  },
+  {
+   "kind": "text",
+   "text": "Me",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 308.3,
+    "y": 989.5,
+    "w": 19.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(59, 76, 202)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "4px 0px",
+    "margin": "0px",
+    "gap": "3px"
+   },
+   "key": "text|Me#0"
+  }
+ ]
+}

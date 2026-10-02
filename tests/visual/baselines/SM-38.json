@@ -1,0 +1,542 @@
+{
+ "id": "SM-38",
+ "name": "SM-38 Voice pack downloading · phone",
+ "board": "P1",
+ "device": "phone",
+ "key": "sm-38-voice-pack-downloading",
+ "live": {
+  "app": "field",
+  "path": "s/sm-38-voice-pack-downloading"
+ },
+ "viewport": {
+  "width": 374,
+  "height": 758
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Voice pack",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 146.6,
+    "y": 6,
+    "w": 80.7,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Voice pack#0"
+  },
+  {
+   "kind": "text",
+   "text": "Voice & language",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 132.7,
+    "y": 28.5,
+    "w": 108.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Voice & language#0"
+  },
+  {
+   "kind": "text",
+   "text": "Downloading on store Wi-Fi",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 56,
+    "y": 77,
+    "w": 174,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Downloading on store Wi-Fi#0"
+  },
+  {
+   "kind": "text",
+   "text": "voice",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 300.8,
+    "y": 77,
+    "w": 37.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|voice#0"
+  },
+  {
+   "kind": "text",
+   "text": "සිංහල",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 259.2,
+    "y": 77,
+    "w": 41.6,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Noto Sans Sinhala\", Inter, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|සිංහල#0"
+  },
+  {
+   "kind": "text",
+   "text": "64",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 36,
+    "y": 98.5,
+    "w": 54.7,
+    "h": 61
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "48px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|64#0"
+  },
+  {
+   "kind": "text",
+   "text": "%",
+   "tag": "small",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 94.7,
+    "y": 127.5,
+    "w": 20.7,
+    "h": 25
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px 0px 0px 4px",
+    "gap": "normal"
+   },
+   "key": "text|%#0"
+  },
+  {
+   "kind": "text",
+   "text": "23 of 36 MB · about 1 min left",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 36,
+    "y": 182.5,
+    "w": 193.6,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|23 of 36 MB · about 1 min left#0"
+  },
+  {
+   "kind": "text",
+   "text": "Everything works without it; text is always shown",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 64,
+    "y": 252.8,
+    "w": 237.4,
+    "h": 37.3
+   },
+   "style": {
+    "color": "rgb(3, 105, 161)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Everything works without it; text is always shown#0"
+  },
+  {
+   "kind": "text",
+   "text": "Orders, arrival windows and notices read the same on screen while this finishes.",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 64,
+    "y": 295.4,
+    "w": 271.4,
+    "h": 37.3
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Orders, arrival windows and notices read the same on screen while this finishes.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Downloads",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 32,
+    "y": 378.7,
+    "w": 79,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Downloads#0"
+  },
+  {
+   "kind": "text",
+   "text": "Once, on Wi-Fi only",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 194.7,
+    "y": 378.7,
+    "w": 147.3,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Once, on Wi-Fi only#0"
+  },
+  {
+   "kind": "text",
+   "text": "Mobile data",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 32,
+    "y": 427.2,
+    "w": 83,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Mobile data#0"
+  },
+  {
+   "kind": "text",
+   "text": "Not used",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 275.7,
+    "y": 427.2,
+    "w": 66.3,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Not used#0"
+  },
+  {
+   "kind": "text",
+   "text": "After that",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 32,
+    "y": 475.2,
+    "w": 65.9,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|After that#0"
+  },
+  {
+   "kind": "text",
+   "text": "Works with no signal",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 188.2,
+    "y": 475.2,
+    "w": 153.8,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(4, 120, 87)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Works with no signal#0"
+  },
+  {
+   "kind": "text",
+   "text": "Until it's ready",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 526,
+    "w": 92,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Until it's ready#0"
+  },
+  {
+   "kind": "text",
+   "text": "in Sinhala",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 292.5,
+    "y": 526,
+    "w": 61.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|in Sinhala#0"
+  },
+  {
+   "kind": "text",
+   "text": "Voice not downloaded, text still works",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 59,
+    "y": 566,
+    "w": 259.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(87, 83, 78)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 16px 0px 14px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Voice not downloaded, text still works#0"
+  },
+  {
+   "kind": "text",
+   "text": "Keep using the app",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 109.6,
+    "y": 659.3,
+    "w": 154.8,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Keep using the app#0"
+  },
+  {
+   "kind": "text",
+   "text": "Pause download",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 127.8,
+    "y": 719.8,
+    "w": 118.5,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Pause download#0"
+  }
+ ]
+}

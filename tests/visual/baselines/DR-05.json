@@ -1,0 +1,142 @@
+{
+ "id": "DR-05",
+ "name": "DR-05 Splash · phone",
+ "board": "P4",
+ "device": "phone",
+ "key": "dr-05-splash",
+ "live": {
+  "app": "field",
+  "path": "s/dr-05-splash"
+ },
+ "viewport": {
+  "width": 374,
+  "height": 758
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Lodestar",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 65.5,
+    "y": 298.5,
+    "w": 171.9,
+    "h": 51
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "40px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Lodestar#0"
+  },
+  {
+   "kind": "text",
+   "text": "Run",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 237.4,
+    "y": 298.5,
+    "w": 71,
+    "h": 51
+   },
+   "style": {
+    "color": "rgb(255, 203, 92)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "40px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Run#0"
+  },
+  {
+   "kind": "text",
+   "text": "Every order, one thread.",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 94.9,
+    "y": 363.5,
+    "w": 184.1,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(185, 192, 230)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "500",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Every order, one thread.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Checking for today's run",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 109.4,
+    "y": 686,
+    "w": 155.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(201, 207, 232)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Checking for today's run#0"
+  },
+  {
+   "kind": "text",
+   "text": "Waypoint Lodestar · for Waypoint Group",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 61.4,
+    "y": 717.5,
+    "w": 251.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(127, 137, 184)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Waypoint Lodestar · for Waypoint Group#0"
+  }
+ ]
+}

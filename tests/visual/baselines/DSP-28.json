@@ -1,0 +1,792 @@
+{
+ "id": "DSP-28",
+ "name": "DSP-28 Approve re-plan · phone",
+ "board": "P2",
+ "device": "phone",
+ "key": "dsp-28-approve-re-plan",
+ "live": {
+  "app": "field",
+  "path": "s/dsp-28-approve-re-plan"
+ },
+ "viewport": {
+  "width": 374,
+  "height": 1014
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Alerts",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 40,
+    "y": 16,
+    "w": 47.3,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(59, 76, 202)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "2px"
+   },
+   "key": "text|Alerts#0"
+  },
+  {
+   "kind": "text",
+   "text": "Re-plan",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 168.2,
+    "y": 16,
+    "w": 61,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px 58px 0px 0px",
+    "gap": "normal"
+   },
+   "key": "text|Re-plan#0"
+  },
+  {
+   "kind": "text",
+   "text": "VEH006 can't depart · 3:45, bay P5",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 64,
+    "y": 71,
+    "w": 241,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(180, 35, 24)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|VEH006 can't depart · 3:45, bay P5#0"
+  },
+  {
+   "kind": "text",
+   "text": "Reefer 9 °C, needs 4 °C or colder. 6 chilled orders, 10.3 m³, back in the cold room.",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 64,
+    "y": 93.3,
+    "w": 259.9,
+    "h": 57.6
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Reefer 9 °C, needs 4 °C or colder. 6 chilled orders, 10.3 m³, back in the cold room.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Planning agent drafted this re-plan at 3:47",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 36,
+    "y": 206.2,
+    "w": 264.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Planning agent drafted this re-plan at 3:47#0"
+  },
+  {
+   "kind": "text",
+   "text": "6 of 6",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 36,
+    "y": 228.7,
+    "w": 107,
+    "h": 56
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "44px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|6 of 6#0"
+  },
+  {
+   "kind": "text",
+   "text": "served",
+   "tag": "small",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 147,
+    "y": 253.7,
+    "w": 65.6,
+    "h": 25
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px 0px 0px 4px",
+    "gap": "normal"
+   },
+   "key": "text|served#0"
+  },
+  {
+   "kind": "text",
+   "text": "0 deferrals. Protected goes first. 3 changes, all rules pass. Approve to send; nothing is sent before.",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 36,
+    "y": 289.7,
+    "w": 288,
+    "h": 57.6
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|0 deferrals. Protected goes first. 3 changes, all rules pass. Approve to send; nothing is sent before.#0"
+  },
+  {
+   "kind": "text",
+   "text": "OUT028",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 183.9,
+    "y": 289.7,
+    "w": 57.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|OUT028#0"
+  },
+  {
+   "kind": "text",
+   "text": "3 changes",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 20,
+    "y": 388.6,
+    "w": 66.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|3 changes#0"
+  },
+  {
+   "kind": "text",
+   "text": "1",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 49.9,
+    "y": 446.1,
+    "w": 6.2,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(59, 76, 202)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|1#0"
+  },
+  {
+   "kind": "text",
+   "text": "Merge into VEH002 Trip 2",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 86,
+    "y": 426.1,
+    "w": 195,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Merge into VEH002 Trip 2#0"
+  },
+  {
+   "kind": "text",
+   "text": "protected, first ~6:40 · + · 258 / 270 min",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 86,
+    "y": 450.2,
+    "w": 204.3,
+    "h": 35.2
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|protected, first ~6:40 · + · 258 / 270 min#0"
+  },
+  {
+   "kind": "text",
+   "text": "OUT028",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 86,
+    "y": 450.2,
+    "w": 46,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|OUT028#1"
+  },
+  {
+   "kind": "text",
+   "text": "OUT034",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 290.3,
+    "y": 450.2,
+    "w": 46,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|OUT034#0"
+  },
+  {
+   "kind": "text",
+   "text": "2",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 48.5,
+    "y": 529.1,
+    "w": 9,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(59, 76, 202)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|2#0"
+  },
+  {
+   "kind": "text",
+   "text": "Colombo trip to VEH005",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 86,
+    "y": 509.6,
+    "w": 183.3,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Colombo trip to VEH005#0"
+  },
+  {
+   "kind": "text",
+   "text": "3 orders · 5.4 m³ · whole trip · 247 / 270 min",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 86,
+    "y": 533.7,
+    "w": 244.6,
+    "h": 34.2
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|3 orders · 5.4 m³ · whole trip · 247 / 270 min#0"
+  },
+  {
+   "kind": "text",
+   "text": "3",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 48.4,
+    "y": 603,
+    "w": 9.2,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(180, 83, 9)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|3#0"
+  },
+  {
+   "kind": "text",
+   "text": "Negombo: pick one",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 86,
+    "y": 592.1,
+    "w": 146.8,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Negombo: pick one#0"
+  },
+  {
+   "kind": "text",
+   "text": "· chilled 1.6 m³ · window to 8:00",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 132,
+    "y": 616.3,
+    "w": 198.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|· chilled 1.6 m³ · window to 8:00#0"
+  },
+  {
+   "kind": "text",
+   "text": "OUT031",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 86,
+    "y": 616.3,
+    "w": 46,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|OUT031#0"
+  },
+  {
+   "kind": "text",
+   "text": "Negombo, your call",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 664.4,
+    "w": 123.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Negombo, your call#0"
+  },
+  {
+   "kind": "text",
+   "text": "agent suggests A",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 243,
+    "y": 664.4,
+    "w": 111,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|agent suggests A#0"
+  },
+  {
+   "kind": "text",
+   "text": "A · VEH036 reefer van, Trip 2",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 66,
+    "y": 706.9,
+    "w": 219.7,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|A · VEH036 reefer van, Trip 2#0"
+  },
+  {
+   "kind": "text",
+   "text": "Arrives ~7:20, 40 min to spare",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 66,
+    "y": 733.2,
+    "w": 192.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13.5px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Arrives ~7:20, 40 min to spare#0"
+  },
+  {
+   "kind": "text",
+   "text": "Late risk 22%",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 78,
+    "y": 755.4,
+    "w": 86,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(180, 83, 9)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "5px"
+   },
+   "key": "text|Late risk 22%#0"
+  },
+  {
+   "kind": "text",
+   "text": "B · Defer to Wed 8 Apr",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 66,
+    "y": 811.9,
+    "w": 166.4,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15.5px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|B · Defer to Wed 8 Apr#0"
+  },
+  {
+   "kind": "text",
+   "text": "VEH-DOWN · score 27 · not protected",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 66,
+    "y": 838.2,
+    "w": 241.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13.5px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|VEH-DOWN · score 27 · not protected#0"
+  },
+  {
+   "kind": "text",
+   "text": "Approve & send",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 137.4,
+    "y": 915.3,
+    "w": 131.2,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Approve & send#0"
+  },
+  {
+   "kind": "text",
+   "text": "Open on desktop",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 125.9,
+    "y": 975.8,
+    "w": 122.2,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Open on desktop#0"
+  }
+ ]
+}

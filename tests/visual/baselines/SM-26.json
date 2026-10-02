@@ -1,0 +1,718 @@
+{
+ "id": "SM-26",
+ "name": "SM-26 Sign in · desktop",
+ "board": "P1",
+ "device": "desktop",
+ "key": "sm-26-sign-in",
+ "live": {
+  "app": "desk",
+  "face": "store",
+  "path": "/store/sm-26-sign-in"
+ },
+ "viewport": {
+  "width": 1438,
+  "height": 858
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Lodestar Store",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 114,
+    "y": 63.5,
+    "w": 160.2,
+    "h": 28
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "22px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "14px"
+   },
+   "key": "text|Lodestar Store#0"
+  },
+  {
+   "kind": "text",
+   "text": "Every order, one thread.",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 56,
+    "y": 124,
+    "w": 225.3,
+    "h": 95.8
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "40px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Every order, one thread.#0"
+  },
+  {
+   "kind": "text",
+   "text": "for the next morning's run",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 276.1,
+    "y": 253.6,
+    "w": 201,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(213, 218, 242)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|for the next morning's run#0"
+  },
+  {
+   "kind": "text",
+   "text": "Order before 4:00 PM",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 106,
+    "y": 253.6,
+    "w": 170.1,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Order before 4:00 PM#0"
+  },
+  {
+   "kind": "text",
+   "text": ", live while the van is out",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 288.9,
+    "y": 305.6,
+    "w": 185,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(213, 218, 242)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|, live while the van is out#0"
+  },
+  {
+   "kind": "text",
+   "text": "Arrival window by 7 PM",
+   "tag": "b",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 106,
+    "y": 305.6,
+    "w": 182.9,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Arrival window by 7 PM#0"
+  },
+  {
+   "kind": "text",
+   "text": ", credit notes raised for you",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 271.8,
+    "y": 357.6,
+    "w": 207.4,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(213, 218, 242)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|, credit notes raised for you#0"
+  },
+  {
+   "kind": "text",
+   "text": "Confirm what arrived",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 106,
+    "y": 357.6,
+    "w": 165.8,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Confirm what arrived#0"
+  },
+  {
+   "kind": "text",
+   "text": "Fresh · Style · Tech",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 193.4,
+    "y": 611,
+    "w": 126.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(185, 192, 230)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "195.406px 0px 0px",
+    "gap": "12px"
+   },
+   "key": "text|Fresh · Style · Tech#0"
+  },
+  {
+   "kind": "text",
+   "text": "Waypoint Group",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 56,
+    "y": 611,
+    "w": 110.4,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Waypoint Group#0"
+  },
+  {
+   "kind": "text",
+   "text": "Sign in",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 835,
+    "y": 188.3,
+    "w": 90.5,
+    "h": 38
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Sign in#0"
+  },
+  {
+   "kind": "text",
+   "text": "For store managers and receiving staff of Waypoint outlets.",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 835,
+    "y": 231.8,
+    "w": 362.9,
+    "h": 41.5
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|For store managers and receiving staff of Waypoint outlets.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Phone number",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 835,
+    "y": 298.8,
+    "w": 92.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Phone number#0"
+  },
+  {
+   "kind": "text",
+   "text": "Change",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1173.7,
+    "y": 298.8,
+    "w": 49.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(59, 76, 202)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Change#0"
+  },
+  {
+   "kind": "text",
+   "text": "+94",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 875.7,
+    "y": 341.5,
+    "w": 34.1,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px 12px 0px 0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|+94#0"
+  },
+  {
+   "kind": "text",
+   "text": "LK",
+   "tag": "small",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 851,
+    "y": 343.5,
+    "w": 16.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|LK#0"
+  },
+  {
+   "kind": "text",
+   "text": "77 318 4526",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 934.8,
+    "y": 340,
+    "w": 113.5,
+    "h": 24
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "19px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|77 318 4526#0"
+  },
+  {
+   "kind": "text",
+   "text": "6-digit code from SMS",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 835,
+    "y": 402.3,
+    "w": 142.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|6-digit code from SMS#0"
+  },
+  {
+   "kind": "text",
+   "text": "Resend in 0:24",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1130.9,
+    "y": 402.3,
+    "w": 92.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Resend in 0:24#0"
+  },
+  {
+   "kind": "text",
+   "text": "4",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 855.4,
+    "y": 440.3,
+    "w": 17.2,
+    "h": 33
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "26px",
+    "fontWeight": "800",
+    "borderRadius": "14px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|4#0"
+  },
+  {
+   "kind": "text",
+   "text": "8",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 921.8,
+    "y": 440.3,
+    "w": 16.5,
+    "h": 33
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "26px",
+    "fontWeight": "800",
+    "borderRadius": "14px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|8#0"
+  },
+  {
+   "kind": "text",
+   "text": "1",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 990.6,
+    "y": 440.3,
+    "w": 10.8,
+    "h": 33
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "26px",
+    "fontWeight": "800",
+    "borderRadius": "14px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|1#0"
+  },
+  {
+   "kind": "text",
+   "text": "2",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1054.3,
+    "y": 440.3,
+    "w": 15.5,
+    "h": 33
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "26px",
+    "fontWeight": "800",
+    "borderRadius": "14px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|2#0"
+  },
+  {
+   "kind": "text",
+   "text": "0",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1118.9,
+    "y": 440.3,
+    "w": 18.2,
+    "h": 33
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "26px",
+    "fontWeight": "800",
+    "borderRadius": "14px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|0#0"
+  },
+  {
+   "kind": "text",
+   "text": "7",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1186.7,
+    "y": 440.3,
+    "w": 14.7,
+    "h": 33
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "26px",
+    "fontWeight": "800",
+    "borderRadius": "14px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|7#0"
+  },
+  {
+   "kind": "text",
+   "text": "Remember this counter PC for 30 days",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 865,
+    "y": 508.8,
+    "w": 256.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Remember this counter PC for 30 days#0"
+  },
+  {
+   "kind": "text",
+   "text": "Sign in",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 990,
+    "y": 565.8,
+    "w": 53,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "14px",
+    "padding": "0px 16px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Sign in#1"
+  },
+  {
+   "kind": "text",
+   "text": "Trouble signing in? Call Kandy Hub, +94 81 222 4410",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 857,
+    "y": 648.8,
+    "w": 349.7,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Trouble signing in? Call Kandy Hub, +94 81 222 4410#0"
+  }
+ ]
+}

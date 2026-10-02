@@ -1,0 +1,767 @@
+{
+ "id": "LD-28",
+ "name": "LD-28 Voice and language · phone",
+ "board": "P3",
+ "device": "phone",
+ "key": "ld-28-voice-and-language",
+ "live": {
+  "app": "field",
+  "path": "s/ld-28-voice-and-language"
+ },
+ "viewport": {
+  "width": 374,
+  "height": 758
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Voice",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 131.9,
+    "y": 15.8,
+    "w": 41.3,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Voice#0"
+  },
+  {
+   "kind": "text",
+   "text": "Works offline",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 261.1,
+    "y": 17.3,
+    "w": 84.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(4, 120, 87)",
+    "backgroundColor": "rgb(227, 246, 236)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 12px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Works offline#0"
+  },
+  {
+   "kind": "text",
+   "text": "Settings · Kasun J. · this phone",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 57,
+    "w": 193.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Settings · Kasun J. · this phone#0"
+  },
+  {
+   "kind": "text",
+   "text": "Read aloud",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 78.5,
+    "w": 156,
+    "h": 38
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Read aloud#0"
+  },
+  {
+   "kind": "text",
+   "text": "Language of the voice",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 132.1,
+    "w": 140.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Language of the voice#0"
+  },
+  {
+   "kind": "text",
+   "text": "screen text stays",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 245.2,
+    "y": 132.1,
+    "w": 108.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|screen text stays#0"
+  },
+  {
+   "kind": "text",
+   "text": "English",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 35,
+    "y": 174.8,
+    "w": 69.4,
+    "h": 25
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|English#0"
+  },
+  {
+   "kind": "text",
+   "text": "EN",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 62,
+    "y": 205.8,
+    "w": 15.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|EN#0"
+  },
+  {
+   "kind": "text",
+   "text": "සිංහල",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 152.5,
+    "y": 174.8,
+    "w": 69,
+    "h": 25
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|සිංහල#0"
+  },
+  {
+   "kind": "text",
+   "text": "SI",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 179.3,
+    "y": 205.8,
+    "w": 15.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|SI#0"
+  },
+  {
+   "kind": "text",
+   "text": "தமிழ்",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 273,
+    "y": 174.8,
+    "w": 62.7,
+    "h": 25
+   },
+   "style": {
+    "color": "rgb(255, 203, 92)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|தமிழ்#0"
+  },
+  {
+   "kind": "text",
+   "text": "TA",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 296.7,
+    "y": 205.8,
+    "w": 15.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(201, 207, 232)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|TA#0"
+  },
+  {
+   "kind": "text",
+   "text": "Read next line",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 90,
+    "y": 267.6,
+    "w": 109.7,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Read next line#0"
+  },
+  {
+   "kind": "text",
+   "text": "Speaks the highlighted line",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 90,
+    "y": 292.4,
+    "w": 167.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(52, 64, 84)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "500",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Speaks the highlighted line#0"
+  },
+  {
+   "kind": "text",
+   "text": "Earpiece",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 90,
+    "y": 336.6,
+    "w": 68.5,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Earpiece#0"
+  },
+  {
+   "kind": "text",
+   "text": "voice goes only here",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 185.9,
+    "y": 361.4,
+    "w": 128.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(52, 64, 84)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "500",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|voice goes only here#0"
+  },
+  {
+   "kind": "text",
+   "text": "Connected",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 102,
+    "y": 361.4,
+    "w": 68.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(4, 120, 87)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "5px"
+   },
+   "key": "text|Connected#0"
+  },
+  {
+   "kind": "text",
+   "text": "Speed",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 90,
+    "y": 404.6,
+    "w": 49.7,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Speed#0"
+  },
+  {
+   "kind": "text",
+   "text": "Slower is clearer",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 90,
+    "y": 429.4,
+    "w": 56.3,
+    "h": 34.2
+   },
+   "style": {
+    "color": "rgb(52, 64, 84)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "500",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Slower is clearer#0"
+  },
+  {
+   "kind": "text",
+   "text": "Slow",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 221,
+    "y": 426.2,
+    "w": 33.3,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(52, 64, 84)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Slow#0"
+  },
+  {
+   "kind": "text",
+   "text": "Normal",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 278.2,
+    "y": 426.2,
+    "w": 49.8,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgb(20, 27, 77)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Normal#0"
+  },
+  {
+   "kind": "text",
+   "text": "voice pack",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 139.5,
+    "y": 493.5,
+    "w": 88.2,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|voice pack#0"
+  },
+  {
+   "kind": "text",
+   "text": "தமிழ்",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 90,
+    "y": 495.5,
+    "w": 49.5,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Noto Sans Tamil\", Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|தமிழ்#1"
+  },
+  {
+   "kind": "text",
+   "text": "On this phone works offline",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 90,
+    "y": 520.3,
+    "w": 182,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(52, 64, 84)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "500",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|On this phone works offline#0"
+  },
+  {
+   "kind": "text",
+   "text": "48",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 318.8,
+    "y": 491.8,
+    "w": 23.2,
+    "h": 25
+   },
+   "style": {
+    "color": "rgb(10, 15, 26)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|48#0"
+  },
+  {
+   "kind": "text",
+   "text": "MB",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 321.4,
+    "y": 522.8,
+    "w": 20.6,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|MB#0"
+  },
+  {
+   "kind": "text",
+   "text": "Test line",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 66,
+    "y": 649,
+    "w": 61.6,
+    "h": 21
+   },
+   "style": {
+    "color": "rgb(20, 27, 77)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "800",
+    "borderRadius": "999px",
+    "padding": "0px 22px 0px 18px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Test line#0"
+  },
+  {
+   "kind": "text",
+   "text": "இந்தக் குரல் தெளிவாகக் கேட்கிறதா?",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 161.6,
+    "y": 634.2,
+    "w": 187.6,
+    "h": 32.9
+   },
+   "style": {
+    "color": "rgb(52, 64, 84)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Noto Sans Tamil\", Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|இந்தக் குரல் தெளிவாகக் கேட்கிறதா?#0"
+  },
+  {
+   "kind": "text",
+   "text": "\"Can you hear this clearly?\"",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 161.6,
+    "y": 668.9,
+    "w": 176.3,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|\"Can you hear this clearly?\"#0"
+  },
+  {
+   "kind": "text",
+   "text": "Done",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 181.2,
+    "y": 711.3,
+    "w": 43.5,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Done#0"
+  }
+ ]
+}

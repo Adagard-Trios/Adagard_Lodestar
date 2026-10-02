@@ -1,0 +1,618 @@
+{
+ "id": "DSP-34",
+ "name": "DSP-34 Reset access · desktop",
+ "board": "P2",
+ "device": "desktop",
+ "key": "dsp-34-reset-access",
+ "live": {
+  "app": "desk",
+  "face": "plan",
+  "path": "/plan/dsp-34-reset-access"
+ },
+ "viewport": {
+  "width": 1438,
+  "height": 858
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Lodestar Plan",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 104,
+    "y": 53,
+    "w": 133.2,
+    "h": 25
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "20px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "12px"
+   },
+   "key": "text|Lodestar Plan#0"
+  },
+  {
+   "kind": "text",
+   "text": "Every order,",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 56,
+    "y": 143,
+    "w": 214.1,
+    "h": 47
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "38px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Every order,#0"
+  },
+  {
+   "kind": "text",
+   "text": "one thread.",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 56,
+    "y": 185.5,
+    "w": 204.9,
+    "h": 47
+   },
+   "style": {
+    "color": "rgb(255, 203, 92)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "38px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|one thread.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Review the agent's plans, approve them for docks, drivers and stores, and follow every order to the shelf.",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 56,
+    "y": 255.1,
+    "w": 471.5,
+    "h": 44.8
+   },
+   "style": {
+    "color": "rgb(185, 192, 230)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Review the agent's plans, approve them for docks, drivers and stores, and follow every order to the shelf.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Peliyagoda DC",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 78,
+    "y": 791.5,
+    "w": 90.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(142, 151, 196)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "7px"
+   },
+   "key": "text|Peliyagoda DC#0"
+  },
+  {
+   "kind": "text",
+   "text": "Kandy Hub",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 208.2,
+    "y": 791.5,
+    "w": 68,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(142, 151, 196)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "7px"
+   },
+   "key": "text|Kandy Hub#0"
+  },
+  {
+   "kind": "text",
+   "text": "Waypoint Group staff only",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 316.2,
+    "y": 791.5,
+    "w": 159.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(142, 151, 196)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "7px"
+   },
+   "key": "text|Waypoint Group staff only#0"
+  },
+  {
+   "kind": "text",
+   "text": "Trouble signing in · reset link sent 4:12 PM",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 889,
+    "y": 147.7,
+    "w": 263.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Trouble signing in · reset link sent 4:12 PM#0"
+  },
+  {
+   "kind": "text",
+   "text": "Check your work email",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 839,
+    "y": 195.5,
+    "w": 356.5,
+    "h": 43
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "34px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Check your work email#0"
+  },
+  {
+   "kind": "text",
+   "text": "We sent a single sign-on reset link to . It works once and expires in 15 minutes.",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 839,
+    "y": 245.8,
+    "w": 372.1,
+    "h": 59
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|We sent a single sign-on reset link to . It works once and expires in 15 minutes.#0"
+  },
+  {
+   "kind": "text",
+   "text": "nilanthi.perera@waypoint.lk",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 839,
+    "y": 266.8,
+    "w": 194,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|nilanthi.perera@waypoint.lk#0"
+  },
+  {
+   "kind": "text",
+   "text": "Your draft plan is safe",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 889,
+    "y": 345.8,
+    "w": 158.8,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Your draft plan is safe#0"
+  },
+  {
+   "kind": "text",
+   "text": "The planning agent keeps drafting Tue 7 Apr on the server, ready ~4:20. Nothing goes live until you approve.",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 889,
+    "y": 371.3,
+    "w": 298.7,
+    "h": 59
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|The planning agent keeps drafting Tue 7 Apr on the server, ready ~4:20. Nothing goes live until you approve.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Back to sign in",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 986.9,
+    "y": 486.3,
+    "w": 114.2,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "800",
+    "borderRadius": "16px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Back to sign in#0"
+  },
+  {
+   "kind": "text",
+   "text": "No email after 2 minutes?",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 839,
+    "y": 546.3,
+    "w": 168.1,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(74, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|No email after 2 minutes?#0"
+  },
+  {
+   "kind": "text",
+   "text": "Resend link",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1015.1,
+    "y": 546.1,
+    "w": 73.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(59, 76, 202)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "4px"
+   },
+   "key": "text|Resend link#0"
+  },
+  {
+   "kind": "text",
+   "text": "· 45 s",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 1096.3,
+    "y": 546.3,
+    "w": 36.7,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|· 45 s#0"
+  },
+  {
+   "kind": "text",
+   "text": "or ask a person",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 980.8,
+    "y": 588.3,
+    "w": 96.4,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "12px"
+   },
+   "key": "text|or ask a person#0"
+  },
+  {
+   "kind": "text",
+   "text": "Ask the Lodestar admin",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 891,
+    "y": 629.8,
+    "w": 172.7,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Ask the Lodestar admin#0"
+  },
+  {
+   "kind": "text",
+   "text": "Resets single sign-on and depot access",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 891,
+    "y": 653.3,
+    "w": 244.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Resets single sign-on and depot access#0"
+  },
+  {
+   "kind": "text",
+   "text": "Message",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1161.1,
+    "y": 638.8,
+    "w": 57.9,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(59, 76, 202)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "9px 0px 0px",
+    "gap": "4px"
+   },
+   "key": "text|Message#0"
+  },
+  {
+   "kind": "text",
+   "text": "Call the Peliyagoda IT desk",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 891,
+    "y": 686.2,
+    "w": 196.8,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(15, 20, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Call the Peliyagoda IT desk#0"
+  },
+  {
+   "kind": "text",
+   "text": "Open 24 hours · locked accounts, new phones",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 891,
+    "y": 709.7,
+    "w": 285.6,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Open 24 hours · locked accounts, new phones#0"
+  },
+  {
+   "kind": "text",
+   "text": "Call",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 1194.8,
+    "y": 695.2,
+    "w": 24.2,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(59, 76, 202)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "9px 0px 0px",
+    "gap": "4px"
+   },
+   "key": "text|Call#0"
+  }
+ ]
+}

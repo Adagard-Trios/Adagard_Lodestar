@@ -1,0 +1,642 @@
+{
+ "id": "SM-39",
+ "name": "SM-39 Deferral notice speaking · phone",
+ "board": "P1",
+ "device": "phone",
+ "key": "sm-39-deferral-notice-speaking",
+ "live": {
+  "app": "field",
+  "path": "s/sm-39-deferral-notice-speaking"
+ },
+ "viewport": {
+  "width": 374,
+  "height": 758
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Notice",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 163,
+    "y": 6,
+    "w": 48,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Notice#0"
+  },
+  {
+   "kind": "text",
+   "text": "Kiribathgoda · OUT027",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 115.1,
+    "y": 28.5,
+    "w": 143.8,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Kiribathgoda · OUT027#0"
+  },
+  {
+   "kind": "text",
+   "text": "Chilled order moved",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 36,
+    "y": 73,
+    "w": 127.7,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(180, 83, 9)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Chilled order moved#0"
+  },
+  {
+   "kind": "text",
+   "text": "Mon 6 Apr · 6:40 PM",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 208.5,
+    "y": 73,
+    "w": 129.5,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Mon 6 Apr · 6:40 PM#0"
+  },
+  {
+   "kind": "text",
+   "text": "Wed 8 Apr",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 36,
+    "y": 91.5,
+    "w": 200.2,
+    "h": 53
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "42px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Wed 8 Apr#0"
+  },
+  {
+   "kind": "text",
+   "text": "· 1.6 m³ · first stop on Trip 1, window 05:00–07:30",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 36,
+    "y": 146.5,
+    "w": 269.3,
+    "h": 37.3
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|· 1.6 m³ · first stop on Trip 1, window 05:00–07:30#0"
+  },
+  {
+   "kind": "text",
+   "text": "ORD0104188",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 36,
+    "y": 146.5,
+    "w": 82.6,
+    "h": 18
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|ORD0104188#0"
+  },
+  {
+   "kind": "text",
+   "text": "Reason",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 32,
+    "y": 224.1,
+    "w": 50.2,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Reason#0"
+  },
+  {
+   "kind": "text",
+   "text": "Reefer space full on Tue 7 Apr ·",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 132,
+    "y": 224.1,
+    "w": 207.8,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Reefer space full on Tue 7 Apr ·#0"
+  },
+  {
+   "kind": "text",
+   "text": "CAP-REEFER",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 132,
+    "y": 244.4,
+    "w": 82.6,
+    "h": 18
+   },
+   "style": {
+    "color": "rgb(180, 83, 9)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|CAP-REEFER#0"
+  },
+  {
+   "kind": "text",
+   "text": "Your shelves",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 32,
+    "y": 279.7,
+    "w": 87,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Your shelves#0"
+  },
+  {
+   "kind": "text",
+   "text": "Last delivery this morning, so chilled cover lasts to Wed.",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 132,
+    "y": 279.7,
+    "w": 194.3,
+    "h": 37.3
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Last delivery this morning, so chilled cover lasts to Wed.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Fair to you",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 32,
+    "y": 335.3,
+    "w": 70.7,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(99, 108, 128)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Fair to you#0"
+  },
+  {
+   "kind": "text",
+   "text": "Your . It's protected.",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 132,
+    "y": 335.3,
+    "w": 146.3,
+    "h": 37.3
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Your . It's protected.#0"
+  },
+  {
+   "kind": "text",
+   "text": "next order won't be moved",
+   "tag": "b",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 132,
+    "y": 335.3,
+    "w": 167,
+    "h": 37.3
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|next order won't be moved#0"
+  },
+  {
+   "kind": "text",
+   "text": "\"Reserved your first slot on Wed Trip 1.\" · N. Perera, dispatcher",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 42,
+    "y": 397.9,
+    "w": 289.2,
+    "h": 38
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|\"Reserved your first slot on Wed Trip 1.\" · N. Perera, dispatcher#0"
+  },
+  {
+   "kind": "text",
+   "text": "Now speaking",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 53,
+    "y": 463.1,
+    "w": 90.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(59, 76, 202)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Now speaking#0"
+  },
+  {
+   "kind": "text",
+   "text": "also available",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 253.6,
+    "y": 463.9,
+    "w": 79.4,
+    "h": 15
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgb(255, 255, 255)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "12px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 9px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|also available#0"
+  },
+  {
+   "kind": "text",
+   "text": "தமிழ்",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 208.5,
+    "y": 464.9,
+    "w": 37.1,
+    "h": 14
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Noto Sans Tamil\", Inter, sans-serif",
+    "fontSize": "12px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|தமிழ்#0"
+  },
+  {
+   "kind": "text",
+   "text": "අප්‍රේල් 7 අඟහරුවාදා ශීතකරණ වාහනයේ ඉඩ පිරී ඇති නිසාය. ඔබේ ඊළඟ ඇණවුම මාරු නොකෙරේ.",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 32,
+    "y": 512.6,
+    "w": 293.1,
+    "h": 83.1
+   },
+   "style": {
+    "color": "rgb(16, 24, 40)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Noto Sans Sinhala\", Inter, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|අප්‍රේල් 7 අඟහරුවාදා ශීතකරණ වාහනයේ ඉඩ පිරී ඇති නිසාය. ඔබේ ඊළඟ ඇණවුම මාරු නොකෙරේ.#0"
+  },
+  {
+   "kind": "text",
+   "text": "ඔබේ ශීත කළ ඇණවුම ORD0104188, අප්‍රේල් 8 බදාදාට මාරු කර ඇත.",
+   "tag": "span",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 32,
+    "y": 490.9,
+    "w": 263.5,
+    "h": 39.7
+   },
+   "style": {
+    "color": "rgb(42, 53, 144)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Noto Sans Sinhala\", Inter, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|ඔබේ ශීත කළ ඇණවුම ORD0104188, අප්‍රේල් 8 බදාදාට මාරු කර ඇත.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Acknowledge",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 129.6,
+    "y": 659.3,
+    "w": 114.8,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Acknowledge#0"
+  },
+  {
+   "kind": "text",
+   "text": "Speaking ·",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 54,
+    "y": 721.5,
+    "w": 72.1,
+    "h": 17
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgb(59, 76, 202)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "999px",
+    "padding": "0px 14px 0px 12px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Speaking ·#0"
+  },
+  {
+   "kind": "text",
+   "text": "සිංහල",
+   "tag": "span",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 132.1,
+    "y": 720.5,
+    "w": 45.6,
+    "h": 18
+   },
+   "style": {
+    "color": "rgb(255, 255, 255)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Noto Sans Sinhala\", Inter, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|සිංහල#0"
+  },
+  {
+   "kind": "text",
+   "text": "Call dispatcher",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 247.3,
+    "y": 719.8,
+    "w": 108,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(71, 84, 103)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Call dispatcher#0"
+  }
+ ]
+}

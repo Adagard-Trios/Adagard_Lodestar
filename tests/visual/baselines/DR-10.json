@@ -1,0 +1,267 @@
+{
+ "id": "DR-10",
+ "name": "DR-10 First-run tips · phone",
+ "board": "P4",
+ "device": "phone",
+ "key": "dr-10-first-run-tips",
+ "live": {
+  "app": "field",
+  "path": "s/dr-10-first-run-tips"
+ },
+ "viewport": {
+  "width": 374,
+  "height": 758
+ },
+ "elements": [
+  {
+   "kind": "text",
+   "text": "Set up",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 163.7,
+    "y": 15.8,
+    "w": 46.6,
+    "h": 19
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "15px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Set up#0"
+  },
+  {
+   "kind": "text",
+   "text": "Step 3 of 3",
+   "tag": "div",
+   "role": "",
+   "dynamic": true,
+   "box": {
+    "x": 20,
+    "y": 63,
+    "w": 68.1,
+    "h": 16
+   },
+   "style": {
+    "color": "rgb(127, 137, 163)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "600",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "8px"
+   },
+   "key": "text|Step 3 of 3#0"
+  },
+  {
+   "kind": "text",
+   "text": "Use it only when you're stopped",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 20,
+    "y": 84.5,
+    "w": 320.4,
+    "h": 71.6
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "30px",
+    "fontWeight": "800",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Use it only when you're stopped#0"
+  },
+  {
+   "kind": "text",
+   "text": "Stopped, not driving",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 98,
+    "y": 186.7,
+    "w": 158.9,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Stopped, not driving#0"
+  },
+  {
+   "kind": "text",
+   "text": "While the van moves, you only see the next stop in big type. Buttons wait until you stop.",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 98,
+    "y": 211.5,
+    "w": 240.8,
+    "h": 52.4
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "500",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|While the van moves, you only see the next stop in big type. Buttons wait until you stop.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Works without signal",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 98,
+    "y": 290,
+    "w": 164.6,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Works without signal#0"
+  },
+  {
+   "kind": "text",
+   "text": "Your run is saved on this phone. Records send by themselves when signal returns.",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 98,
+    "y": 314.8,
+    "w": 216,
+    "h": 52.4
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "500",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Your run is saved on this phone. Records send by themselves when signal returns.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Call, don't type",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 98,
+    "y": 393.4,
+    "w": 118.5,
+    "h": 20
+   },
+   "style": {
+    "color": "rgb(242, 244, 250)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "16px",
+    "fontWeight": "700",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "normal"
+   },
+   "key": "text|Call, don't type#0"
+  },
+  {
+   "kind": "text",
+   "text": "Dispatch sends notices to you. To talk, tap Call dispatch.",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 98,
+    "y": 418.2,
+    "w": 239,
+    "h": 34.2
+   },
+   "style": {
+    "color": "rgb(181, 189, 209)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "fontWeight": "500",
+    "borderRadius": "0px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "6px"
+   },
+   "key": "text|Dispatch sends notices to you. To talk, tap Call dispatch.#0"
+  },
+  {
+   "kind": "text",
+   "text": "Got it",
+   "tag": "div",
+   "role": "",
+   "dynamic": false,
+   "box": {
+    "x": 164.3,
+    "y": 711.3,
+    "w": 45.3,
+    "h": 22
+   },
+   "style": {
+    "color": "rgb(17, 21, 34)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "fontFamily": "\"Plus Jakarta Sans\", Inter, sans-serif",
+    "fontSize": "17px",
+    "fontWeight": "800",
+    "borderRadius": "18px",
+    "padding": "0px",
+    "margin": "0px",
+    "gap": "10px"
+   },
+   "key": "text|Got it#0"
+  }
+ ]
+}
