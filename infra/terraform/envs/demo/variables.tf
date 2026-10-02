@@ -52,10 +52,16 @@ variable "ssh_public_key_path" {
   type        = string
 }
 
-variable "budget_amount" {
-  description = "Monthly budget for the resource group, in the billing currency (USD)."
+variable "credit_amount" {
+  description = "The subscription's credit (USD): one budget tracks the total spent against it."
   type        = number
   default     = 100
+}
+
+variable "monthly_budget" {
+  description = "Expected monthly cost (USD): ~$44.50 for Standard_B2als_v2 + 32 GB SSD + static IP in eastasia."
+  type        = number
+  default     = 45
 }
 
 variable "budget_alert_emails" {

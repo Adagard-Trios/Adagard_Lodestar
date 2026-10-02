@@ -7,6 +7,8 @@ host=${1:?usage: make-env.sh <fqdn, e.g. waypoint-lodestar.southeastasia.cloudap
 email=${2:?usage: make-env.sh <fqdn> <acme-email>}
 [ -e .env ] && { echo ".env already exists: refusing to overwrite (move it away first)"; exit 1; }
 rnd() { openssl rand -base64 33 | tr -d '/+=\n' | cut -c1-32; }
+# the realm's password policy wants a lower-case letter and a special character (backend/identity)
+user_pw() { echo "$(rnd | cut -c1-20)-x$(rnd | cut -c1-4)"; }
 umask 077
 {
   echo "# demo VM settings, generated $(date -u +%FT%TZ). Keep private."
@@ -19,8 +21,8 @@ umask 077
   echo "KEYCLOAK_ADMIN=kcadmin"
   echo "KEYCLOAK_ADMIN_PASSWORD=$(rnd)"
   echo "# The four demo personas sign in with these (published in the README for the judges)"
-  echo "LODESTAR_DEMO_PASSWORD=${LODESTAR_DEMO_PASSWORD:-$(rnd)}"
-  echo "LODESTAR_ADMIN_PASSWORD=${LODESTAR_ADMIN_PASSWORD:-$(rnd)}"
+  echo "LODESTAR_DEMO_PASSWORD=${LODESTAR_DEMO_PASSWORD:-$(user_pw)}"
+  echo "LODESTAR_ADMIN_PASSWORD=${LODESTAR_ADMIN_PASSWORD:-$(user_pw)}"
   for s in AUTH ORDERS PLANNING FLEET OUTLETS TRIPS SYNC NOTIFICATIONS AUDIT AGENT; do
     echo "SVC_${s}_SECRET=$(rnd)"
   done

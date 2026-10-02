@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Starts (or updates) the demo stack on the VM: compose + the production override, after checking .env.
-#   deploy/azure-demo/up.sh            start: pull the CI images when REGISTRY and TAG are set in .env, else build here
+#   deploy/azure-demo/up.sh            start: pull the CI images when REGISTRY and TAG are set in .env; else use the
+#                                      images ship.sh loaded, building here only the ones missing (REBUILD=1: all)
 #   deploy/azure-demo/up.sh down       stop (keeps the data)
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -33,6 +34,7 @@ if [ -n "$(env_val REGISTRY)" ] && [ -n "$(env_val TAG)" ]; then
 else
   # one image at a time: parallel Next.js and Nest builds do not fit in 4 GiB
   for s in $("${compose[@]}" config --format json | jq -r '.services | to_entries[] | select(.value.build) | .key'); do
+    if [ "${REBUILD:-}" != 1 ] && docker image inspect "lodestar-$s" >/dev/null 2>&1; then continue; fi
     echo "building $s"; "${compose[@]}" build "$s"
   done
   "${compose[@]}" up -d --no-build --remove-orphans

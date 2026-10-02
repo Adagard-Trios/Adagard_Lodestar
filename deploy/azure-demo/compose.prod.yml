@@ -70,6 +70,7 @@ services:
     mem_limit: 384m
     environment:
       NODE_OPTIONS: --max-old-space-size=256
+      DEMO_ADMIN_PASSWORD_HINT: ""        # the public start page never shows the admin password
   mobile-web:
     mem_limit: 64m
 

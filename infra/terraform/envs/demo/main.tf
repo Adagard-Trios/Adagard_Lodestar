@@ -125,10 +125,43 @@ resource "azurerm_linux_virtual_machine" "vm" {
   }
 }
 
-resource "azurerm_consumption_budget_resource_group" "demo" {
-  name              = "${var.name}-budget"
+# Two budgets, because the student credit is one $100 pot while Azure budgets reset on their time grain:
+#  - "credit": the whole credit, one year from budget_start_date; alerts as it is used up (actual and forecast)
+#  - "monthly": the expected run rate (~$45/month for this VM); alerts early if a month costs more than planned
+resource "azurerm_consumption_budget_resource_group" "credit" {
+  name              = "${var.name}-credit"
   resource_group_id = azurerm_resource_group.demo.id
-  amount            = var.budget_amount
+  amount            = var.credit_amount
+  time_grain        = "Annually"
+
+  time_period {
+    start_date = "${var.budget_start_date}T00:00:00Z"
+  }
+
+  dynamic "notification" {
+    for_each = [25, 50, 75, 90]
+    content {
+      enabled        = true
+      operator       = "GreaterThanOrEqualTo"
+      threshold      = notification.value
+      threshold_type = "Actual"
+      contact_emails = var.budget_alert_emails
+    }
+  }
+
+  notification {
+    enabled        = true
+    operator       = "GreaterThanOrEqualTo"
+    threshold      = 100 # forecast: the credit will run out within the year at the current rate
+    threshold_type = "Forecasted"
+    contact_emails = var.budget_alert_emails
+  }
+}
+
+resource "azurerm_consumption_budget_resource_group" "monthly" {
+  name              = "${var.name}-monthly"
+  resource_group_id = azurerm_resource_group.demo.id
+  amount            = var.monthly_budget
   time_grain        = "Monthly"
 
   time_period {
@@ -138,7 +171,7 @@ resource "azurerm_consumption_budget_resource_group" "demo" {
   notification {
     enabled        = true
     operator       = "GreaterThanOrEqualTo"
-    threshold      = 50 * 100 / var.budget_amount # alert at $50
+    threshold      = 50
     threshold_type = "Actual"
     contact_emails = var.budget_alert_emails
   }
@@ -146,8 +179,16 @@ resource "azurerm_consumption_budget_resource_group" "demo" {
   notification {
     enabled        = true
     operator       = "GreaterThanOrEqualTo"
-    threshold      = 80 * 100 / var.budget_amount # alert at $80
+    threshold      = 100
     threshold_type = "Actual"
+    contact_emails = var.budget_alert_emails
+  }
+
+  notification {
+    enabled        = true
+    operator       = "GreaterThanOrEqualTo"
+    threshold      = 110 # forecast: this month will cost more than planned
+    threshold_type = "Forecasted"
     contact_emails = var.budget_alert_emails
   }
 }

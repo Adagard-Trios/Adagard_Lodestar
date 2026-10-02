@@ -7,7 +7,7 @@ One Ubuntu VM runs the same `docker compose` stack as a laptop. Caddy sits in fr
 | Resource group, VNet, subnet, NSG | 80 and 443 open; 22 only from your address range |
 | Static public IP with a DNS label | Standard SKU |
 | VM | `Standard_B2als_v2` (2 vCPU, 4 GiB), Ubuntu 24.04, 32 GB Standard SSD, 4 GiB swap (`vm_size`, `os_disk_size_gb`) |
-| Budget on the resource group | $100 a month, e-mail alerts at $50 and $80 |
+| Budgets on the resource group | **credit**: $100 for the year, alerts at 25/50/75/90% spent and when the forecast says the credit runs out; **monthly**: $45, alerts at 50% and 100% and when the month is forecast above $49.50 |
 
 Not used, on purpose: managed Postgres/Redis, Front Door, an Azure container registry (CI pushes to GHCR), Log Analytics, spot VMs, auto-shutdown, and k3s (`install_k3s = true` adds it for the GitOps path; then use `Standard_B2ms`).
 
@@ -25,7 +25,9 @@ Approximate pay-as-you-go list prices (check them in the Azure pricing calculato
 | Outbound data (judges browsing) | < $1 |
 | **Total** | **~$35–42** |
 
-$100 of credit therefore keeps the demo up for about two and a half months. The budget alerts arrive at $50 and $80; to stop the cost, `terraform destroy` (everything is in one resource group).
+$100 of credit therefore keeps the demo up for about two and a half months. A monthly budget alone would never fire (each month costs less than the credit), so a second budget tracks the total against the $100. Cost data reaches Azure 8–24 hours late. Check it in the portal (Cost Management → Cost analysis, scope `lodestar-demo-rg`) and the remaining credit at https://www.microsoftazuresponsorships.com/Balance.
+
+To pause the cost: `az vm deallocate -g lodestar-demo-rg -n lodestar-demo-vm` (only the disk and IP bill, ~$6/month; `az vm start` resumes, same URL). To stop it for good: `terraform destroy` (everything is in one resource group).
 
 ## 1. Create the VM (you run this; it needs your Azure login)
 
