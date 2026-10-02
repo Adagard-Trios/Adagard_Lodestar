@@ -60,27 +60,28 @@ Open the start page in a desktop browser. For the driver and the loader, use a p
 
 4. Sign out, pick **Dispatcher** and sign in as `nilanthi`. On the **Cutoff queue** (DSP-01), choose the Kandy depot and today's run, then press **Draft the plan with the agent**. DSP-22 shows the agent working, then the draft opens on the **Plan board** (DSP-02).
 5. Read the draft: trips per vehicle with stops in order, ETAs, the rule checks (weight, volume, temperature, access, windows, fuel), and the orders it could not fit, each with a reason code (for example `CAP_REEFER`) on **Review deferrals** (DSP-03). For Peliyagoda, the same step shows an over-capacity day: several deferrals, and any protected outlet (skipped yesterday) is sent for your decision instead of being deferred again.
-6. Press **Approve & go live** (DSP-12). The plan is now in effect: trips and stops exist, deferred orders move to the next operating day with their reason, and each affected store gets a notice.
+6. Give the store's orders to Ruwan's van: on **Ask the planning agent** (DSP-39), ask it to move OUT106's orders onto VEH057, and accept its proposal (DSP-40). The draft now shows the move, and any rule it bends (for example the van's working minutes) as a violation.
+7. Press **Approve & go live** (DSP-12). If the draft has violations, DSP-12 lists them and asks for an **Override reason**; it is recorded with the plan and in the audit log. The plan is now in effect: trips and stops exist, deferred orders move to the next operating day with their reason, and each affected store gets a notice.
 
 **Loader: load and release (phone)**
 
-7. Open the **Loader** card on a phone and sign in as `kasun`. The dock queue (LD-01) lists today's Kandy trips by bay.
-8. Open VEH057's load sheet (LD-02): lines in reverse stop order. Tick them off; on one line, **Flag** a shortfall and **Send flag** (LD-03).
-9. **Release** the vehicle (LD-04) with the seal number and reefer temperature. The trip and its orders go en route.
+8. Open the **Loader** card on a phone and sign in as `kasun`. The dock queue (LD-01) lists today's Kandy trips by bay.
+9. Open VEH057's load sheet (LD-02): lines in reverse stop order. Tick them off; on one line, **Flag** a shortfall and **Send flag** (LD-03).
+10. **Release** the vehicle (LD-04) with the seal number and reefer temperature. The trip and its orders go en route.
 
 **Driver: deliver with proof (phone)**
 
-10. Open the **Driver** card and sign in as `ruwan`. Today's run (DR-01) shows VEH057's stops. Press **Start trip**.
-11. At OUT106: **Arrived**, then **Start delivery** (DR-02), count the units, capture the receiver's name and photo, record any exception, then **Complete stop** (DR-03).
-12. Optional, offline: switch the phone to airplane mode before the next stop, complete it, then reconnect. The outbox sends once and the records reconcile without duplicates.
+11. Open the **Driver** card and sign in as `ruwan`. Today's run (DR-01) shows VEH057's stops. Press **Start trip**.
+12. At OUT106: **Arrived**, then **Start delivery** (DR-02), count the units, capture the receiver's name and photo, record any exception, then **Complete stop** (DR-03).
+13. Optional, offline (the app must have opened once online on that phone): switch the phone to airplane mode before the next stop, complete it, then reconnect. The outbox sends once and the records reconcile without duplicates.
 
 **Store manager: receipt (desktop or phone)**
 
-13. Sign in as `fathima` again. Deliveries (SM-02) shows the delivery as arrived. Count it, use **Report an issue** for any short or damaged item, and **Confirm receipt**. A short count creates a credit note.
+14. Sign in as `fathima` again. Deliveries (SM-02) shows the delivery as arrived. Count it, use **Report an issue** for any short or damaged item, and **Confirm receipt**. A short count creates a credit note.
 
 **Dispatcher: the result**
 
-14. As `nilanthi`, **Live operations** (DSP-04) shows the trip's progress and the delivered stops, and the **Deferral log** (DSP-17) lists every deferral with its reason and new date.
+15. As `nilanthi`, **Live operations** (DSP-04) shows the trip's progress and the delivered stops, and the **Deferral log** (DSP-17) lists every deferral with its reason and new date.
 
 ## Repository
 
@@ -99,7 +100,7 @@ Open the start page in a desktop browser. For the driver and the loader, use a p
 
 - **One origin, zero trust.** An NGINX gateway routes `/`, `/field/`, `/odata/v4/`, `/auth/` and `/ws/`. Every service verifies every token itself against Keycloak; field phones are bound to their user. Services talk to each other with their own client-credentials tokens.
 - **OData v4 everywhere.** Each service owns one Postgres schema and exposes it as OData entity sets and bound actions (`Plans('…')/Lodestar.Approve`, `Trips('…')/Lodestar.Release`, `Orders('…')/Lodestar.ConfirmReceipt`).
-- **Planning.** A deterministic planner and rule checker (capacity by weight and volume, temperature, van-only access, home depot, mall closing time, weekly fuel quota, two trips a day; checks for every outlet's window close and the mall delivery window are being added) inside a LangGraph agent with a human approval step. Approving a plan creates the trips and stops, plans the orders, records each deferral with its reason and rolls it to the next operating day, and tells the stores.
+- **Planning.** A deterministic planner and rule checker (capacity by weight and volume, temperature, van-only access, home depot, every outlet's delivery window, the mall delivery window, the weekly fuel quota and two trips a day; closed days are refused) inside a LangGraph agent with a human approval step; approving a plan that bends a rule needs a stated reason. Fuel used is recorded when a trip completes and resets every Monday. Approving a plan creates the trips and stops, plans the orders, records each deferral with its reason and rolls it to the next operating day, and tells the stores.
 - **Offline first.** The field app keeps an outbox; the sync service applies batches idempotently, in the order they were saved, and resolves conflicts (field evidence wins).
 - **Quality gate.** Lint, typecheck, unit suites with coverage, integration tests on a real Postgres, Sonar, and the full stack with Playwright (API, both apps, cross-role flows, design conformance). One command: `tools/qa/gate.sh`. CI: CircleCI. See [docs/QA.md](docs/QA.md).
 
