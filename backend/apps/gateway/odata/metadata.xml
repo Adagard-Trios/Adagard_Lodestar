@@ -605,6 +605,13 @@
         <Parameter Name="departTime" Type="Edm.DateTimeOffset"/>
         <ReturnType Type="Lodestar.Trip"/>
       </Action>
+      <Action Name="ReportVehicleFault" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Lodestar.Trip" Nullable="false"/>
+        <Parameter Name="fault" Type="Edm.String" Nullable="false"/>
+        <Parameter Name="reeferTempC" Type="Edm.Double"/>
+        <Parameter Name="note" Type="Edm.String"/>
+        <ReturnType Type="Edm.Untyped"/>
+      </Action>
       <Action Name="Release" IsBound="true">
         <Parameter Name="bindingParameter" Type="Lodestar.Trip" Nullable="false"/>
         <Parameter Name="sealNumber" Type="Edm.String" Nullable="false"/>

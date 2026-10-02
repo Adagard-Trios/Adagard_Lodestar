@@ -66,6 +66,13 @@ const NEXT_TRIP_STATUS: Record<TripStatus, TripStatus[]> = {
   COMPLETE: [],
 };
 
+/** What can stop a vehicle at the dock (LD-B1). */
+export const VEHICLE_FAULTS = ['NOT_COOLING', 'ENGINE', 'DOOR_SEAL', 'OTHER'] as const;
+export type VehicleFault = (typeof VEHICLE_FAULTS)[number];
+const FAULT_LABEL: Record<VehicleFault, string> = {
+  NOT_COOLING: 'Reefer not cooling', ENGINE: 'Engine fault', DOOR_SEAL: 'Door seal fault', OTHER: 'Vehicle fault',
+};
+
 @Injectable()
 export class TripsService {
   constructor(
@@ -159,6 +166,35 @@ export class TripsService {
       ...outlets.map((o) => `store:${o}`),
     ], event);
     return trip;
+  }
+
+  /**
+   * The loader (or dispatch) reports that a trip's vehicle cannot depart (LD-B1, reefer down): the vehicle goes
+   * to the workshop in fleet, and the depot's dispatchers get a VEHICLE_FAULT notice to re-plan (DSP-B1).
+   * Only before the trip leaves: a vehicle already en route is the driver's report, not the dock's.
+   */
+  async reportVehicleFault(tripId: string, fault: VehicleFault, reportedBy: string, reeferTempC?: number, note?: string) {
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: tripId },
+      select: { id: true, status: true, vehicleId: true, depot: true, bay: true, stops: { select: { outletId: true, orderId: true } } },
+    });
+    if (!trip) throw ODataError.notFound(`Trip ${tripId} was not found`);
+    if (trip.status !== TripStatus.PLANNED && trip.status !== TripStatus.LOADING) {
+      throw ODataError.conflict(`A ${trip.status} trip has already left the dock; the driver reports faults on the road`);
+    }
+    const workshopNote = `${FAULT_LABEL[fault]} reported at bay ${trip.bay ?? '?'}${reeferTempC !== undefined ? ` (reefer ${reeferTempC} °C)` : ''}${note ? `: ${note}` : ''}`;
+    const marked = await this.fleet.setStatus(trip.vehicleId, 'WORKSHOP', workshopNote);
+    if (!marked) throw new ODataError(502, 'FleetUnavailable', `Could not mark ${trip.vehicleId} down in fleet; try again or tell dispatch`);
+    const payload = {
+      tripId, vehicleId: trip.vehicleId, depot: trip.depot, bay: trip.bay, fault, reeferTempC: reeferTempC ?? null, note: note ?? null,
+      reportedBy, orderIds: trip.stops.map((st) => st.orderId), outlets: [...new Set(trip.stops.map((st) => st.outletId))],
+      title: `${trip.vehicleId} cannot depart: ${FAULT_LABEL[fault].toLowerCase()}`,
+    };
+    for (const recipientId of await depotDispatchers(this.prisma, trip.depot)) {
+      await this.notify.notice({ recipientId, type: 'VEHICLE_FAULT', tripId, depot: trip.depot, payload });
+    }
+    await this.notify.publish('vehicle_fault', [`dispatcher:${trip.depot}`, `loader:${trip.depot}`, `trip:${tripId}`], payload);
+    return { ...payload, vehicleStatus: 'WORKSHOP', workshopNote };
   }
 
   async arrive(stopId: string, at: Date) {

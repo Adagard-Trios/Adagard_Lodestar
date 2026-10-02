@@ -271,6 +271,38 @@ describe('TripsService', () => {
     });
   });
 
+  describe('reportVehicleFault (LD-B1)', () => {
+    const atDock = { id: 'T1', status: 'LOADING', vehicleId: 'VEH057', depot: 'KANDY', bay: 'K2', stops: [{ outletId: 'OUT106', orderId: 'O1' }] };
+
+    it("sends the vehicle to the workshop in fleet and tells the depot's dispatchers", async () => {
+      when(trip.findUnique(anything())).thenResolve(atDock as any);
+      when(fleet.setStatus(anything(), anything(), anything())).thenResolve(true);
+      const r = await service.reportVehicleFault('T1', 'NOT_COOLING', 'kasun', 9.5, 'compressor off');
+      const [vehicle, status, note] = capture(fleet.setStatus).last();
+      expect([vehicle, status]).toEqual(['VEH057', 'WORKSHOP']);
+      expect(note).toBe('Reefer not cooling reported at bay K2 (reefer 9.5 °C): compressor off');
+      const [notice] = capture(notify.notice).last();
+      expect(notice).toMatchObject({ recipientId: 'nilanthi', type: 'VEHICLE_FAULT', tripId: 'T1', depot: 'KANDY' });
+      expect((notice.payload as any)).toMatchObject({ vehicleId: 'VEH057', fault: 'NOT_COOLING', reportedBy: 'kasun', orderIds: ['O1'] });
+      verify(notify.publish('vehicle_fault', deepEqual(['dispatcher:KANDY', 'loader:KANDY', 'trip:T1']), anything())).once();
+      expect(r).toMatchObject({ vehicleStatus: 'WORKSHOP' });
+    });
+
+    it('refuses a trip that has already left the dock', async () => {
+      when(trip.findUnique(anything())).thenResolve({ ...atDock, status: 'ENROUTE' } as any);
+      await expect(service.reportVehicleFault('T1', 'ENGINE', 'kasun')).rejects.toMatchObject({ status: 409 });
+      verify(fleet.setStatus(anything(), anything(), anything())).never();
+      verify(notify.notice(anything())).never();
+    });
+
+    it('says so when fleet could not mark the vehicle down, and tells nobody', async () => {
+      when(trip.findUnique(anything())).thenResolve(atDock as any);
+      when(fleet.setStatus(anything(), anything(), anything())).thenResolve(false);
+      await expect(service.reportVehicleFault('T1', 'DOOR_SEAL', 'kasun')).rejects.toMatchObject({ status: 502, code: 'FleetUnavailable' });
+      verify(notify.notice(anything())).never();
+    });
+  });
+
   describe('tripLitres', () => {
     it('is the round trip plus the hops between stops, at the vehicle km/L', () => {
       expect(tripLitres({ distKm: 30, depotToDistMin: 40, interStopMin: 12 }, 1, 6)).toBe(10);

@@ -45,7 +45,8 @@ export class VehiclesSet extends ODataEntitySet {
   @ODataAction({
     name: 'SetStatus',
     binding: 'entity',
-    roles: [Roles.Dispatcher, Roles.Admin],
+    // Service: trips marks a vehicle down when the loader reports a fault (Trips('…')/Lodestar.ReportVehicleFault)
+    roles: [Roles.Dispatcher, Roles.Admin, Roles.Service],
     params: { status: { type: 'Lodestar.VehicleStatus', required: true }, workshopNote: 'Edm.String' },
     returns: 'Lodestar.Vehicle',
   })

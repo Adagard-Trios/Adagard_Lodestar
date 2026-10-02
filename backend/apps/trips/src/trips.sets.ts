@@ -3,7 +3,7 @@ import { PrismaService } from '@lodestar/prisma';
 import { EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, OperationContext, WriteContext } from '@lodestar/odata';
 import { canAccessDepot, HUMAN_ROLES, isPrivileged, Roles } from '@lodestar/security';
 import { Depot } from '@prisma/client';
-import { TripsService } from './trips.service';
+import { TripsService, VEHICLE_FAULTS, type VehicleFault } from './trips.service';
 
 const tripDepot = (depots: string[]) => ({ depot: { in: depots } });
 const tripVehicle = (vehicleId: string) => ({ vehicleId });
@@ -46,6 +46,23 @@ export class TripsSet extends ODataEntitySet {
   })
   setStatus(ctx: OperationContext) {
     return this.trips.updateStatus(ctx.entity.id, ctx.entity.status, ctx.params.status, ctx.params.departTime);
+  }
+
+  /** POST Trips('…')/Lodestar.ReportVehicleFault {fault, reeferTempC?, note?} — the vehicle can't depart (LD-B1). */
+  @ODataAction({
+    name: 'ReportVehicleFault',
+    binding: 'entity',
+    roles: [Roles.Loader, Roles.Dispatcher],
+    params: { fault: { type: 'Edm.String', required: true }, reeferTempC: 'Edm.Double', note: 'Edm.String' },
+    returns: 'Edm.Untyped',
+  })
+  reportVehicleFault(ctx: OperationContext) {
+    const fault = String(ctx.params.fault ?? '').toUpperCase();
+    if (!(VEHICLE_FAULTS as readonly string[]).includes(fault)) {
+      throw ODataError.badRequest(`fault must be one of ${VEHICLE_FAULTS.join(', ')}`, 'fault');
+    }
+    const note = typeof ctx.params.note === 'string' && ctx.params.note.trim() ? ctx.params.note.trim().slice(0, 500) : undefined;
+    return this.trips.reportVehicleFault(ctx.entity.id, fault as VehicleFault, ctx.principal.sub, ctx.params.reeferTempC, note);
   }
 
   /** POST Trips('…')/Lodestar.Release {sealNumber, reeferTempC?} — loader hands the trip to the driver. */
