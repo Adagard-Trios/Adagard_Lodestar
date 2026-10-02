@@ -4,16 +4,20 @@
 // manager's own preferences (Users/Lodestar.MyPreferences / SaveMyPreferences): receiving staff and the time they
 // are at the door, notification channels per topic (app / SMS) and the language of this desk. "Short or moved
 // orders" is always on (locked), as designed. "Save changes" saves and goes to Deliveries (the design's L139).
-// "Users & access" shows the signed-in manager and this browser's session (sign out ends it); store staff have no
-// Lodestar accounts of their own, so "Invite" and "Request a change" carry no action (no endpoint).
+// "Users & access" shows the signed-in manager and this browser's session (sign out ends it). Store accounts and
+// the outlet's dock details are kept by the Lodestar admin (ADM-04, ADM-09), so "Invite" and "Request a change"
+// write to the admin (NEXT_PUBLIC_SUPPORT_EMAIL, else a call to NEXT_PUBLIC_SUPPORT_PHONE); with neither set they
+// say who to ask. "Discard" drops the edits and, as designed (L139), goes back to Deliveries. The sub-navigation
+// scrolls to its section.
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Btn from '@/components/live/Btn';
 import { StoreTop, useMyOutlet } from '@/components/live/chrome';
-import { Ic } from '@/components/live/icons';
+import { Ic, type IconName } from '@/components/live/icons';
 import { type Channels, type Preferences, type ReceivingStaff, type StoreTopic, usePreferences } from '@/components/live/settings-data';
 import { ErrorBanner, Skeleton } from '@/components/live/states';
 import { useAuth } from '@/lib/auth/AuthProvider';
+import { resetOptions, telHref } from '@/lib/auth/reset';
 import { DEPOT_NAME, fmtDayTime } from '@/lib/format';
 
 const TOPICS: Array<{ k: StoreTopic; label: string; sub: string; def: Channels }> = [
@@ -27,6 +31,16 @@ const DOCK: Record<string, string> = { REAR_DOCK: 'Rear dock', STREET: 'Street',
 const PARKING: Record<string, string> = { NORMAL: 'normal access', VAN_ONLY: 'vans only', MALL_DOCK: 'mall dock' };
 const initials = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join('');
 const clock = (v: string) => { const [h, m] = v.split(':').map(Number); return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
+const SECTIONS: Array<[string, IconName, string]> = [
+  ['store', 'store', 'Store details'], ['receiving', 'people', 'Receiving'], ['notifications', 'bell', 'Notifications'], ['access', 'key', 'Users & access'], ['language', 'globe', 'Language'],
+];
+
+/** A request to the Lodestar admin: a mail when a support address is set, else a call to the support phone. */
+function adminLink(subject: string, body: string): string | null {
+  const { supportEmail, supportPhone } = resetOptions();
+  if (supportEmail) return `mailto:${encodeURIComponent(supportEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  return supportPhone ? telHref(supportPhone) : null;
+}
 
 function Tg({ on, locked, label, onChange }: { on: boolean; locked?: boolean; label: string; onChange?: (v: boolean) => void }) {
   const cls = `sx-tg${on ? ' is-on' : ''}${locked ? ' is-lock' : ''}`;
@@ -59,6 +73,16 @@ export default function LiveSm30Settings() {
     setDraft(d => ({ ...(d ?? {}), notifications: { ...(d?.notifications ?? {}), [t.k]: { ...channels(t), [ch]: v } } }));
   const setReceiving = (r: NonNullable<Preferences['receiving']>) => setDraft(d => ({ ...(d ?? {}), receiving: { ...(d?.receiving ?? {}), ...r } }));
   const dirty = edit !== null && JSON.stringify(edit) !== JSON.stringify(prefs.data ?? {});
+  const [section, setSection] = useState('receiving');
+  const goTo = (k: string) => {
+    setSection(k);
+    document.querySelector(`[data-section="${k}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  const outletRef = `${o?.name ?? 'our outlet'} (${session?.outletId ?? ''})`;
+  const changeLink = adminLink(`Lodestar Store: dock details for ${outletRef}`,
+    `Hello,\n\nPlease update the dock details drivers see for ${outletRef}.\nNow: ${o ? (o.accessNote || `${DOCK[o.dockType] ?? o.dockType}, ${PARKING[o.parking] ?? o.parking}, window ${o.windowOpen}-${o.windowClose}`) : ''}\nChange to: \n\nThank you,\n${session?.name ?? ''}`);
+  const inviteLink = adminLink(`Lodestar Store: new user for ${outletRef}`,
+    `Hello,\n\nPlease add a Lodestar Store sign-in for ${outletRef}.\nName: \nEmail: \nRole: \n\nThank you,\n${session?.name ?? ''}`);
   const save = () => void prefs.save.run({
     receiving: draft?.receiving ?? {},
     notifications: Object.fromEntries(TOPICS.map(t => [t.k, channels(t)])),
@@ -79,27 +103,30 @@ export default function LiveSm30Settings() {
               </div>
               <div className="d-h1">{"Settings"}</div>
             </div>
-            <Btn className="d-btn d-btn--ghost" disabled={!dirty} onClick={() => { setEdit(null); setAdding(null); }}>{"Discard"}</Btn>
+            <Btn className="d-btn d-btn--ghost" lk="L139" testId="discard" onClick={() => { setEdit(null); setAdding(null); }}>{"Discard"}</Btn>
             <Btn className="d-btn d-btn--primary" lk="L139" busy={prefs.save.pending} disabled={!draft} onClick={save}>{"Save changes"}</Btn>
           </div>
           <ErrorBanner error={prefs.error ?? prefs.save.error ?? outlet.error} onRetry={() => { void prefs.refresh(); void outlet.refresh(); }} />
           <div className="d-split">
             <div className="sx-subnav">
-              <span className="d-side__item"><Ic n="store" />{"Store details"}</span>
-              <span className="d-side__item is-on"><Ic n="people" />{"Receiving"}</span>
-              <span className="d-side__item"><Ic n="bell" />{"Notifications"}</span>
-              <span className="d-side__item"><Ic n="key" />{"Users & access"}</span>
-              <span className="d-side__item"><Ic n="globe" />{"Language"}</span>
-              <div className="d-card" style={{ marginTop: '18px', padding: '16px', gap: '8px' }} data-testid="dock-note">
+              {SECTIONS.map(([k, icon, label]) => (
+                <span key={k} className={`d-side__item lv-click${section === k ? ' is-on' : ''}`} role="button" tabIndex={0}
+                  onClick={e => { e.stopPropagation(); goTo(k); }} onKeyDown={e => { if (e.key === 'Enter') goTo(k); }}>
+                  <Ic n={icon} />{label}
+                </span>
+              ))}
+              <div className="d-card" style={{ marginTop: '18px', padding: '16px', gap: '8px' }} data-testid="dock-note" data-section="store">
                 <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-3)' }}>{"Your dock, as drivers see it"}</span>
                 <span style={{ fontSize: '14px', lineHeight: '1.5', color: 'var(--text)' }}>
                   {o ? (o.accessNote || `${DOCK[o.dockType] ?? o.dockType} · ${PARKING[o.parking] ?? o.parking} · window ${o.windowOpen}–${o.windowClose}`) : '…'}
                 </span>
-                <span className="sx-link" style={{ fontSize: '13px' }}>{"Request a change"}</span>
+                {changeLink
+                  ? <a className="sx-link" style={{ fontSize: '13px' }} href={changeLink} data-testid="request-change">{"Request a change"}</a>
+                  : <span style={{ fontSize: '13px', color: 'var(--text-3)' }} data-testid="request-change">{"Your Lodestar admin changes these details."}</span>}
               </div>
             </div>
             <div className="vstack" style={{ gap: '18px', flex: '1', minWidth: '0' }}>
-              <div className="d-card" data-testid="receiving-staff">
+              <div className="d-card" data-testid="receiving-staff" data-section="receiving">
                 <div className="d-card__head">
                   <span className="d-card__title">{"Receiving staff"}</span>
                   <span style={{ fontSize: '13px', color: 'var(--text-3)' }}>{`shown to the driver and ${o ? DEPOT_NAME[o.depot] ?? o.depot : 'the depot'}`}</span>
@@ -142,11 +169,13 @@ export default function LiveSm30Settings() {
                   </>
                 )}
               </div>
-              <div className="d-card">
+              <div className="d-card" data-section="access">
                 <div className="d-card__head">
                   <span className="d-card__title">{"Users & access"}</span>
                   <div className="spacer" />
-                  <span className="d-btn" style={{ height: '34px' }}><Ic n="user-plus" />{"Invite"}</span>
+                  {inviteLink
+                    ? <a className="d-btn" style={{ height: '34px' }} href={inviteLink} data-testid="invite"><Ic n="user-plus" />{"Invite"}</a>
+                    : <span style={{ fontSize: '13px', color: 'var(--text-3)' }} data-testid="invite">{"Your Lodestar admin adds store sign-ins."}</span>}
                 </div>
                 <div className="sx-set-row">
                   <span className="d-avatar">{initials(session?.name ?? '')}</span>
@@ -167,7 +196,7 @@ export default function LiveSm30Settings() {
               </div>
             </div>
             <div className="vstack" style={{ gap: '18px', width: '420px', flexShrink: '0' }}>
-              <div className="d-card" data-testid="store-notifications">
+              <div className="d-card" data-testid="store-notifications" data-section="notifications">
                 <div className="d-card__head">
                   <span className="d-card__title">{"Notifications"}</span>
                   <div className="spacer" />
@@ -194,7 +223,7 @@ export default function LiveSm30Settings() {
                   </div>
                 ))}
               </div>
-              <div className="d-card">
+              <div className="d-card" data-section="language">
                 <div className="d-card__head"><span className="d-card__title">{"Language"}</span></div>
                 <div className="d-card__body">
                   <div className="m-seg" style={{ margin: '0' }} role="radiogroup" aria-label="Language">

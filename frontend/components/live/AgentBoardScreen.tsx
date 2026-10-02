@@ -4,19 +4,17 @@
 import { useRouter } from 'next/navigation';
 import Btn from './Btn';
 import AskAgent from './AskAgent';
-import { idleSummary, Lane, useBoardCards } from './board';
+import { idleSummary, Lane, tripTwoHead, useBoardCards } from './board';
 import { PlanSide } from './chrome';
 import { Ic } from './icons';
-import { useAgentRun, usePlanScope, useStartAgentRun } from './plan-data';
+import { useReviewRun, usePlanScope, useStartAgentRun } from './plan-data';
 import { Empty, ErrorBanner, Skeleton } from './states';
 import { DEPOT_NAME, fmtNum, fmtRunDate, fmtTime } from '@/lib/format';
-import { useAgentRunId } from '@/lib/workday';
 
 export default function AgentBoardScreen({ name, mode }: { name: string; mode: 'ask' | 'proposal' }) {
   const router = useRouter();
   const scope = usePlanScope();
-  const [runId, setRunId] = useAgentRunId();
-  const run = useAgentRun(runId);
+  const { runId, run, setRunId } = useReviewRun();
   const start = useStartAgentRun(r => setRunId(r.id));
   const detail = run.data?.detail ?? null;
   const board = useBoardCards({ draft: detail, tripsFilter: scope.tripsFilter, ordersFilter: scope.ordersFilter, active: scope.active });
@@ -55,9 +53,9 @@ export default function AgentBoardScreen({ name, mode }: { name: string; mode: '
           {runId && (
             <div className="ag-split">
               <div className="ag-board">
-                <div className="x-lanehead"><span style={{ width: '128px' }}>{"Vehicle · min"}</span><span style={{ flex: '1' }}>Trip 1{firstDepart ? ` · departs ${fmtTime(firstDepart)}` : ''}</span><span style={{ flex: '1' }}>{"Trip 2 · max 2 trips a day"}</span></div>
+                <div className="x-lanehead"><span style={{ width: '128px' }}>{"Vehicle · min"}</span><span style={{ flex: '1' }}>Trip 1{firstDepart ? ` · departs ${fmtTime(firstDepart)}` : ''}</span><span style={{ flex: '1' }}>{tripTwoHead(board.limits)}</span></div>
                 {board.loading && <Skeleton rows={3} />}
-                {board.lanes.slice(0, 5).map(([id, cs]) => <Lane key={id} vehicleId={id} cards={cs} v={board.vehicles.get(id)} />)}
+                {board.lanes.slice(0, 5).map(([id, cs]) => <Lane key={id} vehicleId={id} cards={cs} v={board.vehicles.get(id)} limits={board.limits} />)}
                 {deferrals.length > 0 && (
                   <div className="ag-defrow">
                     <div className="ag-deflabel"><b>{"Deferrals"}</b><span>suggested · {fmtNum(deferrals.reduce((s, d) => s + d.m3, 0), 1)} m³</span></div>

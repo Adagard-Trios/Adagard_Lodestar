@@ -10,6 +10,7 @@ import { budget } from '@/components/live/board';
 import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { usePlanScope } from '@/components/live/plan-data';
+import { useAgentConfig } from '@/components/live/settings-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { BRAND_LETTER, DEPOT_NAME, dayFilter, fmtClock, fmtNum, isoDay, pct, title } from '@/lib/format';
 import { useEntity, useQuery } from '@/lib/odata/hooks';
@@ -56,7 +57,8 @@ export default function LiveDsp11TripAndVehicleDrawer() {
   const kg = stops.reduce((s, x) => s + (x.order?.kg ?? 0), 0);
   const m3 = stops.reduce((s, x) => s + (x.order?.m3 ?? 0), 0);
   const day3 = siblings.data ?? (t ? [t] : []);
-  const max = budget(t?.brand ?? 'FRESH');
+  const config = useAgentConfig();
+  const max = budget(t?.brand ?? 'FRESH', config.data?.limits);
   const minutes = day3.reduce((s, x) => s + (x.planMinutes ?? 0), 0);
   const next = day3.find(x => x.tripNumber > (t?.tripNumber ?? 0));
   const tr = travel.data;
@@ -106,11 +108,11 @@ export default function LiveDsp11TripAndVehicleDrawer() {
               <div className="hstack" style={{ gap: '20px', alignItems: 'flex-end' }}>
                 <div className="vstack" style={{ gap: '6px' }}>
                   <span className="dx-sech">{title(t.brand)} minutes{day3.length === 2 ? ', both trips' : day3.length > 2 ? `, all ${day3.length} trips` : ''}</span>
-                  <span className="dx-display" data-testid="minutes">{minutes}<small>/ {max} min</small></span>
+                  <span className="dx-display" data-testid="minutes">{minutes}<small>/ {max ?? '—'} min</small></span>
                 </div>
                 <div className="vstack" style={{ gap: '8px', flex: '1', minWidth: '0', paddingBottom: '6px' }}>
                   <div className="dx-bar" style={{ height: '10px' }}>
-                    {day3.map((x, i) => <div key={x.id} className={i === 0 ? 'dx-g-brand' : undefined} style={{ width: `${pct(x.planMinutes, Math.max(max, minutes))}%`, ...(i ? { background: '#8C98F2' } : {}) }} />)}
+                    {day3.map((x, i) => <div key={x.id} className={i === 0 ? 'dx-g-brand' : undefined} style={{ width: `${pct(x.planMinutes, Math.max(max ?? 0, minutes))}%`, ...(i ? { background: '#8C98F2' } : {}) }} />)}
                   </div>
                   <div className="between dx-t13">
                     <span>
@@ -118,7 +120,7 @@ export default function LiveDsp11TripAndVehicleDrawer() {
                         <span key={x.id}>{i ? ' · ' : ''}{x.id === t.id ? <b className="t-2">Trip {x.tripNumber} {x.planMinutes ?? 0}</b> : `Trip ${x.tripNumber} ${x.planMinutes ?? 0}`}</span>
                       ))}
                     </span>
-                    <span>{minutes <= max ? `${max - minutes} min spare` : `${minutes - max} min over`}</span>
+                    <span>{max === undefined ? '' : minutes <= max ? `${max - minutes} min spare` : `${minutes - max} min over`}</span>
                   </div>
                 </div>
               </div>

@@ -10,7 +10,7 @@ import Calendar from '@/live/adm-13-calendar';
 import Notifications from '@/live/adm-18-notifications-and-integrations';
 import { freezeDate, unfreeze } from './helpers/clock';
 import type { FakeRequest } from './helpers/live';
-import { page, renderLive, SESSIONS } from './helpers/live';
+import { agentConfigReply, page, renderLive, SESSIONS } from './helpers/live';
 
 const router = { push: jest.fn(), replace: jest.fn(), back: jest.fn(), forward: jest.fn(), refresh: jest.fn(), prefetch: jest.fn() };
 jest.mock('next/navigation', () => ({ useRouter: () => router, usePathname: () => '/admin' }));
@@ -49,7 +49,7 @@ describe('ADM-09 Edit outlet', () => {
     expect(screen.getByText('Nuwara Eliya · Kandy Hub')).toBeInTheDocument();
     expect(screen.getByText('rear_dock · normal access')).toBeInTheDocument();
     expect(screen.getByTestId('window-now')).toHaveTextContent('05:30 to 08:00');
-    expect(view.calls.find(c => c.path === 'Users')!.query.$filter).toBe("outletId eq 'OUT106' and role eq 'STORE_MANAGER'");
+    expect(view.calls.find(c => c.path === 'Users' && c.query.$top !== '0')!.query.$filter).toBe("outletId eq 'OUT106' and role eq 'STORE_MANAGER'");
     expect(disabled(screen.getByTestId('save-window'))).toBe(true); // nothing changed yet
     fireEvent.change(screen.getByLabelText('Window opens'), { target: { value: '06:00' } });
     expect(disabled(screen.getByTestId('save-window'))).toBe(false);
@@ -166,8 +166,10 @@ describe('ADM-12 Operating rules', () => {
   const allowances = Object.entries(MIN).flatMap(([brand, m]) => ['REAR_DOCK', 'STREET', 'MALL_BAY'].map((dockType, i) => ({ brand, dockType, minutes: m[i] })));
 
   it('shows the planner’s locked rules and the service allowances from the API', async () => {
-    const view = renderLive(<OperatingRules />, { ...admin, handler: req => (req.query.$top === '0' ? page([], 1) : req.path === 'ServiceAllowances' ? page(allowances) : page([])) });
-    expect(screen.getByText('Max 2 a day')).toBeInTheDocument();
+    const view = renderLive(<OperatingRules />, { ...admin, handler: req => agentConfigReply(req) ?? (req.query.$top === '0' ? page([], 1) : req.path === 'ServiceAllowances' ? page(allowances) : page([])) });
+    expect(await screen.findByText('Max 2 a day')).toBeInTheDocument();
+    expect(screen.getByText('3:30 to 8:00 · 270 min')).toBeInTheDocument();
+    expect(screen.getByText('480 min')).toBeInTheDocument();
     expect(screen.getByText('One brand, one district')).toBeInTheDocument();
     const card = screen.getByTestId('service-allowances');
     await waitFor(() => expect(card.querySelectorAll('[data-brand]')).toHaveLength(3));
@@ -275,18 +277,44 @@ describe('ADM-13 Calendar', () => {
 // ------------------------------------------------------------------------------------------------ ADM-18
 
 describe('ADM-18 Notifications and integrations', () => {
-  it('shows the app push channel with today’s notifications and the hub’s state; no SMS, email or voice', async () => {
+  const sent = [
+    { id: 'N1', type: 'ETA_UPDATE', recipientId: 'u-s1' },
+    { id: 'N2', type: 'ETA_UPDATE', recipientId: 'u-s2' },
+    { id: 'N3', type: 'SHORTFALL_FLAGGED', recipientId: 'u-d1' },
+  ];
+  const users = [{ id: 'u-s1', role: 'STORE_MANAGER' }, { id: 'u-s2', role: 'STORE_MANAGER' }, { id: 'u-d1', role: 'DISPATCHER' }];
+
+  it('shows the app push channel with today’s notifications, the hub’s state and who got what; no SMS, email or voice', async () => {
     const view = renderLive(<Notifications />, {
       ...admin,
-      handler: req => (req.path === 'Notifications' && req.query.$top === '0' ? page([], 1284) : req.query.$top === '0' ? page([], 1) : page([])),
+      handler: req => (req.path === 'Notifications' ? page(sent, 1284) : req.path === 'Users' ? page(users) : req.query.$top === '0' ? page([], 1) : page([])),
     });
     const card = screen.getByTestId('channels');
     expect(within(card).getByText('App push')).toBeInTheDocument();
     expect(within(card).getByText('All up')).toBeInTheDocument();
     expect(await within(card).findByText('1,284 today')).toBeInTheDocument();
     expect(view.calls.find(c => c.path === 'Notifications')!.query.$filter).toBe('sentAt ge 2026-04-06T00:00:00Z');
+    const who = screen.getByTestId('who-gets-what');
+    await waitFor(() => expect(who.querySelector('[data-type="ETA_UPDATE"]')).toHaveTextContent('Store manager: eta update2 · app'));
+    expect(who.querySelector('[data-type="SHORTFALL_FLAGGED"]')).toHaveTextContent('Dispatcher: shortfall flagged1 · app');
+    expect(view.calls.find(c => c.path === 'Users' && c.query.$top !== '0')!.query.$filter).toBe("id in ('u-s1','u-s2','u-d1')");
     expect(screen.queryByText('SMS gateway')).not.toBeInTheDocument();
-    expect(screen.queryByText('Send a test')).not.toBeInTheDocument();
+  });
+
+  it('“Send test push” sends a stored notification to the signed-in admin only, then shows the result', async () => {
+    const view = renderLive(<Notifications />, {
+      ...admin,
+      handler: req => (req.path === 'Notifications/Lodestar.Send' ? { id: 'N9', recipientId: 'u-a', type: 'ADMIN_TEST', channel: 'WEBSOCKET', sentAt: '2026-04-06T08:00:00.000Z' }
+        : req.path === 'Notifications' ? page([], 0) : page([], 0)),
+    });
+    expect(await screen.findByText('Nothing sent today')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Test message'), { target: { value: 'Check from the desk' } });
+    fireEvent.click(screen.getByTestId('send-test'));
+    expect(await screen.findByTestId('test-result')).toHaveTextContent('Test sent 1:30 PM. Stored as N9');
+    const post = view.calls.find(c => c.method === 'POST')!;
+    expect(post.path).toBe('Notifications/Lodestar.Send');
+    expect(post.body).toEqual({ recipientId: 'u-a', type: 'ADMIN_TEST', payload: { message: 'Check from the desk', from: 'Ada Admin' } });
+    await waitFor(() => expect(view.calls.filter(c => c.path === 'Notifications' && c.method === 'GET').length).toBeGreaterThan(1));
   });
 
   it('a new notification refreshes the count', async () => {

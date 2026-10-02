@@ -5,7 +5,8 @@ import { hm, until } from '@/lib/time';
 import { plural, titleCase } from '@/lodestar/live';
 import { arriveAtStop } from '@/model/actions';
 import { useOutbox, useRun } from '@/model/hooks';
-import { useNet } from '@/model/run';
+import { openMaps, useNet } from '@/model/run';
+import { LATE_RISK_PCT } from '@/model/preferences';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L13":{"to":"dr-02-stop-arrival","kind":"go"},"L245":{"to":"dr-38-report-a-delay","kind":"go"},"L246":{"to":"dr-37-reefer-temperature-alert","kind":"go"}}};
@@ -23,7 +24,7 @@ export default function ScreenDr36EnRouteDrivingMode() {
   const prev = stop ? [...stops.slice(0, stops.indexOf(stop))].reverse().find(x => x.status === 'DELIVERED') : stops.at(-1);
   const reefer = trip?.loadRecord?.reeferTempC ?? trip?.reeferTempC ?? null;
   const reeferOk = reefer === null || (reefer >= 0 && reefer <= 5);
-  const late = (stop?.lateRiskPct ?? 0) >= 50;
+  const late = (stop?.lateRiskPct ?? 0) >= LATE_RISK_PCT;
   const band = stop?.etaModelBandEarly && stop?.etaModelBandLate ? `likely ${hm(stop.etaModelBandEarly)}–${hm(stop.etaModelBandLate)}` : '';
   const risk = stop?.lateRiskPct != null ? `late risk ${stop.lateRiskPct}%` : '';
   const win = o ? `window ${o.windowOpen}–${o.windowClose}` : '';
@@ -130,10 +131,10 @@ export default function ScreenDr36EnRouteDrivingMode() {
               <Icon xml={X4} width={18} height={18} style={s.v1} />
               <Text style={s.t16}>{stop ? `Voice: next stop${soon ? ` ${soon}` : stop.etaModel ? ` ~${hm(stop.etaModel)}` : ''}` : 'Voice: read aloud'}</Text>
             </Tap>
-            <View style={s.v43}>
+            <Tap style={s.v43} to={null} onPress={() => openMaps(stop ? [stop] : [])} testID="open-maps">
               <Icon xml={X5} width={16} height={16} style={s.v1} />
               <Text style={s.t42} numberOfLines={1}>{"Open in Maps"}</Text>
-            </View>
+            </Tap>
           </View>
         </Scroll>
         <View style={s.v54}>

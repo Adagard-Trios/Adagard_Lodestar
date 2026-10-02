@@ -6,7 +6,7 @@
 import { Fragment, useState } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { hm } from '@/lib/time';
-import { reportToDispatch } from '@/model/field-reports';
+import { reportToDispatch, stopContext } from '@/model/field-reports';
 import { useOnline, useRun } from '@/model/hooks';
 import type { TripStop } from '@/model/types';
 import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
@@ -198,7 +198,7 @@ export default function ScreenDr38ReportADelay() {
             onPress={async () => {
               if (!trip) return true; // prototype mode: just navigate
               if (!reason) return false;
-              await reportToDispatch(trip.id, { report: 'DELAY', reason, minutes, ...(current ? { stopId: current.id } : {}) });
+              await reportToDispatch(trip.id, { report: 'DELAY', reason, minutes, ...(current ? { stopId: current.id, orderId: current.orderId, newEta } : {}) }, trip.id, stopContext(current, trip.vehicleId));
               showToast(online ? 'Sent to dispatch' : 'Saved · sends when signal returns');
               return true;
             }}

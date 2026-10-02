@@ -28,7 +28,7 @@ export default function ScreenLd04ReleaseVehicle() {
   const data = sheet.data;
   const trip = data?.trip;
   const lr = data?.loadRecord;
-  const t = useTicks(sheet.tripId);
+  const t = useTicks(sheet.tripId, sheet.data?.trip?.status);
   const [sealSel, setSeal] = useState<string | null>(null);
   const [tempSel, setTemp] = useState<number | null>(null);
   const seal = sealSel ?? lr?.sealNumber ?? trip?.sealNumber ?? '';
@@ -52,6 +52,7 @@ export default function ScreenLd04ReleaseVehicle() {
     driver: !!driver,
   };
   const passed = Object.values(checks).filter(Boolean).length;
+  const checkCount = Object.keys(checks).length;
   const firstStop = groups.at(-1)?.stop;
   const lastStop = groups[0]?.stop;
   const done: Target | undefined = trip ? { to: 'ld-15-handover-confirmed', params: { trip: trip.id } } : undefined;
@@ -59,6 +60,9 @@ export default function ScreenLd04ReleaseVehicle() {
   const release = trip
     ? async () => {
         if (sheet.released) return;
+        if (!seal.trim()) throw new Error('Enter the seal number first');
+        if (chilled && temp === undefined) throw new Error('Read the reefer first');
+        if (chilled && temp !== undefined && temp > MAX_CHILLED_C) throw new Error(`Reefer reads ${temp} °C · above ${MAX_CHILLED_C} °C, it can't depart`);
         await releaseVehicle(trip, seal, temp);
         setTimeout(() => showToast(online ? `${trip.vehicleId} released · sending` : 'Release saved on this phone · sends when there is signal'), 350);
       }
@@ -88,11 +92,11 @@ export default function ScreenLd04ReleaseVehicle() {
             </View>
             <View style={s.v17}>
               <View style={s.v14}>
-                <Text style={s.t13}>{data ? String(passed) : "—"}<Text style={s.t12}>{"of 5 checks"}</Text></Text>
+                <Text style={s.t13}>{data ? String(passed) : "—"}<Text style={s.t12}>{`of ${checkCount} checks`}</Text></Text>
               </View>
               <View style={s.v16}>
                 <Icon xml={X1} width={14} height={14} style={s.v1} />
-                <Text style={s.t15} numberOfLines={1}>{!data ? "—" : passed === 5 ? "Ready to release" : `${5 - passed} to check`}</Text>
+                <Text style={s.t15} numberOfLines={1}>{!data ? "—" : passed === checkCount ? "Ready to release" : `${checkCount - passed} to check`}</Text>
               </View>
             </View>
             <View>
@@ -105,7 +109,7 @@ export default function ScreenLd04ReleaseVehicle() {
                 <Text style={s.t20}>{"Release checklist"}</Text>
               </View>
               <View style={s.v14}>
-                <Text style={s.t21}>{!data ? "" : passed === 5 ? "all passed" : `${passed} of 5 passed`}</Text>
+                <Text style={s.t21}>{!data ? "" : passed === checkCount ? "all passed" : `${passed} of ${checkCount} passed`}</Text>
               </View>
             </View>
             <View style={s.v40}>

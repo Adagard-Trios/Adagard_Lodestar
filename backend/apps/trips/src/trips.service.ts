@@ -1,9 +1,12 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { ODataError } from '@lodestar/odata';
 import { Depot, OrderStatus, Prisma, TripStatus } from '@prisma/client';
 import { runDateRange } from '@lodestar/platform';
-import { announceStopIssue, depotDispatchers, NOTIFY, NotifyClient, podOutcome, storeManagers } from '@lodestar/security';
+import {
+  announceStopIssue, CLOSED_STOP_STATUSES, depotDispatchers, NOTIFY, NotifyClient, podExceptionsWithStoreCount, podOutcome, recordArrival, recordDeparture,
+  storeManagers,
+} from '@lodestar/security';
 import { FleetClient } from './fleet.client';
 
 /** Stored window [start, end) of a run date (YYYY-MM-DD, or a Date read in Sri Lanka time). */
@@ -75,6 +78,8 @@ const FAULT_LABEL: Record<VehicleFault, string> = {
 
 @Injectable()
 export class TripsService {
+  private readonly logger = new Logger(TripsService.name);
+
   constructor(
     private prisma: PrismaService,
     @Inject(NOTIFY) private notify: NotifyClient,
@@ -121,7 +126,7 @@ export class TripsService {
     if (!trip) return;
     const travel = await this.prisma.districtTravel.findUnique({ where: { district: trip.district } });
     const litres = tripLitres(travel, trip._count.stops, trip.vehicle.kmPerLitre);
-    if (litres > 0) await this.fleet.recordFuel(trip.vehicleId, litres);
+    if (litres > 0) await this.fleet.recordFuel(trip.vehicleId, litres, tripId);
   }
 
   /**
@@ -183,7 +188,7 @@ export class TripsService {
       throw ODataError.conflict(`A ${trip.status} trip has already left the dock; the driver reports faults on the road`);
     }
     const workshopNote = `${FAULT_LABEL[fault]} reported at bay ${trip.bay ?? '?'}${reeferTempC !== undefined ? ` (reefer ${reeferTempC} °C)` : ''}${note ? `: ${note}` : ''}`;
-    const marked = await this.fleet.setStatus(trip.vehicleId, 'WORKSHOP', workshopNote);
+    const marked = await this.fleet.setStatus(trip.vehicleId, 'WORKSHOP', workshopNote, tripId);
     if (!marked) throw new ODataError(502, 'FleetUnavailable', `Could not mark ${trip.vehicleId} down in fleet; try again or tell dispatch`);
     const payload = {
       tripId, vehicleId: trip.vehicleId, depot: trip.depot, bay: trip.bay, fault, reeferTempC: reeferTempC ?? null, note: note ?? null,
@@ -197,38 +202,83 @@ export class TripsService {
     return { ...payload, vehicleStatus: 'WORKSHOP', workshopNote };
   }
 
+  /**
+   * The driver (or dispatch) records the arrival at a stop: the store and live ops are told (stop_arrived) and
+   * the stops after it move by the delay (eta_update). A stop already closed keeps its status.
+   */
   async arrive(stopId: string, at: Date) {
-    return this.prisma.tripStop.update({
+    const before = await this.prisma.tripStop.findUnique({ where: { id: stopId }, include: { trip: { select: { id: true, depot: true, vehicleId: true } } } });
+    if (!before) throw ODataError.notFound(`Stop ${stopId} was not found`);
+    const closed = (CLOSED_STOP_STATUSES as readonly string[]).includes(before.status);
+    const stop = await this.prisma.tripStop.update({
       where: { id: stopId },
-      data: { arrivalActual: at, status: OrderStatus.ENROUTE },
+      data: { arrivalActual: at, ...(closed ? {} : { status: OrderStatus.ENROUTE }) },
     });
+    await this.progress(() => recordArrival(this.prisma, this.notify, before.trip, before, at));
+    return stop;
   }
 
-  /** Driver completes a stop: POD saved, stop and order delivered. */
+  /**
+   * Driver completes a stop: POD saved; stop and order DELIVERED, or EXCEPTION when nothing was delivered (a
+   * failed stop goes to DSP-13). A store count made before the POD existed is kept on it (credit units).
+   */
   async completeStop(stopId: string, orderId: string, pod: PodInput) {
     const { arrivalActual, leaveActual, ...podData } = pod;
     if (!Number.isInteger(podData.unitsDelivered) || !Number.isInteger(podData.unitsOrdered) || podData.unitsDelivered < 0 || podData.unitsDelivered > podData.unitsOrdered) {
       throw ODataError.badRequest('unitsDelivered must be between 0 and unitsOrdered', 'unitsDelivered');
     }
-    const data = { ...podData, exceptions: (podData.exceptions ?? undefined) as Prisma.InputJsonValue };
+    const before = await this.prisma.tripStop.findUnique({
+      where: { id: stopId },
+      include: {
+        trip: { select: { id: true, depot: true, vehicleId: true } },
+        pod: { select: { exceptions: true, creditNoteId: true } },
+        order: { select: { unitsReceived: true, unitsExpected: true, receiptNote: true, receivedBy: true, receiptSavedAt: true, creditNoteId: true } },
+      },
+    });
+    const status = podOutcome(podData) === 'STOP_FAILED' ? OrderStatus.DELIVERED : OrderStatus.DELIVERED;
+    const left = leaveActual ?? new Date();
+    const storeCounted = !before?.pod && !!before?.order && (before.order.unitsExpected ?? 0) > (before.order.unitsReceived ?? Infinity);
+    const exceptions = podData.exceptions !== undefined || storeCounted
+      ? podExceptionsWithStoreCount(podData.exceptions, before?.pod?.exceptions, before?.order)
+      : undefined;
+    const creditNoteId = podData.creditNoteId ?? before?.pod?.creditNoteId ?? before?.order?.creditNoteId ?? undefined;
+    const data = { ...podData, exceptions: exceptions as Prisma.InputJsonValue, ...(creditNoteId ? { creditNoteId } : {}) };
     const stop = await this.prisma.$transaction(async (tx) => {
       await tx.pOD.upsert({
         where: { tripStopId: stopId },
         update: { ...data, syncedAt: podData.savedOffline ? undefined : new Date() },
         create: { tripStopId: stopId, ...data, savedAt: new Date() },
       });
-      await tx.order.update({ where: { id: orderId }, data: { status: OrderStatus.DELIVERED } });
+      await tx.order.update({ where: { id: orderId }, data: { status } });
       return tx.tripStop.update({
         where: { id: stopId },
         data: {
-          status: OrderStatus.DELIVERED,
+          status,
           ...(arrivalActual ? { arrivalActual } : {}),
-          leaveActual: leaveActual ?? new Date(),
+          leaveActual: left,
         },
       });
     });
     await this.announcePod(stopId, podData);
+    if (before) {
+      await this.progress(async () => {
+        // an arrival sent with the POD (no Arrive call before) moves the later stops first
+        if (arrivalActual && !before.arrivalActual) await recordArrival(this.prisma, this.notify, before.trip, before, arrivalActual);
+        await recordDeparture(this.prisma, this.notify, before.trip, { ...before, arrivalActual: before.arrivalActual ?? arrivalActual ?? null }, left, {
+          status, unitsDelivered: podData.unitsDelivered, unitsOrdered: podData.unitsOrdered,
+        });
+      });
+    }
     return stop;
+  }
+
+  /** Live progress (events and the ETAs of later stops) is best effort: the stop itself has been recorded. */
+  private async progress(fn: () => Promise<unknown>) {
+    try {
+      await fn();
+    } catch (e) {
+      this.logger.warn(`Stop progress not announced: ${(e as Error).message}`);
+    }
   }
 
   /** A failed stop or a POD exception reaches the depot's dispatchers and the store (DSP-13, DSP-04, SM-21). */

@@ -1,6 +1,7 @@
 'use client';
 // DSP-06 Sign in · desktop, live. Markup and classes from the generated design (frontend/screens/dsp-06-sign-in.tsx).
 import { Ic } from '@/components/live/icons';
+import { DEPOT_NAME } from '@/lib/format';
 import { useSignInEntry } from '@/components/live/SignInEntry';
 import Btn from '@/components/live/Btn';
 
@@ -58,8 +59,7 @@ export default function LiveDsp06SignIn() {
             </svg>
           </div>
           <div className="dx-auth__foot">
-            <span><Ic n="depot" />{"Peliyagoda DC"}</span>
-            <span><Ic n="depot" />{"Kandy Hub"}</span>
+            {Object.entries(DEPOT_NAME).map(([k, name]) => <span key={k}><Ic n="depot" />{name}</span>)}
             <span><Ic n="lock" />{"Waypoint Group staff only"}</span>
           </div>
         </div>

@@ -150,7 +150,7 @@ export default function ScreenLd09PreCoolCheck() {
             <View style={s.v26}>
               <View style={s.v24}>
                 <Icon xml={X2} width={14} height={14} style={s.v1} />
-                <Text style={s.t23} numberOfLines={1}>{"Set-point —"}</Text>
+                <Text style={s.t23} numberOfLines={1}>{chilled ? `Set-point ≤ ${MAX_CHILLED_C} °C` : "Ambient · no set-point"}</Text>
               </View>
               <View style={s.v10} />
               <Text style={s.t25}>{saved !== null ? `confirmed ${saved} °C on this phone` : "not confirmed yet"}</Text>

@@ -1,8 +1,8 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // LD-24 Can't sign in · phone (P3, phone)
-import { Text, View, StyleSheet } from 'react-native';
+import { Linking, Text, View, StyleSheet } from 'react-native';
 import { useAccessProblem, useDeviceId, useSignIn } from '@/lodestar/live';
-import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L213":{"to":"ld-06-sign-in","kind":"go"},"B":{"to":"ld-06-sign-in","kind":"back"}}};
 
@@ -72,7 +72,17 @@ export default function ScreenLd24CanTSignIn() {
                 </View>
                 <Icon xml={X2} width={22} height={22} style={s.v1} />
               </Tap>
-              <View style={s.v28}>
+              <Tap
+                style={s.v28}
+                to={null}
+                testID="call-lead"
+                // the phone app opens; the lead makes the one-time PIN for this phone's id
+                onPress={async () => {
+                  const opened = await Linking.openURL('tel:').then(() => true, () => false);
+                  if (!opened) showToast(`Call the hub office · this phone's id is ${device ?? '…'}`);
+                  return false;
+                }}
+              >
                 <View style={s.v22}>
                   <Icon xml={X3} width={22} height={22} style={s.v1} />
                 </View>
@@ -85,7 +95,7 @@ export default function ScreenLd24CanTSignIn() {
                   </View>
                 </View>
                 <Icon xml={X2} width={22} height={22} style={s.v1} />
-              </View>
+              </Tap>
             </View>
           </View>
           <View style={s.v32}>

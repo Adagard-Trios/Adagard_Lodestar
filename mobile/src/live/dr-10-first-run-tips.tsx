@@ -2,13 +2,15 @@
 // DR-10 First-run tips · phone (P4, phone)
 import { Text, View, StyleSheet } from 'react-native';
 import { markOnboardingSeen } from '@/lib/settings';
-import { useClaims } from '@/model/hooks';
+import { useClaims, useParam } from '@/model/hooks';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L237":{"to":"dr-11-load-handover-received","kind":"go"},"B":{"to":"dr-09-language","kind":"back"}}};
 
 export default function ScreenDr10FirstRunTips() {
   const sub = useClaims()?.sub;
+  // opened from Settings (DR-24 Help and safety tips): Got it goes back there instead of on to the load handover
+  const fromSettings = useParam('from') === 'settings';
   return (
     <Frame bg="#070b16" nav={nav} style={s.v0}>
       <View style={s.v29}>
@@ -78,7 +80,7 @@ export default function ScreenDr10FirstRunTips() {
           </View>
         </Scroll>
         <View style={s.v28}>
-          <Tap lk="L237" style={s.v27} onPress={async () => { await markOnboardingSeen(sub); return true; }}>
+          <Tap lk="L237" style={s.v27} to={fromSettings ? { to: 'dr-24-settings-me', kind: 'back' } : undefined} onPress={async () => { await markOnboardingSeen(sub); return true; }}>
             <Grad g={G0} style={s.v25} />
             <Text style={s.t26}>{"Got it"}</Text>
           </Tap>

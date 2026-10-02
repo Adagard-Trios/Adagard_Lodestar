@@ -3,9 +3,12 @@
 import { useEffect, useState } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { hm } from '@/lib/time';
+import { LANGUAGE_NAMES, useSettings } from '@/lib/settings';
+import { speakIn } from '@/lodestar/voice';
 import { useClaims, useLoadSheet } from '@/model/hooks';
-import { loadGroups, ordinal, reeferOf, shortfallFor, tempLabel, useOpenRePlan, useRePlanAlert, useTicks, type LoadGroup } from '@/model/dock';
+import { loadGroups, ordinal, reeferOf, shortfallFor, tempLabel, useOpenRePlan, useRePlanAlert, useMarkLoading, useTicks, type LoadGroup } from '@/model/dock';
 import type { OrderLineItem } from '@/model/types';
+import { truckSvg } from '@/lodestar/truck';
 import { Frame, Grad, Icon, Scroll, Tap, openScreen, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L7":{"to":"ld-03-flag-shortfall","kind":"go"},"L64":{"to":"ld-03-flag-shortfall","kind":"go"},"L195":{"to":"ld-30-load-sheet-speaking","kind":"go"},"L196":{"to":"ld-28-voice-and-language","kind":"go"},"B":{"to":"ld-01-dock-queue","kind":"back"}}};
@@ -17,7 +20,8 @@ export default function ScreenLd02LoadSheet() {
   const sheet = useLoadSheet();
   const data = sheet.data;
   const trip = data?.trip;
-  const t = useTicks(sheet.tripId);
+  const t = useTicks(sheet.tripId, sheet.data?.trip?.status);
+  useMarkLoading(data?.trip, !!data?.loadRecord || sheet.shortfalls.length > 0 || Object.keys(t.map).length > 0);
   // dispatch re-plans while this trip is loading: locked while the draft is open (LD-18), then what changed (LD-12)
   useRePlanAlert(trip?.depot, planId => trip && openScreen('ld-12-plan-changed', { trip: trip.id, plan: planId }));
   const lockedBy = useOpenRePlan(trip).data?.id;
@@ -29,10 +33,12 @@ export default function ScreenLd02LoadSheet() {
   const flagged = (l: OrderLineItem) => shortfallFor(sheet.shortfalls, l);
   const accounted = (l: OrderLineItem) => t.isTicked(l.id) || !!flagged(l);
   const groups = loadGroups(data, accounted);
+  const truck = truckSvg(groups);
   const lines = groups.flatMap(g => g.lines);
   const total = lines.length;
   const done = lines.filter(accounted).length;
   const current = lines.find(l => !accounted(l)) ?? null;
+  const { language, readAloud } = useSettings();
   const currentGroup = groups.find(g => g.ticked < g.lines.length) ?? null;
   const temp = reeferOf(trip, data?.loadRecord);
   const kg = data ? data.stops.reduce((n, st) => n + (st.order?.kg ?? 0), 0) : 0;
@@ -142,7 +148,7 @@ export default function ScreenLd02LoadSheet() {
               </View>
             </View>
             <View style={s.v26}>
-              <Icon xml={X1} width={302} height={96} style={s.v20} />
+              {truck ? <Icon xml={truck} width={302} height={96} style={s.v20} /> : null}
               <View style={s.v25}>
                 <Text style={s.t21}>{"Cab left, rear doors right"}</Text>
                 <View style={s.v22} />
@@ -230,15 +236,23 @@ export default function ScreenLd02LoadSheet() {
         </Scroll>
         <View style={s.v61}>
           <View style={s.v57}>
-            <Tap lk="L195" say={current ? `${current.name}. ${current.qty}` : undefined} style={s.v52}>
+            <Tap
+              lk="L195"
+              style={s.v52}
+              to={trip ? { to: 'ld-30-load-sheet-speaking', params: { trip: trip.id } } : undefined}
+              // LD-30 reads the line by itself when read aloud is on; with it off, this tap still says the next line once
+              onPress={() => {
+                if (!readAloud && current) speakIn(`${current.name}. ${current.qty}`, language);
+              }}
+            >
               <Icon xml={X5} width={22} height={22} style={s.v1} />
               <Text style={s.t51} numberOfLines={1}>{"Read next line"}</Text>
             </Tap>
             <View style={s.v56}>
               <View>
-                <Text style={s.t54}>{"Earpiece · "}<Text><Text style={s.t53}>{"தமிழ்"}</Text></Text></Text>
+                <Text style={s.t54}>{readAloud ? "Read aloud · " : "Voice off · "}<Text><Text style={s.t53}>{LANGUAGE_NAMES[language]}</Text></Text></Text>
               </View>
-              <Tap lk="L196">
+              <Tap lk="L196" to={trip ? { to: 'ld-28-voice-and-language', params: { trip: trip.id } } : undefined}>
                 <Text style={s.t55}>{"Voice on this phone, works offline"}</Text>
               </Tap>
             </View>
@@ -264,7 +278,6 @@ const x = StyleSheet.create({
 });
 
 const X0 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#0a0f1a\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"20\" height=\"20\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M19 12H5M12 19l-7-7 7-7\" fill=\"none\" stroke=\"#0a0f1a\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
-const X1 = "<svg width=\"302\" height=\"96\" viewBox=\"0 0 302 96\" font-family=\"Inter, sans-serif\" fill=\"#000000\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" xmlns=\"http://www.w3.org/2000/svg\"> <rect x=\"0\" y=\"22\" width=\"26\" height=\"52\" rx=\"9\" fill=\"#c9cfdb\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect><rect x=\"5\" y=\"30\" width=\"9\" height=\"36\" rx=\"3\" fill=\"#8f98aa\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect> <rect x=\"30\" y=\"1\" width=\"262\" height=\"94\" rx=\"12\" fill=\"#ffffff\" stroke=\"#c9cfdb\" stroke-width=\"1.5\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect> <path d=\"M31 13 a11 11 0 0 1 11 -11 H280 a11 11 0 0 1 11 11 V47 H31 Z\" fill=\"#ddf4f9\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path> <path d=\"M31 49 H291 V83 a11 11 0 0 1 -11 11 H42 a11 11 0 0 1 -11 -11 Z\" fill=\"#f1efec\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path> <rect x=\"36\" y=\"6\" width=\"92\" height=\"37\" rx=\"8\" fill=\"#e3f6ec\" stroke=\"#10b981\" stroke-width=\"1.5\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect>  <rect x=\"132\" y=\"6\" width=\"120\" height=\"37\" rx=\"8\" fill=\"#fff1d6\" stroke=\"#f5b83d\" stroke-width=\"1.5\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect>  <rect x=\"36\" y=\"53\" width=\"64\" height=\"37\" rx=\"8\" fill=\"none\" stroke=\"#a6aebd\" stroke-width=\"1.5\" stroke-dasharray=\"4, 3\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect>  <rect x=\"104\" y=\"53\" width=\"148\" height=\"37\" rx=\"8\" fill=\"#fff1d6\" stroke=\"#f5b83d\" stroke-width=\"1.5\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect>   <rect x=\"293\" y=\"6\" width=\"7\" height=\"38\" rx=\"3\" fill=\"#344054\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect><rect x=\"293\" y=\"52\" width=\"7\" height=\"38\" rx=\"3\" fill=\"#344054\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect> </svg>";
 const X2 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#0e7490\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"14\" height=\"14\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M12 2v20M4.2 7l15.6 10M4.2 17 19.8 7\" fill=\"none\" stroke=\"#0e7490\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const X3 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#047857\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M20 6 9 17l-5-5\" fill=\"none\" stroke=\"#047857\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const X4 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#344054\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z\" fill=\"none\" stroke=\"#344054\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M12 9v4M12 17h.01\" fill=\"none\" stroke=\"#344054\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";

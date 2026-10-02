@@ -11,7 +11,7 @@ import RePlan from '@/live/dsp-b1-re-plan-diff';
 import ExceptionsInbox from '@/live/dsp-13-exceptions-inbox';
 import { freezeDate, unfreeze } from './helpers/clock';
 import type { FakeRequest } from './helpers/live';
-import { page, renderLive } from './helpers/live';
+import { agentConfigReply, page, renderLive } from './helpers/live';
 
 const router = { push: jest.fn(), replace: jest.fn(), back: jest.fn(), forward: jest.fn(), refresh: jest.fn(), prefetch: jest.fn() };
 jest.mock('next/navigation', () => ({ useRouter: () => router, usePathname: () => '/plan' }));
@@ -44,7 +44,10 @@ const blackout = { id: 'N1', recipientId: 'u-d', tripId: 'TRT1', type: 'BLACKOUT
 
 /** Reads every Plan screen makes: sidebar counts and the latest run date. */
 function base(req: FakeRequest) {
+  if (agentConfigReply(req)) return agentConfigReply(req);
   if (req.query.$top === '0') return page([], 0);
+  // no open orders from today on (the test day is past): the desk falls back to the latest plan's run date
+  if (req.path === 'Orders' && req.query.$select === 'runDate') return page([]);
   if (req.path === 'Plans' && req.query.$select === 'runDate') return page([{ runDate: DAY }]);
   return undefined;
 }

@@ -1,6 +1,7 @@
 // Driver (Lodestar Run) helpers for the live screens: network/sync state, outbox labels, the run
 // summary, and dispatch notices (stored Notifications + live socket notices, newest first).
 import { useEffect, useMemo } from 'react';
+import { Linking } from 'react-native';
 import { kv } from '@/lib/kv';
 import { inList } from '@/lib/odata';
 import { Store, useStore } from '@/lib/store';
@@ -12,7 +13,7 @@ import * as api from './api';
 import { useNotifications, type RunView } from './hooks';
 import { bumpRevision, client, sync } from './platform';
 import { useQuery } from './query';
-import type { Trip, TripStop } from './types';
+import type { Outlet, Trip, TripStop } from './types';
 
 /** Online flag plus the time it last changed ("no signal since …"). */
 export function useNet() {
@@ -50,6 +51,10 @@ export function itemDetail(i: QueueItem): string {
       return `left ${hm(p.time) || hm(i.savedAt)}`;
     case 'POD_SAVE':
       return `${p.units ?? 0}/${p.unitsOrdered ?? p.units ?? 0}${p.receiverName ? ` · ${p.receiverName}` : ''}`;
+    case 'STATUS_CHANGE':
+      return typeof p.title === 'string' && p.title ? p.title : `saved ${hm(i.savedAt)}`;
+    case 'TRIP_STATUS':
+      return p.status === 'COMPLETE' ? `trip finished ${hm(i.savedAt)}` : `trip started ${hm(i.savedAt)}`;
     default:
       return `saved ${hm(i.savedAt)}`;
   }
@@ -80,9 +85,75 @@ export function itemMix(items: QueueItem[]): string {
     [n('ARRIVAL'), 'arrival', 'arrivals'],
     [n('POD_SAVE'), 'POD', 'PODs'],
     [n('LEAVE'), 'departure', 'departures'],
-    [items.length - n('ARRIVAL') - n('POD_SAVE') - n('LEAVE'), 'other', 'others'],
+    [n('STATUS_CHANGE'), 'report', 'reports'],
+    [n('TRIP_STATUS'), 'trip update', 'trip updates'],
+    [items.length - n('ARRIVAL') - n('POD_SAVE') - n('LEAVE') - n('STATUS_CHANGE') - n('TRIP_STATUS'), 'other', 'others'],
   ] as const;
   return parts.filter(([c]) => c > 0).map(([c, one, many]) => `${c} ${c === 1 ? one : many}`).join(' · ');
+}
+
+// ---------------------------------------------------------------- calls and maps (no data needed)
+
+/**
+ * "Call dispatch" (DR-17, DR-23, DR-29, DR-37): the phone's dialer, which works where data does not. The app holds no
+ * dispatch number (the directory is not readable by a driver), so the driver dials the depot's number from there.
+ */
+export async function openDialer(phone?: string | null): Promise<false> {
+  const digits = phone?.replace(/[^\d+]/g, '') ?? '';
+  try {
+    await Linking.openURL(`tel:${digits}`);
+  } catch {
+    throw new Error('This phone cannot open the dialer');
+  }
+  return false;
+}
+
+type Place = Outlet & { lat?: number | null; lng?: number | null };
+
+/** Google Maps directions through the given stops (the last one is the destination); null without a place. */
+export function mapsUrl(stops: TripStop[]): string | null {
+  const where = (o?: Place) => (o && typeof o.lat === 'number' && typeof o.lng === 'number' ? `${o.lat},${o.lng}` : (o?.address ?? ''));
+  const points = stops.map(s => where(s.outlet as Place | undefined)).filter(Boolean);
+  if (!points.length) return null;
+  const dest = encodeURIComponent(points.at(-1)!);
+  const via = points.slice(0, -1).map(encodeURIComponent).join('%7C');
+  return `https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${dest}${via ? `&waypoints=${via}` : ''}`;
+}
+
+/** Opens turn-by-turn in Google Maps (DR-15, DR-36). */
+export async function openMaps(stops: TripStop[]): Promise<false> {
+  const url = mapsUrl(stops);
+  if (!url) throw new Error('No address for this stop yet');
+  try {
+    await Linking.openURL(url);
+  } catch {
+    throw new Error('This phone cannot open Maps');
+  }
+  return false;
+}
+
+// ---------------------------------------------------------------- stops with several orders
+
+/** The orders dropped at the same stop (same trip and stop number: e.g. chilled + dry), chilled first. */
+export function stopGroup(stops: TripStop[], stop: TripStop | null | undefined): TripStop[] {
+  if (!stop) return [];
+  const rows = stops.filter(s => s.tripId === stop.tripId && s.stopSeq === stop.stopSeq);
+  const rank = (s: TripStop) => (s.order?.tempClass === 'CHILLED' ? 0 : 1);
+  return (rows.length ? rows : [stop]).sort((a, b) => rank(a) - rank(b) || a.orderId.localeCompare(b.orderId));
+}
+
+/**
+ * Where "Complete stop" goes (DR-03, DR-16, DR-20): the next order at the same stop (its POD), else the next
+ * stop's arrival (DR-19), else the run is complete (DR-04). With no signal: the POD-saved-offline screen (DR-A2),
+ * except from DR-16 (the store code, designed for no signal, goes straight on: offlineScreen false).
+ */
+export function afterPod(view: RunView | null, stop: TripStop, opts: { offlineScreen?: boolean } = {}): { to: string; params: Record<string, string> } {
+  const open = (view?.tripStops ?? []).filter(s => s.status !== 'DELIVERED' && s.id !== stop.id);
+  const sibling = open.find(s => s.stopSeq === stop.stopSeq);
+  if (sibling) return { to: 'dr-03-proof-of-delivery', params: { stop: sibling.id } };
+  if (opts.offlineScreen !== false && !network.get().online) return { to: 'dr-a2-pod-saved-offline', params: { stop: stop.id } };
+  if (open[0]) return { to: 'dr-19-stop-2-arrival-hawa-eliya', params: { stop: open[0].id } };
+  return { to: 'dr-04-run-complete', params: { stop: stop.id } };
 }
 
 // ---------------------------------------------------------------- run summary

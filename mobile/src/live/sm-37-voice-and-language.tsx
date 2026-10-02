@@ -185,7 +185,7 @@ export default function ScreenSm37VoiceAndLanguage() {
           <View style={s.v46}>
             <Icon xml={X5} width={14} height={14} style={s.v43} />
             <View style={s.v9}>
-              <Text style={s.t45}><Text style={s.t44}>{"The voice is made on this phone."}</Text>{" Nothing is sent anywhere, so it keeps working when the Nuwara Eliya signal drops."}</Text>
+              <Text style={s.t45}><Text style={s.t44}>{"The voice is made on this phone."}</Text>{" Nothing is sent anywhere, so it keeps working when the signal drops."}</Text>
             </View>
           </View>
         </Scroll>

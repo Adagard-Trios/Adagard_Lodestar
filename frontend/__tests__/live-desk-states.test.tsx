@@ -30,6 +30,8 @@ const err = (status: number, message: string, code = 'Failed', target?: string) 
 const posts = (calls: FakeRequest[]) => calls.filter(c => c.method === 'POST');
 const base = (req: FakeRequest) => {
   if (req.query.$top === '0') return page([], 0);
+  // no open orders from today on (the test day is past): the desk falls back to the latest plan's run date
+  if (req.path === 'Orders' && req.query.$select === 'runDate') return page([]);
   if (req.path === 'Plans' && req.query.$select === 'runDate') return page([{ runDate: DAY }]);
   return undefined;
 };

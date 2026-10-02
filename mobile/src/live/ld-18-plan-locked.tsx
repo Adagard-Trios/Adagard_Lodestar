@@ -21,7 +21,7 @@ export default function ScreenLd18PlanLocked() {
   const trip = data?.trip ?? null;
   const draft = useOpenRePlan(trip).data ?? null;
   useRePlanAlert(trip?.depot, planId => trip && openScreen('ld-12-plan-changed', { trip: trip.id, plan: planId }, 'nav'));
-  const t = useTicks(sheet.tripId);
+  const t = useTicks(sheet.tripId, sheet.data?.trip?.status);
   const accounted = (l: OrderLineItem) => t.isTicked(l.id) || !!shortfallFor(sheet.shortfalls, l);
   const groups = loadGroups(data, accounted);
   const lines = groups.flatMap(g => g.lines);

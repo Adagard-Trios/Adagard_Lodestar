@@ -4,7 +4,7 @@ import { AppState } from 'react-native';
 import { apiBase, sameOriginApi } from '@/lib/config';
 import { ODataClient } from '@/lib/odata';
 import { Store } from '@/lib/store';
-import { deviceId } from '@/auth/device';
+import { deviceId, ownDeviceId } from '@/auth/device';
 import { oidcClient } from '@/auth/oidc';
 import { deviceStore, tokenStore } from '@/auth/secure';
 import { Session } from '@/auth/session';
@@ -15,9 +15,11 @@ import { registerServiceWorker } from '@/offline/service-worker';
 import { SyncEngine } from '@/offline/sync';
 
 export const getDeviceId = () => deviceId(deviceStore, () => Crypto.randomUUID());
+const installId = () => ownDeviceId(deviceStore, () => Crypto.randomUUID());
 
-// A stored session is resumed only on the phone its token is bound to (where the API can check X-Device-Id).
-export const session = new Session(tokenStore, oidcClient(), undefined, sameOriginApi() ? getDeviceId : undefined);
+// A stored session is resumed only on the install it was saved on, and on the phone its token is bound to (where
+// the API can check X-Device-Id).
+export const session = new Session(tokenStore, oidcClient(), undefined, sameOriginApi() ? getDeviceId : undefined, installId);
 
 export const client = new ODataClient({
   baseUrl: apiBase,

@@ -6,6 +6,8 @@ import { hm } from '@/lib/time';
 import { plural, titleCase } from '@/lodestar/live';
 import { arriveAtStop } from '@/model/actions';
 import { isUnsent, useOutbox, useStop } from '@/model/hooks';
+import { stopGroup } from '@/model/run';
+import { LATE_RISK_PCT } from '@/model/preferences';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L19":{"to":"dr-20-stop-2-proof-of-delivery","kind":"go"},"L259":{"to":"dr-17-report-a-problem","kind":"go"},"B":{"to":"dr-36-en-route-driving-mode","kind":"back"}}};
@@ -18,10 +20,14 @@ export default function ScreenDr19Stop2ArrivalHawaEliya() {
   const total = view?.tripStops.length ?? 0;
   const arrived = stop?.arrivalActual;
   const unsent = isUnsent(waiting, stop?.id);
-  const late = (stop?.lateRiskPct ?? 0) >= 50;
-  const chilled = order?.tempClass === 'CHILLED';
+  const late = (stop?.lateRiskPct ?? 0) >= LATE_RISK_PCT;
+  // every order dropped at this stop (e.g. chilled + dry), chilled first; delivery starts with the first one still open
+  const group = stopGroup(view?.tripStops ?? [], stop);
+  const first = group.find(r => r.status !== 'DELIVERED') ?? stop;
+  const chilled = group.some(r => r.order?.tempClass === 'CHILLED');
   const access = o ? [titleCase(o.dockType), titleCase(o.parking) ? `${titleCase(o.parking)} parking` : ''].filter(Boolean).join(' · ') : '';
   const params = stop ? { stop: stop.id } : undefined;
+  const podParams = first ? { stop: first.id } : undefined;
   return (
     <Frame bg="#070b16" nav={nav} style={s.v0}>
       <View style={s.v48}>
@@ -89,7 +95,7 @@ export default function ScreenDr19Stop2ArrivalHawaEliya() {
           <View style={s.v32}>
             <View style={s.v24}>
               <View style={s.v13}>
-                <Text style={s.t22}>{order ? 'To drop · 1 order' : 'To drop'}</Text>
+                <Text style={s.t22}>{group.length ? `To drop · ${plural(group.length, 'order')}` : 'To drop'}</Text>
               </View>
               {chilled ? (
                 <View style={s.v34}>
@@ -99,32 +105,40 @@ export default function ScreenDr19Stop2ArrivalHawaEliya() {
               ) : null}
             </View>
             <View style={s.v31}>
-              {order ? (
-                <View style={s.v30}>
-                  <View style={chilled ? s.v35 : s.v25}>
-                    <Icon xml={chilled ? X5 : X3} width={22} height={22} style={s.v1} />
-                  </View>
-                  <View style={s.v29}>
-                    <View>
-                      <Text style={s.t26}>{chilled ? 'Chilled' : 'Dry'}</Text>
-                    </View>
-                    <View style={s.v28}>
-                      <View style={s.v13}>
-                        <Text style={s.t36}>{order.id}</Text>
+              {group.some(r => r.order) ? (
+                group.map((r, i) => {
+                  const ro = r.order;
+                  if (!ro) return null;
+                  const cold = ro.tempClass === 'CHILLED';
+                  const n = r.orderId === order?.id ? lines.length : 0;
+                  return (
+                    <View key={r.id} style={i === 0 ? s.v30 : [s.v30, x.rowLine]} testID={`drop-${r.orderId}`}>
+                      <View style={cold ? s.v35 : s.v25}>
+                        <Icon xml={cold ? X5 : X3} width={22} height={22} style={s.v1} />
                       </View>
-                      <View style={s.v37} />
-                      <Text style={s.t27}>{lines.length ? plural(lines.length, 'line') : chilled ? 'chilled' : 'ambient'}</Text>
+                      <View style={s.v29}>
+                        <View>
+                          <Text style={s.t26}>{cold ? 'Chilled' : 'Dry'}</Text>
+                        </View>
+                        <View style={s.v28}>
+                          <View style={s.v13}>
+                            <Text style={s.t36}>{ro.id}</Text>
+                          </View>
+                          <View style={s.v37} />
+                          <Text style={s.t27}>{r.status === 'DELIVERED' ? 'delivered' : n ? plural(n, 'line') : cold ? 'chilled' : 'ambient'}</Text>
+                        </View>
+                      </View>
+                      <View style={s.v40}>
+                        <View>
+                          <Text style={s.t38}>{String(ro.units)}</Text>
+                        </View>
+                        <View>
+                          <Text style={s.t39}>{"units"}</Text>
+                        </View>
+                      </View>
                     </View>
-                  </View>
-                  <View style={s.v40}>
-                    <View>
-                      <Text style={s.t38}>{String(order.units)}</Text>
-                    </View>
-                    <View>
-                      <Text style={s.t39}>{"units"}</Text>
-                    </View>
-                  </View>
-                </View>
+                  );
+                })
               ) : (
                 <View style={s.v30}>
                   <Text style={s.t27}>{"—"}</Text>
@@ -137,14 +151,14 @@ export default function ScreenDr19Stop2ArrivalHawaEliya() {
           <Tap
             lk="L19"
             style={s.v44}
-            to={params ? { to: 'dr-20-stop-2-proof-of-delivery', params } : undefined}
+            to={podParams ? { to: 'dr-20-stop-2-proof-of-delivery', params: podParams } : undefined}
             onPress={async () => {
-              // TripStops Arrive (queued, sent with the next sync)
-              if (stop && !stop.arrivalActual && stop.status !== 'DELIVERED') await arriveAtStop(stop);
+              // arriving here: TripStops Arrive for the stop's orders (queued, sent with the next sync)
+              for (const r of group) if (!r.arrivalActual && r.status !== 'DELIVERED') await arriveAtStop(r);
             }}
           >
             <Grad g={G0} style={s.v42} />
-            <Text style={s.t43}>{stop?.status === 'DELIVERED' ? 'View delivery' : "Start delivery"}</Text>
+            <Text style={s.t43}>{group.length && group.every(r => r.status === 'DELIVERED') ? 'View delivery' : "Start delivery"}</Text>
             <Icon xml={X6} width={22} height={22} style={s.v1} />
           </Tap>
           <Tap lk="L259" style={s.v46} to={params ? { to: 'dr-17-report-a-problem', params } : undefined}>
@@ -166,6 +180,8 @@ const X5 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#67e3f9\" stroke-w
 const X6 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#111522\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M5 12h14M12 5l7 7-7 7\" fill=\"none\" stroke=\"#111522\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const X7 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#b5bdd1\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"18\" height=\"18\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z\" fill=\"none\" stroke=\"#b5bdd1\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M12 9v4M12 17h.01\" fill=\"none\" stroke=\"#b5bdd1\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const G0: GradSpec[] = [{"type":"linear","angle":135,"at":null,"repeat":false,"stops":[{"c":"#ffd37a","p":0},{"c":"#f5b83d","p":0.6},{"c":"#eda422","p":1}]}];
+
+const x = StyleSheet.create({ rowLine: { borderTopWidth: 1, borderTopColor: '#1b2338' } });
 
 const s = StyleSheet.create({
   v0: {"flexDirection":"column","alignItems":"stretch","backgroundColor":"#0a0f1e","flex":1},

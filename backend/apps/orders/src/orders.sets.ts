@@ -4,8 +4,8 @@ import { EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, Oper
 import { canAccessDepot, canAccessOutlet, HUMAN_ROLES, isPrivileged, Roles } from '@lodestar/security';
 import { OrderStatus, TempClass } from '@prisma/client';
 import { CANCELLABLE_STATUSES, EDITABLE_STATUSES, OrdersService } from './orders.service';
-import { runDateValue } from '@lodestar/platform';
-import { assertStoreMayEdit, cutoffSettings, decideCutoff, movedNote } from './order-cutoff';
+import { runDateValue, toBusinessDate } from '@lodestar/platform';
+import { assertStoreMayEdit, closedDayNote, cutoffSettings, decideCutoff, movedNote } from './order-cutoff';
 
 /** Row filters shared by Orders and (through `order`) OrderLineItems. */
 const orderAbac = {
@@ -79,6 +79,13 @@ export class OrdersSet extends ODataEntitySet {
     if (cutoff.moved) {
       const next = await this.orders.nextOperatingRunDate(cutoff.moved.earliest);
       data = { ...data, runDate: runDateValue(next), notes: [data.notes, movedNote(cutoff.moved.from, next)].filter(Boolean).join(' ') };
+    } else {
+      // There is no run on a closed day (Calendar, or a Sunday it is silent about): the order goes to the next run.
+      const asked = toBusinessDate(data.runDate);
+      const next = await this.orders.nextOperatingRunDate(asked);
+      if (next !== asked) {
+        data = { ...data, runDate: runDateValue(next), notes: [data.notes, closedDayNote(asked, next)].filter(Boolean).join(' ') };
+      }
     }
     return {
       ...data,
@@ -102,13 +109,18 @@ export class OrdersSet extends ODataEntitySet {
   async create(data: Record<string, any>, ctx: WriteContext) {
     for (let attempt = 1; ; attempt++) {
       const mine = this.generatedIds.delete(data.id);
+      let created: any;
       try {
-        return await super.create(data, ctx);
+        created = await super.create(data, ctx);
       } catch (e: any) {
         const idClash = e?.code === 'P2002' && [].concat(e?.meta?.target ?? []).some((t: string) => /^(id|\w+_pkey)$/.test(String(t)));
         if (!mine || !idClash || attempt >= 5) throw e;
         data = { ...data, id: this.generated(await this.orders.nextOrderId()) };
+        continue;
       }
+      // committed: dispatch (DSP-01) and the store see the new order live (best effort, never undoes it)
+      await this.orders.announceCreated(created).catch(() => undefined);
+      return created;
     }
   }
 
@@ -120,14 +132,23 @@ export class OrdersSet extends ODataEntitySet {
       }
       assertStoreMayEdit(ctx.principal.roles, current.runDate, patch.runDate, new Date(), cutoffSettings());
     }
+    if (patch.runDate !== undefined && patch.runDate !== null) {
+      const asked = toBusinessDate(patch.runDate);
+      if ((await this.orders.nextOperatingRunDate(asked)) !== asked) {
+        throw ODataError.unprocessable('NonOperatingDay', `${asked} is not an operating day: there is no run to deliver on`, 'runDate');
+      }
+    }
     return patch;
   }
 
-  /** POST Orders('…')/Lodestar.SetStatus {status, notes?} */
+  /**
+   * POST Orders('…')/Lodestar.SetStatus {status, notes?} — dispatch only (ORDER_TRANSITIONS). Loaders and drivers
+   * move orders through their own actions (Release, CompleteStop, PushBatch); stores through ConfirmReceipt.
+   */
   @ODataAction({
     name: 'SetStatus',
     binding: 'entity',
-    roles: [Roles.Dispatcher, Roles.Loader, Roles.Driver, Roles.Admin, Roles.Service],
+    roles: [Roles.Dispatcher, Roles.Admin, Roles.Service],
     params: { status: { type: 'Lodestar.OrderStatus', required: true }, notes: 'Edm.String' },
     returns: 'Lodestar.Order',
   })

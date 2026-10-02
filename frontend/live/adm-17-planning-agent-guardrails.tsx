@@ -5,6 +5,7 @@
 // access notes it reads with the outlet rows (Outlets accessNote). Every guardrail is enforced in code (agent and
 // planning service), so the toggles show the state and cannot be switched here; the locked ones carry the lock.
 // "See its last 30 proposals" opens the audit log (the design's L304).
+import { AUDIT_AREA_KEY } from '@/live/adm-16-audit-log';
 import { AdminSide, useCount } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { useAgentConfig } from '@/components/live/settings-data';
@@ -60,7 +61,7 @@ export default function LiveAdm17PlanningAgentGuardrails() {
               <div className="d-h1">{"Planning agent guardrails"}</div>
               <div className="d-sub">{"The planning agent drafts and proposes. People decide. These settings say what it may read and what it may never do."}</div>
             </div>
-            <span className="d-btn" data-lk="L304"><Ic n="history" />{"See its last 30 proposals"}</span>
+            <span className="d-btn" data-lk="L304" onClickCapture={() => { try { window.sessionStorage.setItem(AUDIT_AREA_KEY, 'agent'); } catch { /* the log opens on All */ } }}><Ic n="history" />{"See its last 30 proposals"}</span>
           </div>
           <ErrorBanner error={config.error} onRetry={config.refresh} />
           <div className="dx-hero adm-hero" style={{ flexDirection: 'row', alignItems: 'center', gap: '18px', padding: '20px 24px' }} data-testid="approval-lock">

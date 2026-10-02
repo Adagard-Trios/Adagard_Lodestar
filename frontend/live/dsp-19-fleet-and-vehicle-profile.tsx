@@ -9,6 +9,7 @@ import Btn from '@/components/live/Btn';
 import { PlanSide, useCount } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { usePlanScope } from '@/components/live/plan-data';
+import { useAgentConfig } from '@/components/live/settings-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { DEPOT_NAME, dayFilter, fmtNum, fmtRunDate, pct } from '@/lib/format';
 import { useAction, useQuery } from '@/lib/odata/hooks';
@@ -38,6 +39,7 @@ function DepotTab({ depot, on, onPick }: { depot: string; on: boolean; onPick: (
 export default function LiveDsp19FleetAndVehicleProfile() {
   const router = useRouter();
   const { runDate, depots, depot: pinned } = usePlanScope();
+  const maxTrips = useAgentConfig().data?.limits?.maxTripsPerVehicle;
   const [tab, setTab] = useState<string | null>(null);
   const depot = tab ?? pinned ?? depots[0];
   const [filter, setFilter] = useState<Filter>('all');
@@ -163,7 +165,7 @@ export default function LiveDsp19FleetAndVehicleProfile() {
                     <div className="dx-kv"><span>{"Temperature"}</span><b>{sel.tempClass === 'CHILLED' ? 'Reefer, chilled' : 'Dry, ambient'}</b></div>
                     <div className="dx-kv"><span>{"Fuel"}</span><b>{fmtNum(sel.kmPerLitre, 1)} km/L</b></div>
                     <div className="dx-kv"><span>{"Weekly quota"}</span><b>{sel.usedLThisWeek} of {sel.weeklyLFuel} L used</b></div>
-                    <div className="dx-kv"><span>{"Trips a day"}</span><b>Max 2 · home {DEPOT_NAME[sel.depot] ?? sel.depot}</b></div>
+                    <div className="dx-kv"><span>{"Trips a day"}</span><b>Max {maxTrips ?? '—'} · home {DEPOT_NAME[sel.depot] ?? sel.depot}</b></div>
                   </div>
                   {sel.tempClass === 'CHILLED' && (
                     <div className="dx-inset dx-inset--warn" style={{ padding: '12px 14px' }}>

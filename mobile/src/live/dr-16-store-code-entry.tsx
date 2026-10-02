@@ -5,7 +5,8 @@
 import { useState } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { completeStop } from '@/model/actions';
-import { dailyStoreCode, reportToDispatch } from '@/model/field-reports';
+import { afterPod } from '@/model/run';
+import { dailyStoreCode, reportToDispatch, stopContext } from '@/model/field-reports';
 import { useOnline, useParam, useStop } from '@/model/hooks';
 import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec, type Target } from '@/lodestar/runtime';
 
@@ -14,7 +15,7 @@ const nav: ScreenNav = {"links":{"L258":{"to":"dr-19-stop-2-arrival-hawa-eliya",
 const KEYS = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']];
 
 export default function ScreenDr16StoreCodeEntry() {
-  const { stop, view } = useStop();
+  const { stop, view, trip } = useStop();
   const online = useOnline();
   const unitsParam = useParam('units');
   const damaged = Number(useParam('damaged') ?? '');
@@ -24,8 +25,7 @@ export default function ScreenDr16StoreCodeEntry() {
   const expected = stop && view ? dailyStoreCode(stop.outletId, view.date) : null;
   const full = code.length === 4;
   const match = full && code === expected;
-  const later = view && stop ? view.tripStops.filter(x => x.status !== 'DELIVERED' && x.id !== stop.id) : [];
-  const target: Target | undefined = stop ? (later[0] ? { to: 'dr-19-stop-2-arrival-hawa-eliya', params: { stop: later[0].id } } : { to: 'dr-04-run-complete', params: { stop: stop.id } }) : undefined;
+  const target: Target | undefined = stop ? afterPod(view, stop, { offlineScreen: false }) : undefined;
   const press = (d: string) => {
     setCode(c => (c.length < 4 ? c + d : c));
     return false;
@@ -117,7 +117,7 @@ export default function ScreenDr16StoreCodeEntry() {
                 receiverName: `Store code ${code}`,
                 ...(damaged > 0 ? { exceptions: [{ type: 'DAMAGED', description: damageNote || `${damaged} damaged` }] } : {}),
               });
-              await reportToDispatch(stop.tripId, { report: 'STORE_CODE', stopId: stop.id, orderId: stop.orderId, code }, stop.id);
+              await reportToDispatch(stop.tripId, { report: 'STORE_CODE', stopId: stop.id, orderId: stop.orderId, code }, stop.id, stopContext(stop, trip?.vehicleId));
               showToast(online ? 'Sent to dispatch' : 'Saved · sends when signal returns');
               return true;
             }}

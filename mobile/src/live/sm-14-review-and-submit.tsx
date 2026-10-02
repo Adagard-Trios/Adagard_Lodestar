@@ -15,11 +15,11 @@ export default function ScreenSm14ReviewAndSubmit() {
   const claims = useClaims();
   const day = useStoreDay();
   const outlet = day.data?.outlet ?? null;
-  const { draft, runDate } = useOrderDraft();
+  const { draft, runDate, ratio } = useOrderDraft();
   const { dry, chilled } = byClass(draft?.lines ?? []);
-  const tDry = totals(dry);
-  const tChilled = totals(chilled);
-  const all = totals(draft?.lines ?? []);
+  const tDry = totals(dry, ratio);
+  const tChilled = totals(chilled, ratio);
+  const all = totals(draft?.lines ?? [], ratio);
   const orders = [tDry.units, tChilled.units].filter(n => n > 0).length;
   const now = useNow();
   const remaining = left(cutoffFor(runDate), now);
@@ -29,14 +29,14 @@ export default function ScreenSm14ReviewAndSubmit() {
     if (!outlet) throw new Error('Store details not loaded yet. Open Today once with signal.');
     if (!orders) throw new Error('Add at least one line');
     if (!remaining) { openScreen('sm-23-orders-closed'); return false; } // past 4:00 PM: the design's "Orders closed"
-    for (const group of [dry, chilled]) {
-      const lines = toOrderLines(group);
-      if (lines.length) await placeOrder(outlet, runDate, lines, draft.notes);
-    }
+    // one order per temperature class (dry and chilled travel apart), as the desk's SM-01 sends them
+    const since = new Date().toISOString();
+    await placeOrder(outlet, runDate, toOrderLines(draft.lines), draft.notes, ratio);
     await clearDraft();
     const online = network.get().online;
-    // no signal: the orders wait in the outbox as drafts (SM-25); with signal they are received (SM-01)
-    openScreen(online ? 'sm-01-received' : 'sm-25-offline-draft-saved', { runDate });
+    // no signal: the orders wait in the outbox as drafts (SM-25); with signal they are received (SM-01), on the
+    // run date the server gave them
+    openScreen(online ? 'sm-01-received' : 'sm-25-offline-draft-saved', { runDate, since });
     setTimeout(() => showToast(online ? `${plural(orders, 'order')} sent for ${dayLabel(runDate)}` : 'Saved on this phone · it sends when there is signal'), 350);
     return false;
   };

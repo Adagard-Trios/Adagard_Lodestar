@@ -4,7 +4,7 @@ import { Text, View, StyleSheet } from 'react-native';
 import { colomboDate, dayLabel, hm } from '@/lib/time';
 import { titleCase } from '@/lodestar/live';
 import { useClaims, useOnline, useRun } from '@/model/hooks';
-import { markNoticeRead, useDispatchNotices, type DispatchNotice } from '@/model/run';
+import { markNoticeRead, openDialer, useDispatchNotices, type DispatchNotice } from '@/model/run';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L266":{"to":"dr-27-sync-conflict-notice","kind":"go"},"N0":{"to":"dr-01-today-s-run","kind":"nav"},"N1":{"to":"dr-21-records","kind":"nav"}}};
@@ -104,11 +104,11 @@ export default function ScreenDr23DispatchNotices() {
           </View>
         </Scroll>
         <View style={s.v36}>
-          <View style={s.v33}>
+          <Tap style={s.v33} to={null} onPress={() => openDialer()} testID="call-dispatch">
             <Grad g={G0} style={s.v31} />
             <Icon xml={X5} width={22} height={22} style={s.v1} />
             <Text style={s.t32}>{"Call dispatch"}</Text>
-          </View>
+          </Tap>
           <View style={s.v35}>
             <Text style={s.t34}>{"No chat. When data is down, dispatch texts you."}</Text>
           </View>

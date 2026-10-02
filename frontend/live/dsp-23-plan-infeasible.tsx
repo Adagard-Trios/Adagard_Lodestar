@@ -9,11 +9,10 @@ import { useScreenNav } from '@/components/ScreenShell';
 import Btn from '@/components/live/Btn';
 import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
-import { infeasibility, useAgentRun, usePlanScope, type Infeasibility } from '@/components/live/plan-data';
+import { infeasibility, useReviewRun, usePlanScope, type Infeasibility } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { DEPOT_NAME, fmtDayTime, fmtNum, fmtRunDate, isoDay, pct } from '@/lib/format';
 import type { AgentRunDetail } from '@/lib/odata/types';
-import { useAgentRunId } from '@/lib/workday';
 
 export interface WhyRow {
   code: string;
@@ -68,8 +67,7 @@ function draftSeconds(d: AgentRunDetail): number | null {
 export default function LiveDsp23PlanInfeasible() {
   const nav = useScreenNav();
   const scope = usePlanScope();
-  const [runId] = useAgentRunId();
-  const run = useAgentRun(runId);
+  const { runId, run } = useReviewRun();
   const detail: AgentRunDetail = run.data?.detail ?? {};
   const f = infeasibility(run.data);
   const version = detail.plan?.version ?? detail.version;

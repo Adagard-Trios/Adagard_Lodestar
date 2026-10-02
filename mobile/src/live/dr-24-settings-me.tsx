@@ -127,7 +127,7 @@ export default function ScreenDr24SettingsMe() {
                 <Text style={s.t30} numberOfLines={1}>{waiting.length ? `${plural(waiting.length, 'record')} to send` : 'all sent'}</Text>
               </View>
             </View>
-            <View style={s.v31}>
+            <Tap style={s.v31} to={{ to: 'dr-10-first-run-tips', params: { from: 'settings' } }} testID="help-tips">
               <View style={s.v24}>
                 <Icon xml={X7} width={19} height={19} style={s.v1} />
               </View>
@@ -137,7 +137,7 @@ export default function ScreenDr24SettingsMe() {
                 </View>
               </View>
               <Icon xml={X4} width={18} height={18} style={s.v1} />
-            </View>
+            </Tap>
             <View style={s.v31}>
               <View style={s.v24}>
                 <Icon xml={X6} width={19} height={19} style={s.v1} />

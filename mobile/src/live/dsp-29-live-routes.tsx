@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { Text, View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { dayLabel, hm } from '@/lib/time';
 import { useClaims, useLiveRoutes } from '@/model/hooks';
-import { depotsLabel, LATE_RISK, tripProgress, useAlertCount, useSignalLost } from '@/model/plan';
+import { depotsLabel, LATE_RISK, LIVE_POLL_MS, tripProgress, useAlertCount, useEvery, useSignalLost } from '@/model/plan';
 import type { Trip } from '@/model/types';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
@@ -18,7 +18,9 @@ const STATUS: Record<Trip['status'], string> = { PLANNED: 'Planned', LOADING: 'L
 
 export default function ScreenDsp29LiveRoutes() {
   const claims = useClaims();
-  const { data, loading, error } = useLiveRoutes();
+  const { data, loading, error, refresh } = useLiveRoutes();
+  // realtime notices (eta_update, signal, trip_released, plan_published) re-read at once; this covers a quiet socket
+  useEvery(LIVE_POLL_MS, refresh);
   const lost = useSignalLost();
   const alertCount = useAlertCount();
   const trips = data?.trips ?? [];

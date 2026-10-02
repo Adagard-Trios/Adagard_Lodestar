@@ -5,13 +5,18 @@
 // "Fuel this week" is the vehicle's own counter (Vehicles usedLThisWeek / weeklyLFuel).
 import { Text, View, StyleSheet } from 'react-native';
 import { hm } from '@/lib/time';
-import { plural } from '@/lodestar/live';
+import { plural, signOutTo } from '@/lodestar/live';
+import { finishDeliveredTrips } from '@/model/actions';
+import { network } from '@/offline/network';
+import { queue, sync } from '@/model/platform';
 import { useClaims, useOutbox, useRun } from '@/model/hooks';
 import { depotName } from '@/model/plan';
 import type { Vehicle } from '@/model/types';
-import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
-const nav: ScreenNav = {"links":{"L22":{"app":"Lodestar Plan (desktop)","screen":"DSP-04 Live operations"}}};
+// Close shift → DR-06 (P4): the finished trips are completed, the outbox is sent while there is signal, then the
+// driver is signed out (anything still unsent stays on the phone and goes after the next sign-in).
+const nav: ScreenNav = {"links":{"L22":{"to":"dr-06-sign-in","kind":"nav"}}};
 
 type Fuel = Vehicle & { usedLThisWeek?: number | null; weeklyLFuel?: number | null };
 
@@ -139,7 +144,19 @@ export default function ScreenDr28EndOfShiftSummary() {
           ) : null}
         </Scroll>
         <View style={s.v46}>
-          <Tap lk="L22" style={s.v45}>
+          <Tap
+            lk="L22"
+            style={s.v45}
+            testID="close-shift"
+            onPress={async () => {
+              if (!v) return true; // prototype mode: just navigate
+              await finishDeliveredTrips(v.trips, v.stops);
+              if (network.get().online) await sync.flush().catch(() => undefined);
+              const left = claims ? queue.pending(claims.sub).length : 0;
+              if (left) showToast(`${plural(left, 'record')} stay on this phone · they send after you sign in`);
+              return signOutTo('dr-06-sign-in');
+            }}
+          >
             <Grad g={G1} style={s.v43} />
             <Icon xml={X4} width={22} height={22} style={s.v1} />
             <Text style={s.t44}>{"Close shift"}</Text>

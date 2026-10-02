@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { hm } from '@/lib/time';
+import { CameraBox, useCamera } from '@/lodestar/camera';
 import { recordShortfall } from '@/model/actions';
-import { loadGroups, shortfallFor, tempLabel } from '@/model/dock';
+import { loadGroups, markLoading, shortfallFor, tempLabel } from '@/model/dock';
 import { useClaims, useLoadSheet, useOnline, useParam } from '@/model/hooks';
 import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
@@ -26,6 +27,26 @@ export default function ScreenLd03FlagShortfall() {
   const stop = line ? (data?.stops.find(st => st.orderId === line.orderId) ?? null) : null;
   const existing = line ? shortfallFor(sheet.shortfalls, line) : undefined;
   const [loadedSel, setLoaded] = useState<Record<string, number>>({});
+  // the photo stays on the phone (proof for the loader); the flag itself carries the count and reason
+  const cam = useCamera();
+  const [camOpen, setCamOpen] = useState(false);
+  const [photoAt, setPhotoAt] = useState<string | null>(null);
+  const photo = async () => {
+    if (!camOpen || !cam.granted) {
+      if (!(await cam.ensure())) {
+        showToast('No camera · the count and reason are enough', 'error');
+        return false;
+      }
+      setCamOpen(true);
+      return false;
+    }
+    const uri = await cam.capture();
+    if (uri) {
+      setPhotoAt(new Date().toISOString());
+      setCamOpen(false);
+    } else showToast('No photo taken · tap again', 'error');
+    return false;
+  };
   const [reasonSel, setReason] = useState<Record<string, string>>({});
   const qty = line?.qty ?? 0;
   const loaded = line ? (loadedSel[line.id] ?? existing?.qtyLoaded ?? Math.max(0, qty - 1)) : 0;
@@ -43,6 +64,8 @@ export default function ScreenLd03FlagShortfall() {
   const send = trip && line
     ? async () => {
         if (short <= 0) throw new Error('Nothing is short: loaded matches the order');
+        // a flag opens the trip's load record: the trip is being loaded
+        if (trip.status === 'PLANNED') await markLoading(trip.id, trip.vehicleId).catch(() => undefined);
         await recordShortfall(trip, data?.loadRecord?.id, sheet.shortfalls, { item: line.name, qtyOrdered: qty, qtyLoaded: loaded, reason, orderId: line.orderId });
         setTimeout(() => showToast(online ? 'Flag sent to dispatch, store and driver' : 'Flag saved on this phone · sends when there is signal'), 350);
       }
@@ -131,20 +154,21 @@ export default function ScreenLd03FlagShortfall() {
             </View>
           </View>
           <View style={s.v43}>
-            <View style={s.v42}>
+            {camOpen && cam.granted ? <CameraBox cam={cam} style={x.cam} testID="flag-camera" /> : null}
+            <Tap style={s.v42} to={null} onPress={photo} disabled={!line} testID="flag-photo">
               <View style={s.v37}>
                 <Icon xml={X6} width={22} height={22} style={s.v1} />
               </View>
               <View style={s.v41}>
                 <View>
-                  <Text style={s.t38}>{"Add photo"}</Text>
+                  <Text style={s.t38}>{photoAt ? `Photo ${hm(photoAt)}` : camOpen ? "Take the photo" : "Add photo"}</Text>
                 </View>
                 <View style={s.v40}>
-                  <Text style={s.t39}>{"Optional"}</Text>
+                  <Text style={s.t39}>{photoAt ? "Saved on this phone" : "Optional"}</Text>
                 </View>
               </View>
               <Icon xml={X7} width={18} height={18} style={s.v1} />
-            </View>
+            </Tap>
           </View>
           <View style={s.v36}>
             <View style={s.v30}>
@@ -239,6 +263,10 @@ const X8 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#ffffff\" stroke-w
 const X9 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"12\" height=\"12\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M12 8v5M12 17h.01\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const X10 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m22 2-7 20-4-9-9-4Z\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M22 2 11 13\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const G0: GradSpec[] = [{"type":"linear","angle":135,"at":null,"repeat":false,"stops":[{"c":"#243080","p":0},{"c":"#141b4d","p":1}]}];
+
+const x = StyleSheet.create({
+  cam: { height: 200, backgroundColor: '#0a0f1a' },
+});
 
 const s = StyleSheet.create({
   v0: {"flexDirection":"column","alignItems":"stretch","backgroundColor":"#ffffff","flex":1},

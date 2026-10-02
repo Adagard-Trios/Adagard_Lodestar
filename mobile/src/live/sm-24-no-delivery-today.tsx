@@ -1,10 +1,10 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // SM-24 No delivery today · phone (P1, phone)
 // SM-11 opens this when the store has no order for today: the next and last delivery from the store's orders.
-// The depot closing calendar (Sundays, holidays) is not in the store's data, so the reason line is left out.
+// The reason line comes from the operating Calendar (the days the depots are closed, with the festival or note).
 import { Text, View, StyleSheet } from 'react-native';
 import { dayLabel, isoDay } from '@/lib/time';
-import { initials, nextRunDate, podFor, useDelivery, useNow } from '@/model/store-face';
+import { closedText, initials, nextRunDate, podFor, useClosedCalendar, useDelivery, useNow } from '@/model/store-face';
 import { today, useClaims, usePods } from '@/model/hooks';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
@@ -20,7 +20,9 @@ export default function ScreenSm24NoDeliveryToday() {
   const last = d.groups.find(g => g.date < t && g.orders.some(o => o.status === 'DELIVERED')) ?? null;
   const lastPods = last ? last.orders.map(o => podFor(pods.data, o.id)) : [];
   const matched = lastPods.length > 0 && lastPods.every(p => p && p.unitsDelivered === p.unitsOrdered && !p.exceptions?.length);
-  const orderFor = nextRunDate(now);
+  const calendar = useClosedCalendar();
+  const orderFor = nextRunDate(now, new Set((calendar ?? []).map(c => c.date)));
+  const reason = closedText(calendar, t);
   const window = d.outlet ? `${d.outlet.windowOpen}–${d.outlet.windowClose}` : '';
   return (
     <Frame bg="#f4f5f9" nav={nav} style={s.v0}>
@@ -43,10 +45,15 @@ export default function ScreenSm24NoDeliveryToday() {
         </View>
         <Scroll style={s.v25} contentStyle={s.v26}>
           <View style={s.v12}>
-            <Icon xml={X1} width={180} height={132} style={s.v9} />
+            <Icon xml={calendarArt(next?.date)} width={180} height={132} style={s.v9} />
             <View>
               <Text style={s.t10} testID="no-delivery">{!claims ? 'Sign in to see your store' : d.loading && !d.data ? 'Loading…' : "No delivery today"}</Text>
             </View>
+            {reason ? (
+              <View>
+                <Text style={[s.t15, x.center]} testID="closed-reason">{reason}</Text>
+              </View>
+            ) : null}
           </View>
           {next || last ? (
             <View style={s.v24}>
@@ -120,7 +127,15 @@ export default function ScreenSm24NoDeliveryToday() {
   );
 }
 
-const x = StyleSheet.create({ first: { borderTopWidth: 0 } });
+const x = StyleSheet.create({ first: { borderTopWidth: 0 }, center: { textAlign: 'center' } });
+
+/** The calendar drawing shows the next delivery's day (blank page when none is known). */
+function calendarArt(date?: string): string {
+  const d = date ? new Date(`${isoDay(date)}T00:00:00Z`) : null;
+  const wd = d ? d.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' }) : '';
+  const day = d ? String(d.getUTCDate()) : '';
+  return X1.replace('>Sun</text>', `>${wd}</text>`).replace('>12</text>', `>${day}</text>`);
+}
 
 const X0 = "<svg viewBox=\"0 0 32 32\" width=\"36\" height=\"36\" fill=\"#000000\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"32\" height=\"32\" rx=\"8\" fill=\"#047857\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect><g transform=\"translate(7.36 7.36) scale(0.72)\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"><path d=\"M3 9l1.5-5h15L21 9\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M5 13v8h14v-8M10 21v-5h4v5\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></g></svg>";
 const X1 = "<svg viewBox=\"0 0 180 132\" fill=\"#000000\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"180\" height=\"132\" xmlns=\"http://www.w3.org/2000/svg\"> <rect x=\"40\" y=\"16\" width=\"100\" height=\"104\" rx=\"16\" fill=\"#eef0ff\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect> <path d=\"M40 32a16 16 0 0 1 16-16h68a16 16 0 0 1 16 16v14H40z\" fill=\"#3b4cca\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path> <rect x=\"62\" y=\"8\" width=\"8\" height=\"18\" rx=\"4\" fill=\"#141b4d\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect><rect x=\"110\" y=\"8\" width=\"8\" height=\"18\" rx=\"4\" fill=\"#141b4d\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect> <text x=\"90\" y=\"39\" text-anchor=\"middle\" font-family=\"Plus Jakarta Sans\" font-size=\"14\" font-weight=\"700\" fill=\"#ffffff\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\">Sun</text> <text x=\"90\" y=\"98\" text-anchor=\"middle\" font-family=\"Plus Jakarta Sans\" font-size=\"40\" font-weight=\"800\" fill=\"#141b4d\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\">12</text> <circle cx=\"152\" cy=\"32\" r=\"14\" fill=\"#f5b83d\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></circle><circle cx=\"158\" cy=\"26\" r=\"12\" fill=\"#ffffff\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></circle> <path d=\"M22 62 L24 68.5 L30.5 70.5 L24 72.5 L22 79 L20 72.5 L13.5 70.5 L20 68.5 Z\" fill=\"#f5b83d\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path> </svg>";

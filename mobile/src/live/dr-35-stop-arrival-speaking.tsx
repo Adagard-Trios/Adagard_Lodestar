@@ -10,7 +10,10 @@ import { useSettings, LANGUAGE_NAMES } from '@/lib/settings';
 import { hm } from '@/lib/time';
 import { plural, titleCase } from '@/lodestar/live';
 import { speakIn, stopSpeaking, useSpeaking } from '@/lodestar/voice';
+import { arriveAtStop } from '@/model/actions';
 import { isUnsent, useOutbox, useStop } from '@/model/hooks';
+import { stopGroup } from '@/model/run';
+import { LATE_RISK_PCT } from '@/model/preferences';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L281":{"to":"dr-02-stop-arrival","kind":"go"},"L282":{"to":"dr-03-proof-of-delivery","kind":"go"},"L283":{"to":"dr-17-report-a-problem","kind":"go"},"B":{"to":"dr-02-stop-arrival","kind":"back"}}};
@@ -25,8 +28,11 @@ export default function ScreenDr35StopArrivalSpeaking() {
   const total = view?.tripStops.length ?? 0;
   const arrived = stop?.arrivalActual;
   const unsent = isUnsent(waiting, stop?.id);
-  const late = (stop?.lateRiskPct ?? 0) >= 50;
-  const chilled = order?.tempClass === 'CHILLED';
+  const late = (stop?.lateRiskPct ?? 0) >= LATE_RISK_PCT;
+  // every order dropped at this stop, chilled first (as DR-02)
+  const group = stopGroup(view?.tripStops ?? [], stop);
+  const first = group.find(r => r.status !== 'DELIVERED') ?? stop;
+  const chilled = group.some(r => r.order?.tempClass === 'CHILLED');
   const access = o ? [titleCase(o.dockType), titleCase(o.parking) ? `${titleCase(o.parking)} parking` : ''].filter(Boolean).join(' · ') : '';
   const lead = stop ? `${o?.name ?? stop.outletId}, ${stop.outletId}.` : '';
   const rest = stop
@@ -34,7 +40,9 @@ export default function ScreenDr35StopArrivalSpeaking() {
         o ? `Window ${o.windowOpen} to ${o.windowClose}.` : '',
         access ? `${access}.` : '',
         o?.accessNote ? `${o.accessNote}.` : '',
-        order ? `To drop: ${chilled ? 'chilled' : 'dry'} order ${order.id}, ${order.units} units${lines.length ? `, ${plural(lines.length, 'line')}` : ''}.` : '',
+        group.some(r => r.order)
+          ? `To drop: ${group.filter(r => r.order).map(r => `${r.order!.tempClass === 'CHILLED' ? 'chilled' : 'dry'} order ${r.order!.id}, ${r.order!.units} units`).join('; then ')}.`
+          : '',
       ].filter(Boolean).join(' ')
     : '';
   const say = stop ? `Stop ${stop.stopSeq}, ${lead} ${rest}` : '';
@@ -49,6 +57,7 @@ export default function ScreenDr35StopArrivalSpeaking() {
   useEffect(() => () => stopSpeaking(), []);
 
   const params = stop ? { stop: stop.id } : undefined;
+  const podParams = first ? { stop: first.id } : undefined;
   return (
     <Frame bg="#070b16" nav={nav} style={s.v0}>
       <View style={s.v66}>
@@ -152,7 +161,7 @@ export default function ScreenDr35StopArrivalSpeaking() {
           <View style={s.v49}>
             <View style={s.v38}>
               <View style={s.v13}>
-                <Text style={s.t36}>{order ? 'To drop · 1 order' : 'To drop'}</Text>
+                <Text style={s.t36}>{group.length ? `To drop · ${plural(group.length, 'order')}` : 'To drop'}</Text>
               </View>
               {chilled ? (
                 <View style={s.v51}>
@@ -162,32 +171,40 @@ export default function ScreenDr35StopArrivalSpeaking() {
               ) : null}
             </View>
             <View style={s.v48}>
-              {order ? (
-                <View style={s.v44}>
-                  <View style={chilled ? s.v52 : s.v39}>
-                    <Icon xml={chilled ? X8 : X9} width={22} height={22} style={s.v1} />
-                  </View>
-                  <View style={s.v43}>
-                    <View>
-                      <Text style={s.t40}>{chilled ? 'Chilled' : 'Dry'}</Text>
-                    </View>
-                    <View style={s.v42}>
-                      <View style={s.v13}>
-                        <Text style={s.t53}>{order.id}</Text>
+              {group.some(r => r.order) ? (
+                group.map((r, i) => {
+                  const ro = r.order;
+                  if (!ro) return null;
+                  const cold = ro.tempClass === 'CHILLED';
+                  const n = r.orderId === order?.id ? lines.length : 0;
+                  return (
+                    <View key={r.id} style={i === 0 ? s.v44 : [s.v44, x.rowLine]}>
+                      <View style={cold ? s.v52 : s.v39}>
+                        <Icon xml={cold ? X8 : X9} width={22} height={22} style={s.v1} />
                       </View>
-                      <View style={s.v54} />
-                      <Text style={s.t41}>{lines.length ? plural(lines.length, 'line') : chilled ? 'chilled' : 'ambient'}</Text>
+                      <View style={s.v43}>
+                        <View>
+                          <Text style={s.t40}>{cold ? 'Chilled' : 'Dry'}</Text>
+                        </View>
+                        <View style={s.v42}>
+                          <View style={s.v13}>
+                            <Text style={s.t53}>{ro.id}</Text>
+                          </View>
+                          <View style={s.v54} />
+                          <Text style={s.t41}>{r.status === 'DELIVERED' ? 'delivered' : n ? plural(n, 'line') : cold ? 'chilled' : 'ambient'}</Text>
+                        </View>
+                      </View>
+                      <View style={s.v57}>
+                        <View>
+                          <Text style={s.t55}>{String(ro.units)}</Text>
+                        </View>
+                        <View>
+                          <Text style={s.t56}>{"units"}</Text>
+                        </View>
+                      </View>
                     </View>
-                  </View>
-                  <View style={s.v57}>
-                    <View>
-                      <Text style={s.t55}>{String(order.units)}</Text>
-                    </View>
-                    <View>
-                      <Text style={s.t56}>{"units"}</Text>
-                    </View>
-                  </View>
-                </View>
+                  );
+                })
               ) : (
                 <View style={s.v44}>
                   <Text style={s.t41}>{"—"}</Text>
@@ -197,9 +214,18 @@ export default function ScreenDr35StopArrivalSpeaking() {
           </View>
         </Scroll>
         <View style={s.v65}>
-          <Tap lk="L282" style={s.v62} to={params ? { to: 'dr-03-proof-of-delivery', params } : undefined} onPress={stopSpeaking}>
+          <Tap
+            lk="L282"
+            style={s.v62}
+            to={podParams ? { to: 'dr-03-proof-of-delivery', params: podParams } : undefined}
+            onPress={async () => {
+              stopSpeaking();
+              // arriving here: TripStops Arrive for the stop's orders (queued, as DR-02)
+              for (const r of group) if (!r.arrivalActual && r.status !== 'DELIVERED') await arriveAtStop(r);
+            }}
+          >
             <Grad g={G0} style={s.v60} />
-            <Text style={s.t61}>{stop?.status === 'DELIVERED' ? 'View delivery' : "Start delivery"}</Text>
+            <Text style={s.t61}>{group.length && group.every(r => r.status === 'DELIVERED') ? 'View delivery' : "Start delivery"}</Text>
             <Icon xml={X10} width={22} height={22} style={s.v1} />
           </Tap>
           <Tap lk="L283" style={s.v64} to={params ? { to: 'dr-17-report-a-problem', params } : undefined} onPress={stopSpeaking}>
@@ -218,6 +244,7 @@ const x = StyleSheet.create({
   en: { fontFamily: 'Inter_700Bold' },
   si: { fontFamily: 'NotoSansSinhala_700Bold' },
   ta: { fontFamily: 'NotoSansTamil_700Bold' },
+  rowLine: { borderTopWidth: 1, borderTopColor: '#1b2338' },
 });
 
 const X0 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#f2f4fa\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"20\" height=\"20\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M19 12H5M12 19l-7-7 7-7\" fill=\"none\" stroke=\"#f2f4fa\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
@@ -232,6 +259,7 @@ const X9 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#a9b4ff\" stroke-w
 const X10 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#111522\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M5 12h14M12 5l7 7-7 7\" fill=\"none\" stroke=\"#111522\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const X11 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#b5bdd1\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"18\" height=\"18\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z\" fill=\"none\" stroke=\"#b5bdd1\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M12 9v4M12 17h.01\" fill=\"none\" stroke=\"#b5bdd1\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const G0: GradSpec[] = [{"type":"linear","angle":135,"at":null,"repeat":false,"stops":[{"c":"#ffd37a","p":0},{"c":"#f5b83d","p":0.6},{"c":"#eda422","p":1}]}];
+
 
 const s = StyleSheet.create({
   v0: {"flexDirection":"column","alignItems":"stretch","backgroundColor":"#0a0f1e","flex":1},

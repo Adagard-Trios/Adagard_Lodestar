@@ -2,7 +2,7 @@
 // is the same per-trip set of ticks the load sheet (LD-02) keeps on the phone, so a line scanned here shows
 // ticked there and counts for the release.
 import { useTicks } from './dock';
-import type { OrderLineItem } from './types';
+import type { OrderLineItem, TripStatus } from './types';
 
 const norm = (v: string) => v.toUpperCase().replace(/[^A-Z0-9]/g, '');
 const digits = (v: string) => v.replace(/\D/g, '');
@@ -23,8 +23,8 @@ export function matchLine(lines: OrderLineItem[], code: string): OrderLineItem |
   );
 }
 
-/** The checked lines of a trip (kept on the phone) and a way to check one. */
-export function useLineChecks(tripId: string | undefined) {
-  const t = useTicks(tripId);
+/** The checked lines of a trip (kept on the phone) and a way to check one (the first check starts loading the trip). */
+export function useLineChecks(tripId: string | undefined, status?: TripStatus) {
+  const t = useTicks(tripId, status);
   return { isChecked: t.isTicked, check: t.tick, count: Object.keys(t.map).length };
 }

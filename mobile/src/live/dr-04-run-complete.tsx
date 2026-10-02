@@ -1,8 +1,10 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // DR-04 Run complete (P4, phone)
+import { useEffect } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { hm } from '@/lib/time';
 import { plural, titleCase } from '@/lodestar/live';
+import { finishDeliveredTrips } from '@/model/actions';
 import { isUnsent, useOutbox, useRun } from '@/model/hooks';
 import { labelParts, minutesUntil, tripSummary } from '@/model/run';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
@@ -18,6 +20,17 @@ export default function ScreenDr04RunComplete() {
   const issues = sum.short.length + sum.exceptions + attention.length;
   const backIn = minutesUntil(trip?.returnTime);
   const stopName = (id: string) => sum.stops.find(x => x.id === id)?.outlet?.name;
+  // The last stop is delivered: the trip is finished (Trips SetStatus COMPLETE through the outbox, once per trip;
+  // the server records the return time and the fuel used). Nothing else sets a trip COMPLETE.
+  const doneTrips = (view?.trips ?? []).filter(t => {
+    const own = (view?.stops ?? []).filter(x => x.tripId === t.id);
+    return own.length > 0 && own.every(x => x.status === 'DELIVERED');
+  });
+  const doneKey = doneTrips.map(t => t.id).join(',');
+  useEffect(() => {
+    if (view && doneKey) void finishDeliveredTrips(view.trips, view.stops).catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doneKey]);
   return (
     <Frame bg="#070b16" nav={nav} style={s.v0}>
       <View style={s.v46}>
@@ -178,7 +191,15 @@ export default function ScreenDr04RunComplete() {
           </View>
         </Scroll>
         <View style={s.v42}>
-          <Tap lk="L21" style={s.v41}>
+          <Tap
+            lk="L21"
+            style={s.v41}
+            testID="end-shift"
+            onPress={async () => {
+              if (view) await finishDeliveredTrips(view.trips, view.stops);
+              return true;
+            }}
+          >
             <Grad g={G0} style={s.v39} />
             <Icon xml={X6} width={22} height={22} style={s.v1} />
             <Text style={s.t40}>{"End shift"}</Text>

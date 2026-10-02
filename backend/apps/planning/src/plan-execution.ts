@@ -32,6 +32,12 @@ interface DraftTrip {
   returns?: string | null;
   stops?: DraftStop[];
 }
+/** An order the agent could not place and would not defer (a protected order): the dispatcher must place it. */
+interface DraftReview {
+  orderId?: string;
+  reason?: string; // PROTECTED_UNPLACED
+  detail?: string; // e.g. "No compatible trip has room (CAP_REEFER); dispatcher must place it"
+}
 interface DraftDeferral {
   orderId: string;
   reason: string;
@@ -45,6 +51,8 @@ export interface ExecutionResult {
   trips: { id: string; vehicleId: string; driverId: string | null; bay: string; outletIds: string[] }[];
   planned: { orderId: string; outletId: string; tripId: string; etaModel: string | null }[];
   deferred: { orderId: string; outletId: string; reason: DeferralReason; rescheduledDate: string }[];
+  /** protected orders the plan could not place: logged as SUGGESTED deferrals for the dispatcher, the store told */
+  atRisk: { orderId: string; outletId: string; reason: DeferralReason }[];
   /** orders already on a trip that has started loading; this version leaves them where they are */
   locked: string[];
   supersededTrips: number;
@@ -54,14 +62,15 @@ const STARTED: TripStatus[] = [TripStatus.LOADING, TripStatus.ENROUTE, TripStatu
 const REASONS = new Set<string>(Object.values(DeferralReason));
 
 /** The trips and deferrals stored with a plan; an AUTOPLAN or seeded plan without trips cannot be executed. */
-export function draftOf(plan: Plan): { trips: DraftTrip[]; deferrals: DraftDeferral[] } {
+export function draftOf(plan: Plan): { trips: DraftTrip[]; deferrals: DraftDeferral[]; review: DraftReview[] } {
   const summary = (plan.summary ?? {}) as Record<string, any>;
   const trips = summary.plan?.trips;
   if (!Array.isArray(trips) || !trips.length) {
     throw new ODataError(409, 'PlanNotExecutable', `Plan ${plan.id} has no trips to put into effect; draft one with the planning agent (AgentRuns)`);
   }
   const deferrals = Array.isArray(summary.deferrals) ? summary.deferrals : Array.isArray(summary.plan?.unassigned) ? summary.plan.unassigned : [];
-  return { trips, deferrals };
+  const review = Array.isArray(summary.needsReview) ? (summary.needsReview as DraftReview[]).filter(r => r?.orderId) : [];
+  return { trips, deferrals, review };
 }
 
 /** HH:MM on the run day as an instant; times past midnight (earlier than departure) roll to the next day. */
@@ -82,7 +91,7 @@ async function nextOperatingDay(tx: Prisma.TransactionClient, runDate: string): 
 }
 
 export async function executePlan(tx: Prisma.TransactionClient, plan: Plan): Promise<ExecutionResult> {
-  const { trips: drafted, deferrals } = draftOf(plan);
+  const { trips: drafted, deferrals, review } = draftOf(plan);
   const runDate = toBusinessDate(plan.runDate);
   const day = runDateValue(runDate);
 
@@ -110,7 +119,7 @@ export async function executePlan(tx: Prisma.TransactionClient, plan: Plan): Pro
   });
   const driverOf = new Map(drivers.map(d => [d.vehicleId!, d.id]));
 
-  const orderIds = [...new Set([...drafted.flatMap(t => t.orderIds), ...deferrals.map(d => d.orderId)])];
+  const orderIds = [...new Set([...drafted.flatMap(t => t.orderIds), ...deferrals.map(d => d.orderId), ...review.map(r => r.orderId!)])];
   const orders = await tx.order.findMany({
     where: { id: { in: orderIds } },
     select: { id: true, outletId: true, status: true, runDate: true, daysSince: true, deferralLog: { select: { status: true, planId: true } } },
@@ -123,7 +132,7 @@ export async function executePlan(tx: Prisma.TransactionClient, plan: Plan): Pro
   const ymd = runDate.replace(/-/g, '');
   const ordered = [...drafted].sort((a, b) => (a.departs ?? '').localeCompare(b.departs ?? '') || a.vehicleId.localeCompare(b.vehicleId) || a.tripNo - b.tripNo);
   const bays = BAYS[plan.depot];
-  const result: ExecutionResult = { planId: plan.id, depot: plan.depot, runDate, trips: [], planned: [], deferred: [], locked: [...locked], supersededTrips: replaced.length };
+  const result: ExecutionResult = { planId: plan.id, depot: plan.depot, runDate, trips: [], planned: [], deferred: [], atRisk: [], locked: [...locked], supersededTrips: replaced.length };
   let bayIndex = 0;
   const taken = new Set(started.map(t => t.id));
   for (const t of ordered) {
@@ -212,6 +221,28 @@ export async function executePlan(tx: Prisma.TransactionClient, plan: Plan): Pro
       data: { status: OrderStatus.DEFERRED, runDate: runDateValue(rescheduled), deferredYesterday: true, daysSince: o.daysSince + 1 },
     });
     result.deferred.push({ orderId: d.orderId, outletId: o.outletId, reason, rescheduledDate: rescheduled });
+  }
+
+  // 6. Protected orders the plan could not place stay on this day (they must not be skipped twice), but never
+  //    silently: each gets a SUGGESTED deferral with the reason, for the dispatcher to place or decide, and the store
+  //    is told its order is at risk.
+  const handled = new Set([...placed, ...result.deferred.map(d => d.orderId)]);
+  for (const r of review) {
+    const id = r.orderId!;
+    if (handled.has(id) || locked.has(id)) continue;
+    handled.add(id);
+    const o = orderById.get(id)!;
+    const code = (r.detail ?? '').match(/\b(CAP_REEFER|CAP_TIME|ACCESS|WINDOW|FUEL|VEH_DOWN)\b/)?.[1];
+    const reason = (code ?? DeferralReason.CAP_TIME) as DeferralReason;
+    const log = {
+      reason,
+      score: 0,
+      status: DeferralStatus.SUGGESTED,
+      planId: plan.id,
+      notes: `Protected order ${plan.id} could not place (${reason}): the dispatcher must place it on ${runDate}`,
+    };
+    await tx.deferralLog.upsert({ where: { orderId: id }, update: log, create: { orderId: id, ...log } });
+    result.atRisk.push({ orderId: id, outletId: o.outletId, reason });
   }
   return result;
 }

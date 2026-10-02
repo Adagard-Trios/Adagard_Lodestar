@@ -82,6 +82,11 @@ export function movedNote(from: string, to: string): string {
   return `Placed after the 4:00 PM cut-off for ${from}; moved to the ${to} run.`;
 }
 
+/** The note an order asked for a closed day carries. */
+export function closedDayNote(from: string, to: string): string {
+  return `${from} is not an operating day; moved to the ${to} run.`;
+}
+
 /** A store may only change an order (or move it to another run) before the cut-off of both run dates. */
 export function assertStoreMayEdit(roles: string[], currentRunDate: string | Date, newRunDate: string | Date | undefined, now: Date, settings: CutoffSettings) {
   if (!settings.enforce) return;

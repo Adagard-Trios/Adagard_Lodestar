@@ -5,6 +5,7 @@ import { Text, View, StyleSheet } from 'react-native';
 import { hm } from '@/lib/time';
 import { plural, useAccessProblem, useDeviceId, useSignIn } from '@/lodestar/live';
 import { useOutbox } from '@/model/hooks';
+import { openDialer } from '@/model/run';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L232":{"to":"dr-07-verify-code","kind":"go"},"L233":{"to":"dr-07-verify-code","kind":"go"},"L234":{"to":"dr-07-verify-code","kind":"go"}}};
@@ -40,22 +41,22 @@ export default function ScreenDr29CanTSignIn() {
               <Text style={s.t10} testID="problem-message">{problem ? `${problem.message}${problem.at ? ` (${hm(problem.at)})` : ''}` : 'Try signing in again. If it keeps failing, try one of these.'}</Text>
             </View>
           </View>
-          <Tap lk="L233" style={s.v20}>
-            <View style={s.v17}>
+          <View style={s.v20}>
+            <Tap lk="L233" style={s.v17} testID="help-sign-in">
               <View style={s.v12}>
                 <Icon xml={X1} width={22} height={22} style={s.v1} />
               </View>
               <View style={s.v16}>
                 <View>
-                  <Text style={s.t13}>{"Get the code by voice call"}</Text>
+                  <Text style={s.t13}>{"Open the sign-in page again"}</Text>
                 </View>
                 <View style={s.v15}>
-                  <Text style={s.t14}>{"An automatic call reads out the 6 digits."}</Text>
+                  <Text style={s.t14}>{"Sign in with your Waypoint account. This phone's ID goes with it."}</Text>
                 </View>
               </View>
               <Icon xml={X2} width={18} height={18} style={s.v1} />
-            </View>
-            <View style={s.v19}>
+            </Tap>
+            <Tap style={s.v19} to={null} onPress={() => openDialer()} testID="call-dispatch">
               <View style={s.v18}>
                 <Icon xml={X3} width={22} height={22} style={s.v1} />
               </View>
@@ -68,8 +69,8 @@ export default function ScreenDr29CanTSignIn() {
                 </View>
               </View>
               <Icon xml={X2} width={18} height={18} style={s.v1} />
-            </View>
-          </Tap>
+            </Tap>
+          </View>
           <View style={s.v25}>
             <Icon xml={X4} width={20} height={20} style={s.v21} />
             <View style={s.v24}>

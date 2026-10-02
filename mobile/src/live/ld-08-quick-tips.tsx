@@ -1,7 +1,7 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // LD-08 Quick tips · phone (P3, phone)
 import { Text, View, StyleSheet, useWindowDimensions } from 'react-native';
-import { markOnboardingSeen } from '@/lib/settings';
+import { markOnboardingSeen, useSettings } from '@/lib/settings';
 import { useClaims } from '@/model/hooks';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
@@ -10,6 +10,7 @@ const nav: ScreenNav = {"links":{"L189":{"to":"ld-01-dock-queue","kind":"go"}}};
 export default function ScreenLd08QuickTips() {
   const sub = useClaims()?.sub;
   const { width } = useWindowDimensions();
+  const { glovesMode } = useSettings();
   // the dock home on a wide tablet is the tablet load sheet; on a phone the designed dock queue
   const home = width >= 900 ? 'ld-02-load-sheet-tablet' : undefined;
   const done = async () => {
@@ -44,10 +45,10 @@ export default function ScreenLd08QuickTips() {
               </View>
               <View style={s.v16}>
                 <View>
-                  <Text style={s.t13}>{"Gloves mode is on"}</Text>
+                  <Text style={s.t13}>{glovesMode ? "Gloves mode is on" : "Gloves mode is off"}</Text>
                 </View>
                 <View style={s.v15}>
-                  <Text style={s.t14}>{"Every button fits a gloved thumb. No swipes, no small links."}</Text>
+                  <Text style={s.t14}>{glovesMode ? "Every button fits a gloved thumb. No swipes, no small links." : "Turn it on at the start of your shift for bigger tap areas."}</Text>
                 </View>
               </View>
             </View>
@@ -88,7 +89,7 @@ export default function ScreenLd08QuickTips() {
               <Icon xml={X3} width={20} height={20} style={s.v25} />
               <View style={s.v28}>
                 <View>
-                  <Text style={s.t26}>{"Plan changed 3:52 · v4 · 2 items moved"}</Text>
+                  <Text style={s.t26}>{"Plan changed · new version · items moved"}</Text>
                 </View>
                 <View>
                   <Text style={s.t27}>{"Tap to see what moved"}</Text>

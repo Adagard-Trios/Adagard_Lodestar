@@ -6,7 +6,7 @@ import { firstName } from '@/auth/claims';
 import { hm } from '@/lib/time';
 import { titleCase } from '@/lodestar/live';
 import { useClaims, useVehicle } from '@/model/hooks';
-import { useSignalLost } from '@/model/plan';
+import { useSignalLost, minutesOfBudget, useAgentConfig } from '@/model/plan';
 import { useQuery } from '@/model/query';
 import type { Trip } from '@/model/types';
 import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
@@ -34,6 +34,7 @@ async function open(url: string): Promise<boolean> {
 }
 
 export default function ScreenDsp31CallOrSmsDriver() {
+  const cfg = useAgentConfig().data;
   const claims = useClaims();
   const { data, id, loading, error } = useVehicle();
   const lost = useSignalLost();
@@ -123,9 +124,6 @@ export default function ScreenDsp31CallOrSmsDriver() {
               </View>
             ) : null}
           </View>
-          <View style={s.v17}>
-            <Icon xml={X1} width={342} height={150} style={s.v16} />
-          </View>
           {trips.map(t => {
             const ts = stops.filter(x => x.tripId === t.id);
             return (
@@ -135,7 +133,7 @@ export default function ScreenDsp31CallOrSmsDriver() {
                     <Text style={s.t18}>{`Trip ${t.tripNumber} · ${titleCase(t.brand)} · ${t.district}`}</Text>
                   </View>
                   <View style={s.v8}>
-                    <Text style={s.t19}>{`${t.planMinutes ?? '—'} / 270 min`}</Text>
+                    <Text style={s.t19}>{minutesOfBudget(t.planMinutes, t.brand, cfg)}</Text>
                   </View>
                 </View>
                 <View style={s.v32}>
@@ -283,7 +281,6 @@ export default function ScreenDsp31CallOrSmsDriver() {
 const x = StyleSheet.create({ input: { flex: 1, padding: 0, textAlignVertical: 'top' } });
 
 const X0 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m15 18-6-6 6-6\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
-const X1 = "<svg width=\"342\" height=\"150\" viewBox=\"0 0 342 150\" fill=\"#000000\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" xmlns=\"http://www.w3.org/2000/svg\"> <rect width=\"342\" height=\"150\" fill=\"#dce8f0\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect> <path d=\"M0 150 L0 110 C 60 90 90 104 140 80 C 190 56 240 70 290 46 C 310 38 330 40 342 36 L342 150 Z\" fill=\"#cfe0d5\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path> <path d=\"M120 150 C 170 110 220 118 260 96 C 290 80 320 84 342 76 L342 150 Z\" fill=\"#c2d6c8\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path> <ellipse cx=\"200\" cy=\"64\" rx=\"62\" ry=\"34\" fill=\"#57534e\" opacity=\"0.07\" stroke=\"#a8a29e\" stroke-width=\"1.5\" stroke-dasharray=\"5, 5\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></ellipse> <path d=\"M34 120 C 70 112 100 98 150 72\" stroke=\"#0369a1\" stroke-width=\"4\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path> <path d=\"M150 72 C 200 50 240 44 268 52 S 300 70 310 74\" stroke=\"#57534e\" stroke-width=\"3\" fill=\"none\" stroke-dasharray=\"6, 6\" stroke-linecap=\"round\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path> <rect x=\"24\" y=\"110\" width=\"20\" height=\"20\" rx=\"6\" fill=\"#141b4d\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect> <circle cx=\"150\" cy=\"72\" r=\"8\" fill=\"#ffffff\" stroke=\"#0369a1\" stroke-width=\"3\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></circle> <circle cx=\"268\" cy=\"52\" r=\"7\" fill=\"#ffffff\" stroke=\"#57534e\" stroke-width=\"2\" stroke-dasharray=\"3, 3\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></circle> <circle cx=\"310\" cy=\"74\" r=\"7\" fill=\"#ffffff\" stroke=\"#57534e\" stroke-width=\"2\" stroke-dasharray=\"3, 3\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></circle> <text x=\"50\" y=\"140\" font-family=\"Inter\" font-size=\"13\" font-weight=\"700\" fill=\"#141b4d\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\">Kandy Hub</text> <text x=\"92\" y=\"54\" font-family=\"Inter\" font-size=\"13\" font-weight=\"700\" fill=\"#0369a1\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\">4:38 Ramboda</text> <text x=\"224\" y=\"30\" font-family=\"Inter\" font-size=\"13\" font-weight=\"600\" fill=\"#57534e\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\">OUT106</text> <text x=\"284\" y=\"100\" font-family=\"Inter\" font-size=\"13\" font-weight=\"600\" fill=\"#57534e\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\">OUT108</text> </svg>";
 const X2 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#047857\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"21\" height=\"21\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M20 6 9 17l-5-5\" fill=\"none\" stroke=\"#047857\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const X3 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const X4 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"21\" height=\"21\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";

@@ -1,13 +1,14 @@
 'use client';
 // ADM-03 People and roles, live. Markup and classes from the generated design (frontend/screens/adm-03-people-and-roles.tsx).
 // Data: Users (paged, role chips, $search on name and email) with their Devices for the status column. A row
-// opens the person in ADM-04; "Add person" opens an empty form.
+// opens the person in ADM-04; a person with an open device request (the design's locked row) opens that request
+// in ADM-05 instead. "Add person" opens an empty form.
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Btn from '@/components/live/Btn';
 import { AdminSide, useCount } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
-import { ROLE_INFO } from '@/components/live/admin-data';
+import { ROLE_INFO, ROLES } from '@/components/live/admin-data';
 import { Empty, ErrorBanner, Skeleton, Spinner } from '@/components/live/states';
 import { initials } from '@/lib/auth/session';
 import { DEPOT_NAME, fmtDayTime } from '@/lib/format';
@@ -36,12 +37,19 @@ function ChipCount({ role }: { role: UserRole }) {
 export default function LiveAdm03PeopleAndRoles() {
   const router = useRouter();
   const [, setFocus] = useFocusId('user');
+  const [, setDevice] = useFocusId('device');
   const [chip, setChip] = useState<Chip>('ALL');
   const [search, setSearch] = useState('');
   const total = useCount('Users', undefined);
   const people = useEntitySet<User>('Users', { filter: chip === 'ALL' ? undefined : `role eq '${chip}'`, expand: 'devices($select=id,status)', orderby: 'name', top: 30, count: true, search: search.trim() || undefined });
-  const open = (id: string | null) => {
-    setFocus(id);
+  const open = (u: User) => {
+    const request = u.devices?.find(d => d.status === 'PENDING');
+    if (request) {
+      setDevice(request.id);
+      router.push('/admin/adm-05-access-requests');
+      return;
+    }
+    setFocus(u.id);
     router.push('/admin/adm-04-add-or-edit-person');
   };
 
@@ -52,7 +60,7 @@ export default function LiveAdm03PeopleAndRoles() {
         <div className="dx-main">
           <div className="d-head">
             <div className="d-head__txt">
-              <div className="d-eyebrow">{"People and roles "}<span className="m-sep" />{` ${total ?? '…'} people `}<span className="m-sep" />{" 5 faces"}</div>
+              <div className="d-eyebrow">{"People and roles "}<span className="m-sep" />{` ${total ?? '…'} people `}<span className="m-sep" />{` ${ROLES.length} faces`}</div>
               <div className="d-h1">{"Who can sign in, where"}</div>
               <div className="d-sub">{"Each person gets one face and one scope. Scope decides what they see: a depot, a vehicle or an outlet."}</div>
             </div>
@@ -90,7 +98,7 @@ export default function LiveAdm03PeopleAndRoles() {
               const info = ROLE_INFO[u.role];
               return (
                 <div key={u.id} className="dx-tr lv-click" style={{ minHeight: '54px' }} data-user={u.id} role="button" tabIndex={0}
-                  onClick={e => { e.stopPropagation(); open(u.id); }} onKeyDown={e => { if (e.key === 'Enter') open(u.id); }}>
+                  onClick={e => { e.stopPropagation(); open(u); }} onKeyDown={e => { if (e.key === 'Enter') open(u); }}>
                   <span className="dx-td" style={{ width: '250px' }}>
                     <span className="hstack" style={{ gap: '10px' }}>
                       <span className="d-avatar" style={{ background: 'var(--tint-brand)', color: 'var(--brand-600)', width: '34px', height: '34px' }}>{initials(u.name)}</span>

@@ -7,7 +7,7 @@ import { Text, View, StyleSheet } from 'react-native';
 import { dayLabel, hm, isoDay } from '@/lib/time';
 import { plural } from '@/lodestar/live';
 import { useClaims, useNotifications, useOutbox, useParam, usePods } from '@/model/hooks';
-import { STEPS, creditedUnits, podFor, receiptFor, timeline, useDelivery } from '@/model/store-face';
+import { STEPS, isCounted, orderCredit, podFor, receiptFor, timeline, useDelivery } from '@/model/store-face';
 import type { POD } from '@/model/types';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
@@ -27,15 +27,25 @@ export default function ScreenSmA1StoreRecordedOffline() {
   const order = all.find(o => o.id === orderId) ?? null;
   const date = isoDay(order?.runDate);
   const sameDay = order ? all.filter(o => isoDay(o.runDate) === date) : [];
-  const rows = sameDay.map(o => ({ o, pod: podFor(pods.data, o.id) as POD | undefined, receipt: receiptFor(items, o.id) })).filter(r => r.pod);
+  // the store's count: on the server (Orders ConfirmReceipt), else waiting on this phone
+  const rows = sameDay
+    .map(o => {
+      const receipt = receiptFor(items, o.id);
+      const counted = isCounted(o) ? (o.unitsReceived ?? 0) : receipt ? Number(receipt.payload.unitsReceived) : undefined;
+      const countedAt = o.receiptSavedAt ?? receipt?.savedAt;
+      return { o, pod: podFor(pods.data, o.id) as POD | undefined, counted, countedAt };
+    })
+    .filter(r => r.pod);
   const pod = podFor(pods.data, orderId) ?? rows[0]?.pod ?? null;
   const savedAt = (typeof notice?.payload?.savedAt === 'string' ? (notice.payload.savedAt as string) : undefined) ?? pod?.savedAt;
   const syncedAt = (typeof notice?.payload?.syncedAt === 'string' ? (notice.payload.syncedAt as string) : undefined) ?? pod?.syncedAt ?? notice?.sentAt;
-  const receipts = rows.map(r => r.receipt).filter(Boolean);
-  const firstReceipt = receipts.map(r => r!.savedAt).sort()[0];
-  const matches = rows.every(r => !r.receipt || Number(r.receipt.payload.unitsReceived) === r.pod!.unitsDelivered);
-  const credit = rows.find(r => r.pod?.creditNoteId)?.pod ?? null;
-  const creditUnits = rows.reduce((n, r) => n + (r.pod ? creditedUnits(r.pod) : 0), 0);
+  const receipts = rows.filter(r => r.counted !== undefined);
+  const firstReceipt = receipts.map(r => r.countedAt).filter(Boolean).sort()[0];
+  const matches = rows.every(r => r.counted === undefined || r.counted === r.pod!.unitsDelivered);
+  const credits = rows.map(r => ({ r, c: orderCredit(r.o, r.pod) }));
+  const creditRow = credits.find(x => x.c.creditNoteId) ?? null;
+  const credit = creditRow ? { creditNoteId: creditRow.c.creditNoteId, orderId: creditRow.r.o.id } : null;
+  const creditUnits = credits.reduce((n, x) => n + x.c.units, 0);
   const { times } = timeline(order);
   const empty = !claims ? 'Sign in to see your delivery' : d.loading || pods.loading ? 'Loading…' : 'No delivery recorded offline';
   return (
@@ -79,7 +89,7 @@ export default function ScreenSmA1StoreRecordedOffline() {
             <View style={s.v34}>
               <View style={s.v19}>
                 <View style={s.v9}>
-                  <Text style={s.t17}>{firstReceipt ? `Your receipt ${hm(firstReceipt)} vs driver's POD` : "Driver's POD"}</Text>
+                  <Text style={s.t17}>{firstReceipt ? `Your receipt ${hm(firstReceipt)} vs driver's POD` : receipts.length ? "Your receipt vs driver's POD" : "Driver's POD"}</Text>
                 </View>
                 {receipts.length ? (
                   <View style={s.v18}>
@@ -92,7 +102,7 @@ export default function ScreenSmA1StoreRecordedOffline() {
                 {rows.map((r, i) => {
                   const p = r.pod!;
                   const short = Math.max(0, p.unitsOrdered - p.unitsDelivered);
-                  const counted = r.receipt ? Number(r.receipt.payload.unitsReceived) : undefined;
+                  const counted = r.counted;
                   return (
                     <View key={r.o.id} style={i === 0 ? s.v27 : s.v29} testID={`match-${i}`}>
                       <View style={s.v25}>
@@ -109,7 +119,7 @@ export default function ScreenSmA1StoreRecordedOffline() {
                         </View>
                         {(p.exceptions ?? []).map((e, j) => (
                           <View key={j} style={s.v24}>
-                            <Text style={s.t23}>{e.description ?? `${e.qty ?? ''} ${e.item ?? e.type ?? ''}`.trim()}</Text>
+                            <Text style={s.t23}>{e.description ?? `${e.qty ?? e.unitsShort ?? ''} ${e.item ?? e.type ?? ''}`.trim()}</Text>
                           </View>
                         ))}
                       </View>
@@ -176,7 +186,7 @@ export default function ScreenSmA1StoreRecordedOffline() {
               <Text style={s.t45}><Text style={s.t44}>{"Nothing else to do."}</Text>{credit ? " Credit note " : ''}{credit ? <Text style={s.t3}>{credit.creditNoteId}</Text> : null}{credit ? ` covers ${plural(creditUnits, 'unit')}.` : ''}</Text>
             </View>
           </View>
-          <Tap lk="L30" style={s.v49} to={pod ? { to: 'sm-20-credit-note-detail', params: { pod: (credit ?? pod).id } } : undefined}>
+          <Tap lk="L30" style={s.v49} to={order || pod ? { to: 'sm-20-credit-note-detail', params: { order: credit?.orderId ?? order?.id ?? pod?.tripStop?.orderId ?? '' } } : undefined}>
             <Grad g={G1} style={s.v47} />
             <Text style={s.t48}>{"View receipt & credit note"}</Text>
           </Tap>

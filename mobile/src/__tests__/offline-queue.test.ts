@@ -170,6 +170,39 @@ describe('SyncEngine', () => {
     expect(queue.list().find(i => i.id === again.id)).toMatchObject({ status: 'conflict', conflict: 'A ENROUTE trip cannot be released' });
   });
 
+  it('sends the dock starting a trip as Trips SetStatus LOADING; a trip that already moved on is not a conflict', async () => {
+    const { queue, client, engine } = await setup();
+    const st = await queue.enqueue('TRIP_STATUS', { sub: 'u-1', tripId: 'T1', label: 'Loading', payload: { tripId: 'T1', status: 'LOADING' } });
+    client.action.mockResolvedValueOnce({});
+    await engine.flush();
+    expect(client.action).toHaveBeenCalledWith("Trips('T1')/Lodestar.SetStatus", { status: 'LOADING' }, { idempotencyKey: st.id });
+    expect(queue.list()[0]).toMatchObject({ status: 'synced', conflict: null });
+
+    const late = await queue.enqueue('TRIP_STATUS', { sub: 'u-1', tripId: 'T2', label: 'Loading', payload: { tripId: 'T2', status: 'LOADING' } });
+    client.action.mockRejectedValueOnce(new ODataError(409, 'Conflict', 'A ENROUTE trip cannot move to LOADING'));
+    await engine.flush();
+    expect(queue.list().find(i => i.id === late.id)).toMatchObject({ status: 'synced', conflict: null });
+  });
+
+  it('keeps a vehicle-fault report on the phone with no signal and sends Trips ReportVehicleFault when it is back', async () => {
+    const { queue, client, engine, setOnline } = await setup({ online: false });
+    const vf = await queue.enqueue('VEHICLE_FAULT', { sub: 'u-1', tripId: 'T1', label: 'Vehicle fault', payload: { tripId: 'T1', fault: 'NOT_COOLING', reeferTempC: 9 } });
+    await engine.flush();
+    expect(client.action).not.toHaveBeenCalled();
+    expect(queue.list()[0].status).toBe('pending');
+    setOnline(true);
+    client.action.mockResolvedValueOnce({ vehicleStatus: 'WORKSHOP' });
+    await engine.flush();
+    expect(client.action).toHaveBeenCalledWith("Trips('T1')/Lodestar.ReportVehicleFault", { fault: 'NOT_COOLING', reeferTempC: 9 }, { idempotencyKey: vf.id });
+    expect(queue.list()[0].status).toBe('synced');
+
+    const gone = await queue.enqueue('VEHICLE_FAULT', { sub: 'u-1', tripId: 'T2', label: 'Vehicle fault', payload: { tripId: 'T2', fault: 'ENGINE' } });
+    client.action.mockRejectedValueOnce(new ODataError(409, 'Conflict', 'A ENROUTE trip has already left the dock'));
+    await engine.flush();
+    expect(client.action).toHaveBeenLastCalledWith("Trips('T2')/Lodestar.ReportVehicleFault", { fault: 'ENGINE' }, { idempotencyKey: gone.id });
+    expect(queue.list().find(i => i.id === gone.id)).toMatchObject({ status: 'conflict' });
+  });
+
   it('runs one flush at a time', async () => {
     const { queue, client, engine } = await setup();
     const a = await arrival(queue);

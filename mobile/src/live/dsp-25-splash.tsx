@@ -2,6 +2,8 @@
 // DSP-25 Splash · phone (P2, phone)
 import { Text, View, StyleSheet } from 'react-native';
 import { useSplash } from '@/lodestar/live';
+import { useClaims } from '@/model/hooks';
+import { depotsLabel } from '@/model/plan';
 import { Frame, Grad, Icon, Scroll, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 // No timed hop here: useSplash() opens the role's first screen when signed in, else the sign-in screen.
@@ -9,6 +11,8 @@ const nav: ScreenNav = {"links":{}};
 
 export default function ScreenDsp25Splash() {
   useSplash('dsp-26-sign-in');
+  // the depots in the signed-in dispatcher's token; nothing before sign-in
+  const depots = depotsLabel(useClaims()?.depots);
   return (
     <Frame bg="#ffffff" nav={nav} style={s.v0}>
       <View style={s.v11}>
@@ -18,9 +22,11 @@ export default function ScreenDsp25Splash() {
           <View>
             <Text style={s.t2}>{"Lodestar Plan"}</Text>
           </View>
-          <View>
-            <Text style={s.t3}>{"On call for both depots"}</Text>
-          </View>
+          {depots ? (
+            <View>
+              <Text style={s.t3} testID="splash-depots">{`On call for ${depots === 'both depots' ? depots : `${depots} depot`}`}</Text>
+            </View>
+          ) : null}
         </Scroll>
         <View style={s.v10}>
           <View style={s.v8}>

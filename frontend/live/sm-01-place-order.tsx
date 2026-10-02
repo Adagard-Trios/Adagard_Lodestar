@@ -3,8 +3,11 @@
 // Starts from the outlet's last dry and chilled orders (Orders + OrderLineItems), the store adjusts quantities or
 // adds items, and "Submit" sends POST /Orders with lineItems — one order per temperature class, for the outlet
 // in the user's token (the API refuses any other outlet). The Calendar row of the run date feeds the festival card.
-// After a run's 4:00 PM cutoff the API still takes the order and moves it to the next open operating run; the
-// screen then shows the run date and note the API returned instead of moving on.
+// The run offered is the next one still open for orders: tomorrow until its 4:00 PM cut-off (Colombo), then the
+// day after, never a day the operating Calendar closes (the next operating day instead); it moves on by itself as
+// the clock passes the cut-off. A closed date picked by hand cannot be submitted. After a run's cut-off the API
+// still takes the order and moves it to the next open operating run; the screen then shows the run date and note
+// the API returned instead of moving on.
 // The lines are kept in this browser tab as the store edits them (components/live/order-draft.ts). When the server
 // cannot be reached on Submit (network error or 5xx), the screen moves to SM-36 Service unavailable, which keeps
 // the draft and sends it as soon as the server answers; "Keep editing" there comes back here with the draft.
@@ -16,8 +19,10 @@ import { StoreTop, useMyOutlet } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { clearOrderDraft, isUnreachable, loadOrderDraft, saveOrderDraft, sendOrderDraft, type DraftLine, type OrderDraft } from '@/components/live/order-draft';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
+import { nextOpenDay, useNextRun } from '@/components/live/store-data';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { addDays, DEPOT_NAME, fmtNum, fmtRunDate, isoDay } from '@/lib/format';
+import { colomboDay, cutoffFor } from '@/lib/workday';
 import { useAction, useQuery } from '@/lib/odata/hooks';
 import type { Order, OrderLineItem, TempClass } from '@/lib/odata/types';
 
@@ -25,12 +30,6 @@ type Line = DraftLine;
 export const SERVICE_UNAVAILABLE = '/store/sm-36-service-unavailable';
 
 const DEFAULT_M3_PER_KG = 0.0045;
-const tomorrow = () => addDays(new Date().toISOString().slice(0, 10), 1);
-/** The first run whose 4:00 PM cutoff (the day before) has not passed yet. */
-const nextOpenRun = () => {
-  const t = tomorrow();
-  return new Date() < cutoffFor(t) ? t : addDays(t, 1);
-};
 
 function toLines(order: Order | undefined): Line[] {
   return (order?.lineItems ?? []).map((li: OrderLineItem) => ({
@@ -46,11 +45,6 @@ function toLines(order: Order | undefined): Line[] {
 const weekday = (v: string) => new Date(v).toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' });
 /** "08:00" as the boards write an opening time: "8:00". */
 const clock = (hhmm: string) => hhmm.replace(/^0(?=\d:)/, '');
-
-function cutoffFor(runDate: string): Date {
-  // Orders close at 4:00 PM (Sri Lanka time, UTC+05:30) the day before the run.
-  return new Date(`${addDays(runDate, -1)}T16:00:00+05:30`);
-}
 
 function LineTable({ title, cls, lines, setLines, note, tempClass, lastLabel }: {
   title: string; cls: string; lines: Line[]; setLines: (l: Line[]) => void; note: string; tempClass: TempClass; lastLabel: string;
@@ -121,7 +115,12 @@ export default function LiveSm01PlaceOrder() {
   const outletId = session?.outletId;
   // a draft kept in this tab (edited earlier, or waiting on SM-36) comes back as it was
   const [saved] = useState(() => loadOrderDraft(outletId));
-  const [runDate, setRunDate] = useState(() => (saved && saved.runDate >= tomorrow() ? saved.runDate : nextOpenRun()));
+  // the next run still open for orders (cut-off and operating Calendar); a date the store picked by hand wins
+  const next = useNextRun();
+  const tomorrow = addDays(colomboDay(new Date(next.now)), 1);
+  const [picked, setPicked] = useState<string | null>(() => (saved && saved.runDate >= tomorrow ? saved.runDate : null));
+  const runDate = picked && picked >= tomorrow ? picked : next.runDate;
+  const setRunDate = (d: string) => setPicked(d >= tomorrow ? d : null);
   const [sent, setSent] = useState<NonNullable<OrderDraft['sent']>>(saved?.sent ?? {});
   const [moved, setMoved] = useState<Order[] | null>(null);
 
@@ -154,8 +153,10 @@ export default function LiveSm01PlaceOrder() {
   const ch = sum(chilledLines);
   const orders = [d.units ? 1 : 0, ch.units ? 1 : 0].reduce((a, b) => a + b, 0);
   const cutoff = cutoffFor(runDate);
-  const msLeft = cutoff.getTime() - new Date().getTime();
+  const msLeft = cutoff.getTime() - next.now;
   const late = msLeft <= 0;
+  // a day the operating Calendar closes has no run: it cannot be ordered for
+  const closedDay = next.closed.has(runDate) || calendar.data?.isOperating === false;
 
   const draftNow = (): OrderDraft | null =>
     outletId && outlet.data ? { outletId, brand: outlet.data.brand, runDate, dry: dryLines, chilled: chilledLines, ratio, savedAt: Date.now(), sent } : null;
@@ -213,7 +214,7 @@ export default function LiveSm01PlaceOrder() {
               <div className="d-sub">
                 {o ? `Delivered before your ${clock(o.windowClose)} opening · window ${o.windowOpen}–${o.windowClose} · ${o.dockType.toLowerCase().replace('_', ' ')}, ${o.parking.toLowerCase().replace('_', ' ')} access · ` : ''}
                 {"delivery date "}
-                <input className="lv-input" type="date" aria-label="Delivery date" value={runDate} min={tomorrow()} onChange={e => setRunDate(e.target.value || nextOpenRun())}
+                <input className="lv-input" type="date" aria-label="Delivery date" value={runDate} min={tomorrow} onChange={e => setRunDate(e.target.value || next.runDate)}
                   style={{ width: 'auto', display: 'inline-block', font: 'inherit', color: 'var(--brand-600)', fontWeight: 700 }} />
               </div>
             </div>
@@ -223,7 +224,7 @@ export default function LiveSm01PlaceOrder() {
               </span>
               <span style={{ fontSize: '13px', color: 'var(--text-3)' }}>{"\"Received\" with order numbers at once"}</span>
             </div>
-            <Btn className="d-btn d-btn--primary" style={{ padding: '0 20px' }} testId="submit-order" busy={submit.pending} disabled={!orders || !o || Boolean(moved)} onClick={() => void submit.run()}>
+            <Btn className="d-btn d-btn--primary" style={{ padding: '0 20px' }} testId="submit-order" busy={submit.pending} disabled={!orders || !o || Boolean(moved) || closedDay} onClick={() => void submit.run()}>
               <Ic n="send" />Submit {orders} order{orders === 1 ? '' : 's'}
             </Btn>
           </div>
@@ -243,7 +244,7 @@ export default function LiveSm01PlaceOrder() {
               <div className="between"><span className="d-kpi__l"><Ic n="clock" className="ic ic--sm" />{"Orders close at 4:00 PM"}</span><span className="d-kpi__l">for the {fmtRunDate(runDate)} run</span></div>
               <span className="d-kpi__v cd__v">{late ? 'Closed' : `${h} h ${m} m`}<small>{late ? '' : 'left'}</small></span>
               <div className="m-progress cd__bar"><div style={{ width: `${late ? 100 : Math.max(0, Math.min(100, 100 - (msLeft / 86_400_000) * 100))}%` }} /></div>
-              <span className="d-kpi__s">{late ? <>This run is closed. Submit now and the order goes to the next open run, <b style={{ color: '#FFFFFF' }}>{fmtRunDate(nextOpenRun())}</b> or the next operating day after it.</> : <>After 4:00 PM this order goes to the <b style={{ color: '#FFFFFF' }}>{fmtRunDate(addDays(runDate, 1))} run</b></>}</span>
+              <span className="d-kpi__s">{late ? <>This run is closed. Submit now and the order goes to the next open run, <b style={{ color: '#FFFFFF' }}>{fmtRunDate(next.runDate)}</b>.</> : <>After 4:00 PM this order goes to the <b style={{ color: '#FFFFFF' }}>{fmtRunDate(nextOpenDay(addDays(runDate, 1), next.closed))} run</b></>}</span>
             </div>
             <div className="d-kpi">
               <span className="d-kpi__l"><span className="m-tag"><span className="dot" />{"Dry order"}</span><span className="m-sep" />{dryLines.length} lines</span>
@@ -255,14 +256,14 @@ export default function LiveSm01PlaceOrder() {
               <span className="d-kpi__v">{ch.units}<small>{"units"}</small></span>
               <span className="d-kpi__s">{fmtNum(ch.kg)} kg · {fmtNum(ch.kg * ratio, 1)} m³ · travels in a reefer</span>
             </div>
-            {calendar.data?.festivalName ? (
+            {closedDay ? (
+              <div className="d-kpi d-kpi--fest" data-testid="closed-day"><span className="d-kpi__l">{calendar.data?.festivalName ?? 'Calendar'}</span><span className="d-kpi__v">{"Closed"}</span><span className="d-kpi__s">No run on this date. The next operating day is {fmtRunDate(nextOpenDay(addDays(runDate, 1), next.closed))}.</span></div>
+            ) : calendar.data?.festivalName ? (
               <div className="d-kpi d-kpi--fest">
                 <span className="d-kpi__l"><Ic n="sparkle" className="ic ic--sm" />{calendar.data.festivalName}</span>
                 <span className="d-kpi__v">{calendar.data.festivalRamp ? `+${Math.round(calendar.data.festivalRamp * 100)}%` : '—'}</span>
                 <span className="d-kpi__s">{"Festival ramp on the operating calendar."}</span>
               </div>
-            ) : calendar.data && calendar.data.isOperating === false ? (
-              <div className="d-kpi d-kpi--fest"><span className="d-kpi__l">{"Calendar"}</span><span className="d-kpi__v">{"Closed"}</span><span className="d-kpi__s">{"No run on this date. Pick another day."}</span></div>
             ) : null}
           </div>
           {!history.data && !history.error ? <Skeleton rows={4} /> : (

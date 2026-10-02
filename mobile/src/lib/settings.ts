@@ -1,5 +1,6 @@
 // Settings of this install (device store, src/lib/kv): app language (also the read-aloud language),
-// read aloud on/off, and the driver's night/day screen. Plus the per-user "onboarding seen" flag.
+// read aloud on/off, the driver's night/day screen, and the loader's gloves mode (bigger tap areas) and loud
+// alerts (vibrate and read plan changes aloud) from LD-07. Plus the per-user "onboarding seen" flag.
 // Nothing here is secret; nothing here is sent to the server.
 import { kv } from './kv';
 import { Store, useStore } from './store';
@@ -8,10 +9,10 @@ export type AppLanguage = 'en' | 'si' | 'ta';
 /** Night or day screen (DR-24): auto follows sunrise in Colombo. */
 export type ScreenTheme = 'auto' | 'night' | 'day';
 
-export type Settings = { language: AppLanguage; readAloud: boolean; theme: ScreenTheme };
+export type Settings = { language: AppLanguage; readAloud: boolean; theme: ScreenTheme; glovesMode: boolean; loudAlerts: boolean };
 
 const KEY = 'lodestar.settings';
-const DEFAULTS: Settings = { language: 'en', readAloud: true, theme: 'auto' };
+const DEFAULTS: Settings = { language: 'en', readAloud: true, theme: 'auto', glovesMode: false, loudAlerts: false };
 
 export const settings = new Store<Settings>(DEFAULTS);
 let loaded: Promise<void> | null = null;

@@ -6,10 +6,10 @@ import { dayLabel, hm, isoDay } from '@/lib/time';
 import { plural, titleCase } from '@/lodestar/live';
 import * as api from '@/model/api';
 import { confirmReceipt } from '@/model/actions';
-import { useClaims, useOrder, usePods } from '@/model/hooks';
+import { useClaims, useOrder, useOutbox, usePods } from '@/model/hooks';
 import { useQuery } from '@/model/query';
 import { useStore } from '@/lib/store';
-import { clearIssues, issueText, podFor, receiptIssues, receiptNoteFor } from '@/model/store-face';
+import { RECEIVABLE, clearIssues, isCounted, issueText, podFor, receiptFor, receiptIssues, receiptNoteFor } from '@/model/store-face';
 import type { POD } from '@/model/types';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
@@ -31,9 +31,21 @@ export default function ScreenSm03ConfirmReceiptCount() {
   const [counts, setCounts] = useState<Record<string, number>>({});
   // issues reported on SM-18 are credited: the count starts that many units lower
   const issues = useStore(receiptIssues);
+  const { items } = useOutbox();
   const podOf = (id: string) => podFor(pods.data, id);
-  const countOf = (id: string, units: number) => counts[id] ?? Math.max(0, (podOf(id)?.unitsDelivered ?? units) - (issues[id]?.units ?? 0));
-  const bump = (id: string, units: number, d: number) => setCounts(c => ({ ...c, [id]: Math.max(0, Math.min(units, countOf(id, units) + d)) }));
+  // an order already counted (on the server, or waiting on this phone) keeps its count; the rest are counted now
+  const done = (id: string): number | null => {
+    const o = orders.find(x => x.id === id);
+    if (o && isCounted(o)) return o.unitsReceived ?? 0;
+    const r = receiptFor(items, id);
+    return r ? Number(r.payload.unitsReceived ?? 0) : null;
+  };
+  const toCount = orders.filter(o => done(o.id) === null && RECEIVABLE.includes(o.status));
+  const countOf = (id: string, units: number) => done(id) ?? counts[id] ?? Math.max(0, (podOf(id)?.unitsDelivered ?? units) - (issues[id]?.units ?? 0));
+  const bump = (id: string, units: number, d: number) => {
+    if (done(id) !== null) return;
+    setCounts(c => ({ ...c, [id]: Math.max(0, Math.min(units, countOf(id, units) + d)) }));
+  };
   const hero = orders.find(o => o.tempClass === 'CHILLED') ?? orders[0] ?? null;
   const heroCount = hero ? countOf(hero.id, hero.units) : 0;
   const heroPod = hero ? podOf(hero.id) : undefined;
@@ -47,7 +59,7 @@ export default function ScreenSm03ConfirmReceiptCount() {
 
   const confirm = async () => {
     if (!claims || !orders.length) return true; // design preview: follow the prototype
-    for (const o of orders) {
+    for (const o of toCount) {
       const n = countOf(o.id, o.units);
       await confirmReceipt(o, n, receiptNoteFor(o.units, n, issues[o.id]));
     }
@@ -101,7 +113,7 @@ export default function ScreenSm03ConfirmReceiptCount() {
               ) : null}
             </View>
             <View>
-              <Text style={s.t10}>{hero && issues[hero.id] ? `${issueText(issues[hero.id])}, credited on confirm.` : heroPod?.exceptions?.length ? heroPod.exceptions.map(e => `${e.qty ? `${e.qty} ` : ''}${e.item ?? e.type ?? 'item'} ${e.type ? titleCase(e.type).toLowerCase() : ''}`.trim()).join(' + ') + ', credited on confirm.' : short ? `${plural(short, 'unit')} short in your count, credited on confirm.` : 'Count each order, then confirm.'}</Text>
+              <Text style={s.t10}>{hero && issues[hero.id] ? `${issueText(issues[hero.id])}, credited on confirm.` : heroPod?.exceptions?.length ? heroPod.exceptions.map(e => `${(e.qty ?? e.unitsShort) ? `${e.qty ?? e.unitsShort} ` : ''}${e.item ?? e.type ?? 'item'} ${e.type ? titleCase(e.type).toLowerCase() : ''}`.trim()).join(' + ') + ', credited on confirm.' : short ? `${plural(short, 'unit')} short in your count, credited on confirm.` : 'Count each order, then confirm.'}</Text>
             </View>
           </View>
           <View style={s.v38}>
@@ -168,7 +180,7 @@ export default function ScreenSm03ConfirmReceiptCount() {
               {exceptions.map((e, i) => (
                 <View key={i} style={i === 0 ? s.v51 : s.v55}>
                   <View style={i === 0 ? s.v43 : s.v53}>
-                    <Text style={i === 0 ? s.t42 : s.t52}>{e.qty ? `−${e.qty}` : '!'}</Text>
+                    <Text style={i === 0 ? s.t42 : s.t52}>{(e.qty ?? e.unitsShort) ? `−${e.qty ?? e.unitsShort}` : '!'}</Text>
                   </View>
                   <View style={s.v50}>
                     <View>

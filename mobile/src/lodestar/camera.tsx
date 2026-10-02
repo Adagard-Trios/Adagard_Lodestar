@@ -1,7 +1,7 @@
 // The camera where a design shows a viewfinder ("Read from photo · confirm"). It only captures: the
 // photo stays on the phone and the person types or confirms the value (no reading by AI). Barcodes are
-// read by expo-camera's built-in scanner (LD-10). No permission or no camera: the designed placeholder
-// (children) shows and the manual fallback on the screen still works.
+// read by expo-camera's built-in scanner (LD-10). No permission or no camera: the screen's own overlay
+// (children, real state only: the code read, or how to turn the camera on) shows and the manual fallback still works.
 import { useState, type ReactNode } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { CameraView, useCameraPermissions, type BarcodeType } from 'expo-camera';
@@ -41,7 +41,7 @@ export function useCamera() {
 
 /**
  * The viewfinder box. `cam` from useCamera(). With `onCode` the barcode scanner runs.
- * `children` is the designed placeholder/overlay, drawn over the camera.
+ * `children` is drawn over the camera: the screen's live state (never a picture of a sample label).
  */
 export function CameraBox({ cam, style, onCode, children, testID }: {
   cam: ReturnType<typeof useCamera>;

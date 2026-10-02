@@ -2,15 +2,16 @@
 // the day's flags (load-record shortfalls + unsent SHORTFALL writes) and their acknowledgements.
 import { useEffect, useEffectEvent, useMemo, useState } from 'react';
 import { kv } from '@/lib/kv';
-import { inList, key, lit, type ODataClient } from '@/lib/odata';
+import { inList, lit, type ODataClient } from '@/lib/odata';
 import { openScreen } from '@/lodestar/runtime';
 import { notices, type Notice } from '@/realtime/notices';
 import { Store, useStore } from '@/lib/store';
 import { colomboDate, dayFilter, isoDay } from '@/lib/time';
 import type { QueueItem } from '@/offline/queue';
 import type { LoadSheet } from './api';
+import { queue, session } from './platform';
 import { useQuery } from './query';
-import type { LoadRecord, Notification, OrderLineItem, Plan, Shortfall, Trip, TripStop, Vehicle } from './types';
+import type { LoadRecord, Notification, OrderLineItem, Plan, Shortfall, Trip, TripStatus, TripStop, Vehicle } from './types';
 
 // ---------------------------------------------------------------- line ticks (local, persisted)
 
@@ -44,31 +45,69 @@ function save(tripId: string, next: Record<string, string>) {
   void kv.set(KEY(tripId), JSON.stringify(next)).catch(() => undefined);
 }
 
-/** The ticked ("loaded") lines of a trip; every change is saved on the device at once. */
-export function useTicks(tripId: string | undefined) {
+/**
+ * The ticked ("loaded") lines of a trip; every change is saved on the device at once. The first tick also tells
+ * the server the trip is being loaded (markLoading), unless `status` says it is already past PLANNED.
+ */
+export function useTicks(tripId: string | undefined, status?: TripStatus) {
   const all = useStore(ticks);
   useEffect(() => {
     if (tripId) ensure(tripId);
   }, [tripId]);
   const map = useMemo(() => (tripId ? (all[tripId] ?? {}) : {}), [all, tripId]);
-  return useMemo(
-    () => ({
+  return useMemo(() => {
+    const started = () => {
+      if (tripId && (!status || status === 'PLANNED')) void markLoading(tripId).catch(() => undefined);
+    };
+    return {
       map,
       isTicked: (lineId: string) => !!map[lineId],
       toggle: (lineId: string) => {
         if (!tripId) return;
         const next = { ...map };
         if (next[lineId]) delete next[lineId];
-        else next[lineId] = new Date().toISOString();
+        else {
+          next[lineId] = new Date().toISOString();
+          started();
+        }
         save(tripId, next);
       },
       tick: (lineId: string) => {
         if (!tripId || map[lineId]) return;
         save(tripId, { ...map, [lineId]: new Date().toISOString() });
+        started();
       },
-    }),
-    [map, tripId],
-  );
+    };
+  }, [map, tripId, status]);
+}
+
+// ---------------------------------------------------------------- trip status (outbox)
+
+/** A LOADING write for the trip is in the outbox (waiting, or already sent). */
+export function loadingQueued(items: QueueItem[], tripId: string): boolean {
+  return items.some(i => i.kind === 'TRIP_STATUS' && i.tripId === tripId && i.payload.status === 'LOADING' && i.status !== 'rejected');
+}
+
+/**
+ * The dock started loading a trip (first tick, or a load record): Trips SetStatus LOADING through the outbox,
+ * once per trip, so a re-plan treats the trip as started and does not drop a half-loaded vehicle.
+ */
+export async function markLoading(tripId: string, label?: string) {
+  const sub = session.claims?.sub;
+  if (!sub) return null;
+  await queue.ready();
+  if (loadingQueued(queue.list(), tripId)) return null;
+  return queue.enqueue('TRIP_STATUS', { sub, tripId, ref: tripId, label: `Loading · ${label ?? tripId}`, payload: { tripId, status: 'LOADING' } });
+}
+
+/** A planned trip that already has a load record (flag, pre-cool) is being loaded: tell the server once. */
+export function useMarkLoading(trip: Pick<Trip, 'id' | 'status' | 'vehicleId'> | null | undefined, started: boolean) {
+  const id = trip?.id;
+  const go = !!id && trip?.status === 'PLANNED' && started;
+  const vehicle = trip?.vehicleId;
+  useEffect(() => {
+    if (go && id) void markLoading(id, vehicle).catch(() => undefined);
+  }, [go, id, vehicle]);
 }
 
 /** Number of ticked lines over several trips (shift summaries). */
@@ -89,6 +128,37 @@ export function useTickCounts(tripIds: string[]): Record<string, number> {
     for (const id of keyList ? keyList.split(',') : []) ensure(id);
   }, [keyList]);
   return Object.fromEntries(tripIds.map(id => [id, Object.keys(all[id] ?? {}).length]));
+}
+
+// ---------------------------------------------------------------- my bay (LD-07, kept on the device)
+
+const BAY_KEY = 'lodestar.dock.bay';
+const myBay = new Store<{ loaded: boolean; bay: string | null }>({ loaded: false, bay: null });
+let bayLoading = false;
+
+/** The bay this loader picked at shift start (LD-07, "change any time"); null until one is picked. */
+export function useMyBay(): [string | null, (bay: string | null) => void] {
+  const v = useStore(myBay);
+  useEffect(() => {
+    if (v.loaded || bayLoading) return;
+    bayLoading = true;
+    void kv
+      .get(BAY_KEY)
+      .then(raw => myBay.set(cur => (cur.loaded ? cur : { loaded: true, bay: raw || null })))
+      .catch(() => myBay.set(cur => ({ ...cur, loaded: true })))
+      .finally(() => (bayLoading = false));
+  }, [v.loaded]);
+  const set = (bay: string | null) => {
+    myBay.set({ loaded: true, bay });
+    void (bay ? kv.set(BAY_KEY, bay) : kv.set(BAY_KEY, '')).catch(() => undefined);
+  };
+  return [v.bay, set];
+}
+
+/** The next trip to load: the first planned or loading one at my bay, else the first on the dock. */
+export function nextToLoad<T extends Pick<Trip, 'status' | 'bay'>>(trips: T[], bay: string | null): T | null {
+  const open = trips.filter(t => t.status === 'PLANNED' || t.status === 'LOADING');
+  return (bay ? open.find(t => t.bay === bay) : undefined) ?? open[0] ?? null;
 }
 
 // ---------------------------------------------------------------- load order
@@ -355,11 +425,26 @@ export function usePlanChange(tripId: string | undefined, planId: string | undef
 
 export type VehicleFault = 'NOT_COOLING' | 'ENGINE' | 'DOOR_SEAL' | 'OTHER';
 
-/** POST Trips('…')/Lodestar.ReportVehicleFault: the vehicle goes to the workshop and the depot's dispatchers are told. Needs signal. */
-export async function reportVehicleFault(c: Pick<ODataClient, 'action'>, tripId: string, fault: VehicleFault, reeferTempC?: number, note?: string) {
-  return c.action(`Trips${key(tripId)}/Lodestar.ReportVehicleFault`, { fault, ...(reeferTempC !== undefined ? { reeferTempC } : {}), ...(note ? { note } : {}) });
+/**
+ * Trips('…')/Lodestar.ReportVehicleFault through the outbox like every field write: sent at once with signal,
+ * kept on the phone (and shown as queued) without. The vehicle goes to the workshop and dispatch is told.
+ */
+export async function reportVehicleFault(trip: Pick<Trip, 'id' | 'vehicleId'>, fault: VehicleFault, reeferTempC?: number, note?: string) {
+  const sub = session.claims?.sub;
+  if (!sub) throw new Error('Sign in to report a vehicle');
+  return queue.enqueue('VEHICLE_FAULT', {
+    sub,
+    tripId: trip.id,
+    ref: trip.id,
+    label: `Vehicle fault · ${trip.vehicleId}`,
+    payload: { tripId: trip.id, fault, ...(reeferTempC !== undefined ? { reeferTempC } : {}), ...(note ? { note } : {}) },
+  });
 }
 
+/** The newest vehicle-fault report for a trip in the outbox (queued, sent, or refused). */
+export function faultReport(items: QueueItem[], tripId: string | undefined): QueueItem | undefined {
+  return tripId ? items.filter(i => i.kind === 'VEHICLE_FAULT' && i.tripId === tripId).at(-1) : undefined;
+}
 
 /** What a vehicle still has on the dock today: its trips not yet released, with stops (outlet, order volume). */
 export async function vehicleDockLoad(c: Pick<ODataClient, 'all'>, tripIds: string[]): Promise<TripStop[]> {

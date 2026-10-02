@@ -1,7 +1,7 @@
 'use client';
 // The working context of the desk screens: which run date and which depot(s) the user is looking at.
-//  - Run date: ?runDate=YYYY-MM-DD, else the latest run date in the user's own data (latest plan for dispatch,
-//    latest order for a store). Nothing is hard-coded.
+//  - Run date: ?runDate=YYYY-MM-DD, else the default from the user's own data (dispatch: the first run from today
+//    with open orders, else the latest plan; a store: the latest order). Nothing is hard-coded.
 //  - Depot: all of the user's depots by default; picking one in the sidebar narrows the screens to it.
 // Both are kept per tab (sessionStorage), so moving between screens keeps the choice.
 import { useCallback, useSyncExternalStore } from 'react';
@@ -59,16 +59,35 @@ export function depotFilter(field: string, active: readonly string[]): string | 
   return `${field} in (${active.map(d => `'${d}'`).join(',')})`;
 }
 
+/** Order statuses still on a run's books (not delivered, cancelled or moved to another run). */
+export const OPEN_ORDER_STATUSES = ['RECEIVED', 'PLANNED', 'LOADED', 'ENROUTE', 'EXCEPTION'];
+
 /**
- * The run date in view. `source` is the entity set whose latest runDate is the default ('Plans' for dispatch,
- * 'Orders' for a store manager).
+ * The run date in view: ?runDate= or the date picked in the sidebar, else the default.
+ *  - 'Plans' (dispatch): the working day, i.e. the first run from today (Colombo) that still has open orders
+ *    (today's demo day while it runs, else the next queue). With no open orders from today on, the latest plan's
+ *    run date (a past day stays reviewable).
+ *  - 'Orders' (a store): the latest order's run date.
  */
 export function useRunDate(source: 'Plans' | 'Orders' = 'Plans') {
   const pinned = useSyncExternalStore(subscribe, () => urlRunDate() ?? read(RUN_KEY), () => null);
-  const latest = useQuery<string | null>(pinned ? null : `latest-run:${source}`, async c => {
+  const today = colomboDay();
+  const latest = useQuery<string | null>(pinned ? null : `latest-run:${source}:${today}`, async c => {
+    if (source === 'Plans') {
+      // the orders service down must not leave the desk without a date: the plans still give one
+      const open = await c
+        .list<{ runDate: string }>('Orders', {
+          select: 'runDate',
+          filter: `runDate ge ${today}T00:00:00.000Z and status in (${OPEN_ORDER_STATUSES.map(x => `'${x}'`).join(',')})`,
+          orderby: 'runDate asc',
+          top: 1,
+        })
+        .catch(() => null);
+      if (open?.value[0]?.runDate) return isoDay(open.value[0].runDate);
+    }
     const page = await c.list<{ runDate: string }>(source, { select: 'runDate', orderby: 'runDate desc', top: 1 });
     return page.value[0] ? isoDay(page.value[0].runDate) : null;
-  });
+  }, { refreshOn: source === 'Plans' ? ['order_created', 'plan_published'] : undefined });
   const setRunDate = useCallback((d: string | null) => write(RUN_KEY, d), []);
   const runDate = pinned ?? latest.data ?? undefined;
   return { runDate, loading: !pinned && latest.loading, error: latest.error, setRunDate, none: !pinned && latest.data === null };

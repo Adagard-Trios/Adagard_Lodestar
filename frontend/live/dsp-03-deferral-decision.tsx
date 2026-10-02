@@ -8,12 +8,12 @@ import { useScreenNav } from '@/components/ScreenShell';
 import Btn from '@/components/live/Btn';
 import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
-import { useAgentRun, usePlanScope } from '@/components/live/plan-data';
+import { PLAN_EVENTS, useNextOperatingDay, useReviewRun, usePlanScope } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
-import { addDays, BRAND_LETTER, DEPOT_NAME, dayFilter, fmtDay, fmtNum, fmtRunDate, fmtTime } from '@/lib/format';
+import { BRAND_LETTER, DEPOT_NAME, dayFilter, fmtDay, fmtNum, fmtRunDate, fmtTime } from '@/lib/format';
 import { useAction, useQuery } from '@/lib/odata/hooks';
 import type { Deferral, Outlet } from '@/lib/odata/types';
-import { depotFilter, useAgentRunId } from '@/lib/workday';
+import { depotFilter } from '@/lib/workday';
 
 const REASONS: Record<string, string> = {
   CAP_REEFER: 'Reefer capacity', CAP_TIME: 'Time window', ACCESS: 'Access', WINDOW: 'Delivery window', FUEL: 'Fuel quota', VEH_DOWN: 'Vehicle down',
@@ -27,8 +27,7 @@ interface Row extends Deferral { outlet?: Outlet }
 export default function LiveDsp03DeferralDecision() {
   const nav = useScreenNav();
   const { runDate, active } = usePlanScope();
-  const [runId] = useAgentRunId();
-  const run = useAgentRun(runId);
+  const { run } = useReviewRun();
   const draftCandidates = run.data?.status === 'NEEDS_APPROVAL' ? run.data.detail?.deferrals ?? [] : [];
 
   const filter = runDate ? [ "status eq 'SUGGESTED'", dayFilter('order/runDate', runDate), depotFilter('order/outlet/depot', active)].filter(Boolean).join(' and ') : null;
@@ -38,7 +37,7 @@ export default function LiveDsp03DeferralDecision() {
     const outlets = ids.length ? await c.all<Outlet>('Outlets', { filter: `id in (${ids.map(i => `'${i}'`).join(',')})` }) : [];
     const byId = new Map(outlets.map(o => [o.id, o]));
     return rows.map(r => ({ ...r, outlet: byId.get(r.order?.outletId ?? '') }));
-  }, { refreshOn: ['notification'] });
+  }, { refreshOn: PLAN_EVENTS });
 
   const rows = useMemo(() => list.data ?? [], [list.data]);
   const [selId, setSelId] = useState<string | null>(null);
@@ -48,11 +47,13 @@ export default function LiveDsp03DeferralDecision() {
   const sel = rows.find(r => r.id === selId) ?? rows[0];
   const isChecked = (id: string) => checked[id] ?? true;
   const chosen = rows.filter(r => isChecked(r.id));
-  const nextDay = runDate ? addDays(runDate, 1) : '';
+  // approval rolls a deferred order to the next operating day (Calendar): a confirmed deferral defaults to the same
+  const next = useNextOperatingDay(runDate);
+  const nextDay = next.day;
 
   const confirm = useAction<Row[], number>(async (c, items) => {
     for (const r of items) {
-      await c.action('Deferrals', r.id, 'Confirm', { notes: notes[r.id] ?? r.notes ?? undefined, rescheduledDate: dates[r.id] || nextDay || undefined });
+      await c.action('Deferrals', r.id, 'Confirm', { notes: notes[r.id] ?? r.notes ?? undefined, rescheduledDate: dates[r.id] || (next.fromCalendar ? nextDay : undefined) });
     }
     return items.length;
   }, { onSuccess: () => { void list.refresh(); nav.go('L4'); } });

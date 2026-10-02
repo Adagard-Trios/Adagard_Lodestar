@@ -169,3 +169,17 @@ export function minutesUntilBusinessTime(hhmm: string, at: Date = new Date()): n
 export function businessHhmm(at: Date = new Date()): string {
   return hhmmOfMinutes(businessMinutesOfDay(at));
 }
+
+/** Day of the week of a business date: 0 = Sunday … 6 = Saturday. */
+export function businessWeekday(date: string | Date): number {
+  return new Date(`${toBusinessDate(date)}T00:00:00.000Z`).getUTCDay();
+}
+
+/**
+ * Does the depot run on this date? The Calendar row decides (isOperating); a date the Calendar is silent
+ * about runs Monday to Saturday and not on Sunday.
+ */
+export function isOperatingDay(date: string | Date, calendar?: { isOperating: boolean } | null): boolean {
+  if (calendar) return calendar.isOperating;
+  return businessWeekday(date) !== 0;
+}

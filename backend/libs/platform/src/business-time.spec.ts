@@ -1,4 +1,6 @@
 import {
+  businessWeekday,
+  isOperatingDay,
   addBusinessDays,
   BUSINESS_TIME_ZONE,
   businessDate,
@@ -128,5 +130,19 @@ describe('business time (Asia/Colombo)', () => {
     expect(startOfBusinessWeek(new Date(monday)).toISOString()).toBe(monday); // the first instant of Monday
     expect(startOfBusinessWeek(new Date('2026-04-12T18:29:59Z')).toISOString()).toBe(monday); // Sun 23:59:59 Colombo
     expect(startOfBusinessWeek(new Date('2026-04-12T18:30:00Z')).toISOString()).toBe('2026-04-12T18:30:00.000Z'); // next Monday
+  });
+});
+
+describe('operating days', () => {
+  it('a date the Calendar is silent about runs Monday to Saturday', () => {
+    expect(businessWeekday('2026-10-03')).toBe(6); // Saturday
+    expect(isOperatingDay('2026-10-03')).toBe(true);
+    expect(isOperatingDay('2026-10-04')).toBe(false); // Sunday
+    expect(isOperatingDay('2026-10-05', null)).toBe(true); // Monday
+  });
+
+  it('a Calendar row decides either way', () => {
+    expect(isOperatingDay('2026-10-04', { isOperating: true })).toBe(true);
+    expect(isOperatingDay('2026-10-05', { isOperating: false })).toBe(false);
   });
 });

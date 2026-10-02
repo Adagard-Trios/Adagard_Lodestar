@@ -1,15 +1,15 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // DSP-28 Approve re-plan · phone (P2, phone)
-// A human dispatcher approves here (Plans('…')/Lodestar.Approve); the app never approves by itself.
+// A human dispatcher approves here; the app never approves by itself. An agent draft (no Plan row until it is
+// approved) goes through AgentRuns('…')/Lodestar.Resume, a plan with drawn trips through Plans('…')/Lodestar.Approve.
 // A plan with rule violations (summary.violations) needs a reason to override them, sent as overrideReason.
 import { useState } from 'react';
 import { Text, TextInput, View, StyleSheet } from 'react-native';
 import { dayLabel, hm } from '@/lib/time';
 import { plural, titleCase } from '@/lodestar/live';
-import * as api from '@/model/api';
 import { useClaims, useOnline } from '@/model/hooks';
-import { planSource, readPlan, usePlan } from '@/model/plan';
-import { bumpRevision, client } from '@/model/platform';
+import { approveReview, planSource, readPlan, usePlan } from '@/model/plan';
+import { bumpRevision } from '@/model/platform';
 import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L180":{"to":"dsp-27-alerts","kind":"go"},"B":{"to":"dsp-27-alerts","kind":"back"}}};
@@ -55,9 +55,9 @@ export default function ScreenDsp28ApproveRePlan() {
     if (violations.length && !reason.trim()) throw new Error('Give a reason to override the rule violations');
     setBusy(true);
     try {
-      const done = await api.approvePlan(client, plan.id, undefined, violations.length ? reason.trim() : undefined);
+      const done = await approveReview(plan, violations.length ? reason.trim() : undefined);
       bumpRevision();
-      showToast(`Plan v${done?.version ?? plan.version} approved and sent`);
+      showToast(done.version ? `Plan v${done.version} approved and sent` : 'Plan approved and sent');
       return true;
     } finally {
       setBusy(false);

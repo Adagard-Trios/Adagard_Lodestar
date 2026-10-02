@@ -2,8 +2,9 @@
 // ADM-16 Audit log, live. Markup and classes from the generated design (frontend/screens/adm-16-audit-log.tsx).
 // Data: AuditEntries (append-only, hash-chained; paged newest first, area chips, $search on action, actor and
 // key), the chain check (AuditEntries/Lodestar.VerifyChain()), today's counts, and Users to show actor names.
-// A row opens the entry (ADM-19); "Verify chain" opens the full check (ADM-20).
-import { useMemo, useState } from 'react';
+// A row opens the entry (ADM-19); "Verify chain" opens the full check (ADM-20). ADM-17's "See its last 30
+// proposals" opens this log on the Planning agent area (AUDIT_AREA_KEY, read once).
+import { useEffect, useMemo, useState } from 'react';
 import Btn from '@/components/live/Btn';
 import { AdminSide, useCount } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
@@ -15,6 +16,18 @@ import type { AuditEntry, ChainCheck, User } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
 
 type Chip = 'all' | 'people' | 'master' | 'plans' | 'agent' | 'denied';
+
+/** sessionStorage key another screen sets to open the log on one area (ADM-17 → 'agent'). */
+export const AUDIT_AREA_KEY = 'lodestar.audit.area';
+
+function initialArea(): Chip {
+  try {
+    const v = typeof window === 'undefined' ? null : window.sessionStorage.getItem(AUDIT_AREA_KEY);
+    return v && v in AREA_FILTER ? (v as Chip) : 'all';
+  } catch {
+    return 'all';
+  }
+}
 const sets = (s: string[]) => `entitySet in (${s.map(x => `'${x}'`).join(',')})`;
 const AREA_FILTER: Record<Chip, [string, string | undefined]> = {
   all: ['All', undefined],
@@ -27,7 +40,11 @@ const AREA_FILTER: Record<Chip, [string, string | undefined]> = {
 
 export default function LiveAdm16AuditLog() {
   const [, setFocus] = useFocusId('audit');
-  const [chip, setChip] = useState<Chip>('all');
+  const [chip, setChip] = useState<Chip>(initialArea);
+  useEffect(() => {
+    // Read once: the next visit opens on All again.
+    try { window.sessionStorage.removeItem(AUDIT_AREA_KEY); } catch { /* storage blocked: nothing to clear */ }
+  }, []);
   const [search, setSearch] = useState('');
   const log = useEntitySet<AuditEntry>('AuditEntries', { filter: AREA_FILTER[chip][1], orderby: 'seq desc', top: 30, count: true, search: search.trim() || undefined }, {
     refreshOn: ['notification'],

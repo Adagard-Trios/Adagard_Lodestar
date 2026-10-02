@@ -83,7 +83,7 @@ export default function LiveDsp35SessionExpired() {
             <span className="d-btn d-btn--disabled"><Ic n="lock" />{"Approve & go live"}</span>
           </div>
           <div className="x-board">
-            <div className="x-lanehead"><span style={{ width: '168px' }}>{"Vehicle · minutes"}</span><span style={{ flex: '1' }}>{"Trip 1"}</span><span style={{ flex: '1' }}>{"Trip 2 · max 2 trips a day"}</span></div>
+            <div className="x-lanehead"><span style={{ width: '168px' }}>{"Vehicle · minutes"}</span><span style={{ flex: '1' }}>{"Trip 1"}</span><span style={{ flex: '1' }}>{"Trip 2"}</span></div>
             {[0, 1, 2, 3].map(i => (
               <div key={i} className="hstack" style={{ gap: '14px' }}>
                 <div className="vstack" style={{ gap: '8px', width: '168px', flexShrink: '0' }}>

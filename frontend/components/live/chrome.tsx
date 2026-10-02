@@ -3,7 +3,7 @@
 // live counts and the signed-in user. The sidebar items keep the design's data-lk codes (N0, N1, …), which
 // ScreenShell resolves through the screen's own link table, so navigation is exactly the prototype's.
 import { useRouter } from 'next/navigation';
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect, useRef, useSyncExternalStore } from 'react';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { initials } from '@/lib/auth/session';
 import { DEPOT_NAME, BRAND_LETTER, dayFilter, fmtDay, fmtTime } from '@/lib/format';
@@ -13,6 +13,7 @@ import type { Outlet } from '@/lib/odata/types';
 import { depotFilter, useDepot, useRunDate } from '@/lib/workday';
 import { Ic, type IconName } from './icons';
 import { OfflineSideItem } from './offline';
+import { useNow } from './store-data';
 
 /** `$count` of a set with a filter (null = don't ask). Cached per key by useQuery's identity. */
 export function useCount(set: string, filter: string | undefined | null, refreshOn?: string[]) {
@@ -126,13 +127,43 @@ export function PlanSide({ active, bellLk, brandLk }: { active: string; bellLk?:
   );
 }
 
+// Admin writes (approve or decline a device, revoke a phone, save a person, an outlet, a vehicle, an import) call
+// adminChanged() so the sidebar's counts are read again on the same page, not only on the next navigation.
+let adminVersion = 0;
+const adminListeners = new Set<() => void>();
+export function adminChanged() {
+  adminVersion += 1;
+  adminListeners.forEach(l => l());
+}
+const subscribeAdmin = (l: () => void) => {
+  adminListeners.add(l);
+  return () => { adminListeners.delete(l); };
+};
+
+/** A sidebar count read again after every admin write and on every realtime notification (a new device request). */
+function useAdminCount(set: string, filter: string | undefined) {
+  const v = useSyncExternalStore(subscribeAdmin, () => adminVersion, () => 0);
+  const q = useQuery<number>(`count:${set}:${filter ?? ''}`, async c => {
+    const page = await c.list(set, { filter, top: 0, count: true });
+    return page.count ?? page.value.length;
+  }, { refreshOn: ['notification'] });
+  const { refresh } = q;
+  const seen = useRef(v);
+  useEffect(() => {
+    if (seen.current === v) return;
+    seen.current = v;
+    void refresh();
+  }, [v, refresh]);
+  return q.data;
+}
+
 /** Lodestar Admin sidebar (ADM boards). `active`: N0 Overview … N11 Notifications. */
 export function AdminSide({ active }: { active: string }) {
-  const requests = useCount('Devices', "status eq 'PENDING'");
-  const people = useCount('Users', undefined);
-  const revoked = useCount('Devices', "status eq 'REVOKED'");
-  const outlets = useCount('Outlets', undefined);
-  const vehicles = useCount('Vehicles', undefined);
+  const requests = useAdminCount('Devices', "status eq 'PENDING'");
+  const people = useAdminCount('Users', undefined);
+  const revoked = useAdminCount('Devices', "status eq 'REVOKED'");
+  const outlets = useAdminCount('Outlets', undefined);
+  const vehicles = useAdminCount('Vehicles', undefined);
   const items: SideItem[] = [
     { code: 'N0', icon: 'home', label: 'Overview' },
     { code: 'N1', icon: 'key', label: 'Access requests', count: requests, tone: 'warn' },
@@ -162,7 +193,8 @@ export function AdminSide({ active }: { active: string }) {
 }
 
 const STORE_NAV: Array<{ key: string; icon: IconName; label: string; href: string }> = [
-  { key: 'order', icon: 'plus', label: 'Order', href: '/store/sm-01-place-order' },
+  // the design's "Order" tab opens Orders & history (SM-27), where "New order" starts SM-01
+  { key: 'order', icon: 'plus', label: 'Order', href: '/store/sm-27-orders-and-history' },
   { key: 'deliveries', icon: 'van-2', label: 'Deliveries', href: '/store/sm-02-deliveries' },
   { key: 'receipts', icon: 'check', label: 'Receipts', href: '/store/sm-28-receipts-and-credit-notes' },
   { key: 'messages', icon: 'message', label: 'Messages', href: '/store/sm-29-messages' },
@@ -179,7 +211,8 @@ export function StoreTop({ active, avatarLk, extra }: { active: string; avatarLk
   const router = useRouter();
   const { session, logout } = useAuth();
   const outlet = useMyOutlet();
-  const unread = useCount('Notifications', 'readAt eq null', ['notification', 'credit_note_issued', 'eta_update']);
+  const unread = useCount('Notifications', 'readAt eq null', ['notification', 'credit_note_issued', 'eta_update', 'plan_published', 'trip_released']);
+  const now = useNow();
   const o = outlet.data;
   return (
     <div className="s-top">
@@ -210,7 +243,7 @@ export function StoreTop({ active, avatarLk, extra }: { active: string; avatarLk
       </div>
       <div className="spacer" />
       {extra}
-      <span className="s-top__clock">{fmtDay(new Date())} · {fmtTime(new Date())}</span>
+      <span className="s-top__clock">{fmtDay(new Date(now))} · {fmtTime(new Date(now))}</span>
       <div className="m-iconbtn lv-click" title="Sign out" role="button" tabIndex={0} onClick={e => { e.stopPropagation(); void logout(); }}>
         <Ic n="log-in" />
       </div>

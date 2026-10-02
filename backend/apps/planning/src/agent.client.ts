@@ -12,7 +12,8 @@ export interface AgentRunSnapshot {
   [key: string]: unknown;
 }
 
-const TIMEOUT_MS = 30_000;
+/** A full draft of a busy day on a small VM can take a while: wait up to two minutes (the gateway allows 150 s). */
+export const AGENT_TIMEOUT_MS = 120_000;
 
 /** Optional DI token to replace fetch (tests). */
 export const AGENT_FETCH = Symbol('AGENT_FETCH');
@@ -73,10 +74,13 @@ export class AgentClient {
           ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
         },
         body: body !== undefined ? JSON.stringify(body) : undefined,
-        signal: AbortSignal.timeout(TIMEOUT_MS),
+        signal: AbortSignal.timeout(AGENT_TIMEOUT_MS),
       });
     } catch (err) {
       this.logger.warn(`Agent ${method} ${path} failed: ${(err as Error).message}`);
+      if ((err as Error).name === 'TimeoutError') {
+        throw new ODataError(504, 'AgentTimeout', `The planning agent did not answer within ${AGENT_TIMEOUT_MS / 1000} s; the draft may still be running, try again in a moment`);
+      }
       throw new ODataError(503, 'ServiceUnavailable', 'The planning agent is not reachable');
     }
     if (res.ok) return (await res.json()) as T;

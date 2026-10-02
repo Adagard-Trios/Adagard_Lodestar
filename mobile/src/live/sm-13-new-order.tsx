@@ -16,7 +16,7 @@ const setQty = (index: number, qty: number) =>
 
 export default function ScreenSm13NewOrder() {
   const claims = useClaims();
-  const { draft, runDate, template } = useOrderDraft();
+  const { draft, runDate, template, ratio } = useOrderDraft();
   const [tab, setTab] = useState<TempClass>('AMBIENT');
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
@@ -24,8 +24,8 @@ export default function ScreenSm13NewOrder() {
   const lines = draft?.lines ?? [];
   const { dry, chilled } = byClass(lines);
   const shown = lines.map((l, i) => ({ l, i })).filter(x => x.l.tempClass === tab);
-  const tTab = totals(tab === 'AMBIENT' ? dry : chilled);
-  const tChilled = totals(chilled);
+  const tTab = totals(tab === 'AMBIENT' ? dry : chilled, ratio);
+  const tChilled = totals(chilled, ratio);
   const orders = [totals(dry).units, tChilled.units].filter(n => n > 0).length;
   const now = useNow();
   const remaining = left(cutoffFor(runDate), now);

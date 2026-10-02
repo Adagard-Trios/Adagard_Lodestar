@@ -4,8 +4,10 @@
 // keep the session and ask for access, see enrollment.ts).
 //
 // Storage: the refresh token and the (non-secret) claims go to the secret store (expo-secure-store on
-// native; the tab's sessionStorage on web, see secure.ts). The access token stays in memory and is refreshed on
-// start; offline, the stored claims open the signed-in app and the refresh waits for the network.
+// native; the install's localStorage on web, see secure.ts), keyed to the install's device id: they are saved with
+// that id and a stored session saved on another install (or with no id) is dropped on start. The access token stays
+// in memory and is refreshed on start; offline, the stored claims open the signed-in app (closing and reopening the
+// browser included) and the refresh waits for the network.
 import { Store } from '@/lib/store';
 import type { ODataError } from '@/lib/odata';
 import { claimsFromToken, type Claims } from './claims';
@@ -27,6 +29,8 @@ export type SessionState = {
 
 const RT = 'lodestar.rt';
 const CLAIMS = 'lodestar.claims';
+/** The install's own device id the stored session was saved on. */
+const BOUND = 'lodestar.session.device';
 const EARLY_MS = 30_000;
 
 /** Posture codes that mean "this token is not bound to this phone": the phone may ask for access. */
@@ -47,6 +51,8 @@ export class Session {
     now?: () => number,
     /** This install's device id (X-Device-Id): a stored session bound to another phone is not resumed. */
     private readonly installDevice?: () => Promise<string>,
+    /** The install's own id (stable for the install): the stored session is saved with it and only resumed on it. */
+    private readonly installId?: () => Promise<string>,
   ) {
     this.now = now ?? Date.now;
   }
@@ -62,7 +68,7 @@ export class Session {
   /** On app start: signed in again from the stored refresh token (works offline from stored claims). */
   async restore(): Promise<void> {
     if (this.state.get().status !== 'restoring') return;
-    const [rt, rawClaims] = await Promise.all([this.store.get(RT).catch(() => null), this.store.get(CLAIMS).catch(() => null)]);
+    const [rt, rawClaims, bound] = await Promise.all([this.store.get(RT).catch(() => null), this.store.get(CLAIMS).catch(() => null), this.store.get(BOUND).catch(() => null)]);
     let claims: Claims | null = null;
     try {
       claims = rawClaims ? (JSON.parse(rawClaims) as Claims) : null;
@@ -71,8 +77,10 @@ export class Session {
     }
     // The token names another phone than this install (the stored session was carried over): drop it, sign in again.
     const otherPhone = !!claims?.deviceId && !!this.installDevice && (await this.installDevice().catch(() => null)) !== claims.deviceId;
-    if (!rt || !claims || otherPhone) {
-      if (otherPhone) await Promise.all([this.store.remove(RT).catch(() => undefined), this.store.remove(CLAIMS).catch(() => undefined)]);
+    // Saved on another install (or before sessions were bound to one): not this install's session.
+    const otherInstall = !!(rt || rawClaims) && !!this.installId && (!bound || (await this.installId().catch(() => null)) !== bound);
+    if (!rt || !claims || otherPhone || otherInstall) {
+      if (otherPhone || otherInstall) await this.forget();
       this.state.set(s => ({ ...s, status: 'signed-out', claims: null }));
       return;
     }
@@ -128,11 +136,18 @@ export class Session {
     }
   }
 
+  /** Removes the stored session (refresh token, claims and the install it was bound to). */
+  private async forget() {
+    await Promise.all([RT, CLAIMS, BOUND].map(k => this.store.remove(k).catch(() => undefined)));
+  }
+
   private async accept(raw: RawTokens, claims: Claims) {
     const expiresAt = this.now() + (raw.expires_in ?? (claims.exp ? claims.exp - this.now() / 1000 : 300)) * 1000;
     this.tokens = { accessToken: raw.access_token, refreshToken: raw.refresh_token ?? this.tokens?.refreshToken, expiresAt };
     if (this.tokens.refreshToken) await this.store.set(RT, this.tokens.refreshToken).catch(() => undefined);
     await this.store.set(CLAIMS, JSON.stringify(claims)).catch(() => undefined);
+    const id = this.installId ? await this.installId().catch(() => null) : null;
+    if (id) await this.store.set(BOUND, id).catch(() => undefined);
     this.state.set(s => ({ ...s, status: 'signed-in', claims, face: faceOf(claims), problem: null, offline: false }));
   }
 
@@ -163,7 +178,7 @@ export class Session {
     const face = this.state.get().face;
     const rt = this.tokens?.refreshToken;
     this.tokens = null;
-    await Promise.all([this.store.remove(RT).catch(() => undefined), this.store.remove(CLAIMS).catch(() => undefined)]);
+    await this.forget();
     // A revoked device must not keep a live SSO session either.
     if (rt && kind === 'revoked') await this.oidc.logout(rt).catch(() => undefined);
     this.state.set({ status: 'signed-out', claims: null, face, offline: false, problem: { kind, message: problemText(kind, detail), at: new Date(this.now()).toISOString() } });
@@ -174,7 +189,7 @@ export class Session {
     const face = this.state.get().face;
     const rt = this.tokens?.refreshToken;
     this.tokens = null;
-    await Promise.all([this.store.remove(RT).catch(() => undefined), this.store.remove(CLAIMS).catch(() => undefined)]);
+    await this.forget();
     if (rt) await this.oidc.logout(rt).catch(() => undefined);
     this.state.set({ status: 'signed-out', claims: null, problem: null, face, offline: false });
   }

@@ -12,7 +12,7 @@ import NotificationsPanel from '@/live/dsp-14-notifications-panel';
 import OutletProfile from '@/live/dsp-18-outlet-profile';
 import { freezeDate, unfreeze } from './helpers/clock';
 import type { FakeRequest } from './helpers/live';
-import { page, renderLive } from './helpers/live';
+import { agentConfigReply, page, renderLive } from './helpers/live';
 
 const router = { push: jest.fn(), replace: jest.fn(), back: jest.fn(), forward: jest.fn(), refresh: jest.fn(), prefetch: jest.fn() };
 jest.mock('next/navigation', () => ({ useRouter: () => router, usePathname: () => '/plan' }));
@@ -28,7 +28,10 @@ const posts = (calls: FakeRequest[]) => calls.filter(c => c.method === 'POST');
 
 /** Reads every Plan screen makes: sidebar counts and the latest run date. */
 function base(req: FakeRequest) {
+  if (agentConfigReply(req)) return agentConfigReply(req);
   if (req.query.$top === '0') return page([], 0);
+  // no open orders from today on (the test day is past): the desk falls back to the latest plan's run date
+  if (req.path === 'Orders' && req.query.$select === 'runDate') return page([]);
   if (req.path === 'Plans' && req.query.$select === 'runDate') return page([{ runDate: DAY }]);
   return undefined;
 }
@@ -142,7 +145,7 @@ describe('DSP-09 Order detail drawer', () => {
     const guard = await screen.findByTestId('protected');
     await waitFor(() => expect(guard).toHaveTextContent("Deferred on the Mon 6 Apr run (CAP-REEFER). Deferring again needs a manager's reason."));
     expect(guard).toHaveTextContent('91');
-    expect(view.calls.find(c => c.path === 'Deferrals')!.query.$filter).toBe("order/outletId eq 'OUTT01' and orderId ne 'ORDT1'");
+    expect(view.calls.find(c => c.path === 'Deferrals' && c.query.$filter?.includes('order/outletId'))!.query.$filter).toBe("order/outletId eq 'OUTT01' and orderId ne 'ORDT1'");
 
     const thread = screen.getByTestId('thread');
     await waitFor(() => expect(thread.querySelector('[data-step="Deferred"]')).toHaveAttribute('data-state', 'warn'));
@@ -180,7 +183,7 @@ describe('DSP-09 Order detail drawer', () => {
   it('without an opened order it shows the first order of the queue', async () => {
     const view = renderLive(<OrderDrawer />, { handler: handler() });
     expect(await screen.findByText('Waypoint Fresh Test')).toBeInTheDocument();
-    const first = view.calls.find(c => c.path === 'Orders' && c.query.$top === '1')!;
+    const first = view.calls.find(c => c.path === 'Orders' && c.query.$top === '1' && c.query.$select === 'id')!;
     expect(first.query).toMatchObject({ $select: 'id', $orderby: 'deferredYesterday desc,deferralScore desc,id' });
     expect(first.query.$filter).toContain("status ne 'CANCELLED'");
   });

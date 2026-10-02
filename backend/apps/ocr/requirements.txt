@@ -1,0 +1,19 @@
+# Runtime dependencies (pinned). Python 3.12.
+# rapidocr-onnxruntime is installed with --no-deps (Dockerfile) so OpenCV is the headless build (no libGL);
+# its own dependencies are listed here. The PP-OCRv4 mobile ONNX models ship inside its wheel.
+rapidocr-onnxruntime==1.4.4
+onnxruntime==1.30.0
+opencv-python-headless==5.0.0.93
+numpy==2.5.3
+pyclipper==1.4.0
+shapely==2.1.2
+pyyaml==6.0.3
+six==1.17.0
+tqdm==4.70.1
+pillow==12.3.0
+fastapi==0.142.2
+starlette==1.7.0
+uvicorn==0.54.0
+pydantic==2.13.5
+pyjwt[crypto]==2.15.1
+cryptography==50.0.2

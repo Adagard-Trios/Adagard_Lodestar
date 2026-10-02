@@ -1,6 +1,6 @@
 'use client';
 // DSP-20 Settings, live. Markup and classes from the generated design (frontend/screens/dsp-20-settings.tsx).
-// Data: the planning agent's limits (AgentRuns/Lodestar.AgentConfig: first departure, 270/480 minute budgets,
+// Data: the planning agent's limits (AgentRuns/Lodestar.AgentConfig: first departure, Fresh/other minute budgets,
 // trips per vehicle, reason codes, protected score), Calendar (run days and the next closed days), Vehicles and
 // DistrictTravel counts per depot, Users of the dispatcher's depots, Outlets with an access note (the notes the
 // agent reads with the outlet rows), and the dispatcher's own alert rules and on-call hours
@@ -18,14 +18,14 @@ import { Ic } from '@/components/live/icons';
 import { type AlertRules, type Preferences, useAgentConfig, usePreferences } from '@/components/live/settings-data';
 import { ErrorBanner, Skeleton } from '@/components/live/states';
 import { usePlanScope } from '@/components/live/plan-data';
-import { addDays, DEPOT_NAME, isoDay } from '@/lib/format';
+import { addDays, DEPOT_NAME, isoDay, LATE_RISK_PCT } from '@/lib/format';
 import { useQuery } from '@/lib/odata/hooks';
 import type { Outlet, User, UserRole } from '@/lib/odata/types';
 import { CUTOFF_LABEL, colomboDay, depotFilter } from '@/lib/workday';
 
 const REASON_TEXT: Record<string, string> = {
   CAP_REEFER: 'Not enough reefer space',
-  CAP_TIME: "Won't fit the 270 or 480 min day",
+  CAP_TIME: "Won't fit the trip's minute budget",
   ACCESS: "Vehicle can't reach the outlet",
   WINDOW: 'Arrival misses the window',
   FUEL: 'Weekly fuel quota exceeded',
@@ -36,7 +36,7 @@ const ROLE_LABEL: Record<UserRole, string> = { ADMIN: 'Admin', DISPATCHER: 'Disp
 const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const DEFAULT_ALERTS: Required<AlertRules> = {
   vehicleFault: { push: true, sms: true },
-  lateRisk: { push: true, threshold: 30, risingOnly: true },
+  lateRisk: { push: true, threshold: LATE_RISK_PCT, risingOnly: true },
   flags: { push: true },
   silence: { push: true, call: true, minutes: 15 },
   signalZones: { alert: false },
@@ -169,7 +169,7 @@ export default function LiveDsp20Settings() {
                       <div className="dx-kv"><span>{"Vehicle can't depart"}</span><span className="hstack" style={{ gap: '8px' }}><span className="dx-t13">{"push"}</span><Toggle label="Vehicle fault push" on={!!alerts.vehicleFault.push} onChange={v => setAlert('vehicleFault', { push: v })} /><span className="dx-t13">{"SMS"}</span><Toggle label="Vehicle fault SMS" on={!!alerts.vehicleFault.sms} onChange={v => setAlert('vehicleFault', { sms: v })} /></span></div>
                       <div className="dx-kv">
                         <span className="hstack" style={{ gap: '6px' }}>{"Late risk"}
-                          <select className="lv-input" aria-label="Late risk threshold" style={{ width: 'auto', height: '30px' }} value={alerts.lateRisk.threshold ?? 30}
+                          <select className="lv-input" aria-label="Late risk threshold" style={{ width: 'auto', height: '30px' }} value={alerts.lateRisk.threshold ?? LATE_RISK_PCT}
                             onChange={e => setAlert('lateRisk', { threshold: Number(e.target.value) })} onClick={e => e.stopPropagation()}>
                             {[20, 30, 40, 50].map(n => <option key={n} value={n}>{`${n}% or more`}</option>)}
                           </select>
@@ -199,7 +199,7 @@ export default function LiveDsp20Settings() {
                   {!c && !config.error && <Skeleton rows={3} />}
                   {c?.reasonCodes.map(code => (
                     <div key={code} className="dx-kv" style={{ minHeight: '40px' }}>
-                      <span className="hstack" style={{ gap: '10px' }}><span className="dx-code">{code}</span><span style={{ color: 'var(--text-2)' }}>{REASON_TEXT[code] ?? ''}</span></span>
+                      <span className="hstack" style={{ gap: '10px' }}><span className="dx-code">{code}</span><span style={{ color: 'var(--text-2)' }}>{code === 'CAP_TIME' && c ? `Won't fit the ${c.limits.freshMinutesBudget} or ${c.limits.otherMinutesBudget} min day` : REASON_TEXT[code] ?? ''}</span></span>
                     </div>
                   ))}
                 </div>

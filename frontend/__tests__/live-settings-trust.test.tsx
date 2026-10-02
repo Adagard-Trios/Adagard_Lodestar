@@ -3,9 +3,10 @@
 // design links restored on the sidebars. Real ODataClient over a fake fetch. Written, not run (tests paused).
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { AdminSide, PlanSide } from '@/components/live/chrome';
-import { type DataImport, importFileOf, type Preferences } from '@/components/live/settings-data';
+import { type DataImport, importFileOf, type Preferences, readText } from '@/components/live/settings-data';
 import Imports from '@/live/adm-14-data-imports';
 import ImportFailed, { rejectedCsv } from '@/live/adm-15-import-check-failed';
+import AuditLog from '@/live/adm-16-audit-log';
 import Guardrails from '@/live/adm-17-planning-agent-guardrails';
 import TwoStep, { accountSecurityUrl } from '@/live/dsp-07-2-step-verification';
 import LateRisk, { explainRisk } from '@/live/dsp-15-late-risk-explainer';
@@ -155,6 +156,27 @@ describe('ADM-14 Data imports', () => {
   });
 });
 
+describe('ADM-14 Data imports · failed file and file reading', () => {
+  it('a file whose last import failed opens ADM-15 on that import', async () => {
+    renderLive(<Imports />, {
+      session: SESSIONS.admin,
+      handler: req => (req.path === 'DataImports' && req.query.$filter === "file eq 'outlets'" ? page([failed]) : fallback(req)),
+    });
+    const row = await screen.findByTestId('file-outlets');
+    await waitFor(() => expect(row).toHaveTextContent('Check failed'));
+    fireEvent.click(row);
+    expect(router.push).toHaveBeenCalledWith('/admin/adm-15-import-check-failed?id=imp-9');
+    fireEvent.click(screen.getByTestId('file-vehicles'));
+    expect(router.push).toHaveBeenCalledTimes(1); // a clean file has nothing to open
+  });
+
+  it('reads a picked file with a FileReader where Blob.text() is missing', async () => {
+    const blob = new Blob(['outlet_id\nOUT1\n'], { type: 'text/csv' });
+    Object.defineProperty(blob, 'text', { value: undefined });
+    await expect(readText(blob)).resolves.toBe('outlet_id\nOUT1\n');
+  });
+});
+
 describe('ADM-15 Import check failed', () => {
   it('shows the newest failed import’s rejected rows and checks', async () => {
     renderLive(<ImportFailed />, { session: SESSIONS.admin, handler: req => (req.path === 'DataImports' ? page([failed]) : fallback(req)) });
@@ -170,5 +192,16 @@ describe('ADM-17 Planning agent guardrails', () => {
     expect(await screen.findByText("It can never publish a plan without a dispatcher's approval")).toBeInTheDocument();
     expect(await screen.findByTestId('may-do')).toHaveTextContent('up to 3 redrafts');
     expect(screen.getByTestId('may-read')).toHaveTextContent('not read');
+  });
+
+  it('“See its last 30 proposals” opens the audit log on the planning agent’s entries', async () => {
+    const view = renderLive(<Guardrails />, { session: SESSIONS.admin, handler: req => (req.path.includes('AgentConfig') ? { value: CONFIG } : fallback(req)) });
+    fireEvent.click(screen.getByText('See its last 30 proposals'));
+    expect(window.sessionStorage.getItem('lodestar.audit.area')).toBe('agent');
+    view.unmount();
+    const log = renderLive(<AuditLog />, { session: SESSIONS.admin, handler: fallback });
+    await waitFor(() => expect(log.calls.some(c => c.path === 'AuditEntries' && c.query.$filter === "entitySet in ('AgentRuns')" && c.query.$top === '30')).toBe(true));
+    expect(screen.getByText('Planning agent', { selector: '.d-filter' })).toHaveClass('is-on');
+    expect(window.sessionStorage.getItem('lodestar.audit.area')).toBeNull();
   });
 });

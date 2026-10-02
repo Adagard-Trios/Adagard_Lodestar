@@ -1,7 +1,8 @@
 // Live Admin screens not covered by live-store-admin.test.tsx (ADM-01, ADM-02, ADM-03, ADM-05, ADM-06, ADM-08,
 // ADM-10, ADM-19), plus the validation, empty and error states of ADM-04/07/16/20. Real ODataClient over a fake
 // fetch: assertions on requests are at the HTTP level. Date is frozen at Mon 6 Apr 2026 13:30 (Colombo).
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { AdminSide, adminChanged } from '@/components/live/chrome';
 import ScreenShell from '@/components/ScreenShell';
 import AdminSignIn from '@/live/adm-01-sign-in';
 import Overview from '@/live/adm-02-overview';
@@ -107,6 +108,35 @@ describe('ADM-02 Overview', () => {
     expect(view.calls.find(c => c.query.$filter?.startsWith('actor eq'))!.query.$filter).toBe("actor eq 'u-a' and at ge 2026-04-06T00:00:00Z");
   });
 
+  it('a person who asked for a new device while the old one is still active ranks first as a lost phone; each row opens its screen', async () => {
+    const view = renderLive(<ScreenShell board="P6" nav={nav({ L285: '/admin/adm-07-lost-phone' })} live><Overview /></ScreenShell>, {
+      ...admin,
+      handler: handler(req => (
+        req.path === 'Devices' && req.query.$filter?.startsWith("status eq 'ACTIVE' and userId in") ? page([device('DEVOLD', { userId: 'u7', label: 'Driver phone', user: { name: 'Chaminda R' } })])
+          : req.path === 'Devices' && req.query.$top === '5' ? page([device('DEVP1', { status: 'PENDING', userId: 'u7', label: 'New phone', user: { name: 'Chaminda R' } })])
+            : req.path === 'OfflineEvents' && req.query.$filter?.includes('driverId in') ? page([{ id: 'E1', driverId: 'u7' }, { id: 'E2', driverId: 'u7' }])
+              : req.path === 'DataImports' ? page([{ id: 'imp-1', file: 'calendar', fileName: 'calendar.csv', rows: 910, passed: 910, applied: true, created: 0, updated: 910, problems: [], checks: [], importedBy: 'u-a', byName: 'Ada Admin', importedAt: NOW }])
+                : undefined)),
+    });
+    await waitFor(() => expect(screen.getByTestId('needs-you')).toHaveTextContent('3'));
+    expect(screen.getByText('1 device request, 1 lost phone, 1 refused access')).toBeInTheDocument();
+    expect(screen.getByText(/^Start with the lost phone/)).toHaveTextContent('Start with the lost phone: it holds 2 records that have not reached Lodestar yet.');
+    expect(view.calls.find(c => c.query.$filter?.startsWith("status eq 'ACTIVE' and userId in"))!.query.$filter).toBe("status eq 'ACTIVE' and userId in ('u7')");
+    expect(view.calls.find(c => c.path === 'OfflineEvents' && c.query.$filter?.includes('driverId'))!.query.$filter).toBe("syncedAt eq null and driverId in ('u7')");
+    expect(await screen.findByText('calendar.csv')).toBeInTheDocument();
+    expect(screen.getByTestId('last-import')).toHaveTextContent('910 rows, clean · by Ada Admin');
+
+    fireEvent.click(document.querySelector('[data-lost="DEVOLD"]')!);
+    expect(window.sessionStorage.getItem('lodestar.focus.device')).toBe('DEVOLD');
+    expect(router.push).toHaveBeenLastCalledWith('/admin/adm-07-lost-phone');
+    fireEvent.click(document.querySelector('[data-device="DEVP1"]')!);
+    expect(window.sessionStorage.getItem('lodestar.focus.device')).toBe('DEVP1');
+    expect(router.push).toHaveBeenLastCalledWith('/admin/adm-05-access-requests');
+    fireEvent.click(document.querySelector('[data-audit="41"]')!);
+    expect(window.sessionStorage.getItem('lodestar.focus.audit')).toBe('41');
+    expect(router.push).toHaveBeenLastCalledWith('/admin/adm-19-audit-entry-detail');
+  });
+
   it('quiet day: nothing waiting; a broken chain is flagged', async () => {
     renderLive(<Overview />, {
       ...admin,
@@ -136,6 +166,21 @@ describe('ADM-02 Overview', () => {
     fireEvent.click(screen.getByRole('button', { name: /Try again/ }));
     expect(await screen.findByText(/Bay tablet 3 waiting/)).toBeInTheDocument();
     expect(view.calls.filter(c => c.path === 'Devices' && c.query.$top === '5')).toHaveLength(2);
+  });
+});
+
+describe('Admin sidebar', () => {
+  it('reads its counts again after an admin write (adminChanged) and on a realtime notification', async () => {
+    let pendingN = 3;
+    const view = renderLive(<AdminSide active="N0" />, { ...admin, handler: req => (req.path === 'Devices' && req.query.$filter === "status eq 'PENDING'" ? page([], pendingN) : page([], 1)) });
+    const item = () => screen.getByText('Access requests').closest('[data-lk]') as HTMLElement;
+    await waitFor(() => expect(item()).toHaveTextContent('Access requests3'));
+    pendingN = 2;
+    act(() => adminChanged());
+    await waitFor(() => expect(item()).toHaveTextContent('Access requests2'));
+    pendingN = 5;
+    view.hub.emit('notification', { id: 'N1' });
+    await waitFor(() => expect(item()).toHaveTextContent('Access requests5'));
   });
 });
 
@@ -170,6 +215,12 @@ describe('ADM-03 People and roles', () => {
     fireEvent.click(row('u3'));
     expect(window.sessionStorage.getItem('lodestar.focus.user')).toBe('u3');
     expect(router.push).toHaveBeenCalledWith('/admin/adm-04-add-or-edit-person');
+
+    // The design's locked row: a person with an open device request opens that request in ADM-05.
+    fireEvent.click(row('u2'));
+    expect(window.sessionStorage.getItem('lodestar.focus.device')).toBe('D2');
+    expect(router.push).toHaveBeenLastCalledWith('/admin/adm-05-access-requests');
+    expect(document.querySelector('.d-eyebrow')).toHaveTextContent('People and roles 4 people 5 faces');
   });
 
   it('role chips, search and “Show more” send the right requests', async () => {
@@ -252,6 +303,23 @@ describe('ADM-05 Access requests', () => {
     expect(await screen.findByText('No open requests')).toBeInTheDocument();
     expect(posts(view.calls)).toEqual([expect.objectContaining({ path: "Devices('DEVP1')/Lodestar.Activate", body: {} })]);
     expect(view.calls.filter(c => c.path === 'Devices' && c.query.$filter === "status eq 'PENDING'" && c.query.$expand === 'user')).toHaveLength(2);
+  });
+
+  it('opens on the request chosen elsewhere (focus device); after a decision the next request is selected', async () => {
+    const second = device('DEVP2', { status: 'PENDING', label: 'Bay tablet', userId: 'u8', user: user('u8', { name: 'Kasun J', role: 'LOADER' }) });
+    window.sessionStorage.setItem('lodestar.focus.device', 'DEVP2');
+    let open = [pending, second];
+    const view = renderLive(<Requests />, {
+      ...admin,
+      handler: req => (req.query.$top === '0' ? page([], open.length)
+        : req.method === 'POST' ? (open = open.filter(d => !req.path.includes(d.id)), { ...second, status: 'ACTIVE' })
+          : req.path === 'Devices' && req.query.$filter === "status eq 'PENDING'" ? page(open) : page([])),
+    });
+    expect(await screen.findByText('Bay tablet for Kasun J')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('approve-device'));
+    await waitFor(() => expect(posts(view.calls)).toEqual([expect.objectContaining({ path: "Devices('DEVP2')/Lodestar.Activate" })]));
+    expect(await screen.findByText('Driver phone for Ruwan Bandara')).toBeInTheDocument();
+    expect(window.sessionStorage.getItem('lodestar.focus.device')).toBeNull();
   });
 
   it('declining needs a reason, which is sent with Devices(…)/Lodestar.Revoke', async () => {

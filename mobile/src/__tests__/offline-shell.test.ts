@@ -1,10 +1,14 @@
-// WP7 offline: the web session kept across a reload (sessionStorage of the tab), the service worker's
-// registration, what it caches (and never caches), and the shell list written at build time.
+// WP7 offline: the web session kept across a reload and a browser restart (localStorage of the install, bound to
+// the install's device id), the service worker's registration, what it caches (and never caches), and the shell
+// list written at build time.
 /* eslint-disable @typescript-eslint/no-require-imports */
 import { OidcError, type OidcClient, type RawTokens } from '@/auth/oidc';
-import { tabSessionStore } from '@/auth/secure';
+import { installSessionStore } from '@/auth/secure';
 import { Session } from '@/auth/session';
+import { OfflineQueue } from '@/offline/queue';
 import { registerServiceWorker } from '@/offline/service-worker';
+import { queueStorage } from '@/offline/storage';
+import { SyncEngine } from '@/offline/sync';
 
 import { jwt } from './helpers';
 
@@ -18,8 +22,12 @@ const { precache, render, TEMPLATE } = require('../../scripts/build-sw.js');
 const driver = { sub: 'u-ruwan', name: 'Ruwan Bandara', realm_access: { roles: ['driver'] }, depot: ['kandy'], vehicle_id: 'VEH-A', device_id: 'DEV-1', exp: 2_000_000_000 };
 const tokens = (rt = 'rt-1'): RawTokens => ({ access_token: jwt(driver), refresh_token: rt, expires_in: 300 });
 const offlineOidc = (): OidcClient => ({ refresh: jest.fn(async () => Promise.reject(new OidcError('network', 'offline'))), logout: jest.fn(async () => undefined) });
+/** This install's own device id. */
+const install = (id = 'DEV-1') => async () => id;
+/** The app on this install (each new one is the app opened again). */
+const app = (oidc: OidcClient = offlineOidc(), id = 'DEV-1') => new Session(installSessionStore, oidc, undefined, install(id), install(id));
 
-/** A tab's sessionStorage (a reload keeps it; the test's "new Session" is the reloaded page). */
+/** The install's localStorage (survives a reload and closing the browser). */
 function fakeStorage() {
   const m = new Map<string, string>();
   return {
@@ -35,33 +43,37 @@ function fakeStorage() {
   };
 }
 
-describe('web session across a reload (sessionStorage of the tab)', () => {
-  const w = globalThis as unknown as { window: { sessionStorage?: unknown; opener?: unknown } };
-  let tab: ReturnType<typeof fakeStorage>;
-  let saved: { sessionStorage?: unknown; opener?: unknown };
+describe('web session across a reload and a browser restart (localStorage of the install)', () => {
+  const w = globalThis as unknown as { window: { localStorage?: unknown; sessionStorage?: unknown; opener?: unknown } };
+  let disk: ReturnType<typeof fakeStorage>;
+  let saved: { localStorage?: unknown; sessionStorage?: unknown; opener?: unknown };
+  const sessionKeys = () => [...disk.m.keys()].filter(k => k === 'lodestar.rt' || k === 'lodestar.claims' || k === 'lodestar.session.device');
 
   beforeEach(() => {
-    saved = { sessionStorage: w.window.sessionStorage, opener: w.window.opener };
-    tab = fakeStorage();
-    w.window.sessionStorage = tab;
+    saved = { localStorage: w.window.localStorage, sessionStorage: w.window.sessionStorage, opener: w.window.opener };
+    disk = fakeStorage();
+    w.window.localStorage = disk;
+    // a closed browser loses the tab's sessionStorage: nothing may depend on it
+    w.window.sessionStorage = fakeStorage();
     w.window.opener = null;
   });
   afterEach(() => {
+    w.window.localStorage = saved.localStorage;
     w.window.sessionStorage = saved.sessionStorage;
     w.window.opener = saved.opener;
   });
 
-  it('keeps the refresh token and claims in the tab, never the access token', async () => {
-    const s = new Session(tabSessionStore, offlineOidc());
-    await s.signIn(tokens());
-    expect(tab.m.get('lodestar.rt')).toBe('rt-1');
-    expect(JSON.parse(tab.m.get('lodestar.claims')!).sub).toBe('u-ruwan');
-    expect([...tab.m.values()].some(v => v.includes(jwt(driver)))).toBe(false);
+  it('keeps the refresh token, the claims and the install id on the install, never the access token', async () => {
+    await app().signIn(tokens());
+    expect(disk.m.get('lodestar.rt')).toBe('rt-1');
+    expect(JSON.parse(disk.m.get('lodestar.claims')!).sub).toBe('u-ruwan');
+    expect(disk.m.get('lodestar.session.device')).toBe('DEV-1');
+    expect([...disk.m.values()].some(v => v.includes(jwt(driver)))).toBe(false);
   });
 
   it('opens signed in after an offline reload, from the stored session', async () => {
-    await new Session(tabSessionStore, offlineOidc()).signIn(tokens());
-    const reloaded = new Session(tabSessionStore, offlineOidc(), undefined, async () => 'DEV-1');
+    await app().signIn(tokens());
+    const reloaded = app();
     await reloaded.restore();
     expect(reloaded.state.get()).toMatchObject({ status: 'signed-in', offline: true, face: 'run' });
     expect(reloaded.claims?.sub).toBe('u-ruwan');
@@ -69,40 +81,88 @@ describe('web session across a reload (sessionStorage of the tab)', () => {
     expect(await reloaded.accessToken()).toBeNull();
   });
 
+  it('relaunch: browser closed and reopened with no signal restores the signed-in run with the outbox intact', async () => {
+    let t = 0;
+    const uuid = () => `00000000-0000-4000-8000-${String(++t).padStart(12, '0')}`;
+    await app().signIn(tokens());
+    const outbox = new OfflineQueue(queueStorage, uuid);
+    await outbox.ready();
+    await outbox.enqueue('POD_SAVE', { sub: 'u-ruwan', tripId: 'T-1', ref: 'S-1', label: 'POD · O-1', payload: { orderId: 'O-1', units: 8, unitsOrdered: 10 }, savedAt: '2026-04-07T01:00:00.000Z' });
+    await outbox.enqueue('ARRIVAL', { sub: 'u-ruwan', tripId: 'T-1', ref: 'S-2', label: 'Arrival · Lake Store', payload: { stopSeq: 2 }, savedAt: '2026-04-07T01:30:00.000Z' });
+
+    // the browser is closed: memory and the tab's sessionStorage are gone, the install's localStorage stays
+    w.window.sessionStorage = fakeStorage();
+    const reopened = app();
+    const queue = new OfflineQueue(queueStorage, uuid);
+    await Promise.all([reopened.restore(), queue.ready()]);
+    expect(reopened.state.get()).toMatchObject({ status: 'signed-in', offline: true, face: 'run' });
+    expect(reopened.claims?.sub).toBe('u-ruwan');
+    expect(queue.pending('u-ruwan').map(i => i.kind)).toEqual(['POD_SAVE', 'ARRIVAL']);
+
+    // still no signal: the sync engine keeps everything on the phone
+    const client = { action: jest.fn(), create: jest.fn(), list: jest.fn() };
+    const sync = new SyncEngine(queue, client as never, { sub: () => reopened.claims?.sub ?? null, online: () => false });
+    expect(await sync.flush()).toMatchObject({ offline: true, attempted: 0 });
+    expect(client.action).not.toHaveBeenCalled();
+    expect(queue.pending('u-ruwan')).toHaveLength(2);
+  });
+
   it('refreshes silently when the reloaded app is online', async () => {
-    await new Session(tabSessionStore, offlineOidc()).signIn(tokens());
+    await app().signIn(tokens());
     const oidc: OidcClient = { refresh: jest.fn(async () => tokens('rt-2')), logout: jest.fn(async () => undefined) };
-    const reloaded = new Session(tabSessionStore, oidc, undefined, async () => 'DEV-1');
+    const reloaded = app(oidc);
     await reloaded.restore();
     expect(oidc.refresh).toHaveBeenCalledWith('rt-1');
     expect(reloaded.state.get()).toMatchObject({ status: 'signed-in', offline: false });
     expect(await reloaded.accessToken()).toBe(jwt(driver));
-    expect(tab.m.get('lodestar.rt')).toBe('rt-2');
+    expect(disk.m.get('lodestar.rt')).toBe('rt-2');
   });
 
-  it('does not resume a session bound to another phone, and forgets it', async () => {
-    await new Session(tabSessionStore, offlineOidc()).signIn(tokens());
-    const reloaded = new Session(tabSessionStore, offlineOidc(), undefined, async () => 'DEV-OTHER');
+  it('does not resume a session saved on another install, and forgets it', async () => {
+    await app().signIn(tokens());
+    const other = app(offlineOidc(), 'DEV-OTHER');
+    await other.restore();
+    expect(other.state.get().status).toBe('signed-out');
+    expect(sessionKeys()).toEqual([]);
+  });
+
+  it('does not resume a stored session that is not bound to an install', async () => {
+    disk.m.set('lodestar.rt', 'rt-1');
+    disk.m.set('lodestar.claims', JSON.stringify({ sub: 'u-ruwan', roles: ['driver'], depots: [] }));
+    const s = app();
+    await s.restore();
+    expect(s.state.get().status).toBe('signed-out');
+    expect(sessionKeys()).toEqual([]);
+  });
+
+  it('does not resume a session whose token names another phone, and forgets it', async () => {
+    await app().signIn(tokens());
+    const reloaded = new Session(installSessionStore, offlineOidc(), undefined, install('DEV-OTHER'), install('DEV-1'));
     await reloaded.restore();
     expect(reloaded.state.get().status).toBe('signed-out');
-    expect(tab.m.has('lodestar.rt')).toBe(false);
-    expect(tab.m.has('lodestar.claims')).toBe(false);
+    expect(sessionKeys()).toEqual([]);
   });
 
-  it('sign-out removes the stored session, so a reload is signed out', async () => {
-    const s = new Session(tabSessionStore, offlineOidc());
+  it('sign-out removes the stored session, so a reopened app is signed out', async () => {
+    const s = app();
     await s.signIn(tokens());
     await s.signOut();
-    expect(tab.m.size).toBe(0);
-    const reloaded = new Session(tabSessionStore, offlineOidc());
+    expect(sessionKeys()).toEqual([]);
+    const reloaded = app();
     await reloaded.restore();
     expect(reloaded.state.get().status).toBe('signed-out');
   });
 
-  it('the sign-in popup (a copy of the tab) does not read the session', async () => {
-    tab.m.set('lodestar.rt', 'rt-1');
+  it('the sign-in popup (window.opener set) neither reads nor rotates the stored session', async () => {
+    await app().signIn(tokens());
     w.window.opener = {};
-    expect(await tabSessionStore.get('lodestar.rt')).toBeNull();
+    expect(await installSessionStore.get('lodestar.rt')).toBeNull();
+    const oidc: OidcClient = { refresh: jest.fn(async () => tokens('rt-2')), logout: jest.fn(async () => undefined) };
+    const popup = app(oidc);
+    await popup.restore();
+    expect(oidc.refresh).not.toHaveBeenCalled();
+    expect(popup.state.get().status).toBe('signed-out');
+    expect(disk.m.get('lodestar.rt')).toBe('rt-1');
   });
 });
 

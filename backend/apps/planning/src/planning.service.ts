@@ -291,7 +291,7 @@ export class PlanningService {
 
   /** After a plan is in effect: each affected store gets a notice, and the open screens are told to refresh. */
   private async announce(x: ExecutionResult) {
-    const outlets = [...new Set([...x.planned.map(p => p.outletId), ...x.deferred.map(d => d.outletId)])];
+    const outlets = [...new Set([...x.planned.map(p => p.outletId), ...x.deferred.map(d => d.outletId), ...(x.atRisk ?? []).map(a => a.outletId)])];
     const managers = await this.prisma.user.findMany({
       where: { role: Role.STORE_MANAGER, isActive: true, outletId: { in: outlets } },
       select: { id: true, outletId: true },
@@ -309,6 +309,12 @@ export class PlanningService {
         await this.notify.notice({
           recipientId: m.id, type: 'ORDER_DEFERRED', outletId: m.outletId!,
           payload: { planId: x.planId, orderId: d.orderId, reason: d.reason, from: x.runDate, rescheduledDate: d.rescheduledDate },
+        });
+      }
+      for (const a of (x.atRisk ?? []).filter(a => a.outletId === m.outletId)) {
+        await this.notify.notice({
+          recipientId: m.id, type: 'ORDER_AT_RISK', outletId: m.outletId!,
+          payload: { planId: x.planId, orderId: a.orderId, reason: a.reason, runDate: x.runDate, title: `Order ${a.orderId} at risk: dispatch is placing it` },
         });
       }
     }

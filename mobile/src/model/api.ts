@@ -110,22 +110,31 @@ export async function orderDetail(c: C, id: string): Promise<Order> {
 
 export type NewOrderLine = { name: string; qty: number; kg: number; tempClass: 'CHILLED' | 'AMBIENT' };
 
-/** The body of POST Orders for a store's draft (m3 estimated from weight when the lines carry none). */
-export function orderBody(outlet: Pick<Outlet, 'id' | 'brand'>, runDate: string, lines: NewOrderLine[], notes?: string) {
-  const units = lines.reduce((n, l) => n + l.qty, 0);
-  const kg = Math.round(lines.reduce((n, l) => n + l.kg, 0) * 10) / 10;
-  const chilled = lines.some(l => l.tempClass === 'CHILLED');
-  return {
-    outletId: outlet.id,
-    runDate,
-    brand: outlet.brand,
-    tempClass: chilled ? 'CHILLED' : 'AMBIENT',
-    units,
-    kg,
-    m3: Math.round(kg * 0.004 * 100) / 100,
-    ...(notes ? { notes } : {}),
-    lineItems: lines.filter(l => l.qty > 0),
-  };
+/** m³ per kg when the outlet has no past orders to learn from (the desk's SM-01 uses the same). */
+export const DEFAULT_M3_PER_KG = 0.0045;
+
+/**
+ * The bodies of POST Orders for a store's draft: one order per temperature class (dry and chilled travel apart,
+ * as the desk's SM-01 sends them), m³ estimated from weight with the outlet's own m³ per kg.
+ */
+export function orderBodies(outlet: Pick<Outlet, 'id' | 'brand'>, runDate: string, lines: NewOrderLine[], notes?: string, m3PerKg: number = DEFAULT_M3_PER_KG) {
+  return (['AMBIENT', 'CHILLED'] as const)
+    .map(tempClass => {
+      const items = lines.filter(l => l.tempClass === tempClass && l.qty > 0);
+      const kg = Math.round(items.reduce((n, l) => n + l.kg, 0) * 10) / 10;
+      return {
+        outletId: outlet.id,
+        runDate,
+        brand: outlet.brand,
+        tempClass,
+        units: items.reduce((n, l) => n + l.qty, 0),
+        kg,
+        m3: Math.round(kg * m3PerKg * 100) / 100,
+        ...(notes ? { notes } : {}),
+        lineItems: items,
+      };
+    })
+    .filter(o => o.lineItems.length > 0);
 }
 
 // ---------------------------------------------------------------- dispatcher

@@ -7,6 +7,10 @@
 //     RECEIPT   → Orders('…')/Lodestar.ConfirmReceipt
 //     ORDER     → POST Orders
 //     PRECOOL   → POST LoadRecords {tripId, bay, reeferTempC} (LD-09 pre-cool reading)
+//     TRIP_STATUS → Trips('…')/Lodestar.SetStatus {status} (the dock started loading: LOADING, so a re-plan keeps the trip;
+//                 the driver started the trip: ENROUTE; the driver finished it: COMPLETE, the server records the return
+//                 time and the fuel used. No client sets COMPLETE any other way.)
+//     VEHICLE_FAULT → Trips('…')/Lodestar.ReportVehicleFault {fault, reeferTempC?, note?} (LD-B1)
 //   STATUS_CHANGE (driver reports to dispatch) goes in the PushBatch with the other driver events.
 // Outcomes: applied → synced (a server conflict note is kept and shown); 409/412 → conflict;
 // other 4xx → rejected (shown, the user can discard); network / 5xx / 429 → stays pending.
@@ -193,6 +197,22 @@ export class SyncEngine {
           const found = await this.client.list<{ id: string }>('LoadRecords', { filter: `tripId eq ${lit(p.tripId)}`, select: ['id'], top: 1 });
           if (found.value[0]) return { status: 'synced', conflict: 'Load record already open: the reading goes with the release' };
           await this.client.create('LoadRecords', { tripId: p.tripId, bay: p.bay, reeferTempC: p.reeferTempC }, idem);
+          return { status: 'synced' };
+        }
+        case 'TRIP_STATUS': {
+          try {
+            await this.client.action(`Trips${key(p.tripId)}/Lodestar.SetStatus`, { status: p.status }, idem);
+          } catch (e) {
+            // the trip moved on meanwhile (released, or already past this status): nothing left to say. A refused
+            // COMPLETE is shown (the trip would otherwise stay open on the dispatcher's board).
+            if (e instanceof ODataError && e.status === 409 && p.status !== 'COMPLETE') return { status: 'synced', conflict: null };
+            throw e;
+          }
+          return { status: 'synced' };
+        }
+        case 'VEHICLE_FAULT': {
+          const body = { fault: p.fault, ...(typeof p.reeferTempC === 'number' ? { reeferTempC: p.reeferTempC } : {}), ...(p.note ? { note: p.note } : {}) };
+          await this.client.action(`Trips${key(p.tripId)}/Lodestar.ReportVehicleFault`, body, idem);
           return { status: 'synced' };
         }
         case 'ORDER': {

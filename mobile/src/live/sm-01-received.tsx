@@ -1,14 +1,15 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // SM-01 Received · phone (P1, phone)
-// The orders just placed for a run date (route param `runDate`, else the next open one): the server's orders
-// for that day, plus the ones still on this phone waiting for signal.
+// The orders just placed (route param `since`: the moment Submit was pressed on SM-14) on the run date the
+// server gave them (a late order moves to the next operating run, with the server's note), else the orders for
+// `runDate` (else the next open run); plus the ones still on this phone waiting for signal.
 import { Fragment } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { dayLabel, isoDay } from '@/lib/time';
 import { plural } from '@/lodestar/live';
 import { useClaims, useOutbox, useParam, useStoreDay } from '@/model/hooks';
 import { depotName } from '@/model/plan';
-import { nextRunDate, useNow } from '@/model/store-face';
+import { useNextRun } from '@/model/store-face';
 import type { TempClass } from '@/model/types';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
@@ -26,20 +27,27 @@ function clock12(iso?: string): [string, string] {
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
+/** The server's clock may differ a little from the phone's. */
+const CLOCK_SLACK_MS = 2 * 60_000;
 const STEPS = ['Received', 'Planned', 'Loaded', 'En route', 'Delivered'];
 
 export default function ScreenSm01Received() {
   const claims = useClaims();
   const day = useStoreDay();
   const outlet = day.data?.outlet ?? null;
-  const now = useNow();
-  const runDate = useParam('runDate') ?? nextRunDate(now);
+  const next = useNextRun();
+  const asked = useParam('runDate') ?? next;
+  const since = useParam('since');
   const { items } = useOutbox();
-  const server: Row[] = (day.data?.orders ?? [])
-    .filter(o => isoDay(o.runDate) === runDate && o.status !== 'CANCELLED')
+  const placed = (day.data?.orders ?? []).filter(o => o.status !== 'CANCELLED' && (since ? Date.parse(o.orderedAt) >= Date.parse(since) - CLOCK_SLACK_MS : isoDay(o.runDate) === asked));
+  // the run date the server gave the orders (it moves a late order to the next operating run)
+  const days = [...new Set(placed.map(o => isoDay(o.runDate)))];
+  const runDate = days.length === 1 ? days[0] : asked;
+  const moved = placed.find(o => isoDay(o.runDate) !== asked && o.notes)?.notes;
+  const server: Row[] = placed
     .map(o => ({ key: o.id, id: o.id, tempClass: o.tempClass, units: o.units, kg: o.kg, m3: o.m3, at: o.orderedAt, onPhone: false }));
   const phone: Row[] = items
-    .filter(i => i.kind === 'ORDER' && (i.status === 'pending' || i.status === 'sending') && i.payload.order?.runDate === runDate)
+    .filter(i => i.kind === 'ORDER' && (i.status === 'pending' || i.status === 'sending') && i.payload.order?.runDate === asked && (!since || i.savedAt >= since))
     .map(i => ({ key: i.id, id: null, tempClass: i.payload.order.tempClass, units: i.payload.order.units, kg: i.payload.order.kg, m3: i.payload.order.m3, at: i.savedAt, onPhone: true }));
   const rows = [...server, ...phone].sort((a, b) => (a.tempClass === b.tempClass ? a.at.localeCompare(b.at) : a.tempClass === 'AMBIENT' ? -1 : 1));
   const latest = rows.map(r => r.at).sort().at(-1);
@@ -87,8 +95,13 @@ export default function ScreenSm01Received() {
               ) : null}
             </View>
             <View>
-              <Text style={s.t15}>{waiting ? 'Sends when there is signal, for ' : outlet ? `In ${depotName(outlet.depot)}'s queue for ` : 'In the queue for '}<Text style={s.t14}>{dayLabel(runDate)}</Text></Text>
+              <Text style={s.t15}>{waiting ? 'Sends when there is signal, for ' : outlet ? `In ${depotName(outlet.depot)}'s queue for ` : 'In the queue for '}<Text style={s.t14}>{days.length > 1 ? days.map(d => dayLabel(d)).join(' and ') : dayLabel(runDate)}</Text></Text>
             </View>
+            {moved ? (
+              <View>
+                <Text style={s.t15} testID="received-moved">{moved}</Text>
+              </View>
+            ) : null}
           </View>
           <View style={s.v32}>
             <View style={s.v20}>

@@ -4,8 +4,9 @@
 // problem is queued straight to dispatch (PROBLEM report through the outbox) and the driver is back at the stop.
 import { useState } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
-import { reportToDispatch } from '@/model/field-reports';
+import { reportToDispatch, stopContext } from '@/model/field-reports';
 import { useOnline, useStop } from '@/model/hooks';
+import { openDialer } from '@/model/run';
 import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec, type Target } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L253":{"to":"dr-18-problem-detail-damaged-goods","kind":"go"},"L254":{"to":"dr-02-stop-arrival","kind":"go"}}};
@@ -13,7 +14,7 @@ const nav: ScreenNav = {"links":{"L253":{"to":"dr-18-problem-detail-damaged-good
 type Problem = 'STORE_CLOSED' | 'ACCESS_BLOCKED' | 'RECEIVER_REFUSED' | 'DAMAGED_GOODS' | 'TEMPERATURE' | 'OTHER';
 
 export default function ScreenDr17ReportAProblem() {
-  const { stop } = useStop();
+  const { stop, trip } = useStop();
   const online = useOnline();
   const [problem, setProblem] = useState<Problem | null>(null);
   const damaged = problem === 'DAMAGED_GOODS';
@@ -86,7 +87,7 @@ export default function ScreenDr17ReportAProblem() {
               if (!stop) return true; // prototype mode: just navigate
               if (!problem) return false;
               if (problem === 'DAMAGED_GOODS') return true;
-              await reportToDispatch(stop.tripId, { report: 'PROBLEM', problem, stopId: stop.id, orderId: stop.orderId }, stop.id);
+              await reportToDispatch(stop.tripId, { report: 'PROBLEM', problem, stopId: stop.id, orderId: stop.orderId }, stop.id, stopContext(stop, trip?.vehicleId));
               showToast(online ? 'Sent to dispatch' : 'Saved · sends when signal returns');
               return true;
             }}
@@ -95,10 +96,10 @@ export default function ScreenDr17ReportAProblem() {
             <Text style={s.t25}>{"Next"}</Text>
             <Icon xml={X9} width={22} height={22} style={s.v1} />
           </Tap>
-          <View style={s.v28}>
+          <Tap style={s.v28} to={null} onPress={() => openDialer()} testID="call-dispatch">
             <Icon xml={X10} width={18} height={18} style={s.v1} />
             <Text style={s.t27}>{"Call dispatch instead"}</Text>
-          </View>
+          </Tap>
         </View>
       </View>
     </Frame>

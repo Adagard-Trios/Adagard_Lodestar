@@ -3,30 +3,37 @@
 // Access requests are field devices people registered from their own signed-in session (Devices in PENDING):
 // a device can't be used until an admin approves it (device posture, PLATFORM.md §2.6).
 // Approve: Devices('…')/Lodestar.Activate. Decline: Devices('…')/Lodestar.Revoke {reason}. Both are audited.
+// After a decision the list is read again and the next open request is selected (the design's "next request").
+// A request opened from the overview or from People and roles (focus device) is selected first.
 import { useState } from 'react';
+import { useScreenNav } from '@/components/ScreenShell';
 import Btn from '@/components/live/Btn';
-import { AdminSide } from '@/components/live/chrome';
+import { AdminSide, adminChanged } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { ROLE_INFO } from '@/components/live/admin-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { DEPOT_NAME, daysAgo, fmtDay, fmtDayTime, fmtTime } from '@/lib/format';
 import { useAction, useQuery } from '@/lib/odata/hooks';
 import type { Device } from '@/lib/odata/types';
+import { useFocusId } from '@/lib/workday';
 
 type Tab = 'open' | 'resolved';
 
 export default function LiveAdm05AccessRequests() {
+  const nav = useScreenNav();
+  const [focus, setFocus] = useFocusId('device');
   const [tab, setTab] = useState<Tab>('open');
-  const [selId, setSelId] = useState<string | null>(null);
+  const [picked, setSelId] = useState<string | null>(null);
+  const selId = picked ?? focus;
   const [note, setNote] = useState('');
   const open = useQuery<Device[]>('adm-requests', c => c.all<Device>('Devices', { filter: "status eq 'PENDING'", expand: 'user', orderby: 'registeredAt' }), { refreshOn: ['notification'] });
   const resolved = useQuery<Device[]>('adm-resolved', async c =>
     (await c.list<Device>('Devices', { filter: `status ne 'PENDING' and updatedAt ge ${daysAgo(0)}T00:00:00Z`, expand: 'user($select=name)', orderby: 'updatedAt desc', top: 10 })).value);
   const rows = tab === 'open' ? open.data ?? [] : resolved.data ?? [];
   const sel = rows.find(d => d.id === selId) ?? rows[0];
-  const after = () => { void open.refresh(); void resolved.refresh(); setNote(''); setSelId(null); };
-  const approve = useAction<string, Device>((c, id) => c.action<Device>('Devices', id, 'Activate'), { onSuccess: after });
-  const decline = useAction<string, Device>((c, id) => c.action<Device>('Devices', id, 'Revoke', { reason: note.trim() }), { onSuccess: after });
+  const after = (msg: string) => { nav.notify(msg); adminChanged(); void open.refresh(); void resolved.refresh(); setNote(''); setSelId(null); setFocus(null); };
+  const approve = useAction<string, Device>((c, id) => c.action<Device>('Devices', id, 'Activate'), { onSuccess: d => after(`${d?.id ?? 'Device'} approved. It can sign in now.`) });
+  const decline = useAction<string, Device>((c, id) => c.action<Device>('Devices', id, 'Revoke', { reason: note.trim() }), { onSuccess: d => after(`${d?.id ?? 'Device'} declined. The reason is in the audit log.`) });
   const oldest = open.data?.[0];
 
   return (

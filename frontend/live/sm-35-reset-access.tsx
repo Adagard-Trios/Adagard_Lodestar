@@ -5,20 +5,23 @@
 //  - "Email me a link": Keycloak's reset-credentials page, which emails a one-time link (only when the realm
 //    allows self-service reset; otherwise the tab says so and points to the admin);
 //  - "Ask the admin": the Lodestar admin resets single sign-on; the depot takes orders by phone meanwhile.
+// Lodestar keeps no depot phone numbers: the call line shows NEXT_PUBLIC_SUPPORT_PHONE when it is configured
+// (lib/auth/reset.ts) and otherwise names the depot without a number.
 // "Back to sign in" is the design's L141; once reset, "Sign in with your new password" follows L140 (the store desk,
 // which asks Keycloak to sign in first).
 import { useState } from 'react';
 import { Ic } from '@/components/live/icons';
+import { CUTOFF_LABEL } from '@/lib/workday';
 import { runtimeConfig } from '@/lib/config';
-import { adminRequestMail, resetCredentialsUrl, resetOptions } from '@/lib/auth/reset';
+import { useAuth } from '@/lib/auth/AuthProvider';
+import { adminRequestMail, depotLabel, resetCredentialsUrl, resetOptions, telHref } from '@/lib/auth/reset';
 
 type Tab = 'email' | 'admin';
 
-/** The depot's order line printed on the store designs (SM-26, SM-35, SM-36). */
-export const DEPOT_ORDER_LINE = '+94 81 222 4410';
-
 export default function LiveSm35ResetAccess() {
   const opts = resetOptions();
+  const { session } = useAuth();
+  const depot = depotLabel(session?.depots);
   const [tab, setTab] = useState<Tab>(opts.selfService ? 'email' : 'admin');
   // live screens render in the browser only (LiveSwitch waits for the client), so the runtime config is there
   const resetUrl = opts.selfService && typeof window !== 'undefined' ? resetCredentialsUrl(runtimeConfig()) : null;
@@ -38,7 +41,7 @@ export default function LiveSm35ResetAccess() {
           </div>
           <div className="sx-dauth__h">{"Every order,"}<br />{"one thread."}</div>
           <div className="vstack" style={{ gap: '16px' }}>
-            <div className="sx-dauth__li"><span><Ic n="clock" /></span><div><b>{"Order before 4:00 PM"}</b>{" for the next morning's run"}</div></div>
+            <div className="sx-dauth__li"><span><Ic n="clock" /></span><div><b>{`Order before ${CUTOFF_LABEL}`}</b>{" for the next morning's run"}</div></div>
             <div className="sx-dauth__li"><span><Ic n="van-2" /></span><div><b>{"Arrival window by 7 PM"}</b>{", live while the van is out"}</div></div>
             <div className="sx-dauth__li"><span><Ic n="check" /></span><div><b>{"Confirm what arrived"}</b>{", credit notes raised for you"}</div></div>
           </div>
@@ -116,7 +119,10 @@ export default function LiveSm35ResetAccess() {
             </div>
             <div className="sx-help ax-help">
               <Ic n="call" className="ic ic--sm" />
-              <span>{"Order due before 4:00 PM? Call Kandy Hub, "}<span style={{ whiteSpace: 'nowrap' }}>{DEPOT_ORDER_LINE}</span></span>
+              <span data-testid="depot-call">
+                {`Order due before ${CUTOFF_LABEL}? Call ${depot}`}
+                {opts.supportPhone ? <>{', '}<a className="sx-link" style={{ whiteSpace: 'nowrap' }} href={telHref(opts.supportPhone)} onClick={e => e.stopPropagation()}>{opts.supportPhone}</a></> : '.'}
+              </span>
             </div>
           </div>
         </div>

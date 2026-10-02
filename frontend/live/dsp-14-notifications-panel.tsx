@@ -13,12 +13,10 @@ import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { fmtClock, fmtDay, fmtTime } from '@/lib/format';
 import { useAction, useEntitySet } from '@/lib/odata/hooks';
 import type { Notification } from '@/lib/odata/types';
+import { ALERT_TYPES } from '@/components/live/plan-data';
 
 /** Alerts that need the dispatcher (as on the exceptions inbox). */
-const ALERTS = new Set([
-  'BLACKOUT_DETECTED', 'REEFER_FAIL', 'SHORTFALL_ACK', 'DEFERRAL_SUGGESTED', 'SIGNAL_LOST', 'DOCK_BLOCKED', 'LATE_RISK',
-  'SHORTFALL_FLAGGED', 'POD_EXCEPTION', 'STOP_FAILED', 'RECEIPT_ISSUE',
-]);
+const ALERTS = new Set(ALERT_TYPES);
 const isPlan = (type: string) => /PLAN|DEFERRAL|DEFERRED|AGENT|TRIP_RELEASED/.test(type);
 
 type Tab = 'all' | 'needs' | 'plans';

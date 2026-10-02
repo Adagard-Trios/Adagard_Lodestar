@@ -8,26 +8,24 @@ import { useRouter } from 'next/navigation';
 import Btn from '@/components/live/Btn';
 import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
-import { idleSummary, Lane, useBoardCards } from '@/components/live/board';
-import { infeasibility, useAgentRun, usePlanScope } from '@/components/live/plan-data';
+import { idleSummary, Lane, tripTwoHead, useBoardCards } from '@/components/live/board';
+import { infeasibility, PLAN_EVENTS, useReviewRun, usePlanScope } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { fmtNum, fmtRunDate, fmtTime, title } from '@/lib/format';
 import { useQuery } from '@/lib/odata/hooks';
 import type { AgentRunDetail, Plan } from '@/lib/odata/types';
-import { useAgentRunId } from '@/lib/workday';
 
 export default function LiveDsp02PlanBoard() {
   const router = useRouter();
   const scope = usePlanScope();
   const { runDate, tripsFilter, plansFilter, ordersFilter, active } = scope;
-  const [runId] = useAgentRunId();
-  const run = useAgentRun(runId);
+  const { run } = useReviewRun();
   const draft: AgentRunDetail | null = run.data?.status === 'NEEDS_APPROVAL' ? run.data.detail ?? null : null;
   const [view, setView] = useState<'draft' | 'live' | null>(null);
   const showing = view ?? (draft ? 'draft' : 'live');
 
   const plan = useQuery<Plan | null>(plansFilter ? `plan:${plansFilter}` : null, async c => (await c.list<Plan>('Plans', { filter: plansFilter, orderby: 'runDate desc,version desc', top: 1 })).value[0] ?? null, {
-    refreshOn: ['notification'],
+    refreshOn: PLAN_EVENTS,
   });
   const board = useBoardCards({ draft: showing === 'draft' ? draft : null, tripsFilter, ordersFilter, active });
   const { trips, orders, fleet, vehicles, cards, lanes, down, idle, loading } = board;
@@ -102,13 +100,13 @@ export default function LiveDsp02PlanBoard() {
               <div className="x-lanehead">
                 <span style={{ width: '168px' }}>{"Vehicle · minutes"}</span>
                 <span style={{ flex: '1' }} data-lk="L155">Trip 1{firstDepart ? ` · departs ${fmtTime(firstDepart)}` : ''}</span>
-                <span style={{ flex: '1' }}>{"Trip 2 · max 2 trips a day"}</span>
+                <span style={{ flex: '1' }}>{tripTwoHead(board.limits)}</span>
               </div>
               {loading && <Skeleton rows={4} label="Loading the plan board…" />}
               {!loading && lanes.length === 0 && (
                 <Empty title="No trips on the board" text={showing === 'draft' ? 'The agent draft has no trips.' : 'No trips are planned for this run date in the depots in view.'} icon="truck" />
               )}
-              {lanes.map(([id, cs]) => <Lane key={id} vehicleId={id} cards={cs} v={vehicles.get(id)} />)}
+              {lanes.map(([id, cs]) => <Lane key={id} vehicleId={id} cards={cs} v={vehicles.get(id)} limits={board.limits} />)}
               {down.map(v => (
                 <div key={v.id} className="x-lane">
                   <div className="x-veh" style={{ padding: '0 2px', justifyContent: 'center' }}>

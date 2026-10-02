@@ -1,17 +1,40 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // SM-22 Profile & settings · phone (P1, phone)
+// Receiving and notification toggles are the store manager's own settings (Users/Lodestar.MyPreferences, saved
+// with SaveMyPreferences), the same record the desk's SM-30 edits. The language row sets this phone's language.
 import { Text, View, StyleSheet } from 'react-native';
 import { signOutTo, titleCase, useDeviceId } from '@/lodestar/live';
+import { setSettings, useSettings, type AppLanguage } from '@/lib/settings';
 import { useClaims, useStoreDay } from '@/model/hooks';
+import { DEFAULT_TOPICS, savePreferences, usePreferences, type StoreTopic } from '@/model/preferences';
 import { initials } from '@/model/store-face';
 import { Frame, Icon, Scroll, Tap, type ScreenNav } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L102":{"to":"sm-11-today-order-day","kind":"go"},"L104":{"to":"sm-05-sign-in","kind":"go"}}};
 
+const TOPICS: Array<{ k: StoreTopic; label: string; sub: string }> = [
+  { k: 'arrivalWindow', label: 'Arrival window', sub: 'by 7 PM the evening before' },
+  { k: 'vanOnTheWay', label: 'Van on the way', sub: 'live updates from departure' },
+  { k: 'cutoffReminder', label: 'Cutoff reminder', sub: "3:00 PM if you haven't ordered" },
+];
+
 export default function ScreenSm22ProfileAndSettings() {
   const claims = useClaims();
   const device = useDeviceId();
   const outlet = useStoreDay().data?.outlet ?? null;
+  const prefs = usePreferences();
+  const lang = useSettings().language;
+  const topic = (k: StoreTopic) => ({ ...DEFAULT_TOPICS[k], ...(prefs.data?.notifications?.[k] ?? {}) });
+  const toggle = (k: StoreTopic) => {
+    const all = Object.fromEntries(TOPICS.map(t => [t.k, topic(t.k)]));
+    return savePreferences({ notifications: { ...prefs.data?.notifications, ...all, [k]: { ...topic(k), app: !topic(k).app } } });
+  };
+  const chooseLanguage = async (l: AppLanguage) => {
+    await setSettings({ language: l });
+    if (claims) await savePreferences({ language: l });
+  };
+  const receiving = prefs.data?.receiving;
+  const staff = (receiving?.staff ?? []).map(x => x.name).filter(Boolean);
   const role = claims?.roles.includes('store_manager') ? 'Store manager' : claims?.roles[0] ? titleCase(claims.roles[0]) : '';
   return (
     <Frame bg="#f4f5f9" nav={nav} style={s.v0}>
@@ -115,7 +138,7 @@ export default function ScreenSm22ProfileAndSettings() {
                   </View>
                 </View>
                 <View style={s.v29}>
-                  <Text style={s.t28} numberOfLines={1}>{outlet?.windowOpen ?? '—'}</Text>
+                  <Text style={s.t28} numberOfLines={1}>{receiving?.staffFrom ?? '—'}</Text>
                 </View>
               </View>
               <View style={s.v33}>
@@ -127,7 +150,7 @@ export default function ScreenSm22ProfileAndSettings() {
                     <Text style={s.t26}>{"Receiving staff"}</Text>
                   </View>
                   <View style={s.v32}>
-                    <Text style={s.t31}>{'—'}</Text>
+                    <Text style={s.t31}>{staff.length ? staff.join(', ') : 'None added'}</Text>
                   </View>
                 </View>
                 <Icon xml={X3} width={18} height={18} style={s.v1} />
@@ -142,32 +165,21 @@ export default function ScreenSm22ProfileAndSettings() {
               <View style={s.v14} />
             </View>
             <View style={s.v23}>
-              <View style={s.v30}>
-                <View style={s.v27}>
-                  <View>
-                    <Text style={s.t26}>{"Arrival window"}</Text>
+              {TOPICS.slice(0, 2).map((t, i) => (
+                <Tap key={t.k} style={i === 0 ? s.v30 : s.v33} testID={`notify-${t.k}`} disabled={!claims} onPress={() => toggle(t.k)}>
+                  <View style={s.v27}>
+                    <View>
+                      <Text style={s.t26}>{t.label}</Text>
+                    </View>
+                    <View style={s.v32}>
+                      <Text style={s.t31}>{t.sub}</Text>
+                    </View>
                   </View>
-                  <View style={s.v32}>
-                    <Text style={s.t31}>{"by 7 PM the evening before"}</Text>
+                  <View style={topic(t.k).app ? s.v35 : s.v37} accessibilityRole="switch" accessibilityState={{ checked: !!topic(t.k).app }}>
+                    <View style={s.v34} />
                   </View>
-                </View>
-                <View style={s.v35}>
-                  <View style={s.v34} />
-                </View>
-              </View>
-              <View style={s.v33}>
-                <View style={s.v27}>
-                  <View>
-                    <Text style={s.t26}>{"Van on the way"}</Text>
-                  </View>
-                  <View style={s.v32}>
-                    <Text style={s.t31}>{"live updates from departure"}</Text>
-                  </View>
-                </View>
-                <View style={s.v35}>
-                  <View style={s.v34} />
-                </View>
-              </View>
+                </Tap>
+              ))}
               <View style={s.v33}>
                 <View style={s.v27}>
                   <View>
@@ -181,19 +193,21 @@ export default function ScreenSm22ProfileAndSettings() {
                   <View style={s.v34} />
                 </View>
               </View>
-              <View style={s.v33}>
-                <View style={s.v27}>
-                  <View>
-                    <Text style={s.t26}>{"Cutoff reminder"}</Text>
+              {TOPICS.slice(2).map(t => (
+                <Tap key={t.k} style={s.v33} testID={`notify-${t.k}`} disabled={!claims} onPress={() => toggle(t.k)}>
+                  <View style={s.v27}>
+                    <View>
+                      <Text style={s.t26}>{t.label}</Text>
+                    </View>
+                    <View style={s.v32}>
+                      <Text style={s.t31}>{t.sub}</Text>
+                    </View>
                   </View>
-                  <View style={s.v32}>
-                    <Text style={s.t31}>{"3:00 PM if you haven't ordered"}</Text>
+                  <View style={topic(t.k).app ? s.v35 : s.v37} accessibilityRole="switch" accessibilityState={{ checked: !!topic(t.k).app }}>
+                    <View style={s.v34} />
                   </View>
-                </View>
-                <View style={s.v37}>
-                  <View style={s.v34} />
-                </View>
-              </View>
+                </Tap>
+              ))}
             </View>
           </View>
           <View style={s.v24}>
@@ -206,15 +220,15 @@ export default function ScreenSm22ProfileAndSettings() {
               </View>
             </View>
             <View style={s.v45}>
-              <View style={s.v39}>
-                <Text style={s.t28}>{"English"}</Text>
-              </View>
-              <View style={s.v42}>
-                <Text style={s.t41}><Text style={s.t40}>{"සිංහල"}</Text></Text>
-              </View>
-              <View style={s.v42}>
-                <Text style={s.t44}><Text style={s.t43}>{"தமிழ்"}</Text></Text>
-              </View>
+              <Tap style={lang === 'en' ? s.v39 : s.v42} testID="lang-en" onPress={() => chooseLanguage('en')}>
+                <Text style={lang === 'en' ? s.t28 : s.t28off}>{"English"}</Text>
+              </Tap>
+              <Tap style={lang === 'si' ? s.v39 : s.v42} testID="lang-si" onPress={() => chooseLanguage('si')}>
+                <Text style={lang === 'si' ? [s.t41, s.on] : s.t41}><Text style={s.t40}>{"සිංහල"}</Text></Text>
+              </Tap>
+              <Tap style={lang === 'ta' ? s.v39 : s.v42} testID="lang-ta" onPress={() => chooseLanguage('ta')}>
+                <Text style={lang === 'ta' ? [s.t44, s.on] : s.t44}><Text style={s.t43}>{"தமிழ்"}</Text></Text>
+              </Tap>
             </View>
           </View>
           <Tap lk="L104" style={s.v48} onPress={() => signOutTo('sm-05-sign-in')}>
@@ -242,6 +256,8 @@ const X3 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#636c80\" stroke-w
 const X4 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#b42318\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9\" fill=\"none\" stroke=\"#b42318\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 
 const s = StyleSheet.create({
+  t28off: {"color":"#475467","fontSize":14,"lineHeight":21,"fontFamily":"Inter_700Bold"},
+  on: {"color":"#101828"},
   v0: {"flexDirection":"column","alignItems":"stretch","backgroundColor":"#ffffff","flex":1},
   v1: {"flexShrink":0,"overflow":"hidden"},
   v2: {"flexDirection":"row","justifyContent":"center","alignItems":"center","flexShrink":0,"width":40,"height":40,"backgroundColor":"#ffffff","borderRadius":20,"boxShadow":"rgba(0, 0, 0, 0.06) 0px 1px 2px 0px"},

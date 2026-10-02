@@ -5,7 +5,7 @@ import { Text, View, StyleSheet } from 'react-native';
 import { dayLabel, hm, isoDay } from '@/lib/time';
 import { plural } from '@/lodestar/live';
 import { useClaims, useOrder, useOutbox, usePods } from '@/model/hooks';
-import { STEPS, creditedUnits, podFor, receiptFor, receiptState, timeline } from '@/model/store-face';
+import { STEPS, isCounted, orderCredit, podFor, receiptFor, receiptState, timeline } from '@/model/store-face';
 import { Frame, Icon, Scroll, Tap, type ScreenNav } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L18":{"to":"dr-19-stop-2-arrival-hawa-eliya","kind":"go"},"N0":{"to":"sm-11-today-order-day","kind":"nav"},"N1":{"to":"sm-12-orders","kind":"nav"},"N2":{"to":"sm-19-receipts-and-credit-notes","kind":"nav"},"N3":{"to":"sm-21-messages","kind":"nav"}}};
@@ -30,13 +30,21 @@ export default function ScreenSm03ReceiptConfirmed() {
   const date = isoDay(base?.runDate);
   const orders = base ? [base, ...(day?.orders ?? []).filter(o => o.id !== base.id && isoDay(o.runDate) === date && o.status !== 'CANCELLED')] : [];
   orders.sort((a, b) => (a.tempClass === b.tempClass ? a.id.localeCompare(b.id) : a.tempClass === 'AMBIENT' ? -1 : 1));
-  const receipt = (base ? receiptFor(items, base.id) : undefined) ?? latest;
-  const [time, ampm] = clock(receipt?.savedAt);
+  const receipt = (base ? receiptFor(items, base.id) : undefined) ?? (orders.some(isCounted) ? undefined : latest);
+  const [time, ampm] = clock(receipt?.savedAt ?? orders.map(o => o.receiptSavedAt ?? o.receivedAt).find(Boolean));
   const pod = orders.map(o => podFor(pods.data, o.id)).find(Boolean);
-  const creditNote = orders.map(o => podFor(pods.data, o.id)?.creditNoteId).find(Boolean);
-  const received = orders.map(o => ({ o, r: receiptFor(items, o.id) }));
-  const short = received.reduce((n, { o, r }) => n + (r ? Math.max(0, o.units - Number(r.payload.unitsReceived ?? o.units)) : 0), 0);
-  const credited = orders.reduce((n, o) => { const p = podFor(pods.data, o.id); return n + (p ? creditedUnits(p) : 0); }, 0);
+  // the credit note is the order's own (raised when the store's count is short, before or after the driver's
+  // record syncs), else the driver's POD's
+  const credits = orders.map(o => orderCredit(o, podFor(pods.data, o.id)));
+  const creditNote = credits.map(c => c.creditNoteId).find(Boolean);
+  const credited = credits.reduce((n, c) => n + c.units, 0);
+  // the count: the server's (Orders ConfirmReceipt), else the one waiting on this phone
+  const received = orders.map(o => {
+    const r = receiptFor(items, o.id);
+    return { o, r, n: isCounted(o) ? (o.unitsReceived ?? 0) : r ? Number(r.payload.unitsReceived ?? 0) : null };
+  });
+  const short = received.reduce((n, { o, n: c }) => n + (c === null ? 0 : Math.max(0, (o.unitsExpected ?? o.units) - c)), 0);
+  const confirmedAt = orders.map(o => o.receiptSavedAt).find(Boolean);
   const deferral = orders.map(o => o.deferralLog).find(Boolean);
   const { reached, times } = timeline(base);
   const delivered = base?.status === 'DELIVERED';
@@ -64,7 +72,7 @@ export default function ScreenSm03ReceiptConfirmed() {
             <View style={s.v13}>
               <View style={s.v11}>
                 <View>
-                  <Text style={s.t8}>{receipt ? `Receipt confirmed · ${receiptState(receipt)}` : 'No receipt saved yet'}</Text>
+                  <Text style={s.t8}>{receipt ? `Receipt confirmed · ${receiptState(receipt)}` : confirmedAt || received.some(r => r.n !== null) ? 'Receipt confirmed' : 'No receipt saved yet'}</Text>
                 </View>
                 <View>
                   <Text style={s.t10} testID="receipt-time">{time}<Text style={s.t9}>{ampm}</Text></Text>
@@ -78,14 +86,13 @@ export default function ScreenSm03ReceiptConfirmed() {
               {creditNote ? (
                 <Text style={s.t16}>{"Credit note "}<Text style={s.t14}>{creditNote}</Text>{" raised for "}<Text style={s.t15}>{plural(credited || short, 'unit')}</Text></Text>
               ) : (
-                <Text style={s.t16}>{!claims ? 'Sign in to see your receipts' : short ? `${plural(short, 'unit')} short · credited when the driver's record matches` : receipt ? 'Everything received as ordered' : 'Count a delivery to confirm it'}</Text>
+                <Text style={s.t16}>{!claims ? 'Sign in to see your receipts' : short ? `${plural(short, 'unit')} short · credited when the driver's record matches` : receipt || received.some(r => r.n !== null) ? 'Everything received as ordered' : 'Count a delivery to confirm it'}</Text>
               )}
             </View>
           </Tap>
           <View style={s.v33}>
-            {received.map(({ o, r }, i) => {
-              const n = r ? Number(r.payload.unitsReceived ?? 0) : null;
-              const gap = n === null ? 0 : o.units - n;
+            {received.map(({ o, n }, i) => {
+              const gap = n === null ? 0 : (o.unitsExpected ?? o.units) - n;
               return (
                 <View key={o.id} style={i === 0 ? s.v29 : s.v32}>
                   <View style={o.tempClass === 'CHILLED' ? s.v30 : s.v18}>

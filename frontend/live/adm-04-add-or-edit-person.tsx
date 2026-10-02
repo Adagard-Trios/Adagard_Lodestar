@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { useScreenNav } from '@/components/ScreenShell';
 import Btn from '@/components/live/Btn';
-import { AdminSide } from '@/components/live/chrome';
+import { AdminSide, adminChanged } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { ROLE_INFO, ROLES } from '@/components/live/admin-data';
 import { ErrorBanner, Skeleton } from '@/components/live/states';
@@ -53,7 +53,13 @@ function PersonForm({ person }: { person: (User & { '@odata.etag'?: string }) | 
     const common = { name: form.name.trim(), role: form.role, depot, outletId: needsOutlet ? form.outletId : null, phone: form.phone.trim() || null };
     if (person) return c.update<User>('Users', person.id, { ...common, isActive: form.isActive }, person['@odata.etag']);
     return c.create<User>('Users', { ...common, email: form.email.trim() });
-  }, { onSuccess: () => nav.go('L290') });
+  }, {
+    onSuccess: u => {
+      adminChanged();
+      nav.notify(person ? `${u?.name ?? form.name.trim()} saved.` : `${u?.name ?? form.name.trim()} added. They can sign in with ${ROLE_INFO[form.role].face}.`);
+      nav.go('L290');
+    },
+  });
 
   const first = form.name.trim().split(' ')[0] || 'this person';
 

@@ -82,11 +82,36 @@ export class NotificationsService {
       tripId: tripId ?? null, item: p.item ?? null, orderId: p.orderId ?? null, outletId: p.outletId ?? null, vehicleId: p.vehicleId ?? null,
       by: by.name ?? null, byId: by.sub, at: new Date().toISOString(),
     };
+    // Every dispatcher of the depot got their own copy of the flag: one acknowledgement handles it for all.
+    const siblings = await this.resolveSiblingFlags(flag);
     if (typeof p.loaderId === 'string' && p.loaderId) {
       await this.send({ recipientId: p.loaderId, type: 'SHORTFALL_ACK', ...(tripId ? { tripId } : {}), payload: ack });
     }
-    const rooms = [...(typeof p.depot === 'string' ? [`loader:${p.depot}`] : []), ...(tripId ? [`trip:${tripId}`] : [])];
-    if (rooms.length) this.publish('shortfall_ack', rooms, ack);
+    const rooms = [
+      ...(typeof p.depot === 'string' ? [`loader:${p.depot}`, `dispatcher:${p.depot}`] : []),
+      ...(tripId ? [`trip:${tripId}`] : []),
+      ...siblings.recipients.map((r) => `user:${r}`),
+    ];
+    if (rooms.length) this.publish('shortfall_ack', rooms, { ...ack, flagIds: [flag.id, ...siblings.ids] });
+  }
+
+  /**
+   * The other dispatchers' unread copies of the same dock flag (same trip, item, order and quantities) are
+   * marked read, so the flag leaves every DSP-13 inbox. Store and driver copies are information and stay.
+   * Returns the copies resolved and their dispatchers.
+   */
+  private async resolveSiblingFlags(flag: Notification): Promise<{ ids: string[]; recipients: string[] }> {
+    const p = (flag.payload ?? {}) as Record<string, any>;
+    const candidates = await this.prisma.notification.findMany({
+      where: { type: 'SHORTFALL_FLAGGED', tripId: flag.tripId, readAt: null, id: { not: flag.id }, recipient: { role: 'DISPATCHER' } },
+      select: { id: true, recipientId: true, payload: true },
+    });
+    const same = (q: Record<string, any>) =>
+      (['item', 'orderId', 'qtyOrdered', 'qtyLoaded', 'reason'] as const).every((k) => (q?.[k] ?? null) === (p[k] ?? null));
+    const siblings = (candidates ?? []).filter((n) => same((n.payload ?? {}) as Record<string, any>));
+    if (!siblings.length) return { ids: [], recipients: [] };
+    await this.prisma.notification.updateMany({ where: { id: { in: siblings.map((n) => n.id) }, readAt: null }, data: { readAt: new Date() } });
+    return { ids: siblings.map((n) => n.id), recipients: [...new Set(siblings.map((n) => n.recipientId))] };
   }
 
   /** Outlets of a trip's stops not delivered yet. */

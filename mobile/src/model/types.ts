@@ -40,6 +40,14 @@ export type Order = Etag & {
   m3: number;
   status: OrderStatus;
   notes?: string | null;
+  /** The store's count (Orders ConfirmReceipt); null until the receipt is confirmed. */
+  unitsReceived?: number | null;
+  unitsExpected?: number | null;
+  receiptNote?: string | null;
+  receiptSavedAt?: string | null;
+  receivedAt?: string | null;
+  /** CN-YYMM-NNNN when the store's count was short (same id as the POD's credit note). */
+  creditNoteId?: string | null;
   outlet?: Outlet;
   lineItems?: OrderLineItem[];
   tripStop?: TripStop | null;
@@ -53,7 +61,7 @@ export type POD = Etag & {
   unitsOrdered: number;
   receiverName?: string | null;
   photoUrl?: string | null;
-  exceptions?: { type?: string; description?: string; item?: string; qty?: number }[] | null;
+  exceptions?: { type?: string; description?: string; item?: string; qty?: number; unitsShort?: number; source?: string; note?: string | null }[] | null;
   creditNoteId?: string | null;
   savedOffline: boolean;
   savedAt: string;

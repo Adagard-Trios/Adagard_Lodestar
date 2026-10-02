@@ -20,6 +20,7 @@ import { budget } from '@/components/live/board';
 import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { useAgentRun, usePlanScope, useStartAgentRun } from '@/components/live/plan-data';
+import { useAgentConfig } from '@/components/live/settings-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { DEPOT_NAME, fmtClock, fmtNum, title } from '@/lib/format';
 import { useAction, useQuery } from '@/lib/odata/hooks';
@@ -36,7 +37,7 @@ const FAULT: Record<string, string> = { NOT_COOLING: 'reefer not cooling', ENGIN
 interface FaultPayload { tripId?: string; vehicleId?: string; bay?: string | null; fault?: string; reeferTempC?: number | null; note?: string | null; orderIds?: string[]; outlets?: string[] }
 const bar = (p: number) => (p > 100 ? 'linear-gradient(90deg,#F97066,#D92D20)' : p >= 90 ? 'linear-gradient(90deg,#FFD37A,#F5B83D)' : 'linear-gradient(90deg,#10B981,#047857)');
 
-function Cap({ label, used, cap, unit, digits = 0 }: { label: string; used: number; cap: number; unit: string; digits?: number }) {
+function Cap({ label, used, cap, unit, digits = 0 }: { label: string; used: number; cap: number | undefined; unit: string; digits?: number }) {
   const p = cap ? Math.round((used / cap) * 100) : 0;
   return (
     <div className="g-cap" style={{ flex: '1' }}>
@@ -52,6 +53,7 @@ export default function LiveDspB1RePlanDiff() {
   const [focus] = useFocusId('vehicle');
   const [runId, setRunId] = useAgentRunId();
   const run = useAgentRun(runId);
+  const limits = useAgentConfig().data?.limits;
 
   const down = useQuery<Vehicle[]>(`b1-down:${active.join(',')}`, c =>
     c.all<Vehicle>('Vehicles', { filter: ["status eq 'WORKSHOP'", depotFilter('depot', active)].filter(Boolean).join(' and '), orderby: 'updatedAt desc' }),
@@ -221,8 +223,8 @@ export default function LiveDspB1RePlanDiff() {
                             </span>
                             {c.kind === 'move' && <span className="d-sub" style={{ fontSize: '13px', color: 'var(--text-3)' }}>{`${c.moved.length} order${c.moved.length === 1 ? '' : 's'} · ${fmtNum(c.to.m3, 1)} m³ · ${c.to.minutes} min`}</span>}
                             <div className="spacer" />
-                            <span className={`m-pill ${c.to.minutes > budget(c.to.brand) ? 'm-pill--bad' : 'm-pill--ok'}`} style={{ height: '26px' }}>
-                              {c.kind === 'move' ? `${c.to.vehicleId} · ${c.to.minutes}/${budget(c.to.brand)}` : `${c.before?.planMinutes ?? '—'} → ${c.to.minutes} min · ${c.to.minutes}/${budget(c.to.brand)}`}
+                            <span className={`m-pill ${c.to.minutes > (budget(c.to.brand, limits) ?? Infinity) ? 'm-pill--bad' : 'm-pill--ok'}`} style={{ height: '26px' }}>
+                              {c.kind === 'move' ? `${c.to.vehicleId} · ${c.to.minutes}/${budget(c.to.brand, limits) ?? '—'}` : `${c.before?.planMinutes ?? '—'} → ${c.to.minutes} min · ${c.to.minutes}/${budget(c.to.brand, limits) ?? '—'}`}
                             </span>
                           </div>
                           {c.kind === 'merge' && c.moved.map(s => {
@@ -266,7 +268,7 @@ export default function LiveDspB1RePlanDiff() {
                         return (
                           <div key={tripKey(c.to.vehicleId, c.to.tripNo)} className="g-sect" style={{ paddingTop: '12px', gap: '8px' }}>
                             <span className="g-lbl"><span className="id">{c.to.vehicleId}</span>{` · Trip ${c.to.tripNo} · ${c.to.district}${c.before ? ` · ${(c.before.stops ?? []).length} → ${c.to.orderIds.length} orders` : ` (from ${vehicle.id})`}`}</span>
-                            <Cap label={`${title(c.to.brand)} minutes`} used={c.to.minutes} cap={budget(c.to.brand)} unit="" />
+                            <Cap label={`${title(c.to.brand)} minutes`} used={c.to.minutes} cap={budget(c.to.brand, limits)} unit="" />
                             {v && (
                               <div className="hstack" style={{ gap: '16px' }}>
                                 <Cap label="Weight" used={c.to.kg} cap={v.capacityKg} unit=" kg" />

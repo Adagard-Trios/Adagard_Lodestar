@@ -4,13 +4,13 @@
 // ServiceAllowances) and each file's last import (DataImports, newest first: when, by whom, clean or failed).
 // "Choose file" (or a drop) reads the CSV in the browser and sends its text to DataImports/Lodestar.Import, which
 // checks every row with the seed's rules and applies the file only when all rows pass. A failed check opens
-// ADM-15 (the design's L300 on a failed file's row). The CSV is never stored, only the result.
+// ADM-15 (the design's L300 on a failed file's row, opened on that file's own failed import). The CSV is never stored, only the result.
 // Not drawn: traffic_speed.csv and road_conditions.csv (Lodestar has no such tables) and rollback (rows are
 // upserted by key and never deleted, so there is no previous version to restore).
 import { useRef, useState, type DragEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Btn from '@/components/live/Btn';
-import { AdminSide } from '@/components/live/chrome';
+import { AdminSide, adminChanged } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { type DataImport, IMPORT_FILES, type ImportFile, importFileOf, useImportCsv } from '@/components/live/settings-data';
 import { ErrorBanner, Skeleton } from '@/components/live/states';
@@ -41,7 +41,7 @@ export default function LiveAdm14DataImports() {
   );
   const imp = useImportCsv(r => {
     setPicked(null);
-    if (r.applied) { setDone(r); void data.refresh(); } else router.push(`/admin/adm-15-import-check-failed?id=${encodeURIComponent(r.id)}`);
+    if (r.applied) { setDone(r); adminChanged(); void data.refresh(); } else router.push(`/admin/adm-15-import-check-failed?id=${encodeURIComponent(r.id)}`);
   });
 
   const choose = (f: File | undefined | null) => {
@@ -116,7 +116,12 @@ export default function LiveAdm14DataImports() {
               const f = spec(r.file);
               const failed = r.last && !r.last.applied;
               return (
-                <div key={r.file} className={`dx-tr${failed ? ' dx-tr--sel' : ''}`} style={{ minHeight: '58px' }} {...(failed ? { 'data-lk': 'L300' } : {})} data-testid={`file-${r.file}`}>
+                <div key={r.file} className={`dx-tr${failed ? ' dx-tr--sel lv-click' : ''}`} style={{ minHeight: '58px' }} data-testid={`file-${r.file}`}
+                  {...(failed ? {
+                    role: 'button', tabIndex: 0,
+                    onClick: () => router.push(`/admin/adm-15-import-check-failed?id=${encodeURIComponent(r.last!.id)}`),
+                    onKeyDown: (e: { key: string }) => { if (e.key === 'Enter') router.push(`/admin/adm-15-import-check-failed?id=${encodeURIComponent(r.last!.id)}`); },
+                  } : {})}>
                   <span className="dx-td" style={{ width: '330px' }}>
                     <span className="hstack" style={{ gap: '10px' }}>
                       <span className={`dx-lead${failed ? ' dx-lead--bad' : ''}`} style={{ width: '36px', height: '36px', borderRadius: '11px' }}><Ic n={f.icon} /></span>

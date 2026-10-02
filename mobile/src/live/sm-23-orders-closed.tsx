@@ -5,17 +5,20 @@ import { addDays, dayLabel, hm } from '@/lib/time';
 import { plural } from '@/lodestar/live';
 import { today } from '@/model/hooks';
 import { depotName } from '@/model/plan';
-import { nextRunDate, useDelivery, useNow } from '@/model/store-face';
+import { cutoffFor, useDelivery, useNextRun, useNow } from '@/model/store-face';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L105":{"to":"sm-13-new-order","kind":"go"},"L106":{"to":"sm-11-today-order-day","kind":"go"}}};
 
-// Past the 4:00 PM cut-off (Asia/Colombo): the run that just closed, and the next run an order can still make.
+// Past the 4:00 PM cut-off (Asia/Colombo): the run that just closed, and the next run an order can still make
+// (the next operating day: days the operating Calendar closes are skipped).
 export default function ScreenSm23OrdersClosed() {
   const now = useNow();
   const { outlet, groups } = useDelivery();
-  const next = nextRunDate(now);
-  const closed = addDays(next, -1);
+  const next = useNextRun();
+  // the run whose cut-off has passed: tomorrow's after 4:00 PM today, else today's
+  const tomorrow = addDays(today(), 1);
+  const closed = now >= cutoffFor(tomorrow) ? tomorrow : today();
   const weekday = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' });
   const onVan = groups.find(g => g.date === closed)?.orders ?? [];
   const units = onVan.reduce((n, o) => n + o.units, 0);
@@ -100,7 +103,7 @@ export default function ScreenSm23OrdersClosed() {
             <Icon xml={X3} width={20} height={20} style={s.v31} />
             <View style={s.v33}>
               <View>
-                <Text style={s.t32}>{"Something urgent for tomorrow?"}</Text>
+                <Text style={s.t32}>{`Something urgent for ${closed === tomorrow ? 'tomorrow' : 'today'}?`}</Text>
               </View>
               <View>
                 <Text style={s.t11}>{`Call ${outlet ? depotName(outlet.depot) : 'the depot'}. They add it only if the van has space.`}</Text>
@@ -113,9 +116,9 @@ export default function ScreenSm23OrdersClosed() {
             <Grad g={G0} style={s.v37} />
             <Text style={s.t38}>{`Start ${dayLabel(next)} order`}</Text>
           </Tap>
-          <View style={s.v41}>
+          <Tap lk="L106" style={s.v41} testID="back-to-today">
             <Text style={s.t40}>{"Back to Today"}</Text>
-          </View>
+          </Tap>
         </View>
       </View>
     </Frame>

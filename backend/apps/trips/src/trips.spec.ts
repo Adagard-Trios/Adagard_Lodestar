@@ -208,7 +208,7 @@ describe('TripsService', () => {
     when(notify.notice(anything())).thenResolve(true);
     when(notify.publish(anything(), anything(), anything())).thenResolve(true);
     fleet = mock(FleetClient);
-    when(fleet.recordFuel(anything(), anything())).thenResolve(true);
+    when(fleet.recordFuel(anything(), anything(), anything())).thenResolve(true);
     service = new TripsService(prisma as any, instance(notify), instance(fleet));
     for (const d of [trip, txLoad, txOrder, txStop]) when(d.update(anything())).thenCall(async (a: any) => a);
     // a released trip comes back with its stops' outlets (for the stores to tell)
@@ -260,13 +260,13 @@ describe('TripsService', () => {
 
       it('a completed trip records the litres of its route with fleet', async () => {
         await service.updateStatus('T1', 'ENROUTE', 'COMPLETE');
-        verify(fleet.recordFuel('V-T1', 8)).once();
+        verify(fleet.recordFuel('V-T1', 8, 'T1')).once(); // the trip id goes along for the log
         expect(capture(travel.findUnique).last()[0]).toEqual({ where: { district: 'Alpha' } });
       });
 
       it.each([['PLANNED', 'LOADING'], ['LOADING', 'ENROUTE'], ['COMPLETE', 'COMPLETE']])('records no fuel for %s → %s', async (from, to) => {
         await service.updateStatus('T1', from as any, to as any);
-        verify(fleet.recordFuel(anything(), anything())).never();
+        verify(fleet.recordFuel(anything(), anything(), anything())).never();
       });
     });
   });
@@ -276,9 +276,10 @@ describe('TripsService', () => {
 
     it("sends the vehicle to the workshop in fleet and tells the depot's dispatchers", async () => {
       when(trip.findUnique(anything())).thenResolve(atDock as any);
-      when(fleet.setStatus(anything(), anything(), anything())).thenResolve(true);
+      when(fleet.setStatus(anything(), anything(), anything(), anything())).thenResolve(true);
       const r = await service.reportVehicleFault('T1', 'NOT_COOLING', 'kasun', 9.5, 'compressor off');
-      const [vehicle, status, note] = capture(fleet.setStatus).last();
+      const [vehicle, status, note, forTrip] = capture(fleet.setStatus).last();
+      expect(forTrip).toBe('T1');
       expect([vehicle, status]).toEqual(['VEH057', 'WORKSHOP']);
       expect(note).toBe('Reefer not cooling reported at bay K2 (reefer 9.5 °C): compressor off');
       const [notice] = capture(notify.notice).last();
@@ -291,13 +292,13 @@ describe('TripsService', () => {
     it('refuses a trip that has already left the dock', async () => {
       when(trip.findUnique(anything())).thenResolve({ ...atDock, status: 'ENROUTE' } as any);
       await expect(service.reportVehicleFault('T1', 'ENGINE', 'kasun')).rejects.toMatchObject({ status: 409 });
-      verify(fleet.setStatus(anything(), anything(), anything())).never();
+      verify(fleet.setStatus(anything(), anything(), anything(), anything())).never();
       verify(notify.notice(anything())).never();
     });
 
     it('says so when fleet could not mark the vehicle down, and tells nobody', async () => {
       when(trip.findUnique(anything())).thenResolve(atDock as any);
-      when(fleet.setStatus(anything(), anything(), anything())).thenResolve(false);
+      when(fleet.setStatus(anything(), anything(), anything(), anything())).thenResolve(false);
       await expect(service.reportVehicleFault('T1', 'DOOR_SEAL', 'kasun')).rejects.toMatchObject({ status: 502, code: 'FleetUnavailable' });
       verify(notify.notice(anything())).never();
     });
@@ -493,5 +494,112 @@ describe('TripsService', () => {
       runDate: { gte: new Date('2026-04-07T00:00:00.000Z'), lt: new Date('2026-04-08T00:00:00.000Z') },
     });
     expect(where.AND[1]).toBe(scope);
+  });
+
+  describe('failed stops and credit units (completeStop)', () => {
+    it('nothing delivered: the stop and the order go to EXCEPTION, never DELIVERED (DSP-13)', async () => {
+      await service.completeStop('S1', 'ORD1', { unitsDelivered: 0, unitsOrdered: 10 });
+      expect(capture(txOrder.update).last()[0]).toEqual({ where: { id: 'ORD1' }, data: { status: 'EXCEPTION' } });
+      expect(capture(txStop.update).last()[0].data.status).toBe('EXCEPTION');
+    });
+
+    it("a store count made before the POD existed goes onto the new POD with its credit note", async () => {
+      when(tripStop.findUnique(anything())).thenResolve({
+        id: 'S1', tripId: 'T1', stopSeq: 1, orderId: 'ORD1', outletId: 'OUT106', status: 'ENROUTE', trip: { id: 'T1', depot: 'KANDY', vehicleId: 'VEH057' }, pod: null,
+        order: { unitsReceived: 7, unitsExpected: 10, receiptNote: null, receivedBy: 'fathima', receiptSavedAt: new Date('2026-10-05T01:00:00Z'), creditNoteId: 'CN-2610-0001' },
+      });
+      await service.completeStop('S1', 'ORD1', { unitsDelivered: 10, unitsOrdered: 10 });
+      const pod = capture(txPod.upsert).last()[0];
+      expect(pod.create.creditNoteId).toBe('CN-2610-0001');
+      expect(pod.create.exceptions).toEqual([expect.objectContaining({ type: 'SHORT', source: 'STORE_RECEIPT', qty: 3, unitsReceived: 7, unitsExpected: 10 })]);
+    });
+
+    it("the driver's exceptions never drop the store's entry already on the POD", async () => {
+      const storeEntry = { type: 'SHORT', source: 'STORE_RECEIPT', qty: 3 };
+      when(tripStop.findUnique(anything())).thenResolve({
+        id: 'S1', tripId: 'T1', stopSeq: 1, orderId: 'ORD1', outletId: 'OUT106', status: 'DELIVERED', trip: { id: 'T1', depot: 'KANDY', vehicleId: 'VEH057' },
+        pod: { exceptions: [storeEntry], creditNoteId: 'CN-2610-0001' }, order: { unitsReceived: 7, unitsExpected: 10 },
+      });
+      await service.completeStop('S1', 'ORD1', { unitsDelivered: 9, unitsOrdered: 10, exceptions: [{ type: 'DAMAGED', description: 'tray' }] });
+      expect(capture(txPod.upsert).last()[0].update.exceptions).toEqual([{ type: 'DAMAGED', description: 'tray' }, storeEntry]);
+    });
+  });
+});
+
+describe('TripsService · live stop progress (stop_arrived, stop_delivered, eta_update)', () => {
+  const T = (hhmm: string) => new Date(`2026-10-05T${hhmm}:00+05:30`);
+  let rows: any[];
+  let notify: NotifyClient;
+  let service: TripsService;
+
+  beforeEach(() => {
+    rows = [
+      { id: 'S1', tripId: 'T1', stopSeq: 1, orderId: 'ORD1', outletId: 'OUT106', status: 'ENROUTE', etaModel: T('06:00'), etaPlan: T('06:00'), serviceMinPredicted: 20, arrivalActual: null, leaveActual: null },
+      { id: 'S2', tripId: 'T1', stopSeq: 2, orderId: 'ORD2', outletId: 'OUT108', status: 'ENROUTE', etaModel: T('06:40'), etaPlan: T('06:40'), etaModelBandEarly: T('06:30'), etaModelBandLate: T('06:55') },
+    ];
+    const tripStop = {
+      findUnique: jest.fn(async ({ where }: any) => {
+        const r = rows.find((x) => x.id === where.id);
+        return r ? { ...r, trip: { id: 'T1', depot: 'KANDY', vehicleId: 'VEH057' }, pod: null, order: null } : null;
+      }),
+      findMany: jest.fn(async ({ where }: any) => rows.filter((r) => r.stopSeq > where.stopSeq.gt && !where.status.notIn.includes(r.status))),
+      update: jest.fn(async ({ where, data }: any) => Object.assign(rows.find((r) => r.id === where.id), data)),
+    };
+    const tx = { pOD: { upsert: jest.fn() }, order: { update: jest.fn() }, tripStop };
+    notify = mock(NotifyClient);
+    when(notify.publish(anything(), anything(), anything())).thenResolve(true);
+    when(notify.notice(anything())).thenResolve(true);
+    service = new TripsService({ tripStop, user: { findMany: async () => [] }, $transaction: async (fn: any) => fn(tx) } as any, instance(notify), instance(mock(FleetClient)));
+  });
+
+  /** The publish calls of one event, in order. */
+  const published = (event: string) => {
+    const calls: Array<[string, string[], any]> = [];
+    for (let i = 0; ; i++) {
+      let call: [string, string[], ...unknown[]];
+      try {
+        call = capture(notify.publish).byCallIndex(i);
+      } catch {
+        return calls;
+      }
+      if (call[0] === event) calls.push(call as [string, string[], any]);
+    }
+  };
+
+  it('Arrive 25 min late: the store and DSP-04 see the arrival, the next store its ETA moved by 25 min', async () => {
+    await service.arrive('S1', T('06:25'));
+    expect(rows[0]).toMatchObject({ arrivalActual: T('06:25'), status: 'ENROUTE' });
+    const [arrived] = published('stop_arrived');
+    expect(arrived[1]).toEqual(['store:OUT106', 'dispatcher:KANDY', 'trip:T1']);
+    expect(arrived[2]).toMatchObject({ stopId: 'S1', lateMin: 25 });
+    const [eta] = published('eta_update');
+    expect(eta[1]).toEqual(['store:OUT108', 'trip:T1']);
+    expect(eta[2]).toMatchObject({ stopId: 'S2', etaModel: T('07:05').toISOString(), shiftMin: 25 });
+    expect(rows[1]).toMatchObject({ etaModel: T('07:05'), etaModelBandEarly: T('06:55'), etaModelBandLate: T('07:20') });
+  });
+
+  it('a repeated Arrive does not move the later stops twice', async () => {
+    await service.arrive('S1', T('06:25'));
+    await service.arrive('S1', T('06:25'));
+    expect(rows[1].etaModel).toEqual(T('07:05'));
+    expect(published('eta_update')).toHaveLength(1);
+  });
+
+  it('CompleteStop: stop_delivered to the store and the depot, and the overrun at the door moves the next stop', async () => {
+    await service.arrive('S1', T('06:00'));
+    await service.completeStop('S1', 'ORD1', { unitsDelivered: 10, unitsOrdered: 10, leaveActual: T('06:35') }); // 35 min at the door, 20 predicted
+    const [delivered] = published('stop_delivered');
+    expect(delivered[1]).toEqual(['store:OUT106', 'dispatcher:KANDY', 'trip:T1']);
+    expect(delivered[2]).toMatchObject({ stopId: 'S1', status: 'DELIVERED', unitsDelivered: 10, leaveActual: T('06:35').toISOString() });
+    expect(rows[1].etaModel).toEqual(T('06:55'));
+  });
+
+  it('a failed stop is announced as stop_delivered with status EXCEPTION', async () => {
+    await service.completeStop('S1', 'ORD1', { unitsDelivered: 0, unitsOrdered: 10, leaveActual: T('06:20') });
+    expect(published('stop_delivered')[0][2]).toMatchObject({ status: 'EXCEPTION' });
+  });
+
+  it('404 for an unknown stop', async () => {
+    await expect(service.arrive('S9', T('06:00'))).rejects.toMatchObject({ status: 404 });
   });
 });

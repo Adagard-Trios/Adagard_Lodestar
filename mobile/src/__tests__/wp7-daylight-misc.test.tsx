@@ -46,7 +46,7 @@ beforeEach(() => {
   replace.mockClear();
   notices.set([]);
   network.set({ online: true, since: new Date().toISOString() });
-  settings.set({ language: 'en', readAloud: true, theme: 'auto' });
+  settings.set({ language: 'en', readAloud: true, theme: 'auto', glovesMode: false, loudAlerts: false });
 });
 
 describe('Daylight driver screens', () => {
@@ -86,7 +86,7 @@ describe('Daylight driver screens', () => {
 describe('DR-24 settings', () => {
   it('night or day: Night saves and stays, Day saves and opens the daylight run; language and version shown', async () => {
     await signInAs(driver('u-dr24'));
-    settings.set({ language: 'si', readAloud: false, theme: 'auto' });
+    settings.set({ language: 'si', readAloud: false, theme: 'auto', glovesMode: false, loudAlerts: false });
     const Screen = require('@/live/dr-24-settings-me').default;
     await render(<Screen />);
     expect(screen.getByTestId('me-language').props.children).toBe('සිංහල');

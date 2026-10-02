@@ -6,7 +6,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-
 import { router } from 'expo-router';
 import { network } from '@/offline/network';
 import { notices } from '@/realtime/notices';
-import { client, queue, routes, signInAs } from './fake-platform';
+import { client, queue, routes, signInAs, sync } from './fake-platform';
 
 jest.mock('@/model/platform', () => require('./fake-platform'));
 jest.mock('expo-auth-session', () => ({
@@ -226,7 +226,7 @@ describe('Dock', () => {
     expect(push).toHaveBeenCalledWith(opened('ld-18-plan-locked', { trip: 'T-3' }));
   });
 
-  it('LD-B1: the loader reports the reefer with Trips ReportVehicleFault and the reading typed in', async () => {
+  it('LD-B1: the loader reports the reefer through the outbox; it goes as Trips ReportVehicleFault with the reading typed in', async () => {
     await signInAs(loader('u-ldb1'));
     params.trip = 'T-1';
     const Screen = require('@/live/ld-b1-vehicle-can-t-depart').default;
@@ -235,17 +235,25 @@ describe('Dock', () => {
     await fireEvent.changeText(screen.getByTestId('reefer-reading'), '9');
     await fireEvent.press(screen.getByTestId('fault-DOOR_SEAL'));
     await fireEvent.press(screen.getByTestId('notify-dispatch'));
-    await waitFor(() => expect(client.action).toHaveBeenCalledWith("Trips('T-1')/Lodestar.ReportVehicleFault", { fault: 'DOOR_SEAL', reeferTempC: 9 }));
+    const item = queue.list().find(i => i.sub === 'u-ldb1' && i.kind === 'VEHICLE_FAULT');
+    expect(item).toMatchObject({ tripId: 'T-1', payload: { tripId: 'T-1', fault: 'DOOR_SEAL', reeferTempC: 9 } });
+    await act(() => sync.flush());
+    expect(client.action).toHaveBeenCalledWith("Trips('T-1')/Lodestar.ReportVehicleFault", { fault: 'DOOR_SEAL', reeferTempC: 9 }, { idempotencyKey: item!.id });
+    expect(await screen.findByText(/^Dispatch notified /)).toBeTruthy();
   });
 
-  it('LD-B1 needs signal: offline, nothing is sent', async () => {
+  it('LD-B1 with no signal: the report is saved on the phone and shown as queued, nothing is sent yet', async () => {
     await signInAs(loader('u-ldb1o'));
     params.trip = 'T-1';
-    network.set({ online: false, since: new Date().toISOString() });
     const Screen = require('@/live/ld-b1-vehicle-can-t-depart').default;
     await render(<Screen />);
-    await fireEvent.press(await screen.findByTestId('notify-dispatch'));
-    expect(await screen.findByTestId('toast')).toBeTruthy();
+    expect(await screen.findByText('VAN-T9')).toBeTruthy();
+    // the dock Wi-Fi drops after the trip opened
+    act(() => network.set({ online: false, since: new Date().toISOString() }));
+    await fireEvent.press(screen.getByTestId('notify-dispatch'));
+    expect(await screen.findByText(/sends when signal is back/)).toBeTruthy();
+    expect(queue.list().find(i => i.sub === 'u-ldb1o' && i.kind === 'VEHICLE_FAULT')).toMatchObject({ status: 'pending', payload: { fault: 'NOT_COOLING' } });
+    await act(() => sync.flush());
     expect(client.action).not.toHaveBeenCalled();
   });
 

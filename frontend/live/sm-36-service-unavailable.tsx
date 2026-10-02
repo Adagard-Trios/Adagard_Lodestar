@@ -12,14 +12,14 @@ import { useScreenNav } from '@/components/ScreenShell';
 import { StoreTop } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { clearOrderDraft, hasUnsent, isUnreachable, lineTotals, loadAnyOrderDraft, loadOrderDraft, saveOrderDraft, sendOrderDraft, type OrderDraft } from '@/components/live/order-draft';
-import { DEPOT_ORDER_LINE } from '@/live/sm-35-reset-access';
 import { useAuth } from '@/lib/auth/AuthProvider';
+import { depotLabel, resetOptions, telHref } from '@/lib/auth/reset';
 import { runtimeConfig } from '@/lib/config';
 import { downSince, isServiceDown, probeApi, useDeskStatus } from '@/lib/desk-status';
 import { fmtAgo, fmtDay, fmtRunDate, fmtTime, fmtNum } from '@/lib/format';
 import type { ODataError } from '@/lib/odata/client';
 import { useODataClient } from '@/lib/odata/hooks';
-import { cutoffFor } from '@/lib/workday';
+import { CUTOFF_LABEL, cutoffFor } from '@/lib/workday';
 
 export const RETRY_EVERY_S = 30;
 
@@ -37,6 +37,7 @@ export default function LiveSm36ServiceUnavailable() {
   const client = useODataClient();
   const { session } = useAuth();
   const status = useDeskStatus();
+  const { supportPhone } = resetOptions();
   const down = isServiceDown(status);
   const since = downSince(status);
   const [draft, setDraft] = useState<OrderDraft | null>(() => (typeof window === 'undefined' ? null : loadOrderDraft(session?.outletId) ?? loadAnyOrderDraft()));
@@ -176,11 +177,13 @@ export default function LiveSm36ServiceUnavailable() {
             <div className="vstack" style={{ gap: '18px', width: '420px', flexShrink: '0' }}>
               <div className="cstate cstate--warn">
                 <div className="cstate__top">
-                  <span className="cstate__l" style={{ color: 'var(--st-deferred-fg)' }}><Ic n="clock" />{"Orders close at 4:00 PM"}</span>
+                  <span className="cstate__l" style={{ color: 'var(--st-deferred-fg)' }}><Ic n="clock" />{`Orders close at ${CUTOFF_LABEL}`}</span>
                   <span className="cstate__v" style={{ color: 'var(--st-deferred-fg)' }}>{left ?? (draft ? 'Closed' : '—')}</span>
                 </div>
                 <span className="cstate__s" style={{ fontSize: '14px' }}>
-                  {"Still not connected "}{cutoffAt ? `by ${fmtTime(new Date(cutoffAt.getTime() - 30 * 60_000))}` : 'near the cutoff'}{"? Call Kandy Hub on "}<b style={{ whiteSpace: 'nowrap' }}>{DEPOT_ORDER_LINE}</b>{". The dispatcher logs your order into the same thread."}
+                  {"Still not connected "}{cutoffAt ? `by ${fmtTime(new Date(cutoffAt.getTime() - 30 * 60_000))}` : 'near the cutoff'}{`? Call ${depotLabel(session?.depots)}`}
+                  {supportPhone ? <>{' on '}<a href={telHref(supportPhone)} style={{ whiteSpace: 'nowrap', fontWeight: 700, color: 'inherit' }} onClick={e => e.stopPropagation()}>{supportPhone}</a></> : null}
+                  {". The dispatcher logs your order into the same thread."}
                 </span>
               </div>
               <div className="d-card" style={{ flex: '1' }}>

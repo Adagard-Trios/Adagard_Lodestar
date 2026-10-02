@@ -1,7 +1,7 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // SM-32 Access request sent · phone (P1, phone)
 // The phone is not bound to the signed-in user yet: it asked for access (POST Devices, PENDING) and waits
-// here until Kandy Hub approves it on the desk (ADM-05 Access requests). Used by every face of the field app.
+// here until the depot approves it on the desk (ADM-05 Access requests). Used by every face of the field app.
 import { useEffect, useRef } from 'react';
 import { Text, View, StyleSheet, useWindowDimensions } from 'react-native';
 import { useStore } from '@/lib/store';

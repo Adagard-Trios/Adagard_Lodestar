@@ -7,6 +7,9 @@ import { dayLabel, greeting, hm } from '@/lib/time';
 import { plural, titleCase } from '@/lodestar/live';
 import { isUnsent, today, useClaims, useOnline, useOutbox, useRun } from '@/model/hooks';
 import { movedRun, useReleasedNotice, useRunMarks, useServerEvents } from '@/model/run';
+import { LATE_RISK_PCT } from '@/model/preferences';
+import { finishDeliveredTrips, startTrip, tripStatusOf } from '@/model/actions';
+import { setSettings } from '@/lib/settings';
 import { Frame, Grad, Icon, Scroll, Tap, openScreen, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L12":{"to":"dr-36-en-route-driving-mode","kind":"go"},"L38":{"to":"dr-15-route-overview-daylight","kind":"go"},"L243":{"to":"dr-24-settings-me","kind":"go"},"N1":{"to":"dr-21-records","kind":"nav"},"N2":{"to":"dr-23-dispatch-notices","kind":"nav"}}};
@@ -45,7 +48,7 @@ export default function ScreenDr01TodaySRunDaylight() {
   const first = shortfalls[0];
   const name = firstName(claims);
   const status = !claims ? 'Sign in to see your run' : view ? (view.isToday ? '' : `Last run · ${dayLabel(view.date)}`) : loading ? 'Loading your run…' : error ? 'No signal · nothing saved yet' : '';
-  const inWindow = current ? (current.lateRiskPct ?? 0) < 50 : true;
+  const inWindow = current ? (current.lateRiskPct ?? 0) < LATE_RISK_PCT : true;
   return (
     <Frame bg="#f2f4f8" nav={nav} style={s.v0}>
       <View style={s.v54}>
@@ -60,9 +63,9 @@ export default function ScreenDr01TodaySRunDaylight() {
             <Icon xml={X1} width={14} height={14} style={s.v1} />
             <Text style={s.t5} numberOfLines={1}>{online ? (waiting.length ? `${waiting.length} to send` : 'Offline-ready') : `Offline · ${waiting.length} saved`}</Text>
           </View>
-          <View style={s.v7}>
+          <Tap style={s.v7} to={null} onPress={() => void setSettings({ theme: 'night' })} testID="theme-toggle">
             <Icon xml={X2} width={20} height={20} style={s.v1} />
-          </View>
+          </Tap>
         </View>
         <Scroll style={s.v4} contentStyle={s.v46}>
           <View style={s.v10}>
@@ -165,10 +168,21 @@ export default function ScreenDr01TodaySRunDaylight() {
           </View>
         </Scroll>
         <View style={s.v50}>
-          <Tap lk="L12" style={s.v49}>
+          <Tap
+            lk="L12"
+            style={s.v49}
+            testID="start-trip"
+            onPress={async () => {
+              if (!trip || !view) return true; // prototype mode: just navigate
+              // the trips before this one are finished (Trip 2 starts after Trip 1), then this one is en route
+              await finishDeliveredTrips(view.trips.filter(t => t.tripNumber < trip.tripNumber), view.stops);
+              await startTrip(trip);
+              return true;
+            }}
+          >
             <Grad g={G0} style={s.v47} />
             <Icon xml={X6} width={22} height={22} style={s.v1} />
-            <Text style={s.t48}>{trip?.status === 'ENROUTE' ? 'Continue trip' : 'Start trip'}</Text>
+            <Text style={s.t48}>{trip && tripStatusOf(trip, items) === 'ENROUTE' ? 'Continue trip' : 'Start trip'}</Text>
           </Tap>
         </View>
         <View style={s.v53}>

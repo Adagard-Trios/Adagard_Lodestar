@@ -5,7 +5,7 @@ import { Text, View, StyleSheet } from 'react-native';
 import { dayLabel, hm } from '@/lib/time';
 import { plural, titleCase } from '@/lodestar/live';
 import { today, useClaims, useOutbox } from '@/model/hooks';
-import { byClass, cutoffFor, initials, left, nextRunDate, receiptFor, totals, useDelivery, useNow, useOrderDraft } from '@/model/store-face';
+import { byClass, cutoffFor, initials, isCounted, left, nextRunDate, receiptFor, totals, useClosedDays, useDelivery, useNow, useOrderDraft } from '@/model/store-face';
 import { Frame, Grad, Icon, Scroll, Tap, openScreen, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L78":{"to":"sm-13-new-order","kind":"go"},"L80":{"to":"sm-22-profile-and-settings","kind":"go"},"N1":{"to":"sm-12-orders","kind":"nav"},"N2":{"to":"sm-19-receipts-and-credit-notes","kind":"nav"},"N3":{"to":"sm-21-messages","kind":"nav"}}};
@@ -18,23 +18,27 @@ export default function ScreenSm11TodayOrderDay() {
   useEffect(() => {
     if (noDelivery) openScreen('sm-24-no-delivery-today', undefined, 'nav');
   }, [noDelivery]);
-  const { draft, template } = useOrderDraft();
+  const { draft, template, ratio } = useOrderDraft();
   const { items } = useOutbox();
   const now = useNow();
-  const runDate = nextRunDate(now);
+  // the next run still open for orders: after its cut-off, or on a day the operating Calendar closes, the next one
+  const closed = useClosedDays();
+  const runDate = nextRunDate(now, closed);
   const cutoff = cutoffFor(runDate);
   const remaining = left(cutoff, now);
   const pct = Math.max(4, Math.min(100, Math.round((1 - (cutoff - now) / 86_400_000) * 100)));
   const lines = draft?.lines ?? template.data?.lines ?? [];
   const { dry, chilled } = byClass(lines);
-  const tDry = totals(dry);
-  const tChilled = totals(chilled);
+  const tDry = totals(dry, ratio);
+  const tChilled = totals(chilled, ratio);
   const fromDay = draft ? 'your draft' : template.data?.runDate ? `from ${dayLabel(template.data.runDate)}` : '';
   const dOrders = delivery?.orders ?? [];
   const dUnits = dOrders.reduce((n, o) => n + o.units, 0);
   const first = dOrders[0];
-  const receipts = dOrders.map(o => receiptFor(items, o.id)).filter(Boolean);
-  const received = receipts.reduce((n, r) => n + Number(r!.payload.unitsReceived ?? 0), 0);
+  // the store's count: on the server (Orders ConfirmReceipt), else waiting on this phone
+  const counts = dOrders.map(o => (isCounted(o) ? (o.unitsReceived ?? 0) : receiptFor(items, o.id) ? Number(receiptFor(items, o.id)!.payload.unitsReceived ?? 0) : null));
+  const receipts = counts.filter((n): n is number => n !== null);
+  const received = receipts.reduce((n, c) => n + c, 0);
   const arrived = dOrders.map(o => o.tripStop?.arrivalActual).find(Boolean);
   const eta = dOrders.map(o => o.tripStop?.etaModel).find(Boolean);
   const delivered = dOrders.length > 0 && dOrders.every(o => o.status === 'DELIVERED');
@@ -73,7 +77,7 @@ export default function ScreenSm11TodayOrderDay() {
               </View>
             </View>
             <View>
-              <Text style={s.t17}>{"After 4:00 PM it goes to the "}<Text style={s.t16}>{dayLabel(nextRunDate(cutoff + 60_000))}</Text>{" run"}</Text>
+              <Text style={s.t17}>{"After 4:00 PM it goes to the "}<Text style={s.t16}>{dayLabel(nextRunDate(cutoff + 60_000, closed))}</Text>{" run"}</Text>
             </View>
           </View>
           <View style={s.v35}>

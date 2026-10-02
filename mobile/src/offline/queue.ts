@@ -1,11 +1,11 @@
 // The persistent outbox of field writes. Every write (arrive at stop, complete stop with POD, record
-// shortfall, release vehicle, confirm receipt, new order) is saved here first with a client UUID and the
+// shortfall, release vehicle, start loading, vehicle fault, confirm receipt, new order) is saved here first with a client UUID and the
 // time it was saved on the phone, then sent by the sync engine (sync.ts) when there is signal.
 import { Store } from '@/lib/store';
 
 /** Driver events go through OfflineEvents/Lodestar.PushBatch; the rest are replayed as their OData call. */
 export type EventKind = 'ARRIVAL' | 'LEAVE' | 'POD_SAVE' | 'STATUS_CHANGE';
-export type CommandKind = 'SHORTFALL' | 'RELEASE' | 'RECEIPT' | 'ORDER' | 'PRECOOL';
+export type CommandKind = 'SHORTFALL' | 'RELEASE' | 'RECEIPT' | 'ORDER' | 'PRECOOL' | 'TRIP_STATUS' | 'VEHICLE_FAULT';
 export type QueueKind = EventKind | CommandKind;
 
 // STATUS_CHANGE: a driver's report to dispatch (delay, reefer alert, problem, vehicle check), stored as the trip's OfflineEvent.

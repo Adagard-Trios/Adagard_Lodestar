@@ -45,7 +45,7 @@ function kind(m: Message, replans: Set<string>): { tile: 'ok' | 'info' | 'warn' 
   if (t === 'SIGNAL_LOST' || t === 'BLACKOUT_DETECTED') return { tile: 'info', to: { to: 'sm-a1-store-in-progress-low-signal', params: { ...(order ? { order } : {}), ...(trip ? { trip } : {}) } } };
   // reefer down (SM-B1): a re-plan moved an order that was already planned
   if (t === 'PLAN_PUBLISHED' && replans.has(m.id)) return { tile: 'warn', to: { to: 'sm-b1-store-later-arrival-notice', params: { notice: m.id, ...(order ? { order } : {}) } } };
-  if (/CREDIT|POD|MATCH|RECEIPT/.test(t)) return { tile: 'ok', to: pod ? { to: 'sm-20-credit-note-detail', params: { pod } } : { to: 'sm-19-receipts-and-credit-notes' } };
+  if (/CREDIT|POD|MATCH|RECEIPT/.test(t)) return { tile: 'ok', to: order ? { to: 'sm-20-credit-note-detail', params: { order } } : pod ? { to: 'sm-20-credit-note-detail', params: { pod } } : { to: 'sm-19-receipts-and-credit-notes' } };
   if (/SHORT|DEFER|LATE|EXCEPTION|REEFER/.test(t)) return { tile: 'warn', to: status };
   if (/ETA|ARRIV|WINDOW|TRIP|SIGNAL|DELIVER/.test(t)) return { tile: 'info', to: { to: 'sm-16-why-this-window-sheet', params: order ? { order } : undefined } };
   if (/PLAN/.test(t)) return { tile: 'info', to: status };

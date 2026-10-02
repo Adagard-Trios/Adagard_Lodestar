@@ -4,7 +4,7 @@ import { Text, View, StyleSheet } from 'react-native';
 import { hm } from '@/lib/time';
 import { titleCase } from '@/lodestar/live';
 import { useClaims, useVehicle } from '@/model/hooks';
-import { useSignalLost } from '@/model/plan';
+import { useSignalLost, minutesOfBudget, useAgentConfig } from '@/model/plan';
 import type { Trip } from '@/model/types';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
@@ -13,6 +13,7 @@ const nav: ScreenNav = {"links":{"L62":{"to":"dsp-31-call-or-sms-driver","kind":
 const STATUS: Record<Trip['status'], string> = { PLANNED: 'Planned', LOADING: 'Loading', ENROUTE: 'En route', COMPLETE: 'Complete' };
 
 export default function ScreenDsp30VehicleDetail() {
+  const cfg = useAgentConfig().data;
   const claims = useClaims();
   const { data, id, loading, error } = useVehicle();
   const lost = useSignalLost();
@@ -91,7 +92,7 @@ export default function ScreenDsp30VehicleDetail() {
                     <Text style={s.t18}>{`Trip ${t.tripNumber} · ${titleCase(t.brand)} · ${t.district}`}</Text>
                   </View>
                   <View style={s.v8}>
-                    <Text style={s.t19}>{`${t.planMinutes ?? '—'} / 270 min`}</Text>
+                    <Text style={s.t19}>{minutesOfBudget(t.planMinutes, t.brand, cfg)}</Text>
                   </View>
                 </View>
                 <View style={s.v32}>

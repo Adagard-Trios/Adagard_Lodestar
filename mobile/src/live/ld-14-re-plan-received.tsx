@@ -131,7 +131,7 @@ export default function ScreenLd14RePlanReceived() {
           ) : null}
         </Scroll>
         <View style={s.v46}>
-          <Tap lk="L33" style={s.v45}>
+          <Tap lk="L33" style={s.v45} to={{ to: 'ld-01-dock-queue', kind: 'nav' }}>
             <Grad g={G0} style={s.v43} />
             <Icon xml={X4} width={22} height={22} style={s.v1} />
             <Text style={s.t44}>{"Got it, back to the dock"}</Text>

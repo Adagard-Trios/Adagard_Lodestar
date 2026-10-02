@@ -71,6 +71,39 @@ describe('Dock (WP7)', () => {
     await waitFor(() => expect(push).toHaveBeenCalledWith(opened('ld-04-release-vehicle', { trip: 'T-1' })));
   });
 
+  it('the first line checked on a planned trip queues Trips SetStatus LOADING, once per trip', async () => {
+    await signInAs(loader('u-ldst'));
+    const planned = { ...trip, id: 'T-P', status: 'PLANNED', loadRecord: null };
+    routes.set('Trips/Lodestar.BayQueue', [planned]);
+    routes.set('Trips', [planned]);
+    routes.set("Trips('T-P')", planned);
+    routes.set('TripStops', [{ ...stop, tripId: 'T-P' }]);
+    params.trip = 'T-P';
+    params.line = 'L-1';
+    const Screen = require('@/live/ld-10-scan-a-line').default;
+    await render(<Screen />);
+    await waitFor(() => expect(screen.getByTestId('scan-state').props.children).toBe('Matched'));
+    await fireEvent.press(screen.getByTestId('lk-L197'));
+    await waitFor(() => expect(queue.list().filter(i => i.sub === 'u-ldst' && i.kind === 'TRIP_STATUS')).toHaveLength(1));
+    expect(queue.list().find(i => i.sub === 'u-ldst' && i.kind === 'TRIP_STATUS')).toMatchObject({ tripId: 'T-P', payload: { tripId: 'T-P', status: 'LOADING' } });
+    // more lines on the same trip: still one LOADING write
+    const { markLoading } = require('@/model/dock');
+    expect(await markLoading('T-P')).toBeNull();
+    expect(queue.list().filter(i => i.sub === 'u-ldst' && i.kind === 'TRIP_STATUS')).toHaveLength(1);
+  });
+
+  it('a trip the server already has as LOADING is not set again when a line is checked', async () => {
+    await signInAs(loader('u-ldst2'));
+    params.trip = 'T-1';
+    params.line = 'L-1';
+    const Screen = require('@/live/ld-10-scan-a-line').default;
+    await render(<Screen />);
+    await waitFor(() => expect(screen.getByTestId('scan-state').props.children).toBe('Matched'));
+    await fireEvent.press(screen.getByTestId('lk-L197'));
+    await waitFor(() => expect(push).toHaveBeenCalledWith(opened('ld-04-release-vehicle', { trip: 'T-1' })));
+    expect(queue.list().filter(i => i.sub === 'u-ldst2' && i.kind === 'TRIP_STATUS')).toHaveLength(0);
+  });
+
   it('LD-11 type a code: the keypad code matches a line and confirming opens the release', async () => {
     await signInAs(loader('u-ld11'));
     params.trip = 'T-1';

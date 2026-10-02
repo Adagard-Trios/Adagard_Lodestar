@@ -15,7 +15,7 @@ const EXECUTION: ExecutionResult = {
   trips: [{ id: 'TRP-VEH057-20260407-1', vehicleId: 'VEH057', driverId: 'ruwan', bay: 'K1', outletIds: ['OUT106'] }],
   planned: [{ orderId: 'ORD1', outletId: 'OUT106', tripId: 'TRP-VEH057-20260407-1', etaModel: '2026-04-07T01:05:00.000Z' }],
   deferred: [{ orderId: 'ORD2', outletId: 'OUT108', reason: 'CAP_REEFER', rescheduledDate: '2026-04-08' }],
-  locked: [], supersededTrips: 0,
+  atRisk: [], locked: [], supersededTrips: 0,
 };
 
 interface PlanDelegate {

@@ -24,6 +24,8 @@ const NAV = { links: { L54: { href: '/plan/dsp-01-cutoff-queue', kind: 'go' } } 
 /** Reads the screen makes: sidebar counts, the latest run date, the outlets and the outlet's earlier orders. */
 function base(req: FakeRequest) {
   if (req.query.$top === '0') return page([], 0);
+  // no open orders from today on (the test day is past): the desk falls back to the latest plan's run date
+  if (req.path === 'Orders' && req.query.$select === 'runDate') return page([]);
   if (req.path === 'Plans' && req.query.$select === 'runDate') return page([{ runDate: DAY }]);
   if (req.path === 'Outlets') return page(OUTLETS);
   if (req.path === 'Orders' && req.method === 'GET') return page([{ id: 'ORDOLD', kg: 100, m3: 0.5 }]);

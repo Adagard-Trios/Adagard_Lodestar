@@ -8,12 +8,17 @@ import { today, useClaims, useOrder } from '@/model/hooks';
 import { useStore } from '@/lib/store';
 import { STEPS, signalByTrip, signalLostFor, timeline } from '@/model/store-face';
 import { notices } from '@/realtime/notices';
+import { LATE_RISK_PCT } from '@/model/preferences';
+import { LANGUAGE_NAMES, useSettings } from '@/lib/settings';
+import { useVoiceCheck } from '@/lodestar/voice';
 import { Frame, Icon, Scroll, Tap, openScreen, type ScreenNav } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L16":{"to":"sm-03-confirm-receipt-count","kind":"go"},"L52":{"to":"sm-16-why-this-window-sheet","kind":"go"},"L53":{"to":"sm-15-order-detail","kind":"go"},"N0":{"to":"sm-11-today-order-day","kind":"nav"},"N1":{"to":"sm-12-orders","kind":"nav"},"N2":{"to":"sm-19-receipts-and-credit-notes","kind":"nav"},"N3":{"to":"sm-21-messages","kind":"nav"}}};
 
 export default function ScreenSm02OrderStatusAndEta() {
   const claims = useClaims();
+  const { language } = useSettings();
+  const voice = useVoiceCheck(language);
   const q = useOrder();
   const day = q.day.data;
   const order = q.data ?? day?.orders.find(o => o.id === q.id) ?? null;
@@ -23,7 +28,7 @@ export default function ScreenSm02OrderStatusAndEta() {
   const sameDay = (day?.orders ?? []).filter(o => isoDay(o.runDate) === date);
   const chilled = sameDay.find(o => o.tempClass === 'CHILLED');
   const def = order?.deferralLog ?? null;
-  const late = (st?.lateRiskPct ?? 0) >= 50;
+  const late = (st?.lateRiskPct ?? 0) >= LATE_RISK_PCT;
   const band = st?.etaModelBandEarly && st.etaModelBandLate ? `${hm(st.etaModelBandEarly)}–${hm(st.etaModelBandLate)}` : '';
   const { reached, times } = timeline(order);
   // dead zone (P5): while the van of an undelivered order has no signal, the status shows as SM-A1 "in progress, low signal"
@@ -85,7 +90,7 @@ export default function ScreenSm02OrderStatusAndEta() {
                 <Text style={s.t16} numberOfLines={1}>{"Read aloud"}</Text>
               </View>
               <View style={s.v18}>
-                <Text style={s.t4}>{"English · works offline"}</Text>
+                <Text style={s.t4}>{`${LANGUAGE_NAMES[language]} · ${voice.checking ? 'checking this phone…' : voice.available ? 'works offline' : 'text still works'}`}</Text>
               </View>
             </Tap>
           </View>

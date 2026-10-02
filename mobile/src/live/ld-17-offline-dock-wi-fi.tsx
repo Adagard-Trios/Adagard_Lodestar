@@ -21,7 +21,7 @@ export default function ScreenLd17OfflineDockWiFi() {
   const sheet = useLoadSheet();
   const data = sheet.data;
   const trip = data?.trip;
-  const t = useTicks(sheet.tripId);
+  const t = useTicks(sheet.tripId, sheet.data?.trip?.status);
   const flagged = (l: OrderLineItem) => shortfallFor(sheet.shortfalls, l);
   const accounted = (l: OrderLineItem) => t.isTicked(l.id) || !!flagged(l);
   const groups = loadGroups(data, accounted);

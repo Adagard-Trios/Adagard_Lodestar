@@ -44,7 +44,7 @@ beforeEach(() => {
   client.action.mockReset();
   client.action.mockResolvedValue({});
   network.set({ online: true, since: new Date().toISOString() });
-  settings.set({ language: 'en', readAloud: true, theme: 'auto' });
+  settings.set({ language: 'en', readAloud: true, theme: 'auto', glovesMode: false, loudAlerts: false });
   routes.set('Trips/Lodestar.BayQueue', [trip]);
   routes.set('Trips', [trip]);
   routes.set("Trips('T-1')", trip);

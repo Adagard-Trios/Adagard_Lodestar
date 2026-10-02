@@ -12,11 +12,11 @@ import { Ic } from '@/components/live/icons';
 import { p5Link, usePlanScope, useExceptions, type ExceptionItem } from '@/components/live/plan-data';
 import Btn from '@/components/live/Btn';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
-import { BRAND_LETTER, DEPOT_NAME, fmtClock, fmtDay, fmtRunDate, fmtTime, pct } from '@/lib/format';
+import { BRAND_LETTER, DEPOT_NAME, fmtClock, fmtDay, fmtRunDate, fmtTime, LATE_RISK_PCT, pct } from '@/lib/format';
 import { useAction, useQuery, useRealtimeRooms, useRealtimeStatus } from '@/lib/odata/hooks';
 import type { Order, Trip, TripStop } from '@/lib/odata/types';
 
-const RISK = 30;
+const RISK = LATE_RISK_PCT;
 type Filter = 'all' | 'risk' | 'exc';
 const ATT: Record<ExceptionItem['tone'], { cls: string; bg: string; fg: string; icon: 'alert' | 'clock' | 'wifi-off' }> = {
   bad: { cls: 'x-att--bad', bg: 'var(--tint-bad)', fg: 'var(--st-exception-fg)', icon: 'alert' },
@@ -118,10 +118,10 @@ export default function LiveDsp04LiveOperations() {
 
   const trips = useQuery<Trip[]>(tripsFilter ? `ops:${tripsFilter}` : null, c =>
     c.all<Trip>('Trips', { filter: tripsFilter, expand: 'stops', orderby: 'depot,vehicleId,tripNumber' }),
-  { refreshOn: ['eta_update', 'signal_lost', 'signal_back', 'notification'], pollMs: 30_000 });
+  { refreshOn: ['eta_update', 'signal_lost', 'signal_back', 'notification', 'plan_published', 'trip_released'], pollMs: 30_000 });
   useRealtimeRooms((trips.data ?? []).slice(0, 60).map(t => `trip:${t.id}`));
   const orders = useQuery<Order[]>(ordersFilter ? `ops-orders:${ordersFilter}` : null, c => c.all<Order>('Orders', { filter: ordersFilter, select: 'id,status,orderedAt,units,tempClass,outletId' }), {
-    refreshOn: ['eta_update', 'notification'],
+    refreshOn: ['eta_update', 'notification', 'plan_published', 'order_created'], pollMs: 30_000,
   });
   const exceptions = useExceptions(runDate, ordersFilter, active);
   const markRead = useAction<string, unknown>((c, id) => c.action('Notifications', id, 'MarkRead'), { onSuccess: () => void exceptions.refresh() });
@@ -214,7 +214,7 @@ export default function LiveDsp04LiveOperations() {
             <div className="x-map">
               <div className="x-maplegend" style={{ top: '14px', bottom: 'auto' }} data-lk="L162">
                 <span><i />{"Live position"}</span>
-                <span><i className="amber" />{"Late risk 30% or more"}</span>
+                <span><i className="amber" />{`Late risk ${LATE_RISK_PCT}% or more`}</span>
                 <span><i className="dash" />{"Predicted, no signal"}</span>
               </div>
               {selected && (

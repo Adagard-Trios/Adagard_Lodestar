@@ -16,6 +16,7 @@ interface FindUniqueDelegate {
 interface TripStopDelegate {
   findFirst(a: any): Promise<any>;
   update(a: any): Promise<any>;
+  findMany(a: any): Promise<any[]>;
 }
 interface DeferralDelegate {
   findUnique(a: any): Promise<any>;
@@ -25,9 +26,11 @@ interface DeferralDelegate {
 }
 interface PodDelegate {
   upsert(a: any): Promise<any>;
+  findUnique(a: any): Promise<any>;
 }
 interface UpdateDelegate {
   update(a: any): Promise<any>;
+  findUnique(a: any): Promise<any>;
 }
 interface FindManyDelegate {
   findMany(a: any): Promise<any[]>;
@@ -200,7 +203,7 @@ describe('SyncService', () => {
       ]);
       expect(capture(tripStop.findFirst).first()[0]).toEqual({ where: { tripId: 'T1', stopSeq: 2 } });
       expect(capture(tripStop.update).first()[0].data).toEqual({ arrivalActual: new Date('2026-04-07T03:00:00.000Z'), status: 'ENROUTE' });
-      expect(capture(tripStop.findFirst).second()[0]).toEqual({ where: { tripId: 'T1', stopSeq: 2 }, include: { pod: { select: { id: true } } } });
+      expect(capture(tripStop.findFirst).second()[0]).toEqual({ where: { tripId: 'T1', stopSeq: 2 }, include: { pod: { select: { id: true, unitsDelivered: true, unitsOrdered: true } } } });
       // No POD stored or in the batch: the stop is not delivered.
       expect(capture(tripStop.update).second()[0].data).toEqual({ leaveActual: new Date('2026-04-07T03:20:00.000Z'), status: 'EXCEPTION' });
     });
@@ -234,7 +237,8 @@ describe('SyncService', () => {
           conflictResolved: false,
           conflictNote: LEAVE_WITHOUT_POD,
         });
-        verify(order.update(anything())).never();
+        // the order goes to EXCEPTION with its stop, so DSP-13 sees it
+        expect(capture(order.update).last()[0]).toEqual({ where: { id: 'ORD2' }, data: { status: 'EXCEPTION' } });
       });
 
       it('a POD_SAVE later in the same batch delivers the stop, with no conflict', async () => {
@@ -469,6 +473,149 @@ describe('SyncService', () => {
         verify(pod.upsert(anything())).never();
         verify(order.update(anything())).never();
       });
+    });
+  });
+
+  describe('failed stops (nothing delivered is never DELIVERED)', () => {
+    const evt = (over: Partial<OfflineEventInput>): OfflineEventInput => ({ tripId: 'T1', eventType: 'POD_SAVE', payload: {}, savedAt: '2026-10-05T01:28:00.000Z', ...over });
+
+    it('a POD of 0 units sends the stop and the order to EXCEPTION, and tells dispatch STOP_FAILED', async () => {
+      await service.pushBatch(personas.ruwan, [evt({ id: 'evt-pod-fail-1', payload: { orderId: 'ORD1', units: 0, unitsOrdered: 10 } })]);
+      expect(capture(tripStop.update).last()[0].data.status).toBe('EXCEPTION');
+      expect(capture(order.update).last()[0]).toEqual({ where: { id: 'ORD1' }, data: { status: 'EXCEPTION' } });
+      expect(capture(notify.notice).first()[0]).toMatchObject({ recipientId: 'nilanthi', type: 'STOP_FAILED' });
+    });
+
+    it('without unitsOrdered the order units count: 0 of 10 is a failed stop, recorded with the event', async () => {
+      when(order.findUnique(anything())).thenResolve({ units: 10, unitsReceived: null, unitsExpected: null, creditNoteId: null });
+      await service.pushBatch(personas.ruwan, [evt({ id: 'evt-pod-fail-2', payload: { orderId: 'ORD1', units: 0 } })]);
+      expect(capture(order.update).last()[0].data.status).toBe('EXCEPTION');
+      expect(capture(pod.upsert).last()[0].create.unitsOrdered).toBe(10);
+      expect(capture(offlineEvent.create).last()[0].data.payload).toMatchObject({ units: 0, unitsOrdered: 10 });
+      expect(capture(notify.notice).first()[0]).toMatchObject({ type: 'STOP_FAILED' });
+    });
+
+    it('a LEAVE after a stored POD of nothing keeps the stop an EXCEPTION', async () => {
+      when(tripStop.findFirst(anything())).thenResolve({ id: 'S1', tripId: 'T1', stopSeq: 1, orderId: 'ORD1', outletId: 'OUT106', status: 'EXCEPTION', pod: { id: 'P1', unitsDelivered: 0, unitsOrdered: 10 } });
+      await service.pushBatch(personas.ruwan, [evt({ id: 'evt-leave-fail', eventType: 'LEAVE', payload: { stopSeq: 1 } })]);
+      expect(capture(tripStop.update).last()[0].data.status).toBe('EXCEPTION');
+    });
+
+    it("a POD synced after the store counted short carries the store's shortfall and credit note (credit units)", async () => {
+      when(order.findUnique(anything())).thenResolve({ units: 10, unitsReceived: 7, unitsExpected: 10, receiptNote: null, receivedBy: 'fathima', receiptSavedAt: null, creditNoteId: 'CN-2610-0004' });
+      await service.pushBatch(personas.ruwan, [evt({ id: 'evt-pod-late-1', payload: { orderId: 'ORD1', units: 10, unitsOrdered: 10 } })]);
+      const { create } = capture(pod.upsert).last()[0];
+      expect(create.creditNoteId).toBe('CN-2610-0004');
+      expect(create.exceptions).toEqual([expect.objectContaining({ source: 'STORE_RECEIPT', qty: 3 })]);
+      expect(capture(order.update).last()[0].data.status).toBe('DELIVERED');
+    });
+  });
+
+  describe('driver reports (STATUS_CHANGE, brief item 8)', () => {
+    const report = (id: string, payload: any, savedAt = '2026-10-05T01:00:00.000Z'): OfflineEventInput => ({ id, tripId: 'T1', eventType: 'STATUS_CHANGE', payload, savedAt });
+    const published = (event: string) => {
+      const calls: any[] = [];
+      for (let i = 0; ; i++) {
+        let call: any;
+        try {
+          call = capture(notify.publish).byCallIndex(i);
+        } catch {
+          return calls;
+        }
+        if (call[0] === event) calls.push(call);
+      }
+    };
+
+    beforeEach(() => {
+      when(notify.publish(anything(), anything(), anything())).thenResolve(true);
+      // the trip and its stops: OUT106 still to come, OUT108 delivered
+      when(trip.findUnique(anything())).thenCall(async (a: any) => ({
+        id: 'T1', vehicleId: 'VEH057', depot: 'KANDY',
+        ...(a.select?.stops ? { stops: [
+          { id: 'S1', stopSeq: 1, orderId: 'ORD1', outletId: 'OUT106', status: 'ENROUTE' },
+          { id: 'S0', stopSeq: 0, orderId: 'ORD0', outletId: 'OUT108', status: 'DELIVERED' },
+        ] } : {}),
+      }));
+    });
+
+    it('a problem on an order reaches the depot dispatchers and that store (DRIVER_REPORT), and driver_report to dispatch', async () => {
+      const res = await service.pushBatch(personas.ruwan, [report('evt-rpt-0001', { report: 'PROBLEM', problem: 'DAMAGED_GOODS', orderId: 'ORD1', units: 2 })]);
+      expect(res.synced).toBe(1);
+      verify(notify.notice(anything())).twice();
+      expect(capture(notify.notice).first()[0]).toMatchObject({ recipientId: 'nilanthi', type: 'DRIVER_REPORT', tripId: 'T1' });
+      expect(capture(notify.notice).last()[0]).toMatchObject({ recipientId: 'fathima', type: 'DRIVER_REPORT', outletId: 'OUT106' });
+      expect(capture(notify.notice).first()[0].payload).toMatchObject({
+        report: 'PROBLEM', problem: 'DAMAGED_GOODS', units: 2, orderId: 'ORD1', outletId: 'OUT106', stopId: 'S1', vehicleId: 'VEH057', driverId: 'ruwan', eventId: 'evt-rpt-0001',
+      });
+      const [call] = published('driver_report');
+      expect(call[1]).toEqual(['dispatcher:KANDY', 'trip:T1']);
+    });
+
+    it('a reefer above 4 °C is a REEFER_FAIL to dispatch; a reading within the limit a DRIVER_REPORT', async () => {
+      await service.pushBatch(personas.ruwan, [report('evt-rpt-0002', { report: 'REEFER_TEMP', tempC: 7.5, action: 'CONTINUE' })]);
+      verify(notify.notice(anything())).once(); // no store named
+      expect(capture(notify.notice).last()[0]).toMatchObject({ recipientId: 'nilanthi', type: 'REEFER_FAIL', payload: { tempC: 7.5, limitC: 4 } });
+      await service.pushBatch(personas.ruwan, [report('evt-rpt-0003', { report: 'REEFER_TEMP', tempC: 3.5, action: 'CONTINUE' })]);
+      expect(capture(notify.notice).last()[0]).toMatchObject({ type: 'DRIVER_REPORT', payload: { tempC: 3.5 } });
+    });
+
+    it.each([
+      ['VEHICLE_CHECK', { report: 'VEHICLE_CHECK', ok: false, items: [{ item: 'Tyres', ok: false }] }, /pre-trip check failed/],
+      ['STORE_CODE', { report: 'STORE_CODE', orderId: 'ORD1', code: '1234' }, /ORD1: delivered on the store code/],
+    ])('%s is a DRIVER_REPORT', async (_kind, payload, title) => {
+      await service.pushBatch(personas.ruwan, [report('evt-rpt-0004', payload)]);
+      expect(capture(notify.notice).first()[0]).toMatchObject({ type: 'DRIVER_REPORT', payload: { report: _kind } });
+      expect((capture(notify.notice).first()[0].payload as any).title).toMatch(title);
+    });
+
+    it("a delay moves the open stops' ETAs and reaches the stores still waiting (store:<outlet>)", async () => {
+      when(tripStop.findMany(anything())).thenResolve([{ id: 'S1', stopSeq: 1, orderId: 'ORD1', outletId: 'OUT106', etaModel: new Date('2026-10-05T01:00:00Z'), etaPlan: null, lateRiskPct: 30 }]);
+      await service.pushBatch(personas.ruwan, [report('evt-rpt-0005', { report: 'DELAY', reason: 'TRAFFIC', minutes: 20 })]);
+      expect(capture(tripStop.update).last()[0]).toMatchObject({ where: { id: 'S1' }, data: { etaModel: new Date('2026-10-05T01:20:00Z') } });
+      const [eta] = published('eta_update');
+      expect(eta[1]).toEqual(['store:OUT106', 'trip:T1']);
+      expect(eta[2]).toMatchObject({ shiftMin: 20, cause: 'DELAY' });
+      const [call] = published('driver_report');
+      expect(call[1]).toEqual(['dispatcher:KANDY', 'trip:T1', 'store:OUT106']);
+      expect(call[2]).toMatchObject({ report: 'DELAY', minutes: 20, reason: 'TRAFFIC' });
+      verify(notify.notice(anything())).once(); // the dispatcher; no store was named
+    });
+
+    it('offline then synced: reports queued with no signal are told once, and a replayed batch tells nobody again', async () => {
+      const queued = [
+        report('evt-rpt-0010', { report: 'DELAY', reason: 'LANDSLIDE', minutes: 30 }, '2026-10-04T23:10:00.000Z'),
+        report('evt-rpt-0011', { report: 'PROBLEM', problem: 'STORE_CLOSED', orderId: 'ORD1' }, '2026-10-04T23:40:00.000Z'),
+      ];
+      const first = await service.pushBatch(personas.ruwan, queued);
+      expect(first).toMatchObject({ synced: 2, duplicates: 0 });
+      verify(notify.notice(anything())).times(3); // dispatcher × 2, the store × 1
+      verify(notify.publish('driver_report', anything(), anything())).twice();
+
+      // the phone retries the same batch (the reply was lost): both events are DUPLICATE and nothing is re-sent
+      when(offlineEvent.findUnique(anything())).thenCall(async (a: any) => ({ id: a.where.id }));
+      const again = await service.pushBatch(personas.ruwan, queued);
+      expect(again).toMatchObject({ synced: 0, duplicates: 2 });
+      verify(notify.notice(anything())).times(3);
+      verify(notify.publish('driver_report', anything(), anything())).twice();
+    });
+
+    it('other STATUS_CHANGE events (signal lost / back) are recorded and tell nobody here', async () => {
+      const res = await service.pushBatch(personas.ruwan, [report('evt-sig-0001', { status: 'SIGNAL_LOST' })]);
+      expect(res.synced).toBe(1);
+      verify(notify.notice(anything())).never();
+      verify(notify.publish(anything(), anything(), anything())).never();
+    });
+  });
+
+  describe('ARRIVAL: live progress', () => {
+    it('a late arrival publishes stop_arrived and moves the next stop (eta_update)', async () => {
+      when(notify.publish(anything(), anything(), anything())).thenResolve(true);
+      when(tripStop.findFirst(anything())).thenResolve({ id: 'S1', tripId: 'T1', stopSeq: 1, orderId: 'ORD1', outletId: 'OUT106', status: 'ENROUTE', etaModel: new Date('2026-10-05T00:30:00Z'), arrivalActual: null });
+      when(tripStop.findMany(anything())).thenResolve([{ id: 'S2', stopSeq: 2, orderId: 'ORD2', outletId: 'OUT108', etaModel: new Date('2026-10-05T01:10:00Z'), etaPlan: null }]);
+      await service.pushBatch(personas.ruwan, [{ id: 'evt-arr-0001', tripId: 'T1', eventType: 'ARRIVAL', payload: { stopSeq: 1, time: '2026-10-05T00:55:00.000Z' }, savedAt: '2026-10-05T00:55:00.000Z' }]);
+      verify(notify.publish('stop_arrived', anything(), anything())).once();
+      expect(capture(tripStop.update).last()[0]).toMatchObject({ where: { id: 'S2' }, data: { etaModel: new Date('2026-10-05T01:35:00Z') } });
+      verify(notify.publish('eta_update', anything(), anything())).once();
     });
   });
 

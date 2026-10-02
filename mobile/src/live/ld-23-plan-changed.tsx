@@ -30,7 +30,7 @@ export default function ScreenLd23PlanChanged() {
   const before = ch?.before ?? null;
   const after = ch?.after ?? before;
   const plan = ch?.plan ?? null;
-  const t = useTicks(before?.id);
+  const t = useTicks(before?.id, before?.status);
   const moved = ch?.moved ?? [];
   const loaded = moved.filter(m => t.isTicked(m.line.id));
   const first = moved[0];

@@ -1,4 +1,4 @@
-import { AgentClient } from './agent.client';
+import { AGENT_TIMEOUT_MS, AgentClient } from './agent.client';
 
 const AUTH = 'Bearer dispatcher-token';
 
@@ -71,6 +71,12 @@ describe('AgentClient', () => {
   it('uses the agent error message in a conflict', async () => {
     next = async () => response(409, { error: { message: 'run is APPROVED' } });
     await expect(client.resume('run-1', AUTH, 'approve')).rejects.toThrow(/run is APPROVED/);
+  });
+
+  it('waits up to 120 s for a draft and turns a timeout into a 504 AgentTimeout the screen can explain', async () => {
+    next = async () => { throw Object.assign(new Error('The operation was aborted due to timeout'), { name: 'TimeoutError' }); };
+    await expect(client.startRun('PELIYAGODA', '2026-10-05', AUTH)).rejects.toMatchObject({ status: 504, code: 'AgentTimeout' });
+    expect(AGENT_TIMEOUT_MS).toBe(120_000);
   });
 
   it('maps a network failure to 503', async () => {

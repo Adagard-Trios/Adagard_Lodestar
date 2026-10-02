@@ -6,6 +6,7 @@ import { hm } from '@/lib/time';
 import { plural } from '@/lodestar/live';
 import { showToast } from '@/lodestar/runtime';
 import { completeStop } from '@/model/actions';
+import { afterPod } from '@/model/run';
 import { useOnline, useStop, useParam } from '@/model/hooks';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
@@ -28,8 +29,7 @@ export default function ScreenDr03ProofOfDelivery() {
   const damage = damaged > 0 ? [{ type: 'DAMAGED', description: damageNote || `${damaged} × ${damagedItem ?? 'item'} damaged` }] : [];
   const count = units ?? stop?.pod?.unitsDelivered ?? Math.max(0, ordered - short);
   const delivered = stop?.status === 'DELIVERED';
-  const later = view ? view.tripStops.filter(x => x.status !== 'DELIVERED' && x.id !== stop?.id) : [];
-  const next = online ? (later.length ? 'dr-36-en-route-driving-mode' : 'dr-04-run-complete') : 'dr-a2-pod-saved-offline';
+
   const step = (d: number) => setUnits(Math.max(0, Math.min(ordered, count + d)));
   const timeline: [string, string | null | undefined][] = [
     ['Planned', trip?.planVersion ? `v${trip.planVersion}` : null],
@@ -175,7 +175,7 @@ export default function ScreenDr03ProofOfDelivery() {
           <Tap
             lk="L15"
             style={s.v78}
-            to={stop ? { to: next, params: { stop: stop.id } } : undefined}
+            to={stop ? afterPod(view, stop) : undefined}
             onPress={async () => {
               if (!stop || !order) return true; // prototype mode: just navigate
               // a delivered stop can be corrected: the POD is saved again (the server upserts it)

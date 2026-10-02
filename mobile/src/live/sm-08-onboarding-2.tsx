@@ -22,7 +22,7 @@ export default function ScreenSm08Onboarding2() {
           </View>
           <View style={s.v7}>
             <Grad g={G0} style={s.v5} />
-            <Icon xml={X0} width={326} height={300} style={s.v6} />
+            <Icon xml={X0.replace('>6:15–6:55</text>', `>${outlet ? `${outlet.windowOpen}–${outlet.windowClose}`.replace(/[<>&]/g, '') : ''}</text>`)} width={326} height={300} style={s.v6} />
           </View>
           <View style={s.v10}>
             <View style={s.v8} />

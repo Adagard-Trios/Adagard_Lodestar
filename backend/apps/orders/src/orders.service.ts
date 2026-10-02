@@ -2,7 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { ODataError } from '@lodestar/odata';
 import { Prisma, OrderStatus, TempClass } from '@prisma/client';
-import { addBusinessDays, businessDate, runDateRange } from '@lodestar/platform';
+import { addBusinessDays, businessDate, isOperatingDay, runDateRange, toBusinessDate } from '@lodestar/platform';
 import { depotDispatchers, NOTIFY, NotifyClient } from '@lodestar/security';
 
 /** Stored window [start, end) of a run date (YYYY-MM-DD, or a Date read in Sri Lanka time). */
@@ -29,17 +29,45 @@ export interface ReceiptInput {
   savedAt: Date;
 }
 
-/** Exception appended to the POD when the store counts short (same shape as the driver's POD exceptions). */
+/**
+ * Exception appended to the POD when the store counts short (same shape as the driver's POD exceptions).
+ * The credited units are `qty` (= unitsShort = unitsExpected - unitsReceived): the store's count governs the
+ * credit, so a client reads a POD's credited units as the STORE_RECEIPT qty when there is one, else
+ * unitsOrdered - unitsDelivered. The same count is on the order (unitsReceived / unitsExpected / creditNoteId).
+ */
 export interface ReceiptException {
   type: 'SHORT';
   source: 'STORE_RECEIPT';
   description: string;
   unitsShort: number;
+  /** credited units (the field app reads exception quantities as qty) */
+  qty: number;
+  unitsReceived: number;
+  unitsExpected: number;
   note: string | null;
   photoUrl: null;
   reportedBy: string;
   at: string;
 }
+
+/**
+ * Status moves a dispatcher may make by hand (Orders('…')/Lodestar.SetStatus). The field moves have their own
+ * actions (Release, CompleteStop, PushBatch, ConfirmReceipt) and cancelling is Lodestar.Cancel.
+ */
+export const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  RECEIVED: [OrderStatus.PLANNED, OrderStatus.DEFERRED, OrderStatus.EXCEPTION],
+  PLANNED: [OrderStatus.RECEIVED, OrderStatus.LOADED, OrderStatus.DEFERRED, OrderStatus.EXCEPTION],
+  LOADED: [OrderStatus.PLANNED, OrderStatus.ENROUTE, OrderStatus.EXCEPTION],
+  ENROUTE: [OrderStatus.DELIVERED, OrderStatus.EXCEPTION],
+  DELIVERED: [OrderStatus.EXCEPTION],
+  // an exception is resolved: delivered after all, put back for a later run, or re-planned
+  EXCEPTION: [OrderStatus.DELIVERED, OrderStatus.DEFERRED, OrderStatus.PLANNED, OrderStatus.RECEIVED],
+  DEFERRED: [OrderStatus.RECEIVED, OrderStatus.PLANNED],
+  CANCELLED: [],
+};
+
+/** Order statuses its trip stop follows (stop and order must agree on DSP-04 and DSP-13). */
+const STOP_MIRRORED: OrderStatus[] = [OrderStatus.LOADED, OrderStatus.ENROUTE, OrderStatus.DELIVERED, OrderStatus.EXCEPTION];
 
 const MAX_NOTE = 500;
 const CREDIT_NOTE_ATTEMPTS = 3;
@@ -108,14 +136,36 @@ export class OrdersService {
     });
   }
 
-  /** Status transition: planned → loaded → enroute → delivered / deferred / exception */
+  /**
+   * A dispatcher's status move (ORDER_TRANSITIONS, else 409). Setting the current status again only updates
+   * the notes. The order's trip stop follows LOADED / ENROUTE / DELIVERED / EXCEPTION.
+   */
   async updateStatus(id: string, status: OrderStatus, notes?: string) {
+    if (!Object.values(OrderStatus).includes(status)) {
+      throw ODataError.badRequest(`status must be one of ${Object.values(OrderStatus).join(', ')}`, 'status');
+    }
     const order = await this.prisma.order.findUnique({ where: { id } });
     if (!order) throw new NotFoundException(`Order ${id} not found`);
-    return this.prisma.order.update({
-      where: { id },
-      data: { status, ...(notes ? { notes } : {}) },
+    if (status === OrderStatus.CANCELLED && order.status !== status) throw ODataError.conflict(`Use Lodestar.Cancel to cancel order ${id}`);
+    if (order.status !== status && !ORDER_TRANSITIONS[order.status].includes(status)) {
+      throw ODataError.conflict(`Order ${id} is ${order.status} and cannot move to ${status}`);
+    }
+    return this.prisma.$transaction(async (tx) => {
+      if (order.status !== status && STOP_MIRRORED.includes(status)) {
+        await tx.tripStop.updateMany({ where: { orderId: id }, data: { status } });
+      }
+      return tx.order.update({ where: { id }, data: { status, ...(notes ? { notes } : {}) } });
     });
+  }
+
+  /** A new order (POST Orders committed): the depot's dispatchers and the store see it at once (order_created). */
+  async announceCreated(order: { id: string; outletId: string; runDate: Date | string; units?: number; tempClass?: string; status?: string; latePhone?: boolean }) {
+    const outlet = await this.prisma.outlet.findUnique({ where: { id: order.outletId }, select: { depot: true } });
+    const payload = {
+      orderId: order.id, outletId: order.outletId, depot: outlet?.depot ?? null, runDate: toBusinessDate(order.runDate),
+      status: order.status ?? OrderStatus.RECEIVED, units: order.units ?? null, tempClass: order.tempClass ?? null, latePhone: order.latePhone ?? false,
+    };
+    await this.notify.publish('order_created', [...(outlet ? [`dispatcher:${outlet.depot}`] : []), `store:${order.outletId}`], payload);
   }
 
   /** Cancel an order that has not been loaded yet. */
@@ -145,6 +195,7 @@ export class OrdersService {
 
     const order = await this.receiptWithCreditNote(orderId, receivedBy, { ...input, note });
     await this.announceReceiptIssue(order);
+    await this.announceCreditNote(order);
     return order;
   }
 
@@ -190,6 +241,9 @@ export class OrdersService {
           source: 'STORE_RECEIPT',
           description: `Store counted ${input.unitsReceived} of ${input.unitsExpected} units (${short} short)`,
           unitsShort: short,
+          qty: short,
+          unitsReceived: input.unitsReceived,
+          unitsExpected: input.unitsExpected,
           note: input.note ?? null,
           photoUrl: null,
           reportedBy: receivedBy,
@@ -203,10 +257,12 @@ export class OrdersService {
       }
     }
 
+    // nothing arrived at all is not a delivery: the order stays an exception for dispatch (DSP-13)
+    const nothingArrived = input.unitsExpected > 0 && input.unitsReceived === 0;
     return tx.order.update({
       where: { id: orderId },
       data: {
-        status: OrderStatus.DELIVERED,
+        status: nothingArrived ? OrderStatus.EXCEPTION : OrderStatus.DELIVERED,
         unitsReceived: input.unitsReceived,
         unitsExpected: input.unitsExpected,
         receiptNote: input.note ?? null,
@@ -238,6 +294,17 @@ export class OrdersService {
     }
   }
 
+  /** A short count carries a credit note: the store's screens (SM-19/20, SM-28) refresh on credit_note_issued. */
+  private async announceCreditNote(order: { id: string; creditNoteId: string | null; unitsReceived: number | null; unitsExpected: number | null }) {
+    if (!order.creditNoteId) return;
+    const where = await this.prisma.order.findUnique({ where: { id: order.id }, select: { outletId: true, tripStop: { select: { tripId: true } } } });
+    if (!where?.outletId) return;
+    await this.notify.publish('credit_note_issued', [`store:${where.outletId}`], {
+      creditNoteId: order.creditNoteId, orderId: order.id, outletId: where.outletId, tripId: where.tripStop?.tripId ?? null,
+      unitsCredited: (order.unitsExpected ?? 0) - (order.unitsReceived ?? 0), unitsReceived: order.unitsReceived, unitsExpected: order.unitsExpected,
+    });
+  }
+
   /** Next free credit note number of the month the count was saved in (orders and PODs share the series). */
   async nextCreditNoteId(tx: Prisma.TransactionClient, at: Date): Promise<string> {
     const prefix = creditNotePrefix(at);
@@ -250,19 +317,22 @@ export class OrdersService {
     return `${prefix}${String(last + 1).padStart(4, '0')}`;
   }
 
-  /** The first run date on or after `from` that the Calendar does not mark as non-operating (a silent calendar runs). */
-  async nextOperatingRunDate(from: string): Promise<string> {
-    const { start } = dayRange(from);
-    const closed = await this.prisma.calendar.findMany({
-      where: { date: { gte: start, lt: dayRange(addBusinessDays(from, OPERATING_DAY_HORIZON)).start }, isOperating: false },
-      select: { date: true },
+  /**
+   * The first operating run date on or after `from` (isOperatingDay: the Calendar row decides; a date the
+   * Calendar is silent about runs Monday to Saturday, not Sunday).
+   */
+  async nextOperatingRunDate(from: string | Date): Promise<string> {
+    const first = toBusinessDate(from);
+    const rows = await this.prisma.calendar.findMany({
+      where: { date: { gte: dayRange(first).start, lt: dayRange(addBusinessDays(first, OPERATING_DAY_HORIZON)).start } },
+      select: { date: true, isOperating: true },
     });
-    const shut = new Set(closed.map((c) => businessDate(c.date)));
+    const calendar = new Map(rows.map((c) => [businessDate(c.date), c]));
     for (let i = 0; i < OPERATING_DAY_HORIZON; i++) {
-      const d = addBusinessDays(from, i);
-      if (!shut.has(d)) return d;
+      const d = addBusinessDays(first, i);
+      if (isOperatingDay(d, calendar.get(d))) return d;
     }
-    return from;
+    return first;
   }
 
   /** Next order number in the ORD0000000 format. */

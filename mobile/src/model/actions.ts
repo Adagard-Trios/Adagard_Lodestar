@@ -1,10 +1,11 @@
 // Field writes. Each one is saved in the outbox first (client UUID + time saved on the phone) and sent by
 // the sync engine as soon as there is signal, so it works the same with and without coverage.
 import { network } from '@/offline/network';
+import type { QueueItem } from '@/offline/queue';
 import { queue, session } from './platform';
 import type { NewOrderLine } from './api';
-import { orderBody } from './api';
-import type { Order, Outlet, Shortfall, Trip, TripStop } from './types';
+import { orderBodies } from './api';
+import type { Order, Outlet, Shortfall, Trip, TripStatus, TripStop } from './types';
 
 function sub(): string {
   const s = session.claims?.sub;
@@ -67,6 +68,78 @@ export async function completeStop(stop: TripStop, pod: PodInput, at: Date = new
   return saved;
 }
 
+// ---------------------------------------------------------------- trip status (driver)
+
+const STATUS_ORDER: TripStatus[] = ['PLANNED', 'LOADING', 'ENROUTE', 'COMPLETE'];
+
+/** The trip's status as this phone knows it: the server's, moved on by a TRIP_STATUS write still on the phone. */
+export function tripStatusOf(trip: Pick<Trip, 'id' | 'status'>, items: QueueItem[] = queue.list()): TripStatus {
+  let st = trip.status;
+  for (const i of items) {
+    if (i.kind !== 'TRIP_STATUS' || i.tripId !== trip.id || i.status === 'rejected' || i.status === 'conflict') continue;
+    const s = i.payload.status as TripStatus;
+    if (STATUS_ORDER.indexOf(s) > STATUS_ORDER.indexOf(st)) st = s;
+  }
+  return st;
+}
+
+// a trip being finished right now (a screen may ask twice while the first write is still being saved)
+const finishing = new Set<string>();
+
+/**
+ * DR-01 Start trip: Trips SetStatus ENROUTE through the outbox, unless the trip is en route already (the dock's
+ * release sets it) or complete. Resolves to the queued write, or null when nothing was needed.
+ */
+export async function startTrip(trip: Pick<Trip, 'id' | 'status' | 'vehicleId'>, at: Date = new Date()) {
+  const st = tripStatusOf(trip);
+  if (st === 'ENROUTE' || st === 'COMPLETE') return null;
+  return queue.enqueue('TRIP_STATUS', {
+    sub: sub(),
+    tripId: trip.id,
+    ref: trip.id,
+    label: `Trip started · ${trip.vehicleId}`,
+    payload: { tripId: trip.id, status: 'ENROUTE' },
+    savedAt: at.toISOString(),
+  });
+}
+
+/**
+ * DR-04 / DR-28: the driver finished the trip. Trips SetStatus COMPLETE through the outbox (the server records
+ * the return time and the fuel used); a trip that never went en route is first set ENROUTE (the server only
+ * completes an en-route trip). No client sets COMPLETE any other way. Null when it is complete already.
+ */
+export async function finishTrip(trip: Pick<Trip, 'id' | 'status' | 'vehicleId' | 'tripNumber'>, at: Date = new Date()) {
+  if (finishing.has(trip.id) || tripStatusOf(trip) === 'COMPLETE') return null;
+  finishing.add(trip.id);
+  try {
+    await startTrip(trip, new Date(at.getTime() - 1));
+    return await queue.enqueue('TRIP_STATUS', {
+      sub: sub(),
+      tripId: trip.id,
+      ref: trip.id,
+      label: `Trip ${trip.tripNumber} complete · ${trip.vehicleId}`,
+      payload: { tripId: trip.id, status: 'COMPLETE' },
+      savedAt: at.toISOString(),
+    });
+  } finally {
+    finishing.delete(trip.id);
+  }
+}
+
+/** Finishes every trip of the run whose stops are all delivered (DR-04 on the last stop, DR-28 Close shift). */
+export async function finishDeliveredTrips(trips: Pick<Trip, 'id' | 'status' | 'vehicleId' | 'tripNumber'>[], stops: Pick<TripStop, 'tripId' | 'status'>[]) {
+  const done = trips.filter(t => {
+    const own = stops.filter(s => s.tripId === t.id);
+    return own.length > 0 && own.every(s => s.status === 'DELIVERED');
+  });
+  const out = [];
+  for (const t of done) {
+    const w = await finishTrip(t);
+    if (w) out.push(w);
+  }
+  return out;
+}
+
 /** LoadRecords RecordShortfalls: the queued write carries the trip's full shortfall list. */
 export async function recordShortfall(trip: Pick<Trip, 'id' | 'bay' | 'vehicleId'>, loadRecordId: string | undefined, current: Shortfall[], add: Shortfall) {
   const shortfalls = [...current.filter(s => s.item !== add.item), { ...add, at: new Date().toISOString() }];
@@ -101,14 +174,22 @@ export async function confirmReceipt(order: Pick<Order, 'id' | 'units'>, unitsRe
   });
 }
 
-/** POST Orders (a store's order for its next delivery day). */
-export async function placeOrder(outlet: Pick<Outlet, 'id' | 'brand'>, runDate: string, lines: NewOrderLine[], notes?: string) {
-  const order = orderBody(outlet, runDate, lines, notes);
-  if (!order.lineItems.length) throw new Error('Add at least one line');
-  return queue.enqueue('ORDER', {
-    sub: sub(),
-    ref: `order-${runDate}`,
-    label: `Order · ${runDate} · ${order.units} units`,
-    payload: { order },
-  });
+/**
+ * POST Orders (a store's order for its next delivery day): one write per temperature class, so the dry and the
+ * chilled order each get their own order number and travel apart. The server may move an order placed after the
+ * cut-off to a later operating run; the screens then show the run date it returned.
+ */
+export async function placeOrder(outlet: Pick<Outlet, 'id' | 'brand'>, runDate: string, lines: NewOrderLine[], notes?: string, m3PerKg?: number) {
+  const orders = orderBodies(outlet, runDate, lines, notes, m3PerKg);
+  if (!orders.length) throw new Error('Add at least one line');
+  const out = [];
+  for (const order of orders) {
+    out.push(await queue.enqueue('ORDER', {
+      sub: sub(),
+      ref: `order-${runDate}-${order.tempClass}`,
+      label: `Order · ${runDate} · ${order.tempClass === 'CHILLED' ? 'chilled' : 'dry'} · ${order.units} units`,
+      payload: { order },
+    }));
+  }
+  return out;
 }

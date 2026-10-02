@@ -10,7 +10,7 @@ import { PlanSide } from '@/components/live/chrome';
 import { Ic, type IconName } from '@/components/live/icons';
 import { useAgentConfig } from '@/components/live/settings-data';
 import { ErrorBanner } from '@/components/live/states';
-import { addDays, fmtNum, fmtRunDate, isoDay } from '@/lib/format';
+import { addDays, fmtNum, fmtRunDate, isoDay, LATE_RISK_PCT } from '@/lib/format';
 import { useQuery } from '@/lib/odata/hooks';
 import { colomboDay } from '@/lib/workday';
 import type { ReactNode } from 'react';
@@ -110,7 +110,7 @@ export default function LiveDsp16ModelsAndFallbacks() {
             </Card>
             <Card icon="alert" lead="dx-lead--warn" title="Lateness model" sub={b ? `${b.districts} districts · ${Object.keys(b.roads).length} road classes` : '…'} live={b ? b.districts > 0 : null}
               fallback={<><b>{"Plan-only ETA"}</b>{", no risk %, labelled \"risk unavailable\"."}</>}>
-              <div className="dx-kv"><span>{"Powers"}</span><b style={{ whiteSpace: 'normal', fontWeight: '600' }}>{"ETA and late risk on live board, alerts at 30%+"}</b></div>
+              <div className="dx-kv"><span>{"Powers"}</span><b style={{ whiteSpace: 'normal', fontWeight: '600' }}>{`ETA and late risk on live board, alerts at ${LATE_RISK_PCT}%+`}</b></div>
               <div className="dx-kv"><span>{"Computed from"}</span><b style={{ fontWeight: '600', whiteSpace: 'normal', textAlign: 'right' }}>
                 {b ? <>{Object.entries(b.roads).map(([k, n]) => `${n} ${k}`).join(', ')}{" districts · "}<b>{fmtNum(b.monsoonDays)}</b>{" monsoon days"}</> : '…'}
               </b></div>

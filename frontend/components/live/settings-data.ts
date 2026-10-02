@@ -116,6 +116,17 @@ export function importFileOf(name: string): ImportFile | null {
   return null;
 }
 
+/** A picked file's text: Blob.text() where the browser has it, a FileReader otherwise (older engines, jsdom). */
+export function readText(f: Blob): Promise<string> {
+  if (typeof f.text === 'function') return f.text();
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result ?? ''));
+    r.onerror = () => reject(r.error ?? new Error('Could not read the file'));
+    r.readAsText(f);
+  });
+}
+
 export function useImportCsv(onDone?: (r: DataImport) => void) {
   const run = useAction(
     async (c, p: { file: ImportFile; csv: string; fileName: string }) => valueOf<DataImport>(await c.action('DataImports', null, 'Import', p)),
@@ -124,7 +135,7 @@ export function useImportCsv(onDone?: (r: DataImport) => void) {
   /** Reads a picked file in the browser and sends its text; nothing is kept on the client after the call. */
   const upload = useCallback(
     async (f: File, file: ImportFile) => {
-      const csv = await f.text();
+      const csv = await readText(f);
       return run.run({ file, csv, fileName: f.name });
     },
     [run],

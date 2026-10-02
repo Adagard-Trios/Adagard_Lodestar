@@ -3,10 +3,12 @@
 // or from a planning-agent draft. Markup and classes from the DSP-02 design.
 import { useMemo } from 'react';
 import { Ic } from './icons';
+import { type AgentConfig, useAgentConfig } from './settings-data';
 import { fmtClock, fmtNum, pct, title } from '@/lib/format';
 import { useQuery } from '@/lib/odata/hooks';
 import type { AgentRunDetail, AgentTrip, Order, Trip, Vehicle } from '@/lib/odata/types';
 import { depotFilter } from '@/lib/workday';
+import { PLAN_EVENTS } from './plan-data';
 
 export /** One card on the board, from a real trip or from the agent's draft. */
 interface Card {
@@ -25,14 +27,22 @@ interface Card {
   status?: string;
 }
 
-export const budget = (brand: string) => (brand === 'FRESH' ? 270 : 480);
+/** The planning agent's limits (AgentRuns/Lodestar.AgentConfig); undefined while they load. */
+export type PlanLimits = AgentConfig['limits'] | undefined;
+
+/** A trip's minute budget for its brand, from the agent's limits (Fresh window or the Style/Tech day). */
+export const budget = (brand: string, limits: PlanLimits): number | undefined =>
+  limits ? (brand === 'FRESH' ? limits.freshMinutesBudget : limits.otherMinutesBudget) : undefined;
+
+/** The board's second-trip column head: "Trip 2 · max N trips a day" with N from the agent's limits. */
+export const tripTwoHead = (limits: PlanLimits) => `Trip 2 · max ${limits?.maxTripsPerVehicle ?? '—'} trips a day`;
 
 function capClass(used: number, cap: number) {
   const p = cap ? used / cap : 0;
   return p > 1 ? 'bad' : p >= 0.85 ? 'warn' : '';
 }
 
-export function TripCard({ c, v }: { c: Card; v?: Vehicle }) {
+export function TripCard({ c, v, limits }: { c: Card; v?: Vehicle; limits?: PlanLimits }) {
   const kgCls = capClass(c.kg, v?.capacityKg ?? 0);
   const m3Cls = capClass(c.m3, v?.capacityM3 ?? 0);
   return (
@@ -41,7 +51,7 @@ export function TripCard({ c, v }: { c: Card; v?: Vehicle }) {
         <span className="x-trip__t">{title(c.brand)} · {c.district}</span>
         {c.chilled ? <span className="m-tag m-tag--cold"><Ic n="snow" />{"Chilled"}</span> : <span className="m-tag"><span className="dot" style={{ color: '#98A1B3' }} />{"Dry"}</span>}
         <span className="spacer" />
-        <span className="x-trip__min"><b>{c.minutes}</b>{c.brand === 'FRESH' ? 'min' : `/ ${budget(c.brand)} min`}</span>
+        <span className="x-trip__min"><b>{c.minutes}</b>{c.brand === 'FRESH' ? 'min' : `/ ${budget(c.brand, limits) ?? '—'} min`}</span>
       </div>
       <div className="x-trip__meta">
         <Ic n="pin" />
@@ -64,20 +74,20 @@ export function TripCard({ c, v }: { c: Card; v?: Vehicle }) {
   );
 }
 
-export function Lane({ vehicleId, cards, v }: { vehicleId: string; cards: Card[]; v?: Vehicle }) {
+export function Lane({ vehicleId, cards, v, limits }: { vehicleId: string; cards: Card[]; v?: Vehicle; limits?: PlanLimits }) {
   const minutes = cards.reduce((s, c) => s + c.minutes, 0);
-  const max = budget(cards[0]?.brand ?? 'FRESH');
+  const max = budget(cards[0]?.brand ?? 'FRESH', limits);
   const reefer = v?.tempClass === 'CHILLED';
   return (
     <div className="x-lane" data-vehicle={vehicleId}>
       <div className="x-veh">
         <div className="x-veh__id"><span className={`x-veh__ic${reefer ? '' : ' x-veh__ic--dry'}`}><Ic n={v?.type === 'VAN' ? 'van' : 'truck'} /></span><span className="id">{vehicleId}</span></div>
         <div className="x-veh__type">{reefer ? 'Reefer' : 'Dry'} {v?.type === 'VAN' ? 'van' : 'truck'} · {fmtNum(v?.capacityM3, 1)} m³</div>
-        <div className="x-veh__min"><span>{minutes}<small>/ {max} min</small></span></div>
+        <div className="x-veh__min"><span>{minutes}<small>/ {max ?? '—'} min</small></span></div>
         <div className="x-veh__bar"><div style={{ width: `${pct(minutes, max)}%` }} /></div>
         {v && <div className="x-veh__fuel"><span className="hstack" style={{ gap: '5px' }}><Ic n="fuel" /><b>{v.usedLThisWeek}</b>/ {v.weeklyLFuel} L</span></div>}
       </div>
-      {cards.slice(0, 2).map(c => <TripCard key={c.id} c={c} v={v} />)}
+      {cards.slice(0, 2).map(c => <TripCard key={c.id} c={c} v={v} limits={limits} />)}
     </div>
   );
 }
@@ -99,9 +109,11 @@ export function useBoardCards(opts: { draft: AgentRunDetail | null; tripsFilter?
   const { draft, tripsFilter, ordersFilter, active } = opts;
   const trips = useQuery<Trip[]>(tripsFilter ? `board:${tripsFilter}` : null, c =>
     c.all<Trip>('Trips', { filter: tripsFilter, expand: 'stops($select=id,orderId,outletId,stopSeq,status)', orderby: 'vehicleId,tripNumber' }),
-  { refreshOn: ['eta_update', 'notification'] });
-  const orders = useQuery<Order[]>(ordersFilter ? `sizes:${ordersFilter}` : null, c => c.all<Order>('Orders', { filter: ordersFilter, select: 'id,kg,m3,status' }));
+  { refreshOn: ['eta_update', ...PLAN_EVENTS] });
+  const orders = useQuery<Order[]>(ordersFilter ? `sizes:${ordersFilter}` : null, c => c.all<Order>('Orders', { filter: ordersFilter, select: 'id,kg,m3,status' }),
+  { refreshOn: PLAN_EVENTS });
   const fleet = useQuery<Vehicle[]>(`fleet:${active.join(',')}`, c => c.all<Vehicle>('Vehicles', { filter: depotFilter('depot', active) }));
+  const config = useAgentConfig();
   const vehicles = useMemo(() => new Map((fleet.data ?? []).map(v => [v.id, v])), [fleet.data]);
   const sizes = useMemo(() => new Map((orders.data ?? []).map(o => [o.id, o])), [orders.data]);
 
@@ -131,5 +143,5 @@ export function useBoardCards(opts: { draft: AgentRunDetail | null; tripsFilter?
   }, [cards]);
   const down = (fleet.data ?? []).filter(v => v.status === 'WORKSHOP');
   const idle = (fleet.data ?? []).filter(v => v.status !== 'WORKSHOP' && !lanes.some(([id]) => id === v.id));
-  return { trips, orders, fleet, vehicles, cards, lanes, down, idle, loading: !draft && !trips.data && !trips.error };
+  return { trips, orders, fleet, vehicles, cards, lanes, down, idle, limits: config.data?.limits as PlanLimits, loading: !draft && !trips.data && !trips.error };
 }

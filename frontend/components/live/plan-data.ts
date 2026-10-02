@@ -3,11 +3,11 @@
 // DSP-13) built from real records: orders in EXCEPTION, stops with a high late risk, and alert notifications
 // (vehicle and signal alerts, dock flags and vehicle faults, POD exceptions and failed stops, store receipt issues), and
 // the run's synced offline records with a conflict note (DSP-A2). p5Link() names the P5 screen that handles an item.
-import { addDays, dayFilter, fmtClock, fmtTime } from '@/lib/format';
+import { addDays, dayFilter, fmtClock, fmtTime, isoDay, LATE_RISK_HIGH_PCT, LATE_RISK_PCT } from '@/lib/format';
 import { useEffect, useRef } from 'react';
 import { useAction, useEntity, useQuery } from '@/lib/odata/hooks';
 import type { AgentRun, AgentRunDetail, Notification, OfflineEvent, Order, TripStop } from '@/lib/odata/types';
-import { colomboDay, cutoffFor, depotFilter, useDepot, useRunDate } from '@/lib/workday';
+import { colomboDay, cutoffFor, depotFilter, useAgentRunId, useDepot, useRunDate } from '@/lib/workday';
 
 export function usePlanScope() {
   const { runDate, loading, error, none } = useRunDate('Plans');
@@ -32,6 +32,12 @@ export function usePlanScope() {
   };
 }
 
+/**
+ * Realtime events after which a plan screen (DSP-01/02/12) reloads: any alert, a plan going live (here or on the
+ * phone) and a new order in the depot (store app or a logged phone order).
+ */
+export const PLAN_EVENTS = ['notification', 'plan_published', 'order_created'];
+
 export type ExceptionTone = 'bad' | 'warn' | 'off';
 
 export interface ExceptionItem {
@@ -53,11 +59,10 @@ export interface ExceptionItem {
   type?: string;
 }
 
-/** Late risk at or above this is an exception the dispatcher should look at. */
-export const LATE_RISK_ALERT = 40;
-const ALERT_TYPES = [
+/** Notification types that need the dispatcher (the phone's DSP-27 uses the same list: mobile/src/model/plan.ts). */
+export const ALERT_TYPES = [
   'BLACKOUT_DETECTED', 'REEFER_FAIL', 'SHORTFALL_ACK', 'DEFERRAL_SUGGESTED', 'SIGNAL_LOST', 'DOCK_BLOCKED', 'LATE_RISK',
-  'SHORTFALL_FLAGGED', 'POD_EXCEPTION', 'STOP_FAILED', 'RECEIPT_ISSUE', 'VEHICLE_FAULT',
+  'SHORTFALL_FLAGGED', 'POD_EXCEPTION', 'STOP_FAILED', 'RECEIPT_ISSUE', 'VEHICLE_FAULT', 'ORDER_AT_RISK', 'DRIVER_REPORT',
 ];
 
 function describeNotification(n: Notification): Pick<ExceptionItem, 'title' | 'meta' | 'tone' | 'outletId' | 'orderId' | 'vehicleId'> {
@@ -77,7 +82,7 @@ export function useExceptions(runDate: string | undefined, ordersFilter: string 
     async c => {
       const stopsFilter = [
         dayFilter('trip/runDate', runDate!),
-        `lateRiskPct ge ${LATE_RISK_ALERT}`,
+        `lateRiskPct ge ${LATE_RISK_PCT}`,
         "status ne 'DELIVERED'",
         depotFilter('trip/depot', active),
       ].filter(Boolean).join(' and ');
@@ -109,7 +114,7 @@ export function useExceptions(runDate: string | undefined, ordersFilter: string 
         ...stops.value.map(s => ({
           id: `stop:${s.id}`,
           source: 'stop' as const,
-          tone: ((s.lateRiskPct ?? 0) >= 60 ? 'bad' : 'warn') as ExceptionTone,
+          tone: ((s.lateRiskPct ?? 0) >= LATE_RISK_HIGH_PCT ? 'bad' : 'warn') as ExceptionTone,
           title: `${s.trip?.vehicleId ?? 'Trip'} late risk rising`,
           meta: [s.outlet?.name ?? s.outletId, `stop ${s.stopSeq}`, s.outlet?.windowClose ? `closes ${s.outlet.windowClose}` : undefined, s.etaModel ? `ETA ~${fmtClock(s.etaModel)}` : undefined]
             .filter(Boolean)
@@ -148,7 +153,7 @@ export function useExceptions(runDate: string | undefined, ordersFilter: string 
       const rank: Record<ExceptionTone, number> = { bad: 0, warn: 1, off: 2 };
       return items.sort((a, b) => rank[a.tone] - rank[b.tone] || String(b.at ?? '').localeCompare(String(a.at ?? '')));
     },
-    { refreshOn: ['notification', 'eta_update', 'signal_lost', 'signal_back', 'vehicle_fault'] },
+    { refreshOn: ['notification', 'eta_update', 'signal_lost', 'signal_back', 'vehicle_fault', 'driver_report'] },
   );
 }
 
@@ -169,6 +174,30 @@ export function useAgentRun(id: string | null | undefined) {
   // Reading a run refreshes it from the agent (planning re-syncs it at most every 2 s).
   useInterval(drafting ? 2000 : null, q.refresh);
   return { ...q, drafting };
+}
+
+/**
+ * The planning-agent run under review for the run date and depot(s) in view: the one this tab started or opened
+ * (useAgentRunId) when it belongs to that day and depot, else the newest run still drafting or waiting for
+ * approval (started on another screen, another tab or the phone). Approved, rejected and failed runs drop out.
+ */
+export function useReviewRun() {
+  const [stored, setRunId] = useAgentRunId();
+  const { runDate } = useRunDate('Plans');
+  const { active } = useDepot();
+  const mine = useAgentRun(stored);
+  const fits = (r: AgentRun) => (!runDate || isoDay(r.runDate) === runDate) && (!active.length || active.includes(r.depot));
+  // a run this tab holds stays (its errors are shown) unless it turns out to be another day's or depot's
+  const useStored = Boolean(stored) && (!mine.data || fits(mine.data));
+  const filter = runDate
+    ? [dayFilter('runDate', runDate), depotFilter('depot', active), `status in (${[...DRAFTING, 'NEEDS_APPROVAL'].map(x => `'${x}'`).join(',')})`].filter(Boolean).join(' and ')
+    : null;
+  const latest = useQuery<string | null>(!useStored && filter ? `review-run:${filter}` : null, async c =>
+    (await c.list<AgentRun>('AgentRuns', { filter: filter!, select: 'id', orderby: 'createdAt desc', top: 1 })).value[0]?.id ?? null,
+  { refreshOn: PLAN_EVENTS });
+  const found = useAgentRun(useStored ? null : latest.data);
+  const runId = useStored ? stored : latest.data ?? null;
+  return { runId, run: useStored ? mine : found, setRunId, loading: !useStored && latest.loading };
 }
 
 /** Starts a planning-agent draft for one depot and run date. The agent drafts; it never publishes. */
@@ -205,6 +234,20 @@ export function useOpenRun(now: Date = new Date()) {
   const runDate = cal.data ?? first;
   const cutoff = cutoffFor(runDate);
   return { runDate, cutoff, before: now < cutoffFor(first) && now < cutoff, msLeft: Math.max(0, cutoff.getTime() - now.getTime()), loading: cal.loading };
+}
+
+/**
+ * The next operating day (Calendar) after a run date: where approval rolls a deferred order (plan-execution's
+ * nextOperatingDay), so a deferral confirmed on DSP-03 lands on the same run. `known` is false until the calendar
+ * answered; `day` is then the following day as a stand-in.
+ */
+export function useNextOperatingDay(runDate: string | undefined) {
+  const q = useQuery<string | null>(runDate ? `next-operating:${runDate}` : null, async c => {
+    const rows = await c.list<{ date: string }>('Calendar', { filter: `date gt ${runDate}T00:00:00Z and isOperating eq true`, select: 'date', orderby: 'date', top: 1 });
+    return rows.value[0] ? String(rows.value[0].date).slice(0, 10) : null;
+  });
+  const known = q.data !== undefined || Boolean(q.error);
+  return { day: q.data ?? (runDate ? addDays(runDate, 1) : ''), known, fromCalendar: Boolean(q.data) };
 }
 
 /** Why an agent draft cannot serve every order as the rules stand (DSP-23 Plan infeasible). */

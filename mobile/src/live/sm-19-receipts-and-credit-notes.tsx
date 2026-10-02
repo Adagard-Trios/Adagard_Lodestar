@@ -1,10 +1,12 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // SM-19 Receipts & credit notes · phone (P1, phone)
+// Receipts from both records: the store's own counts (Orders, with the credit note a short count raises, even
+// before the driver's record syncs) and the drivers' PODs.
 import { Text, View, StyleSheet } from 'react-native';
 import { dayLabel, hm } from '@/lib/time';
 import { plural } from '@/lodestar/live';
-import { useClaims, useOutbox, usePods, useStoreDay } from '@/model/hooks';
-import { creditedUnits, isCredit, receiptFor, useNow } from '@/model/store-face';
+import { useClaims, useOutbox } from '@/model/hooks';
+import { receiptFor, useNow, useStoreReceipts, type StoreReceipt } from '@/model/store-face';
 import { Frame, Icon, Scroll, Tap, type ScreenNav } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L97":{"to":"sm-20-credit-note-detail","kind":"go"},"N0":{"to":"sm-11-today-order-day","kind":"nav"},"N1":{"to":"sm-12-orders","kind":"nav"},"N3":{"to":"sm-21-messages","kind":"nav"}}};
@@ -13,17 +15,18 @@ const WEEK_MS = 7 * 86_400_000;
 
 export default function ScreenSm19ReceiptsAndCreditNotes() {
   const claims = useClaims();
-  const day = useStoreDay();
-  const outlet = day.data?.outlet;
-  const pods = usePods();
+  const receipts = useStoreReceipts();
+  const outlet = receipts.day.data?.outlet;
   const { items } = useOutbox();
-  const list = pods.data ?? [];
+  const list = receipts.list;
+  const isCredit = (r: StoreReceipt) => !!r.creditNoteId || r.credited > 0;
   const credits = list.filter(isCredit);
   const now = useNow();
-  const week = list.filter(p => now - Date.parse(p.savedAt) < WEEK_MS);
-  const creditedWeek = week.filter(isCredit).reduce((n, p) => n + creditedUnits(p), 0);
+  const week = list.filter(r => now - Date.parse(r.at) < WEEK_MS);
+  const creditedWeek = week.filter(isCredit).reduce((n, r) => n + r.credited, 0);
   const mismatched = week.filter(isCredit).length;
-  const empty = !claims ? 'Sign in to see your receipts' : pods.loading && !pods.data ? 'Loading…' : pods.error && !pods.data ? 'No signal · nothing saved yet' : '';
+  const loaded = receipts.day.data !== undefined || receipts.pods.data !== undefined;
+  const empty = !claims ? 'Sign in to see your receipts' : receipts.loading && !loaded ? 'Loading…' : receipts.error && !loaded ? 'No signal · nothing saved yet' : '';
   return (
     <Frame bg="#f4f5f9" nav={nav} style={s.v0}>
       <View style={s.v37}>
@@ -65,22 +68,22 @@ export default function ScreenSm19ReceiptsAndCreditNotes() {
               </View>
             </View>
             <View style={s.v28}>
-              {credits.length ? credits.map((p, i) => {
-                const units = creditedUnits(p);
-                const lines = p.exceptions?.length ?? 0;
+              {credits.length ? credits.map((r, i) => {
+                const units = r.credited;
+                const lines = r.pod?.exceptions?.length ?? 0;
                 return (
-                  <Tap key={p.id} lk={i === 0 ? 'L97' : undefined} testID={i === 0 ? undefined : `credit-row-${i}`} style={i === 0 ? s.v25 : s.v27} to={{ to: 'sm-20-credit-note-detail', params: { pod: p.id } }}>
+                  <Tap key={r.orderId} lk={i === 0 ? 'L97' : undefined} testID={i === 0 ? undefined : `credit-row-${i}`} style={i === 0 ? s.v25 : s.v27} to={{ to: 'sm-20-credit-note-detail', params: { order: r.orderId } }}>
                     <View style={i === 0 ? s.v16 : s.v26}>
                       <Icon xml={i === 0 ? X2 : X4} width={22} height={22} style={s.v1} />
                     </View>
                     <View style={s.v22}>
                       <View>
-                        <Text style={s.t18}><Text style={s.t17}>{p.creditNoteId ?? `Pending · ${p.tripStop?.orderId ?? p.id}`}</Text></Text>
+                        <Text style={s.t18}><Text style={s.t17}>{r.creditNoteId ?? `Pending · ${r.orderId}`}</Text></Text>
                       </View>
                       <View style={s.v21}>
-                        <Text style={s.t19}>{dayLabel(p.savedAt)}</Text>
+                        <Text style={s.t19}>{dayLabel(r.at)}</Text>
                         <View style={s.v20} />
-                        <Text style={s.t19}>{lines ? plural(lines, 'line') : `${p.unitsDelivered} of ${p.unitsOrdered}`}</Text>
+                        <Text style={s.t19}>{lines ? plural(lines, 'line') : `${r.counted ?? r.delivered ?? 0} of ${r.ordered}`}</Text>
                       </View>
                     </View>
                     <View style={s.v24}>
@@ -113,29 +116,30 @@ export default function ScreenSm19ReceiptsAndCreditNotes() {
               </View>
             </View>
             <View style={s.v28}>
-              {list.length ? list.map((p, i) => {
-                const mine = receiptFor(items, p.tripStop?.orderId);
+              {list.length ? list.map((r, i) => {
+                const mine = receiptFor(items, r.orderId);
+                const counted = r.counted ?? (mine ? Number(mine.payload.unitsReceived ?? 0) : null);
                 return (
-                  <Tap key={p.id} style={i === 0 ? s.v31 : s.v27} testID={`receipt-row-${i}`} to={{ to: 'sm-20-credit-note-detail', params: { pod: p.id } }}>
+                  <Tap key={r.orderId} style={i === 0 ? s.v31 : s.v27} testID={`receipt-row-${i}`} to={{ to: 'sm-20-credit-note-detail', params: { order: r.orderId } }}>
                     <View style={s.v30}>
                       <Icon xml={X5} width={22} height={22} style={s.v1} />
                     </View>
                     <View style={s.v22}>
                       <View>
-                        <Text style={s.t18}>{dayLabel(p.savedAt)}</Text>
+                        <Text style={s.t18}>{dayLabel(r.runDate || r.at)}</Text>
                       </View>
                       <View style={s.v21}>
-                        <Text style={s.t19}>{mine ? `You ${hm(mine.savedAt)}` : (p.receiverName ?? `Driver ${hm(p.savedAt)}`)}</Text>
+                        <Text style={s.t19}>{r.order?.receiptSavedAt ? `You ${hm(r.order.receiptSavedAt)}` : mine ? `You ${hm(mine.savedAt)}` : (r.pod?.receiverName ?? (r.pod ? `Driver ${hm(r.pod.savedAt)}` : 'Not counted'))}</Text>
                         <View style={s.v20} />
-                        <Text style={s.t19}>{isCredit(p) ? `driver ${hm(p.savedAt)}` : 'matched'}</Text>
+                        <Text style={s.t19}>{!r.pod ? "driver's record not synced" : isCredit(r) ? `driver ${hm(r.pod.savedAt)}` : 'matched'}</Text>
                       </View>
                     </View>
                     <View style={s.v24}>
                       <View>
-                        <Text style={s.t23}>{String(p.unitsDelivered)}</Text>
+                        <Text style={s.t23}>{String(counted ?? r.delivered ?? 0)}</Text>
                       </View>
                       <View>
-                        <Text style={s.t4}>{`of ${p.unitsOrdered}`}</Text>
+                        <Text style={s.t4}>{`of ${r.ordered}`}</Text>
                       </View>
                     </View>
                   </Tap>

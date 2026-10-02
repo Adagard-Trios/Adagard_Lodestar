@@ -1,22 +1,28 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // LD-07 Start shift · phone (P3, phone)
+// Gloves mode (wider touch areas on every button) and Loud alerts (vibrate and read plan changes aloud) are
+// settings of this phone (src/lib/settings), applied by the runtime's Tap and the realtime notices.
 import { Text, View, StyleSheet } from 'react-native';
 import { dayLabel, hm } from '@/lib/time';
 import { plural, titleCase } from '@/lodestar/live';
+import { setSettings, useSettings } from '@/lib/settings';
 import { useBayQueue, useClaims } from '@/model/hooks';
+import { nextToLoad, useMyBay } from '@/model/dock';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L188":{"to":"ld-08-quick-tips","kind":"go"}}};
 
 export default function ScreenLd07StartShift() {
   const claims = useClaims();
+  const set = useSettings();
   const { data, loading } = useBayQueue();
   const trips = data?.trips ?? [];
   const depot = data?.depot ?? claims?.depots[0];
   const hub = depot ? `${titleCase(depot)} hub` : '—';
   const name = claims?.name ?? claims?.username ?? '';
-  const initials = name.split(/s+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join('') || '—';
-  const next = trips.find(t => t.status === 'PLANNED' || t.status === 'LOADING') ?? null;
+  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join('') || '—';
+  const [bay, setBay] = useMyBay();
+  const next = nextToLoad(trips, bay);
   const toLoad = trips.filter(t => t.status === 'PLANNED' || t.status === 'LOADING');
   const departs = trips.map(t => t.departTime).filter((d): d is string => !!d).sort();
   const span = departs.length ? `${hm(departs[0])}–${hm(departs[departs.length - 1])}` : '—';
@@ -79,14 +85,14 @@ export default function ScreenLd07StartShift() {
               {tiles.length ? tiles.map(t => {
                 const mine = t.id === next?.id;
                 return (
-                  <View key={t.id} style={mine ? s.v31 : s.v28} testID={mine ? 'my-bay' : undefined}>
+                  <Tap key={t.id} style={mine ? s.v31 : s.v28} to={null} onPress={() => setBay(t.bay ?? null)} disabled={!t.bay} testID={mine ? 'my-bay' : `bay-${t.bay ?? t.id}`}>
                     <View>
                       <Text style={mine ? s.t29 : s.t26}>{t.bay ?? '—'}</Text>
                     </View>
                     <View>
                       <Text style={mine ? s.t30 : s.t27}>{t.vehicleId}</Text>
                     </View>
-                  </View>
+                  </Tap>
                 );
               }) : (
                 <View style={s.v28}>
@@ -101,7 +107,7 @@ export default function ScreenLd07StartShift() {
             </View>
           </View>
           <View style={s.v43}>
-            <View style={s.v41}>
+            <Tap style={s.v41} testID="glovesMode" onPress={() => setSettings({ glovesMode: !set.glovesMode })}>
               <View style={s.v34}>
                 <Icon xml={X1} width={22} height={22} style={s.v1} />
               </View>
@@ -113,11 +119,11 @@ export default function ScreenLd07StartShift() {
                   <Text style={s.t36}>{"Big buttons, no swipes"}</Text>
                 </View>
               </View>
-              <View style={s.v40}>
+              <View style={set.glovesMode ? s.v40 : SWITCH_OFF} accessibilityRole="switch" accessibilityState={{ checked: set.glovesMode }}>
                 <View style={s.v39} />
               </View>
-            </View>
-            <View style={s.v42}>
+            </Tap>
+            <Tap style={s.v42} testID="loudAlerts" onPress={() => setSettings({ loudAlerts: !set.loudAlerts })}>
               <View style={s.v34}>
                 <Icon xml={X2} width={22} height={22} style={s.v1} />
               </View>
@@ -129,10 +135,10 @@ export default function ScreenLd07StartShift() {
                   <Text style={s.t36}>{"Vibrate and sound on plan changes"}</Text>
                 </View>
               </View>
-              <View style={s.v40}>
+              <View style={set.loudAlerts ? s.v40 : SWITCH_OFF} accessibilityRole="switch" accessibilityState={{ checked: set.loudAlerts }}>
                 <View style={s.v39} />
               </View>
-            </View>
+            </Tap>
           </View>
         </Scroll>
         <View style={s.v48}>
@@ -153,6 +159,8 @@ const X2 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#3b4cca\" stroke-w
 const X3 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"12\" cy=\"12\" r=\"10\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></circle><path d=\"M12 6v6l4 2\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const G0: GradSpec[] = [{"type":"linear","angle":135,"at":null,"repeat":false,"stops":[{"c":"#1e2766","p":0},{"c":"#141b4d","p":1}]}];
 const G1: GradSpec[] = [{"type":"linear","angle":135,"at":null,"repeat":false,"stops":[{"c":"#243080","p":0},{"c":"#141b4d","p":1}]}];
+
+const SWITCH_OFF = { flexDirection: 'row', alignItems: 'center', flexShrink: 0, padding: 3, width: 56, height: 34, backgroundColor: '#d3d8e3', borderRadius: 17 } as const;
 
 const s = StyleSheet.create({
   v0: {"flexDirection":"column","alignItems":"stretch","backgroundColor":"#ffffff","flex":1},

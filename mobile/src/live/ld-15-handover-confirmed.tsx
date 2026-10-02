@@ -51,7 +51,7 @@ export default function ScreenLd15HandoverConfirmed() {
             <View style={s.v9}>
               <Icon xml={X0} width={42} height={42} style={s.v8} />
             </View>
-            <Tap lk="L11">
+            <Tap lk="L11" to={sent ? { app: 'Lodestar Run', screen: "DR-01 Today's run" } : null}>
               <Text style={s.t10}>{trip ? (sent ? `${who} has the run` : unsent ? "Release saved" : `${trip.vehicleId} not released yet`) : "Handover"}</Text>
             </Tap>
             <View>

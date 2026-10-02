@@ -7,14 +7,14 @@ import { useState } from 'react';
 import { Text, TextInput, View, StyleSheet } from 'react-native';
 import { hm } from '@/lib/time';
 import { CameraBox, useCamera } from '@/lodestar/camera';
-import { reportToDispatch } from '@/model/field-reports';
+import { reportToDispatch, stopContext } from '@/model/field-reports';
 import { useOnline, useStop } from '@/model/hooks';
 import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec, type Target } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L255":{"to":"dr-03-proof-of-delivery","kind":"go"},"B":{"to":"dr-17-report-a-problem","kind":"back"}}};
 
 export default function ScreenDr18ProblemDetailDamagedGoods() {
-  const { stop, lines } = useStop();
+  const { stop, lines, trip } = useStop();
   const online = useOnline();
   const cam = useCamera();
   const order = stop?.order;
@@ -184,8 +184,9 @@ export default function ScreenDr18ProblemDetailDamagedGoods() {
               if (!stop) return true; // prototype mode: just navigate
               await reportToDispatch(
                 stop.tripId,
-                { report: 'PROBLEM', problem: 'DAMAGED_GOODS', stopId: stop.id, orderId: stop.orderId, units: count, note: description, photo: !!photoAt },
+                { report: 'PROBLEM', problem: 'DAMAGED_GOODS', stopId: stop.id, orderId: stop.orderId, units: count, ...(line ? { item: line.name } : {}), note: description, photo: !!photoAt },
                 stop.id,
+                stopContext(stop, trip?.vehicleId),
               );
               showToast(online ? 'Sent to dispatch' : 'Saved · sends when signal returns');
               return true;

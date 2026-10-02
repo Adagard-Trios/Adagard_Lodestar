@@ -4,7 +4,7 @@
 // planning-agent run (POST AgentRuns) and follows the design link to DSP-22.
 // Before the 4:00 PM cutoff, while the run the queue fills for has no orders yet in the depot(s) in view, the
 // queue is the designed empty state DSP-21 (Empty queue before cutoff): the screen moves there.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useScreenNav } from '@/components/ScreenShell';
 import Btn from '@/components/live/Btn';
@@ -26,6 +26,9 @@ const CHIP_FILTER: Record<Chip, string | undefined> = {
   flagged: "(deferredYesterday eq true or status eq 'EXCEPTION' or deferralScore ge 91)",
 };
 const LIVE_STATUSES = "status ne 'CANCELLED'";
+/** A new order (store app, phone order), a published plan or any alert changes the queue; a 30 s poll covers a dropped socket. */
+const QUEUE_EVENTS = ['notification', 'order_created', 'plan_published'];
+const QUEUE_POLL_MS = 30_000;
 export const EMPTY_QUEUE = '/plan/dsp-21-empty-queue-before-cutoff';
 
 /**
@@ -68,16 +71,26 @@ export default function LiveDsp01CutoffQueue() {
   const queue = useEntitySet<Order>(
     'Orders',
     base ? { filter: [base, CHIP_FILTER[chip]].filter(Boolean).join(' and '), expand: 'outlet', orderby: 'deferredYesterday desc,deferralScore desc,id', top: 50, count: true, search: search.trim() || undefined } : null,
-    { refreshOn: ['notification'] },
+    { refreshOn: QUEUE_EVENTS },
   );
   const all = useQuery<Order[]>(base ? `queue-all:${base}` : null, c =>
     c.all<Order>('Orders', { filter: base!, select: 'id,brand,tempClass,m3,kg,status,deferredYesterday,deferralScore', expand: 'outlet($select=parking,dockType)' }),
-  { refreshOn: ['notification'] });
+  { refreshOn: QUEUE_EVENTS, pollMs: QUEUE_POLL_MS });
+  // The poll reads the whole queue (the counts); the visible page reloads only when that changed, so a page the
+  // dispatcher expanded with "Show more" is kept while nothing moved.
+  const signature = all.data ? all.data.map(o => `${o.id}:${o.status}`).join(',') : null;
+  const seen = useRef<string | null>(null);
+  const reloadPage = queue.refresh;
+  useEffect(() => {
+    if (signature === null) return;
+    if (seen.current !== null && seen.current !== signature) void reloadPage();
+    seen.current = signature;
+  }, [signature, reloadPage]);
   const fleet = useQuery<Vehicle[]>(`fleet:${active.join(',')}`, c => c.all<Vehicle>('Vehicles', { filter: depotFilter('depot', active) }));
 
   const open = useOpenRun();
   const otherRun = runDate !== open.runDate && (!runDate || runDate < open.runDate);
-  const openCount = useCount('Orders', otherRun && !scope.loadingDate ? [dayFilter('runDate', open.runDate), depotFilter('outlet/depot', active), LIVE_STATUSES].filter(Boolean).join(' and ') : null, ['notification']);
+  const openCount = useCount('Orders', otherRun && !scope.loadingDate ? [dayFilter('runDate', open.runDate), depotFilter('outlet/depot', active), LIVE_STATUSES].filter(Boolean).join(' and ') : null, QUEUE_EVENTS);
   const emptyBeforeCutoff = !open.loading && !scope.loadingDate && isEmptyBeforeCutoff({ before: open.before, openRun: open.runDate, inView: runDate, queued: all.data?.length, openCount });
   useEffect(() => {
     if (emptyBeforeCutoff && !new URLSearchParams(window.location.search).get('runDate')) router.replace(EMPTY_QUEUE);
@@ -107,6 +120,8 @@ export default function LiveDsp01CutoffQueue() {
     setRunId(run.id);
     nav.go('L1');
   });
+  // a busy day can take a while on a small VM: show how long the draft has been running
+  const drafting = useElapsed(start.pending);
 
   return (
     <div className="frame frame--desktop mode-dispatcher" data-name="DSP-01 Cutoff queue">
@@ -131,7 +146,7 @@ export default function LiveDsp01CutoffQueue() {
               onClick={() => void start.run({ depot: draftDepot!, runDate: runDate! })}
             >
               <Ic n="sparkle-plus" />
-              {start.pending ? 'Agent drafting…' : `Draft the plan with the agent${active.length > 1 ? ` · ${DEPOT_NAME[draftDepot!] ?? draftDepot}` : ''}`}
+              {start.pending ? `Agent drafting… ${drafting}` : `Draft the plan with the agent${active.length > 1 ? ` · ${DEPOT_NAME[draftDepot!] ?? draftDepot}` : ''}`}
             </Btn>
           </div>
           {start.error && <ErrorBanner error={start.error} onRetry={() => void start.run({ depot: draftDepot!, runDate: runDate! })} />}
@@ -248,4 +263,17 @@ export default function LiveDsp01CutoffQueue() {
       </div>
     </div>
   );
+}
+
+/** mm:ss since `running` became true (empty when not running), ticking once a second. */
+function useElapsed(running: boolean): string {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!running) return;
+    const start = Date.now();
+    const t = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000);
+    return () => { clearInterval(t); setElapsed(0); };
+  }, [running]);
+  if (!running) return '';
+  return `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`;
 }

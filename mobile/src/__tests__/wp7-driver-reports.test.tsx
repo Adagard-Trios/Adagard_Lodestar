@@ -129,3 +129,110 @@ describe('Driver reports', () => {
     expect(reports('u-dr38')[0]).toMatchObject({ report: 'DELAY', reason: 'TRAFFIC', minutes: 15, stopId: 'S-1' });
   });
 });
+
+describe('Driver reports carry the trip, the stop\'s order and outlet, and a human title', () => {
+  it('DR-17 / DR-18 / DR-38 / DR-37 / DR-12 titles and context', async () => {
+    await signInAs(driver('u-ctx'));
+    const { reportToDispatch, stopContext } = require('@/model/field-reports');
+    const s1 = { ...stops[0], outlet };
+    await reportToDispatch('T-1', { report: 'PROBLEM', problem: 'STORE_CLOSED', stopId: 'S-1', orderId: 'O-1' }, 'S-1', stopContext(s1, 'VAN-T9'));
+    await reportToDispatch('T-1', { report: 'PROBLEM', problem: 'DAMAGED_GOODS', stopId: 'S-1', orderId: 'O-1', units: 2, item: 'Yoghurt cups' }, 'S-1', stopContext(s1, 'VAN-T9'));
+    await reportToDispatch('T-1', { report: 'DELAY', reason: 'TRAFFIC', minutes: 15, stopId: 'S-1', orderId: 'O-1' }, 'T-1', stopContext(s1, 'VAN-T9'));
+    await reportToDispatch('T-1', { report: 'REEFER_TEMP', tempC: 6, action: 'CHECKED_STILL_WARM' }, 'T-1', { vehicleId: 'VAN-T9' });
+    await reportToDispatch('T-1', { report: 'VEHICLE_CHECK', ok: false, items: [{ item: 'Tyres', ok: false }, { item: 'Seal', ok: true }] }, 'T-1', { vehicleId: 'VAN-T9' });
+    const all = queue.list().filter(i => i.sub === 'u-ctx');
+    expect(all.every(i => i.kind === 'STATUS_CHANGE' && i.tripId === 'T-1')).toBe(true);
+    expect(all.map(i => i.payload)).toEqual([
+      expect.objectContaining({ report: 'PROBLEM', tripId: 'T-1', orderId: 'O-1', outletId: 'OUT-T1', outletName: 'Hill Store', title: 'Store closed at Hill Store' }),
+      expect.objectContaining({ report: 'PROBLEM', tripId: 'T-1', orderId: 'O-1', outletId: 'OUT-T1', title: 'Damaged goods at Hill Store · 2 × Yoghurt cups damaged' }),
+      expect.objectContaining({ report: 'DELAY', tripId: 'T-1', orderId: 'O-1', outletId: 'OUT-T1', title: 'Delay of about 15 min · Traffic · before Hill Store' }),
+      expect.objectContaining({ report: 'REEFER_TEMP', tripId: 'T-1', vehicleId: 'VAN-T9', title: 'Reefer at 6 °C (above 4 °C) · VAN-T9' }),
+      expect.objectContaining({ report: 'VEHICLE_CHECK', tripId: 'T-1', title: 'Pre-trip check: tyres not OK · VAN-T9' }),
+    ]);
+  });
+
+  it('DR-17 on screen: the queued report names the stop\'s outlet', async () => {
+    await signInAs(driver('u-dr17b'));
+    params.stop = 'S-1';
+    const Screen = require('@/live/dr-17-report-a-problem').default;
+    await render(<Screen />);
+    expect(await screen.findByText('Stop 1 · Hill Store')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('problem-ACCESS_BLOCKED'));
+    await fireEvent.press(screen.getByTestId('lk-L253'));
+    await waitFor(() => expect(reports('u-dr17b')).toHaveLength(1));
+    expect(reports('u-dr17b')[0]).toMatchObject({ tripId: 'T-1', orderId: 'O-1', outletId: 'OUT-T1', title: 'Access blocked at Hill Store', vehicleId: 'VAN-T9' });
+  });
+});
+
+describe('Trip status from the driver: started (ENROUTE) and finished (COMPLETE) through the outbox', () => {
+  const statusWrites = (sub: string) => queue.list().filter(i => i.sub === sub && i.kind === 'TRIP_STATUS').map(i => i.payload);
+
+  it('DR-01 Start trip sets a trip that is still loading ENROUTE, once', async () => {
+    routes.set('Trips', [{ ...trip, status: 'LOADING' }]);
+    await signInAs(driver('u-start'));
+    const Screen = require('@/live/dr-01-today-s-run').default;
+    await render(<Screen />);
+    expect(await screen.findByText('Hill Store')).toBeTruthy();
+    expect(screen.getByText('Start trip')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('start-trip'));
+    await waitFor(() => expect(push).toHaveBeenCalledWith(opened('dr-36-en-route-driving-mode')));
+    expect(statusWrites('u-start')).toEqual([{ tripId: 'T-1', status: 'ENROUTE' }]);
+    // the phone now knows the trip is en route: the button says so and a second tap queues nothing
+    expect(await screen.findByText('Continue trip')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('start-trip'));
+    expect(statusWrites('u-start')).toHaveLength(1);
+  });
+
+  it('DR-01 Start trip on a trip the dock already released (ENROUTE) queues nothing', async () => {
+    await signInAs(driver('u-start2'));
+    const Screen = require('@/live/dr-01-today-s-run').default;
+    await render(<Screen />);
+    expect(await screen.findByText('Continue trip')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('start-trip'));
+    await waitFor(() => expect(push).toHaveBeenCalledWith(opened('dr-36-en-route-driving-mode')));
+    expect(statusWrites('u-start2')).toEqual([]);
+  });
+
+  it('DR-04 after the last stop: the trip is set COMPLETE once, and sent as Trips SetStatus', async () => {
+    const pod = (id: string, units: number) => ({ id: `P-${id}`, tripStopId: id, unitsDelivered: units, unitsOrdered: units, savedAt: `${RUN}T01:30:00.000Z` });
+    routes.set('TripStops', stops.map(s => ({ ...s, status: 'DELIVERED', arrivalActual: `${RUN}T01:00:00.000Z`, leaveActual: `${RUN}T01:20:00.000Z`, pod: pod(s.id, s.order.units) })));
+    await signInAs(driver('u-done'));
+    const Screen = require('@/live/dr-04-run-complete').default;
+    const view = await render(<Screen />);
+    expect(await screen.findByText('Trip 1 done')).toBeTruthy();
+    await waitFor(() => expect(statusWrites('u-done')).toEqual([{ tripId: 'T-1', status: 'COMPLETE' }]));
+    // End shift does not queue it twice
+    await fireEvent.press(screen.getByTestId('end-shift'));
+    await waitFor(() => expect(push).toHaveBeenCalledWith(opened('dr-28-end-of-shift-summary')));
+    expect(statusWrites('u-done')).toHaveLength(1);
+    view.unmount();
+
+    network.set({ online: true, since: new Date().toISOString() });
+    const { sync } = require('./fake-platform');
+    await sync.flush();
+    expect(client.action).toHaveBeenCalledWith("Trips('T-1')/Lodestar.SetStatus", { status: 'COMPLETE' }, expect.objectContaining({ idempotencyKey: expect.any(String) }));
+  });
+
+  it('a trip that never went en route is set ENROUTE before COMPLETE (the server completes only en-route trips)', async () => {
+    await signInAs(driver('u-fin'));
+    const { finishTrip, tripStatusOf } = require('@/model/actions');
+    const t = { ...trip, status: 'LOADING' };
+    await finishTrip(t);
+    expect(statusWrites('u-fin')).toEqual([{ tripId: 'T-1', status: 'ENROUTE' }, { tripId: 'T-1', status: 'COMPLETE' }]);
+    expect(tripStatusOf(t, queue.list().filter(i => i.sub === 'u-fin'))).toBe('COMPLETE');
+    expect(await finishTrip(t)).toBeNull();
+  });
+
+  it('DR-28 Close shift completes finished trips, then signs out to DR-06', async () => {
+    routes.set('TripStops', stops.map(s => ({ ...s, status: 'DELIVERED', pod: { id: `P-${s.id}`, tripStopId: s.id, unitsDelivered: s.order.units, unitsOrdered: s.order.units, savedAt: `${RUN}T01:30:00.000Z` } })));
+    await signInAs(driver('u-close'));
+    const Screen = require('@/live/dr-28-end-of-shift-summary').default;
+    await render(<Screen />);
+    expect(await screen.findByText('Shift done')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('close-shift'));
+    await waitFor(() => expect(router.replace as jest.Mock).toHaveBeenCalledWith(opened('dr-06-sign-in')));
+    expect(statusWrites('u-close')).toEqual([{ tripId: 'T-1', status: 'COMPLETE' }]);
+    const { session } = require('./fake-platform');
+    expect(session.signedIn).toBe(false);
+  });
+});

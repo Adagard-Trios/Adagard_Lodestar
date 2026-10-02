@@ -1,7 +1,7 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // SM-12 Orders · phone (P1, phone)
 import { Text, View, StyleSheet } from 'react-native';
-import { cutoffFor, creditedUnits, groupByDay, podFor, useNow } from '@/model/store-face';
+import { cutoffFor, groupByDay, orderCredit, podFor, useNow } from '@/model/store-face';
 import { dayLabel, hm } from '@/lib/time';
 import { plural, titleCase } from '@/lodestar/live';
 import { today, useClaims, usePods, useStoreDay } from '@/model/hooks';
@@ -127,7 +127,7 @@ export default function ScreenSm12Orders() {
             <View style={s.v40}>
               {past.length ? past.map((g, i) => {
                 const units = g.orders.reduce((n, o) => n + o.units, 0);
-                const credited = g.orders.reduce((n, o) => { const p = podFor(pods.data, o.id); return n + (p ? creditedUnits(p) : 0); }, 0);
+                const credited = g.orders.reduce((n, o) => n + orderCredit(o, podFor(pods.data, o.id)).units, 0);
                 const problem = credited > 0 || g.orders.some(o => PROBLEM.includes(o.status));
                 const classes = new Set(g.orders.map(o => o.tempClass));
                 const bad = g.orders.find(o => PROBLEM.includes(o.status));

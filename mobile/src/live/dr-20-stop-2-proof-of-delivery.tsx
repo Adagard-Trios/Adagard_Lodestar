@@ -4,9 +4,11 @@
 import { Text, TextInput, View, StyleSheet } from 'react-native';
 import { useState } from 'react';
 import { hm } from '@/lib/time';
+import { CameraBox, useCamera } from '@/lodestar/camera';
 import { plural } from '@/lodestar/live';
 import { showToast } from '@/lodestar/runtime';
 import { completeStop } from '@/model/actions';
+import { afterPod } from '@/model/run';
 import { useOnline, useStop } from '@/model/hooks';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
@@ -26,10 +28,22 @@ export default function ScreenDr20Stop2ProofOfDelivery() {
   const ordered = order?.units ?? 0;
   const [units, setUnits] = useState<number | null>(null);
   const [receiver, setReceiver] = useState('');
+  // the photo of the drop stays on the phone (only the count and the receiver travel with the POD)
+  const cam = useCamera();
+  const [photoAt, setPhotoAt] = useState<string | null>(null);
+  const photo = async () => {
+    if (!cam.granted) {
+      if (!(await cam.ensure())) showToast('No camera · the count and the name are enough', 'error');
+      return false;
+    }
+    const uri = await cam.capture();
+    if (uri) setPhotoAt(new Date().toISOString());
+    else showToast('No photo taken · the count and the name are enough', 'error');
+    return false;
+  };
   const count = units ?? pod?.unitsDelivered ?? Math.max(0, ordered - short);
   const delivered = stop?.status === 'DELIVERED';
-  const later = view ? view.tripStops.filter(x => x.status !== 'DELIVERED' && x.id !== stop?.id) : [];
-  const next = online ? (later.length ? 'dr-36-en-route-driving-mode' : 'dr-04-run-complete') : 'dr-a2-pod-saved-offline';
+
   const step = (d: number) => setUnits(Math.max(0, Math.min(ordered, count + d)));
   const missing = Math.max(0, ordered - count);
   return (
@@ -91,21 +105,20 @@ export default function ScreenDr20Stop2ProofOfDelivery() {
               </View>
             </View>
             <View style={s.v31}>
-              <View style={s.v28}>
-                <Icon xml={X4} width={56} height={56} style={s.v27} />
-              </View>
+              {/* the viewfinder (a sample photo is never drawn: empty until the camera is on) */}
+              <CameraBox cam={cam} style={[s.v28, x.empty]} testID="drop-camera" />
               <View style={s.v23}>
                 <View>
                   <Text style={s.t20}>{"Photo of the drop"}</Text>
                 </View>
                 <View style={s.v22}>
-                  <Text style={s.t21}>{pod?.photoUrl ? `${hm(pod.savedAt)} · ${pod.savedOffline ? 'saved on phone' : 'sent'}` : 'Optional · none yet'}</Text>
+                  <Text style={s.t21} testID="drop-photo-state">{photoAt ? `${hm(photoAt)} · saved on phone` : pod?.photoUrl ? `${hm(pod.savedAt)} · ${pod.savedOffline ? 'saved on phone' : 'sent'}` : 'Optional · none yet'}</Text>
                 </View>
               </View>
-              <View style={s.v30}>
+              <Tap style={s.v30} onPress={photo} to={null} testID="drop-photo">
                 <Icon xml={X5} width={20} height={20} style={s.v1} />
-                <Text style={s.t29}>{"Add"}</Text>
-              </View>
+                <Text style={s.t29}>{cam.granted ? 'Take' : 'Add'}</Text>
+              </Tap>
             </View>
           </View>
           <View style={s.v43}>
@@ -119,16 +132,6 @@ export default function ScreenDr20Stop2ProofOfDelivery() {
             </View>
             <View style={s.v42}>
               <View style={s.v41}>
-                <View style={s.v40}>
-                  <Icon xml={X6} width={200} height={60} style={s.v36} />
-                  <View style={s.v37} />
-                  <View style={s.v38}>
-                    <Text style={s.t9}>{pod ? `Signed ${hm(pod.savedAt)}${pod.savedOffline ? ' · saved on phone' : ''}` : online ? 'Sent as soon as you complete' : 'Saved on this phone · sends with signal'}</Text>
-                  </View>
-                  <View style={s.v39}>
-                    <Text style={s.t29}>{"Clear"}</Text>
-                  </View>
-                </View>
                 <TextInput
                   value={receiver || pod?.receiverName || ''}
                   onChangeText={setReceiver}
@@ -137,6 +140,9 @@ export default function ScreenDr20Stop2ProofOfDelivery() {
                   style={[s.t20, { paddingTop: 12, paddingBottom: 4 }]}
                   testID="receiver-name"
                 />
+                <View style={{ paddingBottom: 8 }}>
+                  <Text style={s.t9}>{pod ? `Saved ${hm(pod.savedAt)}${pod.savedOffline ? ' · saved on phone' : ''}` : online ? 'Sent as soon as you complete' : 'Saved on this phone · sends with signal'}</Text>
+                </View>
               </View>
             </View>
           </View>
@@ -145,7 +151,7 @@ export default function ScreenDr20Stop2ProofOfDelivery() {
           <Tap
             lk="L20"
             style={s.v47}
-            to={stop ? { to: next, params: { stop: stop.id } } : undefined}
+            to={stop ? afterPod(view, stop) : undefined}
             onPress={async () => {
               if (!stop || !order) return true; // prototype mode: just navigate
               if (delivered) return true;
@@ -171,12 +177,12 @@ export default function ScreenDr20Stop2ProofOfDelivery() {
 const X0 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#f2f4fa\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"20\" height=\"20\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M19 12H5M12 19l-7-7 7-7\" fill=\"none\" stroke=\"#f2f4fa\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const X1 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#d6cfc7\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"14\" height=\"14\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M12 20h.01M8.5 16.43a5 5 0 0 1 7 0M2 8.82a15 15 0 0 1 4.17-2.65M10.66 5c4.01-.36 8.14.9 11.34 3.76M16.85 11.25a10 10 0 0 1 2.22 1.68M5 13a10 10 0 0 1 5.24-2.76M2 2l20 20\" fill=\"none\" stroke=\"#d6cfc7\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const X2 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#67e3f9\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M12 2v20M4.2 7l15.6 10M4.2 17 19.8 7\" fill=\"none\" stroke=\"#67e3f9\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"m9 4 3 2 3-2M9 20l3-2 3 2\" fill=\"none\" stroke=\"#67e3f9\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
-const X4 = "<svg width=\"56\" height=\"56\" viewBox=\"0 0 52 52\" fill=\"#000000\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"52\" height=\"52\" fill=\"#26303f\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect><rect x=\"0\" y=\"36\" width=\"52\" height=\"16\" fill=\"#1a212c\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect><rect x=\"6\" y=\"20\" width=\"18\" height=\"16\" rx=\"2\" fill=\"#5b7fa6\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect><rect x=\"8\" y=\"10\" width=\"14\" height=\"10\" rx=\"2\" fill=\"#7c9cc2\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect><rect x=\"27\" y=\"18\" width=\"19\" height=\"18\" rx=\"2\" fill=\"#5b7fa6\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect><rect x=\"29\" y=\"22\" width=\"15\" height=\"4\" rx=\"1\" fill=\"#9ec3e6\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect></svg>";
 const X5 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#b5bdd1\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"20\" height=\"20\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z\" fill=\"none\" stroke=\"#b5bdd1\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><circle cx=\"12\" cy=\"13\" r=\"3\" fill=\"none\" stroke=\"#b5bdd1\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></circle></svg>";
-const X6 = "<svg width=\"200\" height=\"60\" viewBox=\"0 0 280 84\" fill=\"none\" stroke=\"#f2f4fa\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M10 58 C 20 20, 36 12, 40 30 C 44 48, 30 66, 38 64 C 50 60, 58 30, 70 32 C 80 34, 70 58, 82 58 C 96 58, 100 36, 112 36 C 124 36, 116 56, 128 56 C 144 56, 150 28, 164 26 C 176 24, 170 50, 182 52 C 196 54, 206 40, 222 40\" fill=\"none\" stroke=\"#f2f4fa\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M60 72 C 110 66, 170 68, 250 60\" fill=\"none\" stroke=\"#f2f4fa\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const X7 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#111522\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M20 6 9 17l-5-5\" fill=\"none\" stroke=\"#111522\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const X8 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#b5bdd1\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"18\" height=\"18\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"6\" y=\"2\" width=\"12\" height=\"20\" rx=\"2\" fill=\"none\" stroke=\"#b5bdd1\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect><path d=\"M11 18h2\" fill=\"none\" stroke=\"#b5bdd1\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const G0: GradSpec[] = [{"type":"linear","angle":135,"at":null,"repeat":false,"stops":[{"c":"#ffd37a","p":0},{"c":"#f5b83d","p":0.6},{"c":"#eda422","p":1}]}];
+
+const x = StyleSheet.create({ empty: { backgroundColor: '#1a2340' } });
 
 const s = StyleSheet.create({
   v0: {"flexDirection":"column","alignItems":"stretch","backgroundColor":"#0a0f1e","flex":1},

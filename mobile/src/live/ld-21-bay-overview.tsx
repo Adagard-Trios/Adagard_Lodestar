@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { dayLabel, hm, until } from '@/lib/time';
 import { plural, signOutTo, titleCase } from '@/lodestar/live';
-import { isReleased, onTime, useTickCounts, useTripLineCounts } from '@/model/dock';
+import { isReleased, onTime, useRePlanAlert, useTickCounts, useTripLineCounts } from '@/model/dock';
 import { effectiveShortfalls, useBayQueue, useClaims, useOutbox } from '@/model/hooks';
 import type { Shortfall, Trip } from '@/model/types';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec, type Target } from '@/lodestar/runtime';
@@ -41,6 +41,7 @@ export default function ScreenLd21BayOverview() {
   const late = (t: Trip) => (isReleased(t, items) ? onTime(t) === false : !!t.departTime && Date.parse(t.departTime) < now);
   const onTimeCount = trips.filter(t => !late(t)).length;
   const depot = data?.depot ?? claims?.depots[0];
+  useRePlanAlert(depot);
   const name = claims?.name ?? claims?.username;
   const empty = !claims ? 'Sign in to see the bays' : loading && !data ? 'Loading the bays…' : error && !data ? 'No signal · bays not saved yet' : trips.length ? '' : 'No trips at the bays today';
   const sheetOf = (t: Trip | null): Target | undefined => (t ? { to: 'ld-02-load-sheet-tablet', params: { trip: t.id } } : undefined);

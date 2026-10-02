@@ -17,7 +17,7 @@ import Drafting from '@/live/dsp-22-planning-agent-drafting';
 import Proposal from '@/live/dsp-40-agent-proposal-in-draft';
 import { freezeDate, unfreeze } from './helpers/clock';
 import type { FakeRequest } from './helpers/live';
-import { page, renderLive } from './helpers/live';
+import { agentConfigReply, page, renderLive } from './helpers/live';
 
 const router = { push: jest.fn(), replace: jest.fn(), back: jest.fn(), forward: jest.fn(), refresh: jest.fn(), prefetch: jest.fn() };
 jest.mock('next/navigation', () => ({ useRouter: () => router, usePathname: () => '/plan' }));
@@ -35,7 +35,10 @@ const disabled = (el: HTMLElement) => el.getAttribute('aria-disabled') === 'true
 
 /** Reads every Plan screen makes: sidebar counts and the latest run date. */
 function base(req: FakeRequest) {
+  if (agentConfigReply(req)) return agentConfigReply(req);
   if (req.query.$top === '0') return page([], 0);
+  // no open orders from today on (the test day is past): the desk falls back to the latest plan's run date
+  if (req.path === 'Orders' && req.query.$select === 'runDate') return page([]);
   if (req.path === 'Plans' && req.query.$select === 'runDate') return page([{ runDate: DAY }]);
   return undefined;
 }
@@ -220,8 +223,8 @@ describe('DSP-13 Exceptions inbox', () => {
     const detail = screen.getByTestId('exception-detail');
     expect(detail).toHaveTextContent('Outlet T01: order exception');
     expect(await within(detail).findByText(/Window/)).toHaveTextContent('Window 05:30–08:00. ORDT1 · Dock blocked');
-    expect(view.calls.find(c => c.path === 'Orders' && c.query.$filter?.includes('EXCEPTION'))!.query.$filter).toBe(`${RUN_FILTER} and outlet/depot in ('PELIYAGODA','KANDY') and status eq 'EXCEPTION'`);
-    expect(view.calls.find(c => c.path === 'TripStops')!.query.$filter).toBe("trip/runDate ge 2026-04-07T00:00:00.000Z and trip/runDate lt 2026-04-08T00:00:00.000Z and lateRiskPct ge 40 and status ne 'DELIVERED' and trip/depot in ('PELIYAGODA','KANDY')");
+    expect(view.calls.find(c => c.path === 'Orders' && c.query.$filter?.includes("status eq 'EXCEPTION'"))!.query.$filter).toBe(`${RUN_FILTER} and outlet/depot in ('PELIYAGODA','KANDY') and status eq 'EXCEPTION'`);
+    expect(view.calls.find(c => c.path === 'TripStops')!.query.$filter).toBe("trip/runDate ge 2026-04-07T00:00:00.000Z and trip/runDate lt 2026-04-08T00:00:00.000Z and lateRiskPct ge 30 and status ne 'DELIVERED' and trip/depot in ('PELIYAGODA','KANDY')");
 
     fireEvent.click(inbox.querySelector('[data-exception="stop:S2"]')!);
     await waitFor(() => expect(screen.getByText('stops done').parentElement).toHaveTextContent('1 / 2'));

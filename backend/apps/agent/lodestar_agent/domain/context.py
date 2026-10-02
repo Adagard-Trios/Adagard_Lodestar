@@ -8,7 +8,9 @@ from typing import Any
 
 from . import heuristics as h
 
-OPEN_STATUSES = ("RECEIVED", "PLANNED")
+# DEFERRED: an order an earlier run deferred and rolled to this day (executePlan sets deferredYesterday, so it is
+# protected here); leaving it out would strand it, unplanned, on its new run date.
+OPEN_STATUSES = ("RECEIVED", "PLANNED", "DEFERRED")
 
 
 @dataclass

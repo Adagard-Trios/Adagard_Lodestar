@@ -1,12 +1,16 @@
 'use client';
 // SM-29 Messages, live. Markup and classes from the generated design (frontend/screens/sm-29-messages.tsx).
 // Data: the user's own Notifications (the API only returns the caller's), grouped by day; opening one marks it
-// read (Notifications('…')/Lodestar.MarkRead). New notifications arrive over the WebSocket (user:<sub> room).
+// read (Notifications('…')/Lodestar.MarkRead). New notifications arrive over the WebSocket (user:<sub> room), and
+// every store event refreshes the list. "View credit note" and "Open order thread" open the notice's order on
+// SM-28 / SM-27.
 import { useMemo, useState } from 'react';
 import Btn from '@/components/live/Btn';
 import { StoreTop } from '@/components/live/chrome';
 import { Ic, type IconName } from '@/components/live/icons';
 import { Empty, ErrorBanner, Skeleton, Spinner } from '@/components/live/states';
+import { noticeText, STORE_EVENTS } from '@/components/live/store-data';
+import { useFocusId } from '@/lib/workday';
 import { fmtDay, fmtDayTime, fmtTime } from '@/lib/format';
 import { useAction, useEntitySet } from '@/lib/odata/hooks';
 import type { Notification } from '@/lib/odata/types';
@@ -27,18 +31,23 @@ function look(type: string): { lead: string; icon: IconName; pill: string } {
   return { lead: '', icon: 'message', pill: 'm-pill--brand' };
 }
 const label = (type: string) => type.charAt(0) + type.slice(1).toLowerCase().replace(/_/g, ' ');
-const payloadText = (n: Notification) => {
-  const p = (n.payload ?? {}) as Record<string, unknown>;
-  return String(p.message ?? p.description ?? p.title ?? p.note ?? '');
+const payloadText = (n: Notification) => noticeText(n);
+/** The order a notice is about (its own, or the first of a plan notice). */
+const orderOf = (n: Notification | undefined): string | null => {
+  const p = (n?.payload ?? {}) as Record<string, unknown>;
+  if (typeof p.orderId === 'string') return p.orderId;
+  const first = Array.isArray(p.orders) ? (p.orders[0] as Record<string, unknown> | undefined) : undefined;
+  return typeof first?.orderId === 'string' ? first.orderId : null;
 };
 
 export default function LiveSm29Messages() {
   const [filter, setFilter] = useState<Filter>('all');
   const [selId, setSelId] = useState<string | null>(null);
   const list = useEntitySet<Notification>('Notifications', { filter: FILTER[filter], orderby: 'sentAt desc', top: 30, count: true }, {
-    refreshOn: ['notification', 'credit_note_issued', 'eta_update'],
+    refreshOn: STORE_EVENTS,
   });
-  const unread = useEntitySet<Notification>('Notifications', { filter: 'readAt eq null', top: 0, count: true }, { refreshOn: ['notification'] });
+  const unread = useEntitySet<Notification>('Notifications', { filter: 'readAt eq null', top: 0, count: true }, { refreshOn: STORE_EVENTS });
+  const [, setFocusOrder] = useFocusId('order');
   const markRead = useAction<string, Notification>((c, id) => c.action<Notification>('Notifications', id, 'MarkRead'), {
     onSuccess: n => {
       list.setData(rows => (rows ?? []).map(r => (r.id === n.id ? { ...r, readAt: n.readAt ?? new Date().toISOString() } : r)));
@@ -124,8 +133,9 @@ export default function LiveSm29Messages() {
                     {sel.tripId && <div className="kvl__r"><span>{"Trip"}</span><span className="id">{sel.tripId}</span></div>}
                   </div>
                   <div className="hstack" style={{ gap: '10px' }}>
-                    <span className="d-btn d-btn--primary" data-lk="L137">{"Receipts & credit notes"}</span>
-                    <span className="d-btn" data-lk="L138">{"Open orders"}</span>
+                    {/* the shell follows the design link (SM-28 / SM-27) after the order is set as the one to open */}
+                    <span className="d-btn d-btn--primary" data-lk="L137" data-testid="view-credit" onClick={() => setFocusOrder(orderOf(sel))} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setFocusOrder(orderOf(sel)); }}>{p.creditNoteId ? 'View credit note' : 'Receipts & credit notes'}</span>
+                    <span className="d-btn" data-lk="L138" data-testid="open-thread" onClick={() => setFocusOrder(orderOf(sel))} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setFocusOrder(orderOf(sel)); }}>{orderOf(sel) ? 'Open order thread' : 'Open orders'}</span>
                   </div>
                 </div>
               )}

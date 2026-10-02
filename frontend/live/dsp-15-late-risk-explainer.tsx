@@ -15,7 +15,7 @@ import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { usePlanScope } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
-import { dayFilter, fmtClock, fmtNum, isoDay, TIME_ZONE } from '@/lib/format';
+import { dayFilter, fmtClock, fmtNum, isoDay, LATE_RISK_HIGH_PCT, LATE_RISK_PCT, TIME_ZONE } from '@/lib/format';
 import { useEntity, useQuery } from '@/lib/odata/hooks';
 import type { Order, Outlet, Trip, TripStop } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
@@ -98,7 +98,7 @@ export default function LiveDsp15LateRiskExplainer() {
   const to = pts.length ? Math.max(from + 60, Math.ceil(Math.max(...pts) / 30) * 30) : 60;
   const at = (m: number) => `${(((m - from) / (to - from)) * 100).toFixed(1)}%`;
   const ticks = Array.from({ length: Math.floor((to - from) / 30) + 1 }, (_, i) => from + i * 30);
-  const tone = risk === null ? 'var(--text)' : risk >= 50 ? 'var(--st-exception-fg)' : risk >= 30 ? 'var(--st-deferred-fg)' : 'var(--st-delivered-fg)';
+  const tone = risk === null ? 'var(--text)' : risk >= LATE_RISK_HIGH_PCT ? 'var(--st-exception-fg)' : risk >= LATE_RISK_PCT ? 'var(--st-deferred-fg)' : 'var(--st-delivered-fg)';
   const nowLabel = fmtClock(new Date());
   let cum = 0;
 

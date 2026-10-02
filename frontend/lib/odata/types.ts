@@ -56,7 +56,12 @@ export interface Order {
   notes?: string | null;
   /** The store's count (Orders('…')/Lodestar.ConfirmReceipt); null until the receipt is confirmed. */
   unitsReceived?: number | null;
+  /** The units the store expected when it counted (the order's units at the time). */
+  unitsExpected?: number | null;
   receiptNote?: string | null;
+  /** When the store counted (may be before it reached the server) and when the server recorded it. */
+  receiptSavedAt?: string | null;
+  receivedAt?: string | null;
   creditNoteId?: string | null;
   createdAt?: string;
   updatedAt?: string;

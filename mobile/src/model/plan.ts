@@ -1,20 +1,59 @@
 // Lodestar Plan phone (dispatcher): the alerts list, the plan under review, trip progress and signal state,
 // built from Notifications, Plans, the day's trips and the live socket notices.
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useStore } from '@/lib/store';
-import { inList } from '@/lib/odata';
+import { inList, key, type ODataClient } from '@/lib/odata';
 import { addDays, dayFilter, dayLabel, hm } from '@/lib/time';
 import { titleCase } from '@/lodestar/live';
 import { notices, type Notice } from '@/realtime/notices';
-import { useClaims, useLiveRoutes, useNotifications, useParam, usePlans } from './hooks';
+import * as api from './api';
+import { useClaims, useLiveRoutes, useNotifications, useParam } from './hooks';
+import { client } from './platform';
+import { LATE_RISK_PCT } from './preferences';
 import { useQuery } from './query';
 import type { Deferral, Notification, Order, Outlet, Plan, Trip, TripStop } from './types';
 
-/** Late risk at or above this needs the dispatcher. */
-export const LATE_RISK = 50;
+/** How often the dispatcher's live screens re-read when no realtime notice arrives (a dropped socket, a quiet zone). */
+export const LIVE_POLL_MS = 30_000;
 
-/** Notification types that wake the dispatcher until they are read. */
-const ALERT_TYPES = new Set(['BLACKOUT_DETECTED', 'SIGNAL_LOST', 'REEFER_FAIL', 'DEFERRAL_SUGGESTED', 'LATE_RISK', 'DOCK_BLOCKED']);
+/** Calls `fn` every `ms` while the screen is mounted. */
+export function useEvery(ms: number, fn: () => void) {
+  const ref = useRef(fn);
+  useEffect(() => {
+    ref.current = fn;
+  });
+  useEffect(() => {
+    const t = setInterval(() => ref.current(), ms);
+    return () => clearInterval(t);
+  }, [ms]);
+}
+
+/** Late risk at or above this needs the dispatcher (one value with the desk: LATE_RISK_PCT). */
+export const LATE_RISK = LATE_RISK_PCT;
+
+/** The planning agent's limits (AgentRuns/Lodestar.AgentConfig, from the agent's GET /config). */
+export type AgentLimits = { maxTripsPerVehicle: number; freshMinutesBudget: number; otherMinutesBudget: number };
+export type AgentConfig = { firstDeparture?: string; limits: AgentLimits; rules: Array<{ rule: string; label: string }> };
+
+export function useAgentConfig() {
+  return useQuery<AgentConfig>('agent-config', c => c.fn<AgentConfig>('AgentRuns/Lodestar.AgentConfig()'), { persist: true });
+}
+
+/** "212 / 270 min" with the trip's day budget (Fresh or Style and Tech) when the config is known, else "212 min". */
+export function minutesOfBudget(minutes: number | null | undefined, brand: string | null | undefined, cfg?: AgentConfig): string {
+  if (minutes === null || minutes === undefined) return '—';
+  const budget = cfg ? (brand === 'FRESH' ? cfg.limits.freshMinutesBudget : cfg.limits.otherMinutesBudget) : undefined;
+  return budget ? `${Math.round(minutes)} / ${budget} min` : `${Math.round(minutes)} min`;
+}
+
+/**
+ * Notification types that wake the dispatcher until they are read: the same alert list as the desk's exceptions
+ * inbox (frontend/components/live/plan-data.ts ALERT_TYPES), plus the order and driver reports sent to dispatch.
+ */
+export const ALERT_TYPES = new Set([
+  'BLACKOUT_DETECTED', 'SIGNAL_LOST', 'REEFER_FAIL', 'DEFERRAL_SUGGESTED', 'LATE_RISK', 'DOCK_BLOCKED', 'SHORTFALL_ACK',
+  'SHORTFALL_FLAGGED', 'POD_EXCEPTION', 'STOP_FAILED', 'RECEIPT_ISSUE', 'VEHICLE_FAULT', 'ORDER_AT_RISK', 'DRIVER_REPORT',
+]);
 
 export type AlertTone = 'late' | 'signal' | 'done';
 
@@ -146,7 +185,7 @@ export function useSignalLost(): Map<string, string> {
 export function useAlerts() {
   const claims = useClaims();
   const notes = useNotifications();
-  const plans = usePlans();
+  const plans = useReviewPlans();
   const routes = useLiveRoutes();
   const live = useStore(notices);
   const rows = useMemo(() => {
@@ -156,7 +195,7 @@ export function useAlerts() {
       out.push({
         id: `p:${p.id}`,
         tone: 'late',
-        title: `Plan v${p.version} waits for you`,
+        title: p.version ? `Plan v${p.version} waits for you` : 'Agent draft waits for you',
         meta: [planSource(p), titleCase(p.depot), dayLabel(p.runDate)].filter(Boolean).join(' · '),
         at: p.createdAt,
         needsYou: true,
@@ -189,7 +228,12 @@ export function useAlerts() {
   }, [plans.data, routes.data, notes.data, live]);
   const loading = notes.loading || plans.loading || routes.loading;
   const hasData = notes.data !== undefined || plans.data !== undefined || routes.data !== undefined;
-  return { ...rows, signedIn: !!claims, loading, hasData, date: routes.data?.date };
+  const refresh = () => {
+    notes.refresh();
+    plans.refresh();
+    routes.refresh();
+  };
+  return { ...rows, signedIn: !!claims, loading, hasData, date: routes.data?.date, refresh };
 }
 
 /** The number on the Alerts tab (0 = no badge). */
@@ -197,14 +241,106 @@ export function useAlertCount(): number {
   return useAlerts().needs.length;
 }
 
-/** The plan to review: route param `plan`, else the newest one awaiting approval. */
+/** A planning-agent run (AgentRuns): its draft lives on the run until a dispatcher approves it. */
+export type AgentRunRow = {
+  id: string;
+  depot: Plan['depot'];
+  runDate: string;
+  status: string;
+  planId?: string | null;
+  detail?: Record<string, any> | null;
+  createdAt: string;
+  updatedAt?: string;
+};
+
+/** A plan waiting for the dispatcher: a Plan row, or an agent draft (`agentRunId`) shown in the same shape. */
+export type ReviewPlan = Plan & { agentRunId?: string };
+
+/** An agent run's draft as a plan awaiting approval (summary and explanation in the shapes readPlan reads). */
+export function runAsPlan(r: AgentRunRow): ReviewPlan {
+  const d = r.detail ?? {};
+  const version = Number(d.plan?.version ?? d.version ?? 0) || 0;
+  const explanation = d.explanation === undefined || d.explanation === null ? null : typeof d.explanation === 'string' ? d.explanation : JSON.stringify(d.explanation);
+  return {
+    id: r.id,
+    agentRunId: r.id,
+    depot: r.depot,
+    runDate: r.runDate,
+    version,
+    status: 'NEEDS_APPROVAL',
+    source: 'AGENT',
+    createdAt: r.createdAt,
+    explanation,
+    summary: {
+      plan: d.plan ?? null,
+      ruleChecks: d.ruleChecks ?? null,
+      violations: d.violations ?? null,
+      deferrals: d.deferrals ?? null,
+      needsReview: d.needsReview ?? null,
+      contextSummary: d.contextSummary ?? null,
+    },
+  };
+}
+
+/**
+ * A Plan row that approval can put into effect: one with drawn trips (an agent or manual plan). An auto-plan
+ * suggestion has no trips (Plans/Approve answers 409 PlanNotExecutable): it is drafted on the desk with the agent.
+ */
+export function isExecutable(p: Pick<Plan, 'summary'>): boolean {
+  const trips = (p.summary as { plan?: { trips?: unknown[] } } | null | undefined)?.plan?.trips;
+  return Array.isArray(trips) && trips.length > 0;
+}
+
+/** Agent drafts waiting for approval and executable plans awaiting approval, newest first. */
+export async function reviewPlans(c: ODataClient): Promise<ReviewPlan[]> {
+  const [plans, runs] = await Promise.all([
+    api.plansAwaitingApproval(c),
+    c.list<AgentRunRow>('AgentRuns', { filter: "status eq 'NEEDS_APPROVAL'", orderby: 'createdAt desc', top: 10 }).then(r => r.value),
+  ]);
+  const out: ReviewPlan[] = [...runs.map(runAsPlan), ...plans.filter(isExecutable)];
+  return out.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
+/** Everything awaiting the dispatcher's approval (DSP-27's "waits for you" rows, DSP-28, DSP-38). */
+export function useReviewPlans() {
+  const signedIn = !!useClaims();
+  return useQuery<ReviewPlan[]>(signedIn ? 'plans.review' : null, c => reviewPlans(c));
+}
+
+/** The plan to review: route param `plan` (a plan id or an agent run id), else the newest one awaiting approval. */
 export function usePlan() {
   const param = useParam('plan');
-  const plans = usePlans();
-  const id = param ?? plans.data?.[0]?.id;
-  const q = useQuery<Plan>(id ? `plan.${id}` : null, c => c.get<Plan>('Plans', id!));
-  const plan = q.data ?? plans.data?.find(p => p.id === id) ?? null;
+  const plans = useReviewPlans();
+  const listed = param ? plans.data?.find(p => p.id === param) : plans.data?.[0];
+  const id = param ?? listed?.id;
+  const isRun = listed ? !!listed.agentRunId : false;
+  // a fresh read: a Plan row, or the run (reading a run re-syncs it from the agent)
+  const q = useQuery<ReviewPlan>(id && (listed || !plans.loading) ? `plan.${isRun ? 'run.' : ''}${id}` : null, async c => {
+    if (isRun) return runAsPlan(await c.get<AgentRunRow>('AgentRuns', id!));
+    try {
+      return await c.get<Plan>('Plans', id!);
+    } catch (e) {
+      // an id from an alert may be an agent run that is not listed any more (approved or rejected meanwhile)
+      const run = await c.get<AgentRunRow>('AgentRuns', id!).catch(() => null);
+      if (!run) throw e;
+      return { ...runAsPlan(run), status: run.status === 'NEEDS_APPROVAL' ? 'NEEDS_APPROVAL' : run.status === 'APPROVED' ? 'APPROVED' : 'REJECTED' } as ReviewPlan;
+    }
+  });
+  const plan = q.data ?? listed ?? null;
   return { ...q, id, plan, plans };
+}
+
+/**
+ * Approves a plan with the dispatcher's authority: an agent draft through AgentRuns('…')/Lodestar.Resume (planning
+ * stores it as a plan version and publishes it), a Plan row through Plans('…')/Lodestar.Approve.
+ */
+export async function approveReview(p: ReviewPlan, overrideReason?: string): Promise<{ version?: number; planId?: string }> {
+  if (p.agentRunId) {
+    const run = await client.action<AgentRunRow>(`AgentRuns${key(p.agentRunId)}/Lodestar.Resume`, { decision: 'approve', ...(overrideReason ? { overrideReason } : {}) });
+    return { version: p.version || undefined, planId: run?.planId ?? undefined };
+  }
+  const done = await api.approvePlan(client, p.id, undefined, overrideReason);
+  return { version: done?.version, planId: done?.id };
 }
 
 export type PlanChange = { title: string; meta: string; code?: string; warn?: boolean };
@@ -282,7 +418,7 @@ export function readPlan(p: Plan | null): PlanView {
         Array.isArray(t.orderIds) ? `${t.orderIds.length} orders` : undefined,
         n(t.m3) !== undefined ? `${fix1(n(t.m3))} m³` : undefined,
         str(t.district),
-        n(t.minutes) !== undefined ? `${Math.round(n(t.minutes)!)} / 270 min` : undefined,
+        n(t.minutes) !== undefined ? `${Math.round(n(t.minutes)!)} min` : undefined,
       ].filter(Boolean).join(' · '),
     }));
   for (const d of [...suggestions, ...deferrals]) {
@@ -400,5 +536,11 @@ export function usePlansBoard() {
     loading: routes.loading || plans.loading,
     error: routes.error ?? plans.error,
     hasData: routes.data !== undefined,
+    refresh: () => {
+      routes.refresh();
+      plans.refresh();
+      moved.refresh();
+      queue.refresh();
+    },
   };
 }

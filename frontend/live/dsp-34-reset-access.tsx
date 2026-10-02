@@ -5,6 +5,7 @@
 // one-time link; otherwise (the shipped realm) the screen gives the admin-request path the design shows. "Back to
 // sign in" is the design's link (L175).
 import { Ic } from '@/components/live/icons';
+import { DEPOT_NAME } from '@/lib/format';
 import { runtimeConfig } from '@/lib/config';
 import { adminRequestMail, resetCredentialsUrl, resetOptions } from '@/lib/auth/reset';
 
@@ -44,8 +45,7 @@ export default function LiveDsp34ResetAccess() {
             </svg>
           </div>
           <div className="dx-auth__foot">
-            <span><Ic n="depot" />{"Peliyagoda DC"}</span>
-            <span><Ic n="depot" />{"Kandy Hub"}</span>
+            {Object.entries(DEPOT_NAME).map(([k, name]) => <span key={k}><Ic n="depot" />{name}</span>)}
             <span><Ic n="lock" />{"Waypoint Group staff only"}</span>
           </div>
         </div>

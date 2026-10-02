@@ -2,13 +2,14 @@
 // DSP-05 Capacity outlook, live. Markup and classes from the generated design (frontend/screens/dsp-05-capacity-outlook.tsx).
 // Data: Plans/Lodestar.CapacityOutlook(depot=…) for each depot in view (10 ISO weeks: operating days, festival,
 // payday, forecast total and chilled m³, reefers available and their m³ per trip) and the reefers in the workshop.
-// Reefer trips: needed = chilled m³ ÷ m³ per reefer trip; available = reefers × 2 trips a day × operating days
-// (the booklet's two-trips-a-day limit, as on the plan board). Advisory only: nothing is booked or deferred here.
+// Reefer trips: needed = chilled m³ ÷ m³ per reefer trip; available = reefers × trips a day × operating days
+// (the planning agent's maxTripsPerVehicle from AgentRuns/Lodestar.AgentConfig, as on the plan board). Advisory only: nothing is booked or deferred here.
 // Not shown, because the service has no data for them: the brand split (Fresh/Style/Tech columns), the 80% band,
 // the recommended hire and the "Other options" card.
 import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { usePlanScope } from '@/components/live/plan-data';
+import { useAgentConfig } from '@/components/live/settings-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { valueOf } from '@/lib/odata/client';
 import { fmtDay, fmtNum, fmtRunDate, fmtTime } from '@/lib/format';
@@ -29,8 +30,6 @@ export interface OutlookWeek {
   festival: string | null;
 }
 
-/** Booklet rule shown on the plan board: a vehicle runs at most two trips a day. */
-const TRIPS_PER_DAY = 2;
 const SHORT: Record<string, string> = { PELIYAGODA: 'Peliyagoda', KANDY: 'Kandy Hub' };
 const MINUS = '−';
 const signed = (n: number) => (n < 0 ? `${MINUS}${Math.abs(n)}` : `+${n}`);
@@ -40,15 +39,15 @@ interface Row extends OutlookWeek {
   depot: Depot;
   perTrip: number | null;
   needed: number | null;
-  available: number;
+  available: number | null;
   headroom: number | null;
 }
 
-function toRow(depot: Depot, w: OutlookWeek): Row {
+function toRow(depot: Depot, w: OutlookWeek, tripsPerDay: number | undefined): Row {
   const perTrip = w.reeferVehiclesAvailable > 0 ? w.reeferCapacityM3 / w.reeferVehiclesAvailable : null;
   const needed = perTrip ? Math.ceil(w.estimatedChilledDemandM3 / perTrip) : null;
-  const available = w.reeferVehiclesAvailable * TRIPS_PER_DAY * w.operatingDays;
-  return { ...w, depot, perTrip, needed, available, headroom: needed === null ? null : available - needed };
+  const available = tripsPerDay ? w.reeferVehiclesAvailable * tripsPerDay * w.operatingDays : null;
+  return { ...w, depot, perTrip, needed, available, headroom: needed === null || available === null ? null : available - needed };
 }
 
 /** A round tick step so that about three gridlines cover `max`. */
@@ -69,7 +68,7 @@ function usualDays(rows: OutlookWeek[]) {
 function Headroom({ r }: { r: Row }) {
   if (r.headroom === null) return <span className="t-3">—</span>;
   if (r.headroom < 0) return <span className="m-pill m-pill--bad" style={{ height: '24px', fontSize: '12.5px' }}>{signed(r.headroom)} trips</span>;
-  if (r.headroom < r.available * 0.1) return <span className="m-tag m-tag--warn"><span className="dot" />{signed(r.headroom)} tight</span>;
+  if (r.headroom < (r.available ?? 0) * 0.1) return <span className="m-tag m-tag--warn"><span className="dot" />{signed(r.headroom)} tight</span>;
   return <span className="m-tag m-tag--ok"><span className="dot" />{signed(r.headroom)}</span>;
 }
 
@@ -161,9 +160,10 @@ export default function LiveDsp05CapacityOutlook() {
     c.all<Vehicle>('Vehicles', { filter: ["tempClass eq 'CHILLED'", "status eq 'WORKSHOP'", depotFilter('depot', active)].filter(Boolean).join(' and '), select: 'id,depot' }),
   );
 
+  const tripsPerDay = useAgentConfig().data?.limits?.maxTripsPerVehicle;
   const data = outlook.data ?? [];
   const rows = data
-    .flatMap(o => o.weeks.map(w => toRow(o.depot, w)))
+    .flatMap(o => o.weeks.map(w => toRow(o.depot, w, tripsPerDay)))
     .sort((a, b) => a.weekStart.localeCompare(b.weekStart) || active.indexOf(a.depot) - active.indexOf(b.depot));
   const weekKeys = [...new Set(rows.map(r => r.week))];
   const weeks: OutlookWeek[] = weekKeys.map(k => {
@@ -225,7 +225,7 @@ export default function LiveDsp05CapacityOutlook() {
                   <span className="d-kpi__v" style={{ ...(peakBad ? { color: 'var(--st-exception-fg)' } : {}), whiteSpace: 'nowrap' }}>{signed(peak.headroom!)}<small>{"trips"}</small></span>
                   <span className="d-kpi__s" style={{ lineHeight: '1.45' }}>
                     <b>{peak.needed}</b>{" reefer trips needed vs "}<b>{peak.available}</b>
-                    {` available (${peak.reeferVehiclesAvailable} × ${TRIPS_PER_DAY} × ${peak.operatingDays}${out.length ? `, ${out.join(', ')} out` : ''}).`}
+                    {` available (${peak.reeferVehiclesAvailable} × ${tripsPerDay} × ${peak.operatingDays}${out.length ? `, ${out.join(', ')} out` : ''}).`}
                     {peakBad && peak.perTrip ? ` About ${fmtNum(-peak.headroom! * peak.perTrip)} m³ chilled would be deferred.` : ''}
                   </span>
                 </div>
@@ -268,7 +268,7 @@ export default function LiveDsp05CapacityOutlook() {
                         <span className="d-td id" style={{ width: '48px', ...(bad ? { color: 'var(--st-exception-fg)', fontWeight: '800' } : {}) }}>{r.week}</span>
                         <span className={`d-td${bad ? ' fw7' : ''}`} style={{ width: '92px' }}>{SHORT[r.depot] ?? r.depot}</span>
                         <span className={`d-td x-num${bad ? ' fw7' : ''}`} style={{ width: '60px' }}>{fmtNum(r.estimatedChilledDemandM3)}</span>
-                        <span className={`d-td x-num${bad ? ' fw7' : ''}`} style={{ width: '96px' }}>{r.needed ?? '—'} / {r.available}</span>
+                        <span className={`d-td x-num${bad ? ' fw7' : ''}`} style={{ width: '96px' }}>{r.needed ?? '—'} / {r.available ?? '—'}</span>
                         <span className="d-td" style={{ width: '96px' }}><Headroom r={r} /></span>
                         <span className="d-td x-meta" style={{ flex: '1', minWidth: '0' }}><Signal w={r} usual={usual} /></span>
                       </div>

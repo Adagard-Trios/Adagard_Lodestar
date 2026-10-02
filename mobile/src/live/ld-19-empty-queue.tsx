@@ -6,7 +6,7 @@
 import { Text, View, StyleSheet } from 'react-native';
 import { dayLabel, hm } from '@/lib/time';
 import { signOutTo, titleCase } from '@/lodestar/live';
-import { isReleased, onTime, useLatestPlan } from '@/model/dock';
+import { isReleased, onTime, useLatestPlan, useRePlanAlert } from '@/model/dock';
 import { useBayQueue, useClaims, useOutbox } from '@/model/hooks';
 import { depotName } from '@/model/plan';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
@@ -27,6 +27,7 @@ export default function ScreenLd19EmptyQueue() {
   const { items } = useOutbox();
   const date = bay.data?.date;
   const depot = bay.data?.depot ?? claims?.depots[0];
+  useRePlanAlert(depot);
   const plan = useLatestPlan(depot, date).data ?? null;
   const trips = bay.data?.trips ?? [];
   const mine = trips.filter(t => isReleased(t, items) && (t.loadRecord?.loaderId === claims?.sub || items.some(i => i.kind === 'RELEASE' && i.tripId === t.id)));
@@ -83,7 +84,7 @@ export default function ScreenLd19EmptyQueue() {
             </View>
           ) : null}
           <View style={s.v20}>
-            <Icon xml={X2} width={240} height={132} style={s.v17} />
+            <Icon xml={X2.replace('>K2</text>', `>${(myBays[0] ?? '').replace(/[<>&]/g, '')}</text>`)} width={240} height={132} style={s.v17} />
             <View>
               <Text style={s.t18} testID="queue-empty">{empty || "Your queue is empty"}</Text>
             </View>

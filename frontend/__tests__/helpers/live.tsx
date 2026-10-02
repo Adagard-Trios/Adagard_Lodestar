@@ -125,3 +125,13 @@ export const page = <T,>(value: T[], count?: number, nextLink?: string) => ({
   value,
   ...(nextLink ? { '@odata.nextLink': nextLink } : {}),
 });
+
+/** The planning agent's limits as AgentRuns/Lodestar.AgentConfig returns them (only the parts the board screens read). */
+export const AGENT_CONFIG = {
+  firstDeparture: '03:30',
+  limits: { maxTripsPerVehicle: 2, freshMinutesBudget: 270, otherMinutesBudget: 480, protectedScore: 91, deferralCandidateBelow: 30, defaultServiceMin: 15 },
+  rules: [{ rule: 'weight', label: 'Weight' }, { rule: 'volume', label: 'Volume' }],
+  reasonCodes: [],
+};
+/** Answers the AgentConfig function call, else undefined. */
+export const agentConfigReply = (req: FakeRequest) => (req.path.includes('Lodestar.AgentConfig') ? { value: AGENT_CONFIG } : undefined);

@@ -5,6 +5,8 @@ import { hm } from '@/lib/time';
 import { plural, titleCase } from '@/lodestar/live';
 import { arriveAtStop } from '@/model/actions';
 import { isUnsent, useOutbox, useStop } from '@/model/hooks';
+import { stopGroup } from '@/model/run';
+import { LATE_RISK_PCT } from '@/model/preferences';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L14":{"to":"dr-03-proof-of-delivery","kind":"go"},"L251":{"to":"dr-17-report-a-problem","kind":"go"},"L252":{"to":"dr-35-stop-arrival-speaking","kind":"go"},"B":{"to":"dr-36-en-route-driving-mode","kind":"back"}}};
@@ -17,8 +19,11 @@ export default function ScreenDr02StopArrival() {
   const total = view?.tripStops.length ?? 0;
   const arrived = stop?.arrivalActual;
   const unsent = isUnsent(waiting, stop?.id);
-  const late = (stop?.lateRiskPct ?? 0) >= 50;
-  const chilled = order?.tempClass === 'CHILLED';
+  const late = (stop?.lateRiskPct ?? 0) >= LATE_RISK_PCT;
+  // every order dropped at this stop (e.g. chilled + dry), chilled first; delivery starts with the first one still open
+  const group = stopGroup(view?.tripStops ?? [], stop);
+  const first = group.find(r => r.status !== 'DELIVERED') ?? stop;
+  const chilled = group.some(r => r.order?.tempClass === 'CHILLED');
   const access = o ? [titleCase(o.dockType), titleCase(o.parking) ? `${titleCase(o.parking)} parking` : ''].filter(Boolean).join(' · ') : '';
   const say = stop
     ? [
@@ -30,6 +35,7 @@ export default function ScreenDr02StopArrival() {
       ].filter(Boolean).join(' ')
     : 'No stop loaded yet.';
   const params = stop ? { stop: stop.id } : undefined;
+  const podParams = first ? { stop: first.id } : undefined;
   return (
     <Frame bg="#070b16" nav={nav} style={s.v0}>
       <View style={s.v55}>
@@ -118,7 +124,7 @@ export default function ScreenDr02StopArrival() {
           <View style={s.v38}>
             <View style={s.v27}>
               <View style={s.v13}>
-                <Text style={s.t25}>{order ? 'To drop · 1 order' : 'To drop'}</Text>
+                <Text style={s.t25}>{group.length ? `To drop · ${plural(group.length, 'order')}` : 'To drop'}</Text>
               </View>
               {chilled ? (
                 <View style={s.v40}>
@@ -128,32 +134,40 @@ export default function ScreenDr02StopArrival() {
               ) : null}
             </View>
             <View style={s.v37}>
-              {order ? (
-                <View style={s.v33}>
-                  <View style={chilled ? s.v41 : s.v28}>
-                    <Icon xml={chilled ? X8 : X9} width={22} height={22} style={s.v1} />
-                  </View>
-                  <View style={s.v32}>
-                    <View>
-                      <Text style={s.t29}>{chilled ? 'Chilled' : 'Dry'}</Text>
-                    </View>
-                    <View style={s.v31}>
-                      <View style={s.v13}>
-                        <Text style={s.t42}>{order.id}</Text>
+              {group.some(r => r.order) ? (
+                group.map((r, i) => {
+                  const ro = r.order;
+                  if (!ro) return null;
+                  const cold = ro.tempClass === 'CHILLED';
+                  const n = r.orderId === order?.id ? lines.length : 0;
+                  return (
+                    <View key={r.id} style={i === 0 ? s.v33 : s.v36} testID={`drop-${r.orderId}`}>
+                      <View style={cold ? s.v41 : s.v28}>
+                        <Icon xml={cold ? X8 : X9} width={22} height={22} style={s.v1} />
                       </View>
-                      <View style={s.v43} />
-                      <Text style={s.t30}>{lines.length ? plural(lines.length, 'line') : chilled ? 'chilled' : 'ambient'}</Text>
+                      <View style={s.v32}>
+                        <View>
+                          <Text style={s.t29}>{cold ? 'Chilled' : 'Dry'}</Text>
+                        </View>
+                        <View style={s.v31}>
+                          <View style={s.v13}>
+                            <Text style={s.t42}>{ro.id}</Text>
+                          </View>
+                          <View style={s.v43} />
+                          <Text style={s.t30}>{r.status === 'DELIVERED' ? 'delivered' : n ? plural(n, 'line') : cold ? 'chilled' : 'ambient'}</Text>
+                        </View>
+                      </View>
+                      <View style={s.v46}>
+                        <View>
+                          <Text style={s.t44}>{String(ro.units)}</Text>
+                        </View>
+                        <View>
+                          <Text style={s.t45}>{"units"}</Text>
+                        </View>
+                      </View>
                     </View>
-                  </View>
-                  <View style={s.v46}>
-                    <View>
-                      <Text style={s.t44}>{String(order.units)}</Text>
-                    </View>
-                    <View>
-                      <Text style={s.t45}>{"units"}</Text>
-                    </View>
-                  </View>
-                </View>
+                  );
+                })
               ) : (
                 <View style={s.v33}>
                   <Text style={s.t30}>{"—"}</Text>
@@ -166,14 +180,14 @@ export default function ScreenDr02StopArrival() {
           <Tap
             lk="L14"
             style={s.v51}
-            to={params ? { to: 'dr-03-proof-of-delivery', params } : undefined}
+            to={podParams ? { to: 'dr-03-proof-of-delivery', params: podParams } : undefined}
             onPress={async () => {
-              // arriving here: TripStops Arrive (queued, sent with the next sync)
-              if (stop && !stop.arrivalActual && stop.status !== 'DELIVERED') await arriveAtStop(stop);
+              // arriving here: TripStops Arrive for the stop's orders (queued, sent with the next sync)
+              for (const r of group) if (!r.arrivalActual && r.status !== 'DELIVERED') await arriveAtStop(r);
             }}
           >
             <Grad g={G0} style={s.v49} />
-            <Text style={s.t50}>{stop?.status === 'DELIVERED' ? 'View delivery' : "Start delivery"}</Text>
+            <Text style={s.t50}>{group.length && group.every(r => r.status === 'DELIVERED') ? 'View delivery' : "Start delivery"}</Text>
             <Icon xml={X10} width={22} height={22} style={s.v1} />
           </Tap>
           <Tap lk="L251" style={s.v53} to={params ? { to: 'dr-17-report-a-problem', params } : undefined}>

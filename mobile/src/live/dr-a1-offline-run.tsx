@@ -7,6 +7,7 @@ import { plural, titleCase } from '@/lodestar/live';
 import { arriveAtStop } from '@/model/actions';
 import { isUnsent, useOutbox, useRun } from '@/model/hooks';
 import { useNet } from '@/model/run';
+import { LATE_RISK_PCT } from '@/model/preferences';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L23":{"to":"dr-a2-pod-saved-offline","kind":"go"},"N0":{"to":"dr-01-today-s-run","kind":"nav"},"N1":{"to":"dr-21-records","kind":"nav"},"N2":{"to":"dr-23-dispatch-notices","kind":"nav"}}};
@@ -20,7 +21,7 @@ export default function ScreenDrA1OfflineRun() {
   const stop = view?.current ?? null;
   const o = stop?.outlet;
   const seq = stop ? stops.indexOf(stop) + 1 : 0;
-  const late = (stop?.lateRiskPct ?? 0) >= 50;
+  const late = (stop?.lateRiskPct ?? 0) >= LATE_RISK_PCT;
   const savedAt = updatedAt ? hm(new Date(updatedAt).toISOString()) : '';
   return (
     <Frame bg="#070b16" nav={nav} style={s.v0}>

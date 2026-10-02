@@ -3,14 +3,15 @@
 // Reefer down (P5): the loader reports the trip's vehicle (route param `trip`) with Trips ReportVehicleFault. The
 // vehicle goes to the workshop and the depot's dispatchers are told; when dispatch publishes the re-plan, LD-14
 // opens. There is no reefer telemetry: the loader types the reading (no reading history), and the reefer photo
-// is not built. The report needs signal (it is not queued).
-import { useState } from 'react';
+// is not built. The report goes through the field outbox like every field write: sent at once with signal,
+// kept on the phone and shown as queued without, and sent when signal is back.
+import { useEffect, useState } from 'react';
 import { Text, TextInput, View, StyleSheet } from 'react-native';
 import { hm } from '@/lib/time';
-import { reportVehicleFault, useRePlanAlert, useVehicleDockLoad, type VehicleFault } from '@/model/dock';
-import { useBayQueue, useClaims, useLoadSheet, useOnline } from '@/model/hooks';
+import { faultReport, reportVehicleFault, useRePlanAlert, useVehicleDockLoad, type VehicleFault } from '@/model/dock';
+import { precoolReading } from '@/model/field-reports';
+import { useBayQueue, useClaims, useLoadSheet, useOnline, useOutbox } from '@/model/hooks';
 import { depotName } from '@/model/plan';
-import { client } from '@/model/platform';
 import { useNow } from '@/model/store-face';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
@@ -37,7 +38,29 @@ export default function ScreenLdB1VehicleCanTDepart() {
   const chilled = trip?.vehicle?.tempClass === 'CHILLED' || load.some(st => st.order?.tempClass === 'CHILLED');
   const [fault, setFault] = useState<VehicleFault>('NOT_COOLING');
   const [reading, setReading] = useState('');
-  const [sentAt, setSentAt] = useState<string | null>(null);
+  // the reading the loader confirmed on LD-09 (kept on this phone) starts the field
+  const tripId = trip?.id;
+  useEffect(() => {
+    if (!tripId) return;
+    let live = true;
+    void precoolReading(tripId).then(v => {
+      if (live && v !== null) setReading(r => (r === '' ? String(v) : r));
+    });
+    return () => {
+      live = false;
+    };
+  }, [tripId]);
+  const { items } = useOutbox();
+  const report = faultReport(items, trip?.id);
+  // a refused report can be sent again; a queued or sent one locks the form
+  const refused = report?.status === 'rejected' || report?.status === 'conflict';
+  const sentAt = report && !refused ? report.savedAt : null;
+  const queued = report?.status === 'pending' || report?.status === 'sending';
+  const button = !report || refused
+    ? 'Notify dispatch now'
+    : queued
+      ? online ? 'Sending to dispatch…' : `Saved ${hm(report.savedAt)} · sends when signal is back`
+      : `Dispatch notified ${hm(report.syncedAt ?? report.savedAt)}`;
   const temp = reading.trim() === '' ? undefined : Number(reading.replace(',', '.'));
   const tempOk = temp === undefined || Number.isFinite(temp);
   const options: { k: VehicleFault; label: string; icon: string }[] = [
@@ -49,10 +72,8 @@ export default function ScreenLdB1VehicleCanTDepart() {
 
   const notify = async () => {
     if (!trip) throw new Error(claims ? 'Open this from a trip on the load sheet' : 'Sign in to report a vehicle');
-    if (!online) throw new Error('No signal · this needs signal to reach dispatch');
     if (!tempOk) throw new Error('Enter the reefer reading as a number');
-    await reportVehicleFault(client, trip.id, fault, temp);
-    setSentAt(new Date().toISOString());
+    await reportVehicleFault(trip, fault, temp);
     return true; // the design's cross-device step: "continues in Lodestar Plan: DSP-B1"
   };
 
@@ -202,10 +223,13 @@ export default function ScreenLdB1VehicleCanTDepart() {
           ) : null}
         </Scroll>
         <View style={s.v57}>
+          {refused ? (
+            <Text style={x.refused} testID="fault-refused">{`Not sent: ${report?.conflict ?? report?.lastError ?? 'refused by the server'}`}</Text>
+          ) : null}
           <Tap lk="L31" style={s.v54} onPress={notify} disabled={!!sentAt || !trip} testID="notify-dispatch">
             <Grad g={G0} style={s.v52} />
             <Icon xml={X7} width={22} height={22} style={s.v1} />
-            <Text style={s.t53}>{sentAt ? `Dispatch notified ${hm(sentAt)}` : "Notify dispatch now"}</Text>
+            <Text style={s.t53} numberOfLines={1}>{button}</Text>
           </Tap>
         </View>
       </View>
@@ -219,6 +243,7 @@ const x = StyleSheet.create({
   offChip: { backgroundColor: '#fde8e5' },
   offDot: { backgroundColor: '#b42318' },
   offText: { color: '#b42318' },
+  refused: { color: '#b42318', fontSize: 14, lineHeight: 20, fontFamily: 'Inter_600SemiBold', marginBottom: 8 },
 });
 
 const X0 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#0a0f1a\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"20\" height=\"20\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M19 12H5M12 19l-7-7 7-7\" fill=\"none\" stroke=\"#0a0f1a\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";

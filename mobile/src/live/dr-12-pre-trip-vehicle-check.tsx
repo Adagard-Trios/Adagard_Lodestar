@@ -59,7 +59,7 @@ export default function ScreenDr12PreTripVehicleCheck() {
   const send = async (ok: boolean) => {
     if (!trip) throw new Error('No trip on this phone yet');
     const note = [reading !== undefined ? `Reefer ${reading} °C` : '', photoAt ? 'display photo kept on the phone' : ''].filter(Boolean).join(' · ');
-    await reportToDispatch(trip.id, { report: 'VEHICLE_CHECK', ok, items: items(), ...(note ? { note } : {}) });
+    await reportToDispatch(trip.id, { report: 'VEHICLE_CHECK', ok, items: items(), ...(note ? { note } : {}) }, trip.id, { vehicleId: trip.vehicleId });
     showToast(online ? 'Sent to dispatch' : 'Saved · sends when signal returns');
   };
 

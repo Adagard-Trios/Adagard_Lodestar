@@ -6,7 +6,7 @@ const REQUEST_TIMEOUT_MS = 5_000;
 /**
  * The fleet service owns Vehicle: trips records fuel through Vehicles('…')/Lodestar.RecordFuel with its own
  * service token (svc-trips). Best effort, like notices: the trip completion has already committed, so a
- * failure is logged and never undoes it.
+ * failure is logged (WARN, with the trip it was for) and never undoes it.
  */
 @Injectable()
 export class FleetClient {
@@ -16,46 +16,33 @@ export class FleetClient {
   constructor(private readonly tokens: ServiceTokenClient) {}
 
   /** Vehicles('…')/Lodestar.SetStatus with the svc-trips token; the caller decides what a failure means. */
-  async setStatus(vehicleId: string, status: 'AVAILABLE' | 'WORKSHOP' | 'ENROUTE', workshopNote?: string): Promise<boolean> {
-    const what = `SetStatus ${status} → ${vehicleId}`;
-    if (!this.tokens.configured) {
-      this.logger.warn(`${what} skipped: no service credentials configured`);
-      return false;
-    }
-    try {
-      const key = vehicleId.replace(/'/g, "''");
-      const res = await this.tokens.fetch(`${this.baseUrl}/odata/v4/Vehicles('${key}')/Lodestar.SetStatus`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-        body: JSON.stringify({ status, ...(workshopNote ? { workshopNote } : {}) }),
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      });
-      if (!res.ok) this.logger.warn(`${what} failed: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
-      return res.ok;
-    } catch (e) {
-      this.logger.warn(`${what} failed: ${(e as Error).message}`);
-      return false;
-    }
+  setStatus(vehicleId: string, status: 'AVAILABLE' | 'WORKSHOP' | 'ENROUTE', workshopNote?: string, tripId?: string): Promise<boolean> {
+    return this.post(vehicleId, 'SetStatus', { status, ...(workshopNote ? { workshopNote } : {}) }, `SetStatus ${status} → ${vehicleId}`, tripId);
   }
 
-  async recordFuel(vehicleId: string, litres: number): Promise<boolean> {
-    const what = `RecordFuel ${litres} L → ${vehicleId}`;
+  /** A completed trip's litres against its vehicle's weekly quota. */
+  recordFuel(vehicleId: string, litres: number, tripId?: string): Promise<boolean> {
+    return this.post(vehicleId, 'RecordFuel', { litres }, `RecordFuel ${litres} L → ${vehicleId}`, tripId);
+  }
+
+  private async post(vehicleId: string, action: string, body: unknown, what: string, tripId?: string): Promise<boolean> {
+    const forTrip = tripId ? ` for trip ${tripId}` : '';
     if (!this.tokens.configured) {
-      this.logger.warn(`${what} skipped: no service credentials configured`);
+      this.logger.warn(`${what}${forTrip} skipped: no fleet service credentials configured (the vehicle record was not updated)`);
       return false;
     }
     try {
       const key = vehicleId.replace(/'/g, "''");
-      const res = await this.tokens.fetch(`${this.baseUrl}/odata/v4/Vehicles('${key}')/Lodestar.RecordFuel`, {
+      const res = await this.tokens.fetch(`${this.baseUrl}/odata/v4/Vehicles('${key}')/Lodestar.${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-        body: JSON.stringify({ litres }),
+        body: JSON.stringify(body),
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
-      if (!res.ok) this.logger.warn(`${what} failed: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
+      if (!res.ok) this.logger.warn(`${what}${forTrip} failed: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
       return res.ok;
     } catch (e) {
-      this.logger.warn(`${what} failed: ${(e as Error).message}`);
+      this.logger.warn(`${what}${forTrip} failed: ${(e as Error).message}`);
       return false;
     }
   }

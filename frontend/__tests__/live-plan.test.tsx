@@ -1,5 +1,5 @@
 // Live Plan screens against a mocked OData API (real ODataClient over a fake fetch).
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import ScreenShell from '@/components/ScreenShell';
 import CutoffQueue from '@/live/dsp-01-cutoff-queue';
 import PlanBoard from '@/live/dsp-02-plan-board';
@@ -8,7 +8,7 @@ import ApproveAndGoLive from '@/live/dsp-12-approve-and-go-live';
 import AskAgent from '@/live/dsp-39-ask-the-planning-agent';
 import SignIn from '@/live/dsp-06-sign-in';
 import type { FakeRequest } from './helpers/live';
-import { page, renderLive, SESSIONS } from './helpers/live';
+import { agentConfigReply, page, renderLive, SESSIONS } from './helpers/live';
 
 const router = { push: jest.fn(), replace: jest.fn(), back: jest.fn(), forward: jest.fn(), refresh: jest.fn(), prefetch: jest.fn() };
 jest.mock('next/navigation', () => ({ useRouter: () => router, usePathname: () => '/plan' }));
@@ -20,7 +20,10 @@ const vehicle = (id: string, over = {}) => ({ id, depot: 'KANDY', type: 'VAN', t
 
 /** Common reads every Plan screen makes (sidebar counts, latest run date, fleet). */
 function base(req: FakeRequest) {
+  if (agentConfigReply(req)) return agentConfigReply(req);
   if (req.query.$top === '0') return page([], 2);
+  // no open orders from today on (the test day is past): the desk falls back to the latest plan's run date
+  if (req.path === 'Orders' && req.query.$select === 'runDate') return page([]);
   if (req.path === 'Plans' && req.query.$select === 'runDate') return page([{ runDate: DAY }]);
   if (req.path === 'Vehicles') return page([vehicle('VEHT1'), vehicle('VEHT2', { status: 'WORKSHOP', tempClass: 'AMBIENT', type: 'TRUCK' })]);
   return undefined;
@@ -66,6 +69,37 @@ describe('DSP-01 Cutoff queue', () => {
     expect(window.sessionStorage.getItem('lodestar.agentRun')).toBe('run-1');
   });
 
+  it('opens on the first run from today that still has open orders (a new demo day), not the latest plan', async () => {
+    const NEXT = '2026-04-09T00:00:00.000Z';
+    const view = renderLive(<CutoffQueue />, {
+      handler: req => (req.path === 'Orders' && req.query.$select === 'runDate' ? page([{ runDate: NEXT }]) : base(req) ?? (req.path === 'Orders' ? page([order('ORDT9', { runDate: NEXT })], 1) : page([]))),
+    });
+    expect(await screen.findByText('Cutoff queue for Thu 9 Apr')).toBeInTheDocument();
+    const day = view.calls.find(c => c.path === 'Orders' && c.query.$select === 'runDate')!;
+    expect(day.query).toMatchObject({ $orderby: 'runDate asc', $top: '1' });
+    expect(day.query.$filter).toMatch(/^runDate ge \d{4}-\d{2}-\d{2}T00:00:00.000Z and status in \('RECEIVED','PLANNED','LOADED','ENROUTE','EXCEPTION'\)$/);
+    // the latest plan's date is not asked for when the orders give the day
+    expect(view.calls.some(c => c.path === 'Plans' && c.query.$select === 'runDate')).toBe(false);
+  });
+
+  it('reloads the queue on a new order, a published plan and every 30 s', async () => {
+    jest.useFakeTimers();
+    try {
+      const view = renderLive(<CutoffQueue />, { handler: req => base(req) ?? (req.path === 'Orders' ? page([order('ORDT1')], 1) : page([])) });
+      await screen.findByTestId('queue');
+      const reads = () => view.calls.filter(c => c.path === 'Orders' && c.query.$select?.startsWith('id,brand')).length;
+      const before = reads();
+      act(() => view.hub.emit('order_created', { orderId: 'ORDT2' }));
+      await waitFor(() => expect(reads()).toBe(before + 1));
+      act(() => view.hub.emit('plan_published', { planId: 'PLT-v1' }));
+      await waitFor(() => expect(reads()).toBe(before + 2));
+      act(() => { jest.advanceTimersByTime(30_000); });
+      await waitFor(() => expect(reads()).toBe(before + 3));
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('shows the API error in the design’s banner', async () => {
     renderLive(<CutoffQueue />, { handler: req => base(req) ?? (req.path === 'Orders' ? { status: 503, body: { error: { code: 'ServiceUnavailable', message: 'The owning service is not reachable' } } } : page([])) });
     expect((await screen.findAllByRole('alert'))[0]).toHaveTextContent('The owning service is not reachable');
@@ -90,18 +124,20 @@ describe('DSP-02 Plan board', () => {
 });
 
 describe('DSP-03 Deferral decision', () => {
-  it('confirms the selected deferrals with a note and the next run date', async () => {
+  it('confirms the selected deferrals with a note and the next operating day (as approval rolls them)', async () => {
     window.sessionStorage.setItem('lodestar.depot', 'KANDY');
     const deferrals = [{ id: 'DT1', orderId: 'ORDT3', reason: 'CAP_REEFER', score: 22, status: 'SUGGESTED', isProvisional: false, createdAt: DAY, order: order('ORDT3', { tempClass: 'CHILLED', m3: 1.5 }) }];
     const view = renderLive(
       <ScreenShell board="P2" nav={nav({ L4: '/plan/dsp-12-approve-and-go-live' })} live><DeferralDecision /></ScreenShell>,
-      { handler: req => base(req) ?? (req.path === 'Deferrals' ? page(deferrals) : req.path === 'Outlets' ? page([outlet('OUTT01')]) : req.method === 'POST' ? { id: 'DT1', status: 'CONFIRMED' } : page([])) },
+      // Wed 8 Apr is not an operating day: the next run is Thu 9 Apr
+      { handler: req => base(req) ?? (req.path === 'Deferrals' ? page(deferrals) : req.path === 'Outlets' ? page([outlet('OUTT01')]) : req.path === 'Calendar' ? page([{ date: '2026-04-09T00:00:00.000Z' }]) : req.method === 'POST' ? { id: 'DT1', status: 'CONFIRMED' } : page([])) },
     );
-    await screen.findByText('Defer 1 order to Wed');
+    await screen.findByText('Defer 1 order to Thu');
     fireEvent.change(screen.getByLabelText('Note to store'), { target: { value: 'Covered till Wednesday' } });
     fireEvent.click(screen.getByTestId('confirm-all'));
     await waitFor(() => expect(router.push).toHaveBeenCalledWith('/plan/dsp-12-approve-and-go-live'));
-    expect(view.calls.find(c => c.method === 'POST')).toMatchObject({ path: "Deferrals('DT1')/Lodestar.Confirm", body: { notes: 'Covered till Wednesday', rescheduledDate: '2026-04-08' } });
+    expect(view.calls.find(c => c.method === 'POST')).toMatchObject({ path: "Deferrals('DT1')/Lodestar.Confirm", body: { notes: 'Covered till Wednesday', rescheduledDate: '2026-04-09' } });
+    expect(view.calls.find(c => c.path === 'Calendar')!.query).toMatchObject({ $filter: 'date gt 2026-04-07T00:00:00Z and isOperating eq true', $top: '1' });
     expect(view.calls.find(c => c.path === 'Deferrals' && c.query.$expand === 'order')!.query.$filter).toContain("order/outlet/depot eq 'KANDY'");
   });
 });
@@ -125,6 +161,19 @@ describe('DSP-12 Approve and go live', () => {
     expect(await screen.findByText('Plan PLT-v4 is live')).toBeInTheDocument();
     expect(view.calls.find(c => c.method === 'POST')).toMatchObject({ path: "AgentRuns('run-9')/Lodestar.Resume", body: { decision: 'approve', comment: 'Checked the reefer gap' } });
     expect(screen.getByRole('status')).toHaveTextContent('Continues in Lodestar Dock');
+  });
+
+  it('without a run held in this tab it finds the draft waiting for approval (started elsewhere, e.g. the phone)', async () => {
+    const view = renderLive(<ApproveAndGoLive />, {
+      handler: req => base(req) ?? (req.path === 'AgentRuns' ? page([{ id: 'run-9' }]) : req.path === "AgentRuns('run-9')" ? run : req.method === 'POST' ? { ...run, status: 'APPROVED', planId: 'PLT-v4' } : page([])),
+    });
+    expect(await screen.findByText(/Approve \d+ orders and go live/)).toBeInTheDocument();
+    const list = view.calls.find(c => c.path === 'AgentRuns')!;
+    expect(list.query).toMatchObject({ $select: 'id', $orderby: 'createdAt desc', $top: '1' });
+    expect(list.query.$filter).toContain('runDate ge 2026-04-07T00:00:00.000Z and runDate lt 2026-04-08T00:00:00.000Z');
+    expect(list.query.$filter).toContain("status in ('DRAFTING','RUNNING','PENDING','QUEUED','NEEDS_APPROVAL')");
+    fireEvent.click(screen.getByTestId('approve'));
+    await waitFor(() => expect(view.calls.some(c => c.method === 'POST' && c.path === "AgentRuns('run-9')/Lodestar.Resume")).toBe(true));
   });
 
   it('approves a plan waiting for approval with Plans(…)/Lodestar.Approve when there is no agent draft', async () => {

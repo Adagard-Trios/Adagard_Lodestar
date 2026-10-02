@@ -4,7 +4,7 @@
 // order, the pre-cool reading confirmed on LD-09, the seal number typed here and the driver. Release queues
 // RELEASE with the seal and the reefer reading, then back to the bay overview.
 import { useEffect, useState } from 'react';
-import { Text, TextInput, View, StyleSheet } from 'react-native';
+import { Platform, Share, Text, TextInput, View, StyleSheet } from 'react-native';
 import { hm, until } from '@/lib/time';
 import { signOutTo, titleCase } from '@/lodestar/live';
 import { releaseVehicle } from '@/model/actions';
@@ -35,7 +35,7 @@ export default function ScreenLd22ReleaseChecklist() {
   const data = sheet.data;
   const trip = data?.trip;
   const lr = data?.loadRecord;
-  const checks = useLineChecks(sheet.tripId);
+  const checks = useLineChecks(sheet.tripId, sheet.data?.trip?.status);
   const [precool, setPrecool] = useState<number | null>(null);
   const tripId = trip?.id;
   useEffect(() => {
@@ -68,6 +68,7 @@ export default function ScreenLd22ReleaseChecklist() {
     driver: !!driver,
   };
   const passed = Object.values(ok).filter(Boolean).length;
+  const checkCount = Object.keys(ok).length;
   const firstStop = groups.at(-1)?.stop;
   const lastStop = groups[0]?.stop;
   const shortText = sheet.shortfalls.map(sf => `${sf.item} short ${Math.max(0, sf.qtyOrdered - sf.qtyLoaded)}`).join(', ');
@@ -80,10 +81,31 @@ export default function ScreenLd22ReleaseChecklist() {
     if (!trip) throw new Error(empty || 'No trip selected');
     if (sheet.released) return true;
     if (!seal.trim()) throw new Error('Enter the seal number first');
+    if (chilled && temp === undefined) throw new Error('Confirm the reefer reading first (pre-cool check)');
     if (chilled && temp !== undefined && temp > MAX_CHILLED_C) throw new Error(`Reefer reads ${temp} °C · above ${MAX_CHILLED_C} °C, it can't depart`);
     await releaseVehicle(trip, seal.trim(), temp);
     setTimeout(() => showToast(online ? `${trip.vehicleId} released · sending` : 'Release saved on this tablet · sends when there is signal'), 350);
     return true;
+  };
+
+  // the driver's copy of the load: the browser's print on the web, the share sheet (print, message) on a tablet
+  const printCopy = async () => {
+    if (!trip || !data) throw new Error(empty || 'No trip selected');
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.print === 'function') {
+      window.print();
+      return false;
+    }
+    const stops = [...groups].reverse().map(g => `Stop ${g.stop.stopSeq} · ${g.stop.outlet?.name ?? g.stop.outletId}: ${g.lines.map(l => `${l.name} ×${l.qty}`).join(', ')}`);
+    const message = [
+      `${trip.vehicleId} · Trip ${trip.tripNumber}${trip.bay ? ` · Bay ${trip.bay}` : ''}${trip.departTime ? ` · departs ${hm(trip.departTime)}` : ''}`,
+      driver ? `Driver: ${driver}` : '',
+      seal.trim() ? `Seal: ${seal.trim()}` : '',
+      temp !== undefined ? `Reefer: ${temp} °C` : '',
+      shortText ? `Short: ${shortText}` : '',
+      ...stops,
+    ].filter(Boolean).join('\n');
+    await Share.share({ title: `Driver copy · ${trip.vehicleId}`, message });
+    return false;
   };
 
   return (
@@ -156,11 +178,11 @@ export default function ScreenLd22ReleaseChecklist() {
               </View>
               <View style={s.v30}>
                 <View style={s.v2}>
-                  <Text style={s.t27}>{data ? String(passed) : "—"}<Text style={s.t26}>{"of 5 checks"}</Text></Text>
+                  <Text style={s.t27}>{data ? String(passed) : "—"}<Text style={s.t26}>{`of ${checkCount} checks`}</Text></Text>
                 </View>
                 <View style={s.v29}>
                   <Icon xml={X3} width={18} height={18} style={s.v3} />
-                  <Text style={s.t28} numberOfLines={1}>{!data ? "—" : passed === 5 ? "Ready to release" : `${5 - passed} to check`}</Text>
+                  <Text style={s.t28} numberOfLines={1}>{!data ? "—" : passed === checkCount ? "Ready to release" : `${checkCount - passed} to check`}</Text>
                 </View>
               </View>
               <View>
@@ -228,7 +250,7 @@ export default function ScreenLd22ReleaseChecklist() {
                   <Text style={s.t49}>{"Release checklist"}</Text>
                 </View>
                 <View style={s.v2}>
-                  <Text style={s.t50}>{!data ? "" : passed === 5 ? "all passed" : `${passed} of 5 passed`}</Text>
+                  <Text style={s.t50}>{!data ? "" : passed === checkCount ? "all passed" : `${passed} of ${checkCount} passed`}</Text>
                 </View>
               </View>
               <View style={s.v60}>
@@ -348,10 +370,10 @@ export default function ScreenLd22ReleaseChecklist() {
             </View>
           </View>
           <View style={s.v13} />
-          <View style={s.v72}>
+          <Tap style={s.v72} to={null} onPress={printCopy} disabled={!trip} testID="print-copy">
             <Icon xml={X7} width={22} height={22} style={s.v3} />
             <Text style={s.t71}>{"Print driver copy"}</Text>
-          </View>
+          </Tap>
           <Tap lk="L225" style={s.v75} onPress={release} disabled={!trip || (!seal.trim() && !sheet.released)}>
             <Grad g={G2} style={s.v73} />
             <Icon xml={X8} width={22} height={22} style={s.v3} />

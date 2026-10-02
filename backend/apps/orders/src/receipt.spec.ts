@@ -116,6 +116,9 @@ describe('Orders ConfirmReceipt (SM-03)', () => {
           source: 'STORE_RECEIPT',
           description: 'Store counted 31 of 34 units (3 short)',
           unitsShort: 3,
+          qty: 3,
+          unitsReceived: 31,
+          unitsExpected: 34,
           note: 'chicken tray damaged',
           photoUrl: null,
           reportedBy: 'fathima',
@@ -179,6 +182,30 @@ describe('Orders ConfirmReceipt (SM-03)', () => {
         await expect(service.confirmReceipt('ORD0104217', 'fathima', { unitsReceived: 1, unitsExpected: 3, savedAt: SAVED })).rejects.toMatchObject({ status: 409 });
         verify(notify.notice(anything())).never();
       });
+    });
+
+    describe('credit_note_issued (SM-19/20, SM-28 refresh on it)', () => {
+      it('a short count publishes the credit note to the store room, with the credited units', async () => {
+        when(order.findUnique(anything())).thenResolve(delivered({ id: 'POD1', creditNoteId: 'CN-2604-0441', exceptions: [] }));
+        await service.confirmReceipt('ORD0104217', 'fathima', { unitsReceived: 31, unitsExpected: 34, savedAt: SAVED });
+        verify(notify.publish('credit_note_issued', anything(), anything())).once();
+        const [, rooms, payload] = capture(notify.publish).last();
+        expect(rooms).toEqual(['store:OUT106']);
+        expect(payload).toMatchObject({ creditNoteId: 'CN-2604-0441', orderId: 'ORD0104217', outletId: 'OUT106', tripId: 'T1', unitsCredited: 3, unitsReceived: 31, unitsExpected: 34 });
+      });
+
+      it('a full count issues no credit note', async () => {
+        when(order.findUnique(anything())).thenResolve(delivered(null));
+        await service.confirmReceipt('ORD0104217', 'fathima', { unitsReceived: 34, unitsExpected: 34, note: 'one tray torn', savedAt: SAVED });
+        verify(notify.publish(anything(), anything(), anything())).never();
+      });
+    });
+
+    it('nothing arrived (0 of N) is not a delivery: the order is an EXCEPTION, with its credit note', async () => {
+      when(order.findUnique(anything())).thenResolve(delivered({ id: 'POD1', creditNoteId: null, exceptions: null }, { status: 'EXCEPTION' }));
+      const res = await service.confirmReceipt('ORD0104217', 'fathima', { unitsReceived: 0, unitsExpected: 34, savedAt: SAVED });
+      expect(res).toMatchObject({ status: 'EXCEPTION', unitsReceived: 0, creditNoteId: 'CN-2604-0001' });
+      expect(capture(pod.update).last()[0].data.exceptions).toEqual([expect.objectContaining({ source: 'STORE_RECEIPT', qty: 34, unitsShort: 34 })]);
     });
 
     it('draws again when two receipts raced for the same credit note number', async () => {

@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { useScreenNav } from '@/components/ScreenShell';
 import Btn from '@/components/live/Btn';
-import { AdminSide } from '@/components/live/chrome';
+import { AdminSide, adminChanged } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { ROLE_INFO } from '@/components/live/admin-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
@@ -26,7 +26,7 @@ export default function LiveAdm07LostPhone() {
     (await c.list<OfflineEvent>('OfflineEvents', { filter: `driverId eq '${d!.userId}' and syncedAt eq null`, orderby: 'savedAt', top: 50 })).value);
   const [reason, setReason] = useState('');
   const revoke = useAction<void, Device>(c => c.action<Device>('Devices', id!, 'Revoke', { reason: reason.trim() }), {
-    onSuccess: () => { nav.notify(`${id} revoked. Its sessions are signed out.`); nav.go('L293'); },
+    onSuccess: () => { adminChanged(); nav.notify(`${id} revoked. Its sessions are signed out.`); nav.go('L293'); },
   });
   const n = waiting.data?.length ?? 0;
 
@@ -68,9 +68,10 @@ export default function LiveAdm07LostPhone() {
           {d && (
             <>
               <div className={`dx-hero${n ? ' dx-hero--bad' : ''}`} style={{ gap: '6px', padding: '16px 18px', borderRadius: '18px' }} data-testid="records-waiting">
-                <div className="dx-hero__l"><Ic n="alert" className="ic ic--sm" />{n} record{n === 1 ? ' exists' : 's exist'} only on that phone</div>
+                <div className="dx-hero__l"><Ic n="alert" className="ic ic--sm" />{waiting.data ? `${n} record${n === 1 ? ' exists' : 's exist'} only on that phone` : 'Checking what is still on that phone…'}</div>
+                <ErrorBanner error={waiting.error} onRetry={waiting.refresh} compact />
                 <div className="dx-hero__m">
-                  {n ? <>{waiting.data!.map(e => `${e.eventType.toLowerCase().replace('_', ' ')} ${fmtClock(e.savedAt)}`).join(' · ')}. They sync if the phone finds signal before it is wiped.</> : 'Everything on this device has reached Lodestar.'}
+                  {!waiting.data ? null : n ? <>{waiting.data!.map(e => `${e.eventType.toLowerCase().replace('_', ' ')} ${fmtClock(e.savedAt)}`).join(' · ')}. They sync if the phone finds signal before it is wiped.</> : 'Everything on this device has reached Lodestar.'}
                 </div>
               </div>
               <div className="dx-sech"><b>{"What happens to the phone"}</b></div>

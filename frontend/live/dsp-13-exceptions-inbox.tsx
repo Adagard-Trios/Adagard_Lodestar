@@ -12,7 +12,7 @@ import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { p5Link, usePlanScope, useExceptions, type ExceptionItem } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
-import { DEPOT_NAME, fmtClock, fmtRunDate, fmtTime } from '@/lib/format';
+import { DEPOT_NAME, fmtClock, fmtRunDate, fmtTime, LATE_RISK_PCT } from '@/lib/format';
 import { useAction, useEntity, useQuery } from '@/lib/odata/hooks';
 import type { Notification, Outlet, Trip, User } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
@@ -139,7 +139,7 @@ export default function LiveDsp13ExceptionsInbox() {
                 </div>
               ))}
               <div className="spacer" />
-              <div className="x-tfoot"><span>{"Rules: late risk 40% or more, order exceptions, loader and vehicle alerts"}</span></div>
+              <div className="x-tfoot"><span>{`Rules: late risk ${LATE_RISK_PCT}% or more, order exceptions, loader and vehicle alerts`}</span></div>
             </div>
             <div className="dx-col" style={{ flex: '1', gap: '16px' }}>
               {!sel ? (

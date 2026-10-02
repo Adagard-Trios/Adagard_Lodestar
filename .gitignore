@@ -36,3 +36,4 @@ backend/coverage-int/
 # demo VM deploy markers (deploy/azure-demo/autodeploy.sh)
 /.deployed-sha
 /.deploy-freeze
+tests/e2e/playwright-report/

@@ -21,7 +21,7 @@ export default function ScreenLd27TabletLocked() {
   const data = sheet.data;
   const trip = data?.trip ?? null;
   const notes = useNotifications().data;
-  const t = useTicks(sheet.tripId);
+  const t = useTicks(sheet.tripId, sheet.data?.trip?.status);
   const accounted = (l: OrderLineItem) => t.isTicked(l.id) || !!shortfallFor(sheet.shortfalls, l);
   const lines = loadGroups(data, accounted).flatMap(g => g.lines);
   const done = lines.filter(accounted).length;
@@ -77,7 +77,7 @@ export default function ScreenLd27TabletLocked() {
             <View style={s.v11} />
             <View style={s.v21}>
               <Icon xml={X3} width={18} height={18} style={s.v3} />
-              <Text style={s.t20}>{"Locked after 2 min idle. Every tick is saved."}</Text>
+              <Text style={s.t20}>{"Locked. Every tick is saved."}</Text>
             </View>
           </View>
           <View style={s.v46}>

@@ -11,16 +11,16 @@
 import { useState } from 'react';
 import { useScreenNav } from '@/components/ScreenShell';
 import Btn from '@/components/live/Btn';
-import { Lane, useBoardCards } from '@/components/live/board';
+import { Lane, tripTwoHead, useBoardCards } from '@/components/live/board';
 import { PlanSide, useCount } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
-import { useAgentRun, usePlanScope } from '@/components/live/plan-data';
+import { PLAN_EVENTS, useReviewRun, usePlanScope } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { DEPOT_NAME, dayFilter, fmtClock, fmtDayTime, fmtRunDate, fmtTime, isoDay, title } from '@/lib/format';
 import { useAction, useQuery } from '@/lib/odata/hooks';
 import type { AgentRun, Plan } from '@/lib/odata/types';
-import { depotFilter, useAgentRunId } from '@/lib/workday';
+import { depotFilter } from '@/lib/workday';
 
 function Check({ label, value, ok = true }: { label: string; value: string; ok?: boolean }) {
   return (
@@ -54,12 +54,11 @@ export default function LiveDsp12ApproveAndGoLive() {
   const { session } = useAuth();
   const scope = usePlanScope();
   const { runDate, plansFilter, tripsFilter, ordersFilter, active } = scope;
-  const [runId, setRunId] = useAgentRunId();
-  const run = useAgentRun(runId);
+  const { runId, run, setRunId } = useReviewRun();
   const draft = run.data?.status === 'NEEDS_APPROVAL' ? run.data : null;
   const plans = useQuery<Plan[]>(plansFilter ? `approve-plans:${plansFilter}` : null, c =>
     c.all<Plan>('Plans', { filter: `${plansFilter} and status in ('NEEDS_APPROVAL','DRAFT')`, orderby: 'version desc' }),
-  { refreshOn: ['notification'] });
+  { refreshOn: PLAN_EVENTS });
   const pending = plans.data?.[0] ?? null;
   const board = useBoardCards({ draft: draft?.detail ?? null, tripsFilter, ordersFilter, active });
   const total = useCount('Orders', ordersFilter ? `${ordersFilter} and status ne 'CANCELLED'` : null);
@@ -127,10 +126,10 @@ export default function LiveDsp12ApproveAndGoLive() {
               <div className="x-lanehead">
                 <span style={{ width: '168px' }}>{"Vehicle · minutes"}</span>
                 <span style={{ flex: '1' }}>Trip 1{firstDepart ? ` · departs ${fmtTime(firstDepart)}` : ''}</span>
-                <span style={{ flex: '1' }}>{"Trip 2 · max 2 trips a day"}</span>
+                <span style={{ flex: '1' }}>{tripTwoHead(board.limits)}</span>
               </div>
               {board.loading && <Skeleton rows={3} />}
-              {board.lanes.slice(0, 6).map(([id, cs]) => <Lane key={id} vehicleId={id} cards={cs} v={board.vehicles.get(id)} />)}
+              {board.lanes.slice(0, 6).map(([id, cs]) => <Lane key={id} vehicleId={id} cards={cs} v={board.vehicles.get(id)} limits={board.limits} />)}
             </div>
           </div>
         </div>

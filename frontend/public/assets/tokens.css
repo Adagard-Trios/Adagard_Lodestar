@@ -3,7 +3,6 @@
    One token system, four role modes. Product name lives in --product-name
    (and in plain text on pages — find/replace "Waypoint Lodestar" to rename).
    ========================================================================== */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 :root {
   /* ---------- Brand ---------- */

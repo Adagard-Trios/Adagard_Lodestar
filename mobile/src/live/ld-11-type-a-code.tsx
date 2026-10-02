@@ -19,7 +19,7 @@ export default function ScreenLd11TypeACode() {
   const sheet = useLoadSheet();
   const data = sheet.data;
   const trip = data?.trip;
-  const checks = useLineChecks(sheet.tripId);
+  const checks = useLineChecks(sheet.tripId, sheet.data?.trip?.status);
   const [code, setCode] = useState('');
   const [countSel, setCount] = useState<number | null>(null);
   const groups = loadGroups(data, l => checks.isChecked(l.id));

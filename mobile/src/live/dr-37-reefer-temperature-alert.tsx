@@ -10,6 +10,7 @@ import { plural } from '@/lodestar/live';
 import { reeferOf } from '@/model/dock';
 import { reportToDispatch } from '@/model/field-reports';
 import { useOnline, useRun } from '@/model/hooks';
+import { openDialer } from '@/model/run';
 import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L247":{"to":"dr-36-en-route-driving-mode","kind":"go"},"L248":{"to":"dr-36-en-route-driving-mode","kind":"go"}}};
@@ -52,7 +53,7 @@ export default function ScreenDr37ReeferTemperatureAlert() {
       showToast('Type the reading on the reefer display first', 'error');
       return false;
     }
-    await reportToDispatch(trip.id, { report: 'REEFER_TEMP', tempC: reading, action, ...(dock !== undefined ? { note: `Dock read ${dock} °C` } : {}) });
+    await reportToDispatch(trip.id, { report: 'REEFER_TEMP', tempC: reading, action, ...(dock !== undefined ? { note: `Dock read ${dock} °C` } : {}) }, trip.id, { vehicleId: trip.vehicleId });
     showToast(online ? 'Sent to dispatch' : 'Saved · sends when signal returns');
     return true;
   };
@@ -186,10 +187,10 @@ export default function ScreenDr37ReeferTemperatureAlert() {
             <Icon xml={X5} width={22} height={22} style={s.v1} />
             <Text style={s.t41}>{reading === undefined ? "Checked, log the reading" : warm ? `Checked, still ${reading} °C` : `Checked, back to ${reading} °C`}</Text>
           </Tap>
-          <View style={s.v44}>
+          <Tap style={s.v44} to={null} onPress={() => openDialer()} testID="call-dispatch">
             <Icon xml={X6} width={18} height={18} style={s.v1} />
             <Text style={s.t43}>{"Call dispatch when signal"}</Text>
-          </View>
+          </Tap>
         </View>
       </View>
     </Frame>

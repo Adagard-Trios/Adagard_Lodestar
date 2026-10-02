@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
 import * as Speech from 'expo-speech';
+import { useSettings } from '@/lib/settings';
 import Svg, { Defs, LinearGradient, RadialGradient, Rect, Stop, SvgXml } from 'react-native-svg';
 
 export type Target = { to?: string; kind?: 'go' | 'nav' | 'back'; app?: string; screen?: string; params?: Record<string, string> };
@@ -122,12 +123,15 @@ export function Tap({ lk, say, group, style, children, onPress, to, disabled, te
   onPress?: TapAction; to?: Target | string | null; disabled?: boolean; testID?: string;
 }) {
   const { nav, notify } = useContext(NavContext);
+  // gloves mode (LD-07): a wider touch area around every button
+  const gloves = useSettings().glovesMode;
   const target = to === null ? undefined : to !== undefined ? (typeof to === 'string' ? { to, kind: 'go' as const } : to) : lk ? nav.links[lk] : undefined;
   return (
     <Pressable
       accessibilityRole={group ? undefined : 'button'}
       accessibilityState={disabled ? { disabled: true } : undefined}
       testID={testID ?? (lk ? 'lk-' + lk : say ? 'say' : undefined)}
+      hitSlop={gloves ? 12 : undefined}
       onPress={async () => {
         if (disabled) return;
         if (say) speak(say);

@@ -4,14 +4,14 @@ import { Text, View, StyleSheet } from 'react-native';
 import { applyUpdate, useVersion } from '@/lib/version';
 import { hm } from '@/lib/time';
 import { titleCase } from '@/lodestar/live';
-import { usePlans } from '@/model/hooks';
+import { useReviewPlans } from '@/model/plan';
 import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L185":{"to":"dsp-26-sign-in","kind":"go"}}};
 
 export default function ScreenDsp38UpdateRequired() {
   const { current, minimum } = useVersion();
-  const plans = usePlans().data ?? [];
+  const plans = useReviewPlans().data ?? [];
   const first = plans[0];
   const update = async () => {
     if (await applyUpdate()) return true;
@@ -77,7 +77,7 @@ export default function ScreenDsp38UpdateRequired() {
                 </View>
                 <View style={s.v9}>
                   <View>
-                    <Text style={s.t7}>{"All 7 booklet rules on re-plans"}</Text>
+                    <Text style={s.t7}>{"Every booklet rule on re-plans"}</Text>
                   </View>
                   <View>
                     <Text style={s.t8}>{"See every check before you approve"}</Text>

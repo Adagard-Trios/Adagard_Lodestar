@@ -2,8 +2,10 @@
 // SM-02 Deliveries, live. Markup and classes from the generated design (frontend/screens/sm-02-deliveries.tsx).
 // Data: the outlet's TripStops (with Trip, Order and POD) — the API returns only stops of the outlet in the
 // token — the next delivery's ETA band and late risk, its order thread, the week's orders, and unread
-// Notifications ("Got it" marks them read). Realtime: the store:<outlet> room pushes eta_update and
-// credit_note_issued, which refresh the screen.
+// Notifications ("Got it" marks them read). Realtime: everything the store:<outlet> and user rooms carry
+// (notification, eta_update and arrivals, credit_note_issued, signal_lost/back, trip_released, plan_published)
+// refreshes the screen. The order card counts down to the cut-off of the next run still open for orders (the next
+// operating day on the Calendar), moving on by itself at 4:00 PM.
 // Receipt: once the delivery is in, the side panel asks for the store's count of each order and an optional
 // issue (the phone's SM-03 count and SM-18 report issue, on the desk): Orders('…')/Lodestar.ConfirmReceipt
 // records the count and the issue as the receipt note; a short count gets a credit note and a POD exception.
@@ -12,8 +14,10 @@ import Btn from '@/components/live/Btn';
 import { StoreTop, useMyOutlet } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
+import { isCounted, leftText, noticeText, orderCredit, STORE_EVENTS, useNextRun } from '@/components/live/store-data';
 import { useAuth } from '@/lib/auth/AuthProvider';
-import { addDays, daysAgo, DEPOT_NAME, fmtClock, fmtDay, fmtRunDate, fmtTime, title } from '@/lib/format';
+import { addDays, daysAgo, DEPOT_NAME, fmtClock, fmtDay, fmtRunDate, fmtTime, LATE_RISK_PCT, title } from '@/lib/format';
+import { colomboDay } from '@/lib/workday';
 import { useAction, useQuery } from '@/lib/odata/hooks';
 import type { Notification, Order, Trip, TripStop } from '@/lib/odata/types';
 
@@ -57,8 +61,8 @@ function ReceiptCard({ stops, onDone, hub }: { stops: TripStop[]; onDone: () => 
   if (!open.length) {
     if (orders.some(o => o.unitsReceived == null)) return null;
     const got = orders.reduce((n, o) => n + (o.unitsReceived ?? 0), 0);
-    const want = orders.reduce((n, o) => n + o.units, 0);
-    const credit = orders.find(o => o.creditNoteId)?.creditNoteId;
+    const want = orders.reduce((n, o) => n + (o.unitsExpected ?? o.units), 0);
+    const credit = orders.map(o => orderCredit(o, stops.find(s => s.orderId === o.id)?.pod)).find(c => c.creditNoteId)?.creditNoteId;
     return (
       <div className="d-card" data-testid="receipt-done">
         <div className="ncard" style={{ gap: '6px' }}>
@@ -149,13 +153,15 @@ export default function LiveSm02Deliveries() {
 
   const stops = useQuery<TripStop[]>(outletId ? `store-stops:${outletId}` : null, async c =>
     (await c.list<TripStop>('TripStops', { filter: `outletId eq '${outletId}'`, expand: 'trip,order,pod', orderby: 'etaPlan desc', top: 20 })).value,
-  { refreshOn: ['eta_update', 'credit_note_issued', 'notification'] });
-  const orders = useQuery<Order[]>(outletId ? `store-week:${outletId}:${range}` : null, async c =>
-    (await c.list<Order>('Orders', { filter: `outletId eq '${outletId}' and runDate ge ${daysAgo(range)}T00:00:00Z`, expand: 'tripStop', orderby: 'runDate desc,id', top: 60 })).value,
-  { refreshOn: ['eta_update', 'notification'] });
+  { refreshOn: STORE_EVENTS });
+  // the week (or 4 weeks) back from today's business date in Colombo, and the orders booked ahead
+  const since = daysAgo(range);
+  const orders = useQuery<Order[]>(outletId ? `store-week:${outletId}:${since}` : null, async c =>
+    (await c.list<Order>('Orders', { filter: `outletId eq '${outletId}' and runDate ge ${since}T00:00:00Z`, expand: 'tripStop($expand=pod)', orderby: 'runDate desc,id', top: 60 })).value,
+  { refreshOn: STORE_EVENTS });
   const notes = useQuery<Notification[]>('store-unread', async c =>
     (await c.list<Notification>('Notifications', { filter: 'readAt eq null', orderby: 'sentAt desc', top: 3 })).value,
-  { refreshOn: ['notification', 'credit_note_issued', 'eta_update'] });
+  { refreshOn: STORE_EVENTS });
   const markRead = useAction<string, unknown>((c, id) => c.action('Notifications', id, 'MarkRead'), { onSuccess: () => void notes.refresh() });
 
   // The delivery to show: the next one not yet delivered, else the latest.
@@ -177,10 +183,13 @@ export default function LiveSm02Deliveries() {
   const depot = o?.depot ?? trip?.depot;
   const hub = depot ? DEPOT_NAME[depot] ?? depot : 'the hub';
   const vans = new Set(sameRun.map(s => s.tripId)).size;
-  // the next run still open for orders: tomorrow's until its 4:00 PM cutoff today (Sri Lanka time), then the day after
-  const [colombo] = useState(() => new Date(Date.now() + 330 * 60_000));
-  const afterCutoff = colombo.getUTCHours() >= 16;
-  const nextRun = addDays(colombo.toISOString().slice(0, 10), afterCutoff ? 2 : 1);
+  // the next run still open for orders: tomorrow's until its 4:00 PM cut-off today (Colombo), then the next
+  // operating day; kept current as the clock passes the cut-off
+  const next = useNextRun();
+  const nextRun = next.runDate;
+  const closesOn = addDays(nextRun, -1);
+  const today = colomboDay(new Date(next.now));
+  const closesWhen = closesOn === today ? 'today' : closesOn === addDays(today, 1) ? 'tomorrow' : `on ${fmtRunDate(closesOn)}`;
 
   return (
     <div className="frame frame--desktop mode-store" data-name="SM-02 Deliveries · desktop">
@@ -219,7 +228,7 @@ export default function LiveSm02Deliveries() {
                         {trip?.departTime ? ` · departs ~${fmtClock(trip.departTime)}` : ''}
                       </span>
                       {risk !== null && current.status !== 'DELIVERED' && (
-                        <span className={`m-tag ${risk >= 30 ? 'm-tag--warn' : 'm-tag--ok'}`}><span className="dot" />{risk >= 30 ? 'At risk' : 'On time'} for your {o?.windowClose ?? ''} window · late risk {risk}%</span>
+                        <span className={`m-tag ${risk >= LATE_RISK_PCT ? 'm-tag--warn' : 'm-tag--ok'}`}><span className="dot" />{risk >= LATE_RISK_PCT ? 'At risk' : 'On time'} for your {o?.windowClose ?? ''} window · late risk {risk}%</span>
                       )}
                     </div>
                     <div className="arr__plan">
@@ -239,9 +248,11 @@ export default function LiveSm02Deliveries() {
                         <div key={s.id} className="ord-mini">
                           {s.order?.tempClass === 'CHILLED' ? <span className="m-tag m-tag--cold"><Ic n="snow" />{"Chilled"}</span> : <span className="m-tag"><span className="dot" />{"Dry"}</span>}
                           <span className="id" style={{ color: 'var(--text)' }}>{s.orderId}</span>
-                          {s.pod && s.pod.unitsDelivered !== s.pod.unitsOrdered
-                            ? <span style={{ color: 'var(--st-deferred-fg)', fontWeight: '700' }}>{s.pod.unitsDelivered} of {s.pod.unitsOrdered}</span>
-                            : <span>{s.order?.units ?? 0} units</span>}
+                          {isCounted(s.order) && s.order!.unitsReceived! < (s.order!.unitsExpected ?? s.order!.units)
+                            ? <span style={{ color: 'var(--st-deferred-fg)', fontWeight: '700' }}>{s.order!.unitsReceived} of {s.order!.unitsExpected ?? s.order!.units}</span>
+                            : s.pod && s.pod.unitsDelivered !== s.pod.unitsOrdered
+                              ? <span style={{ color: 'var(--st-deferred-fg)', fontWeight: '700' }}>{s.pod.unitsDelivered} of {s.pod.unitsOrdered}</span>
+                              : <span>{s.order?.units ?? 0} units</span>}
                         </div>
                       ))}
                       <span className="t-3" style={{ fontSize: '12.5px' }}>{units} units in this delivery</span>
@@ -260,7 +271,7 @@ export default function LiveSm02Deliveries() {
                   <div className="ncard">
                     <span className="ncard__meta"><Ic n="alert" className="ic ic--sm" />Needs your attention · {fmtTime(n.sentAt)}</span>
                     <span className="ncard__t">{title(n.type)}</span>
-                    <span className="ncard__p">{String((n.payload as Record<string, unknown> | null)?.message ?? (n.payload as Record<string, unknown> | null)?.description ?? '')}</span>
+                    <span className="ncard__p" data-testid="notice-text">{noticeText(n)}</span>
                     <div className="hstack" style={{ gap: '10px', marginTop: '4px' }}>
                       <Btn className="d-btn d-btn--primary" style={{ height: '36px' }} busy={markRead.pending} onClick={() => void markRead.run(n.id)}>{"Got it"}</Btn>
                     </div>
@@ -269,7 +280,7 @@ export default function LiveSm02Deliveries() {
               ))}
               <div className="d-card" data-lk="L124">
                 <div className="ncard" style={{ gap: '6px' }}>
-                  <span className="ncard__meta" style={{ color: 'var(--brand-600)' }}><Ic n="clock" className="ic ic--sm" />{fmtRunDate(nextRun)} orders close 4:00 PM {afterCutoff ? 'tomorrow' : 'today'}</span>
+                  <span className="ncard__meta" style={{ color: 'var(--brand-600)' }} data-testid="next-run"><Ic n="clock" className="ic ic--sm" />{fmtRunDate(nextRun)} orders close 4:00 PM {closesWhen}{leftText(next.msLeft) ? ` · ${leftText(next.msLeft)} left` : ''}</span>
                   <span className="ncard__p">Start from your last order. <b style={{ color: 'var(--brand-600)' }}>Start {fmtRunDate(nextRun).split(' ')[0]} order</b></span>
                 </div>
               </div>
@@ -304,6 +315,10 @@ export default function LiveSm02Deliveries() {
               const [cls, label] = PILL[x.status] ?? ['', x.status];
               const st = x.tripStop;
               const sel = Boolean(st && st.id === current?.id);
+              const credit = orderCredit(x, st?.pod);
+              const receipt = isCounted(x)
+                ? `Counted ${x.unitsReceived} of ${x.unitsExpected ?? x.units}${credit.creditNoteId ? ` · ${credit.creditNoteId}, ${credit.units} credited` : ''}`
+                : x.status === 'DELIVERED' ? (credit.creditNoteId ? `Delivered · ${credit.creditNoteId}` : 'Delivered · count it') : 'after delivery';
               return (
                 <div key={x.id} className={`wk-row${sel ? ' wk-row--sel' : ''}`} data-order={x.id}>
                   <span className={`c${sel ? ' fw7' : ''}`} style={{ width: '120px' }}>{fmtRunDate(x.runDate)}</span>
@@ -312,8 +327,8 @@ export default function LiveSm02Deliveries() {
                   <span className="c" style={{ width: '110px' }}>{x.units}</span>
                   <span className="c" style={{ width: '150px' }}><span className={`m-pill ${cls}`}><span className="dot" />{label}</span></span>
                   <span className={`c${sel ? ' fw7' : ''}`} style={{ width: '150px' }}>{st?.arrivalActual ? fmtClock(st.arrivalActual) : st?.etaModelBandEarly ? `${fmtClock(st.etaModelBandEarly)}–${fmtClock(st.etaModelBandLate)}` : '—'}</span>
-                  <span className="c" style={{ flex: '1', color: x.status === 'DELIVERED' ? 'var(--st-delivered-fg)' : 'var(--text-3)', fontWeight: x.status === 'DELIVERED' ? '700' : undefined }}>
-                    {x.status === 'DELIVERED' ? 'Delivered · see receipts' : 'after delivery'}
+                  <span className="c" style={{ flex: '1', color: credit.creditNoteId ? 'var(--st-deferred-fg)' : x.status === 'DELIVERED' ? 'var(--st-delivered-fg)' : 'var(--text-3)', fontWeight: x.status === 'DELIVERED' ? '700' : undefined }}>
+                    {receipt}
                   </span>
                 </div>
               );

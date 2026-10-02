@@ -1,29 +1,65 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // SM-20 Credit note detail · phone (P1, phone)
-import { Image, Text, View, StyleSheet } from 'react-native';
+// The credit of one order (route param `order`, or `pod` from older links): the order's own credit note when
+// the store counted short (it exists before the driver's record syncs), else the driver's POD's. "Download PDF"
+// prints the note on the web (save as PDF); a phone shares it.
+import { Image, Platform, Share, Text, View, StyleSheet } from 'react-native';
 import { dayLabel, hm } from '@/lib/time';
 import { plural, titleCase } from '@/lodestar/live';
-import * as api from '@/model/api';
-import { useClaims, useOutbox, useParam, usePods } from '@/model/hooks';
-import { useQuery } from '@/model/query';
-import { creditedUnits, isCredit, receiptFor } from '@/model/store-face';
+import { useClaims, useOutbox, useParam } from '@/model/hooks';
+import { receiptFor, useStoreReceipts, type StoreReceipt } from '@/model/store-face';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+
+const ESC: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
+const esc = (v: unknown) => String(v ?? '').replace(/[&<>"]/g, c => ESC[c]);
+
+/** The credit note as plain lines (shared from a phone, printed on the web). */
+function noteLines(r: StoreReceipt, outlet: string): string[] {
+  const ex = r.pod?.exceptions ?? [];
+  return [
+    `Credit note ${r.creditNoteId ?? '(pending)'}`,
+    outlet,
+    `Order ${r.orderId}${r.runDate ? ` · delivery ${dayLabel(r.runDate)}` : ''}`,
+    `Credited: ${plural(r.credited, 'unit')}`,
+    `Ordered ${r.ordered}${r.counted !== null ? ` · store count ${r.counted}` : ''}${r.delivered !== null ? ` · driver's record ${r.delivered}` : ''}`,
+    ...ex.map(e => `${e.qty ?? e.unitsShort ?? ''} ${e.item ?? titleCase(e.type)}${e.description ? ` · ${e.description}` : ''}`.trim()),
+    ...(r.order?.receiptNote ? [`Store note: ${r.order.receiptNote}`] : []),
+  ].filter(Boolean);
+}
+
+async function exportNote(r: StoreReceipt, outlet: string) {
+  const lines = noteLines(r, outlet);
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const w = window.open('', '_blank');
+    if (!w) throw new Error('Allow pop-ups to save the credit note');
+    w.document.write(`<!doctype html><meta charset="utf-8"><title>${esc(lines[0])}</title><body style="font:14px/1.5 system-ui,sans-serif;padding:32px"><h1 style="font-size:22px">${esc(lines[0])}</h1>${lines.slice(1).map(l => `<p>${esc(l)}</p>`).join('')}</body>`);
+    w.document.close();
+    w.focus();
+    w.print();
+    return;
+  }
+  await Share.share({ title: lines[0], message: lines.join('\n') });
+}
 
 const nav: ScreenNav = {"links":{"L99":{"to":"sm-19-receipts-and-credit-notes","kind":"go"}}};
 
 export default function ScreenSm20CreditNoteDetail() {
   const claims = useClaims();
-  const param = useParam('pod');
-  const pods = usePods();
-  const id = param ?? pods.data?.find(isCredit)?.id ?? pods.data?.[0]?.id;
-  const q = useQuery(id ? `pod.${id}` : null, c => api.pod(c, id!), { persist: true });
-  const pod = q.data ?? pods.data?.find(p => p.id === id) ?? null;
+  const orderParam = useParam('order');
+  const podParam = useParam('pod');
+  const receipts = useStoreReceipts();
+  const list = receipts.list;
+  const r = (orderParam ? list.find(x => x.orderId === orderParam) : podParam ? list.find(x => x.pod?.id === podParam) : undefined)
+    ?? (orderParam || podParam ? undefined : list.find(x => x.creditNoteId || x.credited > 0) ?? list[0]);
+  const pod = r?.pod ?? null;
   const { items } = useOutbox();
-  const orderId = pod?.tripStop?.orderId;
+  const orderId = r?.orderId;
   const mine = receiptFor(items, orderId);
-  const units = pod ? creditedUnits(pod) : 0;
+  const countedAt = r?.order?.receiptSavedAt ?? mine?.savedAt;
+  const units = r?.credited ?? 0;
   const ex = pod?.exceptions ?? [];
-  const empty = !claims ? 'Sign in to see credit notes' : q.loading || pods.loading ? 'Loading…' : 'No credit note selected';
+  const outletName = receipts.day.data?.outlet ? `${receipts.day.data.outlet.name} · ${receipts.day.data.outlet.id}` : (claims?.outletId ?? '');
+  const empty = !claims ? 'Sign in to see credit notes' : receipts.loading ? 'Loading…' : 'No credit note selected';
   return (
     <Frame bg="#f4f5f9" nav={nav} style={s.v0}>
       <View style={s.v50}>
@@ -36,7 +72,7 @@ export default function ScreenSm20CreditNoteDetail() {
               <Text style={s.t3}>{"Credit note"}</Text>
             </View>
             <View>
-              <Text style={s.t4} numberOfLines={1}>{pod ? (pod.creditNoteId ?? 'Not issued yet') : '—'}</Text>
+              <Text style={s.t4} numberOfLines={1}>{r ? (r.creditNoteId ?? 'Not issued yet') : '—'}</Text>
             </View>
           </View>
           <View style={s.v6} />
@@ -45,20 +81,23 @@ export default function ScreenSm20CreditNoteDetail() {
           <View style={s.v17}>
             <View style={s.v12}>
               <View style={s.v8}>
-                <Text style={s.t4}>{pod ? `${units ? 'Credited' : 'Delivered'} · ${dayLabel(pod.savedAt)}` : empty}</Text>
+                <Text style={s.t4}>{r ? `${units ? 'Credited' : 'Delivered'} · ${dayLabel(r.at)}` : empty}</Text>
               </View>
-              {pod ? (
+              {r ? (
                 <View style={s.v11}>
                   <View style={s.v9} />
-                  <Text style={s.t10} numberOfLines={1}>{pod.creditNoteId ? 'Issued' : units ? 'Pending' : 'Matched'}</Text>
+                  <Text style={s.t10} numberOfLines={1}>{r.creditNoteId ? 'Issued' : units ? 'Pending' : 'Matched'}</Text>
                 </View>
               ) : null}
             </View>
             <View>
-              <Text style={s.t14} testID="credit-units">{pod ? String(units) : '—'}<Text style={s.t13}>{units === 1 ? 'unit' : 'units'}</Text></Text>
+              <Text style={s.t14} testID="credit-units">{r ? String(units) : '—'}<Text style={s.t13}>{units === 1 ? 'unit' : 'units'}</Text></Text>
             </View>
             <View>
-              <Text style={s.t16}>{pod ? 'On ' : ''}{pod ? <Text style={s.t15}>{orderId ?? '—'}</Text> : null}{pod ? ` · delivered ${pod.unitsDelivered} of ${pod.unitsOrdered}${mine ? ` · your count ${hm(mine.savedAt)}` : ''} · driver's record ${hm(pod.savedAt)}` : ''}</Text>
+              <Text style={s.t16}>{r ? 'On ' : ''}{r ? <Text style={s.t15}>{orderId ?? '—'}</Text> : null}{r ? [
+                r.counted !== null ? ` · you counted ${r.counted} of ${r.ordered}${countedAt ? ` at ${hm(countedAt)}` : ''}` : mine ? ` · your count ${hm(mine.savedAt)}` : '',
+                pod ? ` · delivered ${pod.unitsDelivered} of ${pod.unitsOrdered} · driver's record ${hm(pod.savedAt)}` : " · driver's record not synced yet",
+              ].join('') : ''}</Text>
             </View>
           </View>
           <View style={s.v35}>
@@ -74,7 +113,7 @@ export default function ScreenSm20CreditNoteDetail() {
               {ex.length ? ex.map((e, i) => (
                 <View key={i} style={i === 0 ? s.v30 : s.v33}>
                   <View style={i === 0 ? s.v22 : s.v32}>
-                    <Text style={i === 0 ? s.t21 : s.t31}>{e.qty ? `−${e.qty}` : '!'}</Text>
+                    <Text style={i === 0 ? s.t21 : s.t31}>{(e.qty ?? e.unitsShort) ? `−${e.qty ?? e.unitsShort}` : '!'}</Text>
                   </View>
                   <View style={s.v27}>
                     <View>
@@ -88,17 +127,17 @@ export default function ScreenSm20CreditNoteDetail() {
                   </View>
                   <View style={s.v29}>
                     <View>
-                      <Text style={s.t28}>{e.qty !== undefined ? String(e.qty) : '—'}</Text>
+                      <Text style={s.t28}>{(e.qty ?? e.unitsShort) !== undefined ? String(e.qty ?? e.unitsShort) : '—'}</Text>
                     </View>
                     <View>
-                      <Text style={s.t4}>{e.qty === 1 ? 'unit' : 'units'}</Text>
+                      <Text style={s.t4}>{(e.qty ?? e.unitsShort) === 1 ? 'unit' : 'units'}</Text>
                     </View>
                   </View>
                 </View>
               )) : (
                 <View style={s.v30}>
                   <View style={s.v27}>
-                    <Text style={s.t24}>{pod ? (units ? `${plural(units, 'unit')} short, no line detail on the driver's record` : 'No exceptions recorded') : empty}</Text>
+                    <Text style={s.t24}>{r ? (units ? `${plural(units, 'unit')} short${r.order?.receiptNote ? ` · ${r.order.receiptNote}` : pod ? ", no line detail on the driver's record" : ''}` : 'No exceptions recorded') : empty}</Text>
                   </View>
                 </View>
               )}
@@ -124,7 +163,7 @@ export default function ScreenSm20CreditNoteDetail() {
               <View style={s.v39}>
                 <Grad g={G1} style={s.v36} />
                 <View style={s.v38}>
-                  <Text style={s.t37} numberOfLines={1}>{mine ? `You ${hm(mine.savedAt)}` : 'You'}</Text>
+                  <Text style={s.t37} numberOfLines={1}>{countedAt ? `You ${hm(countedAt)}` : 'You'}</Text>
                 </View>
               </View>
             </View>
@@ -144,10 +183,10 @@ export default function ScreenSm20CreditNoteDetail() {
           ) : null}
         </Scroll>
         <View style={s.v49}>
-          <View style={s.v48}>
+          <Tap style={s.v48} testID="credit-pdf" to={null} disabled={!r} onPress={async () => { if (r) await exportNote(r, outletName); return false; }}>
             <Icon xml={X2} width={22} height={22} style={s.v1} />
-            <Text style={s.t47}>{"Download PDF"}</Text>
-          </View>
+            <Text style={s.t47}>{Platform.OS === 'web' ? 'Download PDF' : 'Share credit note'}</Text>
+          </Tap>
         </View>
       </View>
     </Frame>

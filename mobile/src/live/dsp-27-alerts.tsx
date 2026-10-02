@@ -4,7 +4,8 @@ import { Text, View, StyleSheet, type StyleProp, type ViewStyle } from 'react-na
 import { dayLabel, hm } from '@/lib/time';
 import { plural } from '@/lodestar/live';
 import { today, useClaims } from '@/model/hooks';
-import { depotsLabel, useAlerts, type AlertRow } from '@/model/plan';
+import { depotsLabel, LIVE_POLL_MS, useAlerts, useEvery, type AlertRow } from '@/model/plan';
+import { clock12, onCallNow, usePreferences } from '@/model/preferences';
 import { Frame, Icon, Scroll, Tap, type ScreenNav, type Target } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L61":{"to":"dsp-28-approve-re-plan","kind":"go"},"N1":{"to":"dsp-29-live-routes","kind":"nav"},"N2":{"to":"dsp-32-plans","kind":"nav"},"N3":{"to":"dsp-33-me-and-alert-rules","kind":"nav"}}};
@@ -14,11 +15,15 @@ const targetOf = (r: AlertRow): Target | undefined =>
 
 export default function ScreenDsp27Alerts() {
   const claims = useClaims();
-  const { needs, handled, signedIn, loading, hasData, date } = useAlerts();
+  const { needs, handled, signedIn, loading, hasData, date, refresh } = useAlerts();
+  useEvery(LIVE_POLL_MS, refresh);
   const all = [...needs, ...handled];
   // L61 opens the re-plan: on the first row about a plan, else the first row, else the empty row
   const lkRow = all.find(r => r.plan) ?? all[0];
   const depots = depotsLabel(claims?.depots);
+  // quiet hours: outside the on-call hours the dispatcher set (MyPreferences onCall); hidden when none are set
+  const onCall = usePreferences().data?.onCall;
+  const quiet = onCall?.from && onCall.to && !onCallNow(onCall) ? clock12(onCall.from) : '';
   const heading = !signedIn ? 'Sign in to see alerts' : !hasData && loading ? 'Loading alerts…' : needs.length ? `${plural(needs.length, 'alert')} need${needs.length === 1 ? 's' : ''} you` : 'Nothing needs you';
 
   const row = (r: AlertRow, i: number, style: StyleProp<ViewStyle>) => {
@@ -129,17 +134,19 @@ export default function ScreenDsp27Alerts() {
               </View>
             </View>
           ) : null}
-          <View style={s.v28}>
-            <Icon xml={X4} width={20} height={20} style={s.v24} />
-            <View style={s.v27}>
-              <View>
-                <Text style={s.t25}>{"Quiet hours"}</Text>
-              </View>
-              <View>
-                <Text style={s.t26}>{"Store messages and plan edits wait. Only your alert rules wake you."}</Text>
+          {quiet ? (
+            <View style={s.v28} testID="quiet-hours">
+              <Icon xml={X4} width={20} height={20} style={s.v24} />
+              <View style={s.v27}>
+                <View>
+                  <Text style={s.t25}>{`Quiet hours · on call from ${quiet}`}</Text>
+                </View>
+                <View>
+                  <Text style={s.t26}>{"Store messages and plan edits wait. Only your alert rules wake you."}</Text>
+                </View>
               </View>
             </View>
-          </View>
+          ) : null}
         </Scroll>
         <View style={s.v35}>
           <View style={s.v34}>

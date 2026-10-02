@@ -1,8 +1,58 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { ODataError } from '@lodestar/odata';
-import { announceStopIssue, isPrivileged, NOTIFY, NotifyClient, podOutcome, Principal, storeManagers } from '@lodestar/security';
+import {
+  announceStopIssue, CLOSED_STOP_STATUSES, depotDispatchers, departureShiftMs, isPrivileged, NOTIFY, NotifyClient, podExceptionsWithStoreCount, podOutcome,
+  Principal, ProgressTrip, publishEtaUpdates, recordArrival, recordDeparture, shiftRemainingEtas, storeManagers,
+} from '@lodestar/security';
 import { DeferralStatus, OrderStatus, Prisma } from '@prisma/client';
+
+/** Driver reports to dispatch (DR-12, DR-16, DR-17/18, DR-37, DR-38): STATUS_CHANGE events with payload.report. */
+export const DRIVER_REPORTS = ['PROBLEM', 'DELAY', 'REEFER_TEMP', 'VEHICLE_CHECK', 'STORE_CODE'] as const;
+export type DriverReportKind = (typeof DRIVER_REPORTS)[number];
+
+/** Chilled loads must stay at or below this (°C, DR-37's limit); a warmer reefer reading is a REEFER_FAIL. */
+export const REEFER_MAX_C = 4;
+
+/** The longest delay a DELAY report moves the ETAs by (minutes). */
+const MAX_DELAY_MIN = 600;
+
+/** The report fields passed on to dispatch and the store (the rest of the payload stays on the event). */
+const REPORT_FIELDS = ['problem', 'reason', 'minutes', 'tempC', 'setpointC', 'action', 'note', 'ok', 'items', 'odometerKm', 'units', 'photo', 'time'] as const;
+
+/** The kind of a driver report, or null for another STATUS_CHANGE (signal lost/back, …). */
+export function reportKind(payload: any): DriverReportKind | null {
+  const r = typeof payload?.report === 'string' ? payload.report.trim().toUpperCase() : '';
+  return (DRIVER_REPORTS as readonly string[]).includes(r) ? (r as DriverReportKind) : null;
+}
+
+/** A reefer reading above the limit (the payload's limitC, else REEFER_MAX_C). */
+export function reeferTooWarm(payload: any): boolean {
+  const t = Number(payload?.tempC);
+  const limit = Number.isFinite(Number(payload?.limitC)) && payload?.limitC !== null && payload?.limitC !== undefined ? Number(payload.limitC) : REEFER_MAX_C;
+  return payload?.tempC !== null && payload?.tempC !== undefined && Number.isFinite(t) && t > limit;
+}
+
+/** Minutes a DELAY report moves the ETAs by (whole minutes, 1–600), or null. */
+export function delayMinutes(payload: any): number | null {
+  const m = Number(payload?.minutes);
+  return Number.isInteger(m) && m > 0 && m <= MAX_DELAY_MIN ? m : null;
+}
+
+function reportTitle(kind: DriverReportKind, p: any, vehicleId: string, orderId: string | null): string {
+  switch (kind) {
+    case 'PROBLEM':
+      return `${vehicleId}: ${String(p.problem ?? 'problem').toLowerCase().replace(/_/g, ' ')} reported${orderId ? ` on ${orderId}` : ''}`;
+    case 'DELAY':
+      return `${vehicleId} running ${delayMinutes(p) ?? '?'} min late${p.reason ? `: ${String(p.reason).toLowerCase().replace(/_/g, ' ')}` : ''}`;
+    case 'REEFER_TEMP':
+      return reeferTooWarm(p) ? `${vehicleId} reefer at ${p.tempC} °C (limit ${p.limitC ?? REEFER_MAX_C} °C)` : `${vehicleId} reefer reading ${p.tempC ?? '?'} °C`;
+    case 'VEHICLE_CHECK':
+      return `${vehicleId} pre-trip check ${p.ok === false ? 'failed' : 'passed'}`;
+    case 'STORE_CODE':
+      return `${orderId ?? vehicleId}: delivered on the store code`;
+  }
+}
 
 export const EVENT_TYPES = ['ARRIVAL', 'LEAVE', 'POD_SAVE', 'PHOTO', 'STATUS_CHANGE'] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
@@ -92,6 +142,8 @@ export function normalisePodExceptions(raw: unknown): PodException[] | null {
  */
 @Injectable()
 export class SyncService {
+  private readonly logger = new Logger(SyncService.name);
+
   constructor(
     private prisma: PrismaService,
     @Inject(NOTIFY) private notify: NotifyClient,
@@ -168,6 +220,8 @@ export class SyncService {
         },
       });
       await this.announce(evt, outcome);
+      // A driver report is told once: on its first apply (a replayed event id is a DUPLICATE above).
+      if (evt.eventType === 'STATUS_CHANGE') await this.announceReport(evt, principal.sub);
       results.push({
         id: saved.id,
         eventType: evt.eventType,
@@ -235,6 +289,66 @@ export class SyncService {
     }
   }
 
+  /**
+   * A driver's report (STATUS_CHANGE with payload.report): DRIVER_REPORT — REEFER_FAIL for a reefer reading
+   * above the limit — to the depot's dispatchers (DSP-13) and to the managers of the store it names (an order
+   * or outlet on the trip), and driver_report to dispatcher:<depot> and trip:<id>; a delay also reaches the
+   * stores still waiting on the trip (store:<outlet>), whose ETAs it moved.
+   */
+  private async announceReport(evt: OfflineEventInput, driverId: string) {
+    const p = evt.payload ?? {};
+    const kind = reportKind(p);
+    if (!kind || !evt.tripId) return;
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: evt.tripId },
+      select: { id: true, depot: true, vehicleId: true, stops: { select: { id: true, stopSeq: true, orderId: true, outletId: true, status: true } } },
+    });
+    if (!trip) return;
+    const stops = trip.stops ?? [];
+    const named =
+      stops.find((s) => (typeof p.stopId === 'string' && s.id === p.stopId) || (typeof p.orderId === 'string' && s.orderId === p.orderId)) ??
+      (typeof p.outletId === 'string' ? stops.find((s) => s.outletId === p.outletId) : undefined);
+    const outletId = named?.outletId ?? (typeof p.outletId === 'string' ? p.outletId : null);
+    const orderId = named?.orderId ?? (typeof p.orderId === 'string' ? p.orderId : null);
+    const type = kind === 'REEFER_TEMP' && reeferTooWarm(p) ? 'REEFER_FAIL' : 'DRIVER_REPORT';
+    const details = Object.fromEntries(REPORT_FIELDS.filter((k) => p[k] !== undefined).map((k) => [k, p[k]]));
+    const payload = {
+      report: kind, ...details, tripId: trip.id, vehicleId: trip.vehicleId, depot: trip.depot, driverId,
+      stopId: named?.id ?? null, stopSeq: named?.stopSeq ?? null, orderId, outletId,
+      ...(kind === 'REEFER_TEMP' ? { limitC: p.limitC ?? REEFER_MAX_C } : {}),
+      eventId: evt.id ?? null, savedAt: evt.savedAt, title: reportTitle(kind, p, trip.vehicleId, orderId),
+    };
+    for (const recipientId of await depotDispatchers(this.prisma, trip.depot)) {
+      await this.notify.notice({ recipientId, type, tripId: trip.id, payload });
+    }
+    if (outletId) {
+      for (const m of await storeManagers(this.prisma, [outletId])) {
+        await this.notify.notice({ recipientId: m.id, type, tripId: trip.id, outletId: m.outletId, payload });
+      }
+    }
+    const waiting = outletId ? [outletId] : [...new Set(stops.filter((s) => !(CLOSED_STOP_STATUSES as readonly string[]).includes(s.status)).map((s) => s.outletId))];
+    await this.notify.publish('driver_report', [
+      `dispatcher:${trip.depot}`, `trip:${trip.id}`,
+      ...(kind === 'DELAY' ? waiting.map((o) => `store:${o}`) : []),
+    ], payload);
+  }
+
+  /** The trip a stop's progress is announced for. */
+  private async progressTrip(tripId: string | undefined): Promise<ProgressTrip | null> {
+    if (!tripId) return null;
+    const trip = await this.prisma.trip.findUnique({ where: { id: tripId }, select: { id: true, depot: true, vehicleId: true } });
+    return trip?.depot ? { id: trip.id ?? tripId, depot: trip.depot, vehicleId: trip.vehicleId } : null;
+  }
+
+  /** Live progress (events and later stops' ETAs) is best effort: the event itself has been applied. */
+  private async progress(fn: () => Promise<unknown>) {
+    try {
+      await fn();
+    } catch (e) {
+      this.logger.warn(`Stop progress not announced: ${(e as Error).message}`);
+    }
+  }
+
   /** A driver may only report events for trips of the vehicle in their token. */
   private async checkTrip(principal: Principal, tripId?: string): Promise<string | undefined> {
     if (!tripId) return 'tripId is required';
@@ -251,10 +365,15 @@ export class SyncService {
           where: { tripId: evt.tripId, stopSeq: evt.payload.stopSeq },
         });
         if (stop) {
+          const at = new Date(evt.payload.time ?? evt.savedAt);
+          const closed = (CLOSED_STOP_STATUSES as readonly string[]).includes(stop.status);
           await this.prisma.tripStop.update({
             where: { id: stop.id },
-            data: { arrivalActual: new Date(evt.payload.time ?? evt.savedAt), status: OrderStatus.ENROUTE },
+            data: { arrivalActual: at, ...(closed ? {} : { status: OrderStatus.ENROUTE }) },
           });
+          // the store and live ops see the van arrive; the stops after it move by the delay
+          const trip = await this.progressTrip(evt.tripId);
+          if (trip) await this.progress(() => recordArrival(this.prisma, this.notify, trip, stop, at));
         }
         return null;
       }
@@ -263,22 +382,45 @@ export class SyncService {
         // or a POD_SAVE in this batch (which then delivers the stop itself).
         const stop = await this.prisma.tripStop.findFirst({
           where: { tripId: evt.tripId, stopSeq: evt.payload.stopSeq },
-          include: { pod: { select: { id: true } } },
+          include: { pod: { select: { id: true, unitsDelivered: true, unitsOrdered: true } } },
         });
         if (!stop) return null;
         const leaveActual = new Date(evt.payload.time ?? evt.savedAt);
+        const trip = await this.progressTrip(evt.tripId);
         if (stop.pod || stop.status === OrderStatus.DELIVERED) {
-          await this.prisma.tripStop.update({ where: { id: stop.id }, data: { leaveActual, status: OrderStatus.DELIVERED } });
+          // a stored POD of nothing delivered is a failed stop, never DELIVERED
+          const failed = stop.pod ? podOutcome(stop.pod) === 'STOP_FAILED' : false;
+          const status = failed || stop.status === OrderStatus.EXCEPTION ? OrderStatus.EXCEPTION : OrderStatus.DELIVERED;
+          await this.prisma.tripStop.update({ where: { id: stop.id }, data: { leaveActual, status } });
+          if (trip) await this.progress(() => recordDeparture(this.prisma, this.notify, trip, stop, leaveActual, { status }));
           return null;
         }
         if (pendingPods.has(podKey(evt.tripId, stop.orderId))) {
           await this.prisma.tripStop.update({ where: { id: stop.id }, data: { leaveActual } });
+          // the POD_SAVE later in the batch announces the delivery; the van has left, so later stops move now
+          if (trip) {
+            await this.progress(async () =>
+              publishEtaUpdates(this.notify, trip, await shiftRemainingEtas(this.prisma, trip.id, stop.stopSeq, departureShiftMs(stop, leaveActual)), 'DEPARTURE'));
+          }
           return null;
         }
-        // No POD anywhere: never deliver silently. EXCEPTION puts the stop in front of a dispatcher;
-        // a later POD_SAVE for the stop still delivers it.
+        // No POD anywhere: never deliver silently. EXCEPTION puts the stop and its order in front of a
+        // dispatcher (DSP-13); a later POD_SAVE for the stop still delivers them.
         await this.prisma.tripStop.update({ where: { id: stop.id }, data: { leaveActual, status: OrderStatus.EXCEPTION } });
+        await this.prisma.order.update({ where: { id: stop.orderId }, data: { status: OrderStatus.EXCEPTION } });
+        if (trip) await this.progress(() => recordDeparture(this.prisma, this.notify, trip, stop, leaveActual, { status: OrderStatus.EXCEPTION, note: LEAVE_WITHOUT_POD }));
         return { note: LEAVE_WITHOUT_POD, resolved: false };
+      }
+      case 'STATUS_CHANGE': {
+        // A delay report moves the ETAs of the stops still to come (the store sees it at once); a later
+        // arrival is then measured against the moved ETA, so the delay is not counted twice.
+        const minutes = reportKind(evt.payload) === 'DELAY' ? delayMinutes(evt.payload) : null;
+        const trip = minutes ? await this.progressTrip(evt.tripId) : null;
+        if (trip && minutes) {
+          await this.progress(async () =>
+            publishEtaUpdates(this.notify, trip, await shiftRemainingEtas(this.prisma, trip.id, 0, minutes * 60_000), 'DELAY'));
+        }
+        return null;
       }
       case 'POD_SAVE': {
         // The stop must be on the event's trip (not just any stop for the order).
@@ -292,13 +434,29 @@ export class SyncService {
           where: { orderId: evt.payload.orderId },
         });
 
+        // The POD already stored (a correction) and the store's own count, if the store counted first:
+        // the store's shortfall stays on the POD whatever the driver writes (credit units, SM-19/20, SM-28).
+        const [previous, order] = await Promise.all([
+          this.prisma.pOD.findUnique({ where: { tripStopId: stop.id }, select: { exceptions: true, creditNoteId: true, unitsOrdered: true } }),
+          this.prisma.order.findUnique({
+            where: { id: evt.payload.orderId },
+            select: { units: true, unitsReceived: true, unitsExpected: true, receiptNote: true, receivedBy: true, receiptSavedAt: true, creditNoteId: true },
+          }),
+        ]);
+
         // What the driver recorded at the door: receiver and exceptions travel with the units.
         // Absent fields leave a stored value alone (a correction may only fix the count).
         const details: Prisma.PODUpdateInput = {};
         const receiverName = typeof evt.payload.receiverName === 'string' ? evt.payload.receiverName.trim() : '';
         if (receiverName) details.receiverName = receiverName;
         const exceptions = evt.payload.exceptions === undefined || evt.payload.exceptions === null ? null : normalisePodExceptions(evt.payload.exceptions);
-        if (exceptions) details.exceptions = exceptions as unknown as Prisma.InputJsonValue;
+        if (exceptions) details.exceptions = podExceptionsWithStoreCount(exceptions, previous?.exceptions, order) as Prisma.InputJsonValue;
+        const createExceptions = podExceptionsWithStoreCount(exceptions ?? [], null, order);
+        const creditNoteId = previous?.creditNoteId ?? order?.creditNoteId ?? null;
+        if (creditNoteId && !previous?.creditNoteId) details.creditNoteId = creditNoteId;
+        const unitsOrdered: number = evt.payload.unitsOrdered ?? previous?.unitsOrdered ?? order?.units ?? evt.payload.units;
+        // recorded with the event and read by announce(): a POD of 0 units of 10 is a failed stop
+        if (evt.payload.unitsOrdered === undefined && unitsOrdered !== evt.payload.units) evt.payload = { ...evt.payload, unitsOrdered };
 
         await this.prisma.pOD.upsert({
           where: { tripStopId: stop.id },
@@ -306,23 +464,33 @@ export class SyncService {
           create: {
             tripStopId: stop.id,
             unitsDelivered: evt.payload.units,
-            unitsOrdered: evt.payload.unitsOrdered ?? evt.payload.units,
+            unitsOrdered,
             ...(details.receiverName ? { receiverName: details.receiverName as string } : {}),
-            ...(exceptions ? { exceptions: exceptions as unknown as Prisma.InputJsonValue } : {}),
+            ...(exceptions || createExceptions.length ? { exceptions: createExceptions as Prisma.InputJsonValue } : {}),
+            ...(creditNoteId ? { creditNoteId } : {}),
             savedOffline: true,
             savedAt: new Date(evt.payload.savedAt ?? evt.savedAt),
             syncedAt: new Date(),
           },
         });
 
+        // Nothing delivered is a failed stop: stop and order go to EXCEPTION (DSP-13), never DELIVERED.
+        const status = podOutcome({ unitsDelivered: evt.payload.units, unitsOrdered }) === 'STOP_FAILED' ? OrderStatus.EXCEPTION : OrderStatus.DELIVERED;
+        const leaveActual: Date = stop.leaveActual ?? new Date(evt.savedAt);
         await this.prisma.tripStop.update({
           where: { id: stop.id },
-          data: { status: OrderStatus.DELIVERED, leaveActual: stop.leaveActual ?? new Date(evt.savedAt) },
+          data: { status, leaveActual },
         });
         await this.prisma.order.update({
           where: { id: evt.payload.orderId },
-          data: { status: OrderStatus.DELIVERED },
+          data: { status },
         });
+        const trip = await this.progressTrip(evt.tripId);
+        if (trip) {
+          await this.progress(() => recordDeparture(this.prisma, this.notify, trip, stop, leaveActual, {
+            status, unitsDelivered: evt.payload.units, unitsOrdered, savedOffline: true,
+          }));
+        }
 
         if (deferral?.isProvisional && deferral.status !== DeferralStatus.REVERSED) {
           // Reverse provisional deferral — field evidence wins (records are never deleted)

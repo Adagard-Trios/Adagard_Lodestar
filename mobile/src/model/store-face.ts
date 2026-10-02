@@ -4,11 +4,13 @@ import { useEffect, useMemo } from 'react';
 import { kv } from '@/lib/kv';
 import { lit } from '@/lib/odata';
 import { Store, useStore } from '@/lib/store';
-import { addDays, colomboDate, hm, isoDay } from '@/lib/time';
+import { addDays, colomboDate, dayLabel, hm, isoDay } from '@/lib/time';
 import type { QueueItem } from '@/offline/queue';
-import type { NewOrderLine } from './api';
-import { today, useClaims, useOutbox, useStoreDay } from './hooks';
-import { session } from './platform';
+import { DEFAULT_M3_PER_KG, type NewOrderLine } from './api';
+
+export { DEFAULT_M3_PER_KG };
+import { today, useClaims, useOutbox, usePods, useStoreDay } from './hooks';
+import { queue, session } from './platform';
 import { useQuery } from './query';
 import type { Notification, Order, OrderLineItem, POD, TempClass, Trip } from './types';
 
@@ -36,10 +38,74 @@ export function cutoffFor(runDate: string): number {
   return Date.parse(`${addDays(runDate, -1)}T00:00:00Z`) + CUTOFF_MIN * 60_000 - OFFSET_MS;
 }
 
-/** The earliest run date an order placed now can still make (tomorrow before 4:00 PM, else the day after). */
-export function nextRunDate(now: number = Date.now()): string {
+/** How far ahead the Calendar is read for closed days (the server looks as far). */
+const CALENDAR_HORIZON = 14;
+
+const NO_DAYS: ReadonlySet<string> = new Set();
+
+/**
+ * The earliest run date an order placed now can still make: tomorrow before its 4:00 PM cut-off, else the day
+ * after, moved forward past the days the operating Calendar marks closed (`closed`, YYYY-MM-DD).
+ */
+export function nextRunDate(now: number = Date.now(), closed: ReadonlySet<string> = NO_DAYS): string {
   const tomorrow = addDays(colomboDate(now), 1);
-  return now < cutoffFor(tomorrow) ? tomorrow : addDays(tomorrow, 1);
+  return nextOpenDay(now < cutoffFor(tomorrow) ? tomorrow : addDays(tomorrow, 1), closed);
+}
+
+/** `day`, or the first day after it that the Calendar does not mark closed (a silent calendar runs). */
+export function nextOpenDay(day: string, closed: ReadonlySet<string> = NO_DAYS): string {
+  for (let i = 0; i < CALENDAR_HORIZON; i++) {
+    const d = addDays(day, i);
+    if (!closed.has(d)) return d;
+  }
+  return day;
+}
+
+export type ClosedDay = { date: string; reason?: string };
+
+/** The non-operating days (Calendar isOperating = false) from today on, with the Calendar's reason. */
+export function useClosedCalendar(): ClosedDay[] | undefined {
+  const from = colomboDate();
+  return useQuery<ClosedDay[]>(`store.closed.${from}`, async c => {
+    const res = await c.list<{ date: string; festivalName?: string | null; note?: string | null }>('Calendar', {
+      filter: `isOperating eq false and date ge ${from}T00:00:00Z and date lt ${addDays(from, CALENDAR_HORIZON + 2)}T00:00:00Z`,
+      select: ['date', 'festivalName', 'note'],
+      orderby: 'date',
+      top: 60,
+    });
+    return res.value.map(r => ({ date: isoDay(r.date), reason: r.festivalName || r.note || undefined }));
+  }, { persist: true }).data;
+}
+
+/** The non-operating days (Calendar isOperating = false) from today on, as YYYY-MM-DD. */
+export function useClosedDays(): ReadonlySet<string> {
+  const rows = useClosedCalendar();
+  return useMemo(() => (rows?.length ? new Set(rows.map(r => r.date)) : NO_DAYS), [rows]);
+}
+
+/** "Depots are closed on Sun 12 Apr, and on Mon 13 Apr and Tue 14 Apr for New Year." from `from` on, until a run day. */
+export function closedText(rows: ClosedDay[] | undefined, from: string): string {
+  const run: ClosedDay[] = [];
+  for (let d = from; ; d = addDays(d, 1)) {
+    const hit = rows?.find(r => r.date === d);
+    if (!hit) break;
+    run.push(hit);
+  }
+  if (!run.length) return '';
+  const groups: { reason?: string; days: string[] }[] = [];
+  for (const r of run) {
+    const last = groups.at(-1);
+    if (last && last.reason === r.reason) last.days.push(r.date);
+    else groups.push({ reason: r.reason, days: [r.date] });
+  }
+  const part = (g: { reason?: string; days: string[] }) => `on ${g.days.map(d => dayLabel(d)).join(' and ')}${g.reason ? ` for ${g.reason}` : ''}`;
+  return `Depots are closed ${groups.map(part).join(', and ')}.`;
+}
+
+/** The next run date still open for orders (cut-off and operating Calendar), refreshed as the clock moves. */
+export function useNextRun(): string {
+  const closed = useClosedDays();
+  return nextRunDate(useNow(), closed);
 }
 
 /** "1 h 26 m" / "12 m" until `at`, or '' when past. */
@@ -53,7 +119,16 @@ export function left(at: number, now: number = Date.now()): string {
 // ---------------------------------------------------------------- draft
 
 export type DraftLine = { name: string; qty: number; kgPerUnit: number; tempClass: TempClass; lastQty?: number };
-export type Draft = { outletId: string; runDate: string; lines: DraftLine[]; notes?: string; savedAt: string; fromRunDate?: string };
+export type Draft = {
+  outletId: string;
+  runDate: string;
+  lines: DraftLine[];
+  notes?: string;
+  savedAt: string;
+  fromRunDate?: string;
+  /** m³ per kg, from the outlet's past orders (the desk's SM-01 uses the same estimate). */
+  ratio?: number;
+};
 
 const KEY = 'lodestar.store.draft.';
 const LAST = 'lodestar.store.draft.last';
@@ -130,14 +205,45 @@ export const lineKg = (l: Pick<DraftLine, 'qty' | 'kgPerUnit'>) => Math.round(l.
 
 export type Totals = { lines: number; units: number; kg: number; m3: number };
 
-export function totals(lines: DraftLine[]): Totals {
+
+/** m³ per kg of the outlet's past orders (their total m³ over their total kg), else the default. */
+export function m3PerKg(orders: Pick<Order, 'kg' | 'm3'>[] | undefined): number {
+  const base = (orders ?? []).filter(o => o.kg > 0);
+  const kg = base.reduce((n, o) => n + o.kg, 0);
+  const m3 = base.reduce((n, o) => n + o.m3, 0);
+  return kg > 0 && m3 > 0 ? m3 / kg : DEFAULT_M3_PER_KG;
+}
+
+/** m³ estimated from weight, rounded as the order is sent. */
+export const m3Of = (kg: number, ratio: number = DEFAULT_M3_PER_KG) => Math.round(kg * ratio * 100) / 100;
+
+export function totals(lines: DraftLine[], ratio: number = DEFAULT_M3_PER_KG): Totals {
   const live = lines.filter(l => l.qty > 0);
   const kg = Math.round(live.reduce((n, l) => n + lineKg(l), 0) * 10) / 10;
-  return { lines: live.length, units: live.reduce((n, l) => n + l.qty, 0), kg, m3: Math.round(kg * 0.004 * 10) / 10 };
+  return { lines: live.length, units: live.reduce((n, l) => n + l.qty, 0), kg, m3: m3Of(kg, ratio) };
 }
 
 export function byClass(lines: DraftLine[]) {
   return { dry: lines.filter(l => l.tempClass === 'AMBIENT'), chilled: lines.filter(l => l.tempClass === 'CHILLED') };
+}
+
+/**
+ * "Keep editing" on SM-25: the orders still waiting on this phone (not being sent right now) come back into the
+ * draft and leave the outbox, so nothing is sent twice. Returns false when there was nothing to take back.
+ */
+export async function reopenOrders(items: QueueItem[]): Promise<boolean> {
+  const waiting = items.filter(i => i.kind === 'ORDER' && (i.status === 'pending' || i.status === 'conflict'));
+  if (!waiting.length) return false;
+  const first = waiting[0].payload.order as { outletId: string; runDate: string; notes?: string; kg?: number; m3?: number };
+  const lines: DraftLine[] = waiting.flatMap(i =>
+    ((i.payload.order?.lineItems ?? []) as NewOrderLine[]).map(l => ({ name: l.name, qty: l.qty, kgPerUnit: l.qty > 0 ? Math.round((l.kg / l.qty) * 1000) / 1000 : l.kg, tempClass: l.tempClass })),
+  );
+  const kg = waiting.reduce((n, i) => n + Number(i.payload.order?.kg ?? 0), 0);
+  const m3 = waiting.reduce((n, i) => n + Number(i.payload.order?.m3 ?? 0), 0);
+  const ratio = kg > 0 && m3 > 0 ? m3 / kg : undefined;
+  for (const i of waiting) await queue.discard(i.id);
+  await saveDraft({ outletId: first.outletId, runDate: isoDay(first.runDate) || first.runDate, lines, ...(first.notes ? { notes: first.notes } : {}), ...(ratio ? { ratio } : {}) });
+  return true;
 }
 
 export function toOrderLines(lines: DraftLine[]): NewOrderLine[] {
@@ -146,7 +252,7 @@ export function toOrderLines(lines: DraftLine[]): NewOrderLine[] {
 
 // ---------------------------------------------------------------- template (previous order)
 
-export type Template = { runDate: string; orders: Order[]; lines: DraftLine[] };
+export type Template = { runDate: string; orders: Order[]; lines: DraftLine[]; ratio: number };
 
 /** The store's previous order day with its lines (every temperature class of that day). */
 export function useTemplate() {
@@ -157,13 +263,13 @@ export function useTemplate() {
       const res = await c.list<Order>('Orders', {
         filter: `outletId eq ${lit(outletId!)} and status ne 'CANCELLED'`,
         orderby: 'runDate desc,orderedAt desc',
-        top: 6,
+        top: 12,
         expand: 'lineItems($select=id,orderId,name,qty,kg,tempClass)',
       });
       const runDate = isoDay(res.value[0]?.runDate);
       const orders = res.value.filter(o => isoDay(o.runDate) === runDate);
       const lines = orders.flatMap(o => (o.lineItems ?? []).map(fromLine));
-      return { runDate, orders, lines };
+      return { runDate, orders, lines, ratio: m3PerKg(res.value) };
     },
     { persist: true },
   );
@@ -173,21 +279,28 @@ function fromLine(l: OrderLineItem): DraftLine {
   return { name: l.name, qty: l.qty, kgPerUnit: l.qty > 0 ? Math.round((l.kg / l.qty) * 1000) / 1000 : l.kg, tempClass: l.tempClass, lastQty: l.qty };
 }
 
-/** The draft, created from the previous order the first time (and moved to the next open run date). */
+/**
+ * The draft, created from the previous order the first time, and kept on the next run date still open for
+ * orders (moved on after the cut-off, or off a day the operating Calendar closes).
+ */
 export function useOrderDraft() {
   const claims = useClaims();
   const { draft, loaded } = useDraft();
   const tpl = useTemplate();
-  const runDate = nextRunDate(useNow());
+  const closed = useClosedDays();
+  const runDate = nextRunDate(useNow(), closed);
+  const ratio = tpl.data?.ratio;
   useEffect(() => {
     if (!loaded || !claims?.outletId || !session.claims) return;
     if (!draft && tpl.data) {
-      void saveDraft({ outletId: claims.outletId, runDate, lines: tpl.data.lines, fromRunDate: tpl.data.runDate || undefined });
-    } else if (draft && draft.runDate < runDate) {
-      void saveDraft({ ...draft, runDate });
+      void saveDraft({ outletId: claims.outletId, runDate, lines: tpl.data.lines, fromRunDate: tpl.data.runDate || undefined, ratio: tpl.data.ratio });
+    } else if (draft && (draft.runDate < runDate || closed.has(draft.runDate))) {
+      void saveDraft({ ...draft, runDate: draft.runDate < runDate ? runDate : nextOpenDay(draft.runDate, closed) });
+    } else if (draft && draft.ratio === undefined && ratio !== undefined) {
+      void saveDraft({ ...draft, ratio });
     }
-  }, [loaded, draft, tpl.data, claims?.outletId, runDate]);
-  return { draft, loaded, template: tpl, runDate: draft?.runDate ?? runDate };
+  }, [loaded, draft, tpl.data, claims?.outletId, runDate, closed, ratio]);
+  return { draft, loaded, template: tpl, runDate: draft?.runDate ?? runDate, ratio: draft?.ratio ?? ratio ?? DEFAULT_M3_PER_KG };
 }
 
 // ---------------------------------------------------------------- deliveries
@@ -230,13 +343,92 @@ export function podFor(pods: POD[] | undefined, orderId?: string): POD | undefin
   return orderId ? pods?.find(p => p.tripStop?.orderId === orderId) : undefined;
 }
 
-/** Units credited on a POD (ordered minus delivered, else the sum of exception quantities). */
+/**
+ * Units credited on a POD: ordered minus delivered, else the units of its exceptions (an item the driver
+ * recorded, `qty`, or a short count the store confirmed, `unitsShort`).
+ */
 export function creditedUnits(p: POD): number {
   const gap = Math.max(0, p.unitsOrdered - p.unitsDelivered);
-  return gap || (p.exceptions ?? []).reduce((n, e) => n + (e.qty ?? 0), 0);
+  return gap || (p.exceptions ?? []).reduce((n, e) => n + (e.qty ?? e.unitsShort ?? 0), 0);
 }
 
 export const isCredit = (p: POD) => !!p.creditNoteId || !!p.exceptions?.length || p.unitsDelivered < p.unitsOrdered;
+
+/** The store's own count of an order is on the server (Orders ConfirmReceipt). */
+export const isCounted = (o: Pick<Order, 'unitsReceived'>) => o.unitsReceived !== null && o.unitsReceived !== undefined;
+
+/** Order statuses ConfirmReceipt accepts (backend RECEIVABLE_STATUSES). */
+export const RECEIVABLE = ['LOADED', 'ENROUTE', 'DELIVERED', 'EXCEPTION'];
+
+/**
+ * The credit of one order: the store's short count (the order's own credit note, raised even before the
+ * driver's record exists) or the driver's POD, whichever is larger.
+ */
+export function orderCredit(o?: Order | null, p?: POD | null): { creditNoteId: string | null; units: number } {
+  const counted = o && isCounted(o) ? Math.max(0, (o.unitsExpected ?? o.units) - (o.unitsReceived ?? 0)) : 0;
+  const driver = p ? creditedUnits(p) : 0;
+  const creditNoteId = o?.creditNoteId ?? p?.creditNoteId ?? null;
+  return { creditNoteId, units: creditNoteId || counted || (p && isCredit(p)) ? Math.max(counted, driver) : 0 };
+}
+
+/** One delivered order as the store sees it: its count, the driver's record and the credit note. */
+export type StoreReceipt = {
+  orderId: string;
+  order?: Order;
+  pod?: POD;
+  runDate: string;
+  tempClass?: TempClass;
+  /** The units the store expected. */
+  ordered: number;
+  /** The store's own count (null until confirmed). */
+  counted: number | null;
+  /** The driver's delivered units (null until the POD syncs). */
+  delivered: number | null;
+  creditNoteId: string | null;
+  credited: number;
+  /** When it happened: the store's count, else the driver's record. */
+  at: string;
+};
+
+/**
+ * Receipts and credit notes from both records: every order the store counted (Order.unitsReceived, with its
+ * credit note) and every driver's POD; an order counted before its POD exists is still listed.
+ */
+export function storeReceipts(orders: Order[] | undefined, pods: POD[] | undefined): StoreReceipt[] {
+  const byOrder = new Map<string, StoreReceipt>();
+  const add = (o: Order | undefined, p: POD | undefined) => {
+    const orderId = o?.id ?? p?.tripStop?.orderId;
+    if (!orderId) return;
+    const prev = byOrder.get(orderId);
+    const order = o ?? prev?.order;
+    const pod = p ?? prev?.pod;
+    const credit = orderCredit(order, pod);
+    byOrder.set(orderId, {
+      orderId,
+      order,
+      pod,
+      runDate: isoDay(order?.runDate ?? pod?.savedAt),
+      tempClass: order?.tempClass,
+      ordered: order?.unitsExpected ?? order?.units ?? pod?.unitsOrdered ?? 0,
+      counted: order && isCounted(order) ? (order.unitsReceived as number) : null,
+      delivered: pod ? pod.unitsDelivered : null,
+      creditNoteId: credit.creditNoteId,
+      credited: credit.units,
+      at: order?.receiptSavedAt ?? order?.receivedAt ?? pod?.savedAt ?? order?.runDate ?? '',
+    });
+  };
+  for (const p of pods ?? []) add(undefined, p);
+  for (const o of orders ?? []) if (isCounted(o) || byOrder.has(o.id)) add(o, undefined);
+  return [...byOrder.values()].sort((a, b) => b.at.localeCompare(a.at));
+}
+
+/** The outlet's receipts and credit notes (its orders and the drivers' PODs). */
+export function useStoreReceipts() {
+  const day = useStoreDay();
+  const pods = usePods();
+  const list = useMemo(() => storeReceipts(day.data?.orders, pods.data), [day.data, pods.data]);
+  return { list, loading: day.loading || pods.loading, error: day.error ?? pods.error, fromCache: day.fromCache || pods.fromCache, day, pods };
+}
 
 // ---------------------------------------------------------------- timeline
 

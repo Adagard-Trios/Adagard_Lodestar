@@ -1,0 +1,13 @@
+[project]
+name = "lodestar-ocr"
+version = "0.1.0"
+description = "Waypoint Lodestar OCR: read a value from a field photo (RapidOCR, CPU). The person confirms it."
+requires-python = ">=3.12"
+
+[tool.setuptools.packages.find]
+include = ["lodestar_ocr*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]

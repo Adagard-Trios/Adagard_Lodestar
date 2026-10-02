@@ -111,7 +111,17 @@ export function title(v: string | null | undefined): string {
 export const BRAND_LETTER: Record<string, string> = { FRESH: 'F', STYLE: 'S', TECH: 'T' };
 export const DEPOT_NAME: Record<string, string> = { PELIYAGODA: 'Peliyagoda DC', KANDY: 'Kandy Hub' };
 
-/** ISO day (YYYY-MM-DD) `n` days before today. */
-export function daysAgo(n: number): string {
-  return new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+/** ISO day (YYYY-MM-DD) `n` days before today's business date in Colombo (not the UTC date). */
+export function daysAgo(n: number, now: Date = new Date()): string {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+  return addDays(today, -n);
 }
+
+/**
+ * Late risk (TripStop.lateRiskPct) at or above this is "at risk": the live board's tags and "At risk" filter, the
+ * exceptions inbox, the store's next-delivery tag and the default alert threshold in Plan settings. The planning
+ * backend sets no threshold of its own, so this is the one value the desk uses.
+ */
+export const LATE_RISK_PCT = 30;
+/** Colour banding only: an at-risk stop at or above this reads red (exception) instead of amber. */
+export const LATE_RISK_HIGH_PCT = 60;

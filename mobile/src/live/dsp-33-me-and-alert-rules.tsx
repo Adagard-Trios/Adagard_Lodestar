@@ -1,10 +1,12 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // DSP-33 Me and alert rules · phone (P2, phone)
-// The alert-rule toggles and on-call hours are design-only (no backend settings for them yet).
-import { Text, View, StyleSheet } from 'react-native';
+// Alert rules and on-call hours are the user's own settings (Users/Lodestar.MyPreferences, saved with
+// SaveMyPreferences), the same record the desk's DSP-20 edits. Tapping a rule saves it.
+import { Text, View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { signOutTo, titleCase, useDeviceId } from '@/lodestar/live';
 import { useClaims } from '@/model/hooks';
 import { depotsLabel, useAlertCount } from '@/model/plan';
+import { alertRules, clock12, DEFAULT_ALERTS, LATE_RISK_PCT, onCallNow, savePreferences, usePreferences, type Preferences } from '@/model/preferences';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"N0":{"to":"dsp-27-alerts","kind":"nav"},"N1":{"to":"dsp-29-live-routes","kind":"nav"},"N2":{"to":"dsp-32-plans","kind":"nav"}}};
@@ -19,13 +21,30 @@ const initials = (name?: string) =>
         .join('')
     : '—';
 
+type RuleRow = { key: string; icon: string; tile: StyleProp<ViewStyle>; title: string; sub: string; on: boolean; set: (v: boolean) => Preferences['alerts'] };
+
 export default function ScreenDsp33MeAndAlertRules() {
   const claims = useClaims();
   const device = useDeviceId();
   const alertCount = useAlertCount();
+  const prefs = usePreferences();
   const name = claims?.name ?? claims?.username;
   const role = claims ? (claims.roles.includes('dispatcher') ? 'Dispatcher' : titleCase(claims.roles[0])) : '';
   const depots = depotsLabel(claims?.depots);
+  const a = alertRules(prefs.data);
+  const onCall = prefs.data?.onCall;
+  const from = onCall?.from && clock12(onCall.from);
+  const to = onCall?.to && clock12(onCall.to);
+  const now = !!(from && to) && onCallNow(onCall);
+  const rows: RuleRow[] = [
+    { key: 'vehicleFault', icon: X0, tile: s.v22, title: "Vehicle can't depart", sub: [a.vehicleFault.push && 'Push', a.vehicleFault.sms && 'SMS'].filter(Boolean).join(' and ') || 'Off', on: !!(a.vehicleFault.push || a.vehicleFault.sms), set: v => ({ ...a, vehicleFault: { push: v, sms: v } }) },
+    { key: 'lateRisk', icon: X1, tile: s.v28, title: `Late risk ${a.lateRisk.threshold ?? LATE_RISK_PCT}% or more`, sub: a.lateRisk.risingOnly ? 'Push · rising risk only' : 'Push', on: !!a.lateRisk.push, set: v => ({ ...a, lateRisk: { ...a.lateRisk, push: v } }) },
+    { key: 'flags', icon: X2, tile: s.v28, title: 'Loader and store flags', sub: 'Push · shortfalls, blocked docks', on: !!a.flags.push, set: v => ({ ...a, flags: { push: v } }) },
+    { key: 'silence', icon: X3, tile: s.v22, title: `Silent ${a.silence.minutes ?? DEFAULT_ALERTS.silence.minutes} min, unknown place`, sub: [a.silence.push && 'Push', a.silence.call && 'call'].filter(Boolean).join(' and ') || 'Off', on: !!(a.silence.push || a.silence.call), set: v => ({ ...a, silence: { ...a.silence, push: v, call: v } }) },
+    { key: 'signalZones', icon: X4, tile: s.v30, title: 'Known signal-loss zones', sub: a.signalZones.alert ? 'Alert when a van goes quiet there' : 'Show as predicted, no alert', on: !!a.signalZones.alert, set: v => ({ ...a, signalZones: { alert: v } }) },
+  ];
+  const onCount = rows.filter(r => r.on).length;
+  const big = now ? to : from;
   return (
     <Frame bg="#f4f5f9" nav={nav} style={s.v0}>
       <View style={s.v41}>
@@ -43,23 +62,33 @@ export default function ScreenDsp33MeAndAlertRules() {
               </View>
             </View>
           </View>
-          <View style={s.v17}>
+          <View style={s.v17} testID="on-call">
             <Grad g={G0} style={s.v7} />
             <View style={s.v13}>
               <View style={s.v9}>
-                <Text style={s.t8}>{"On call now"}</Text>
+                <Text style={s.t8}>{!(from && to) ? "On-call hours" : now ? "On call now" : "Off call now"}</Text>
               </View>
               <View style={s.v10} />
-              <View style={s.v12}>
-                <View style={s.v11} />
+              {from && to ? (
+                <View style={now ? s.v12 : s.v31}>
+                  <View style={s.v11} />
+                </View>
+              ) : null}
+            </View>
+            {from && to && big ? (
+              <>
+                <View>
+                  <Text style={s.t15}>{`${now ? 'until' : 'from'} ${big.slice(0, -3)}`}<Text style={s.t14}>{big.slice(-2)}</Text></Text>
+                </View>
+                <View>
+                  <Text style={s.t16}>{`${from} to ${to}, set on the desk in Settings.`}</Text>
+                </View>
+              </>
+            ) : (
+              <View>
+                <Text style={s.t16}>{prefs.data ? "Not set yet. Set your on-call hours on the desk in Settings." : prefs.error ? "Couldn't load your settings." : "Loading…"}</Text>
               </View>
-            </View>
-            <View>
-              <Text style={s.t15}>{"until 7:00"}<Text style={s.t14}>{"AM"}</Text></Text>
-            </View>
-            <View>
-              <Text style={s.t16}>{"Mon to Sat, 3:00 to 7:00 AM on operating days."}</Text>
-            </View>
+            )}
           </View>
           <View style={s.v33}>
             <View style={s.v20}>
@@ -67,100 +96,30 @@ export default function ScreenDsp33MeAndAlertRules() {
                 <Text style={s.t18}>{"What wakes me"}</Text>
               </View>
               <View style={s.v9}>
-                <Text style={s.t19}>{"4 of 5 on"}</Text>
+                <Text style={s.t19} testID="rules-on">{`${onCount} of ${rows.length} on`}</Text>
               </View>
             </View>
             <View style={s.v32}>
-              <View style={s.v27}>
-                <View style={s.v22}>
-                  <Icon xml={X0} width={21} height={21} style={s.v21} />
-                </View>
-                <View style={s.v25}>
-                  <View>
-                    <Text style={s.t23}>{"Vehicle can't depart"}</Text>
+              {rows.map((r, i) => (
+                <Tap key={r.key} style={i === 0 ? s.v27 : s.v29} testID={`rule-${r.key}`} disabled={!claims} onPress={() => savePreferences({ alerts: r.set(!r.on) })}>
+                  <View style={r.tile}>
+                    <Icon xml={r.icon} width={21} height={21} style={s.v21} />
                   </View>
-                  <View>
-                    <Text style={s.t24}>{"Push and SMS · always"}</Text>
+                  <View style={s.v25}>
+                    <View>
+                      <Text style={s.t23}>{r.title}</Text>
+                    </View>
+                    <View>
+                      <Text style={s.t24}>{r.sub}</Text>
+                    </View>
                   </View>
-                </View>
-                <View style={s.v26}>
-                  <View style={s.v12}>
-                    <View style={s.v11} />
+                  <View style={s.v26}>
+                    <View style={r.on ? s.v12 : s.v31} accessibilityRole="switch" accessibilityState={{ checked: r.on }}>
+                      <View style={s.v11} />
+                    </View>
                   </View>
-                </View>
-              </View>
-              <View style={s.v29}>
-                <View style={s.v28}>
-                  <Icon xml={X1} width={21} height={21} style={s.v21} />
-                </View>
-                <View style={s.v25}>
-                  <View>
-                    <Text style={s.t23}>{"Late risk 50% or more"}</Text>
-                  </View>
-                  <View>
-                    <Text style={s.t24}>{"Push · rising risk only"}</Text>
-                  </View>
-                </View>
-                <View style={s.v26}>
-                  <View style={s.v12}>
-                    <View style={s.v11} />
-                  </View>
-                </View>
-              </View>
-              <View style={s.v29}>
-                <View style={s.v28}>
-                  <Icon xml={X2} width={21} height={21} style={s.v21} />
-                </View>
-                <View style={s.v25}>
-                  <View>
-                    <Text style={s.t23}>{"Loader and store flags"}</Text>
-                  </View>
-                  <View>
-                    <Text style={s.t24}>{"Push · shortfalls, blocked docks"}</Text>
-                  </View>
-                </View>
-                <View style={s.v26}>
-                  <View style={s.v12}>
-                    <View style={s.v11} />
-                  </View>
-                </View>
-              </View>
-              <View style={s.v29}>
-                <View style={s.v22}>
-                  <Icon xml={X3} width={21} height={21} style={s.v21} />
-                </View>
-                <View style={s.v25}>
-                  <View>
-                    <Text style={s.t23}>{"Silent 15 min, unknown place"}</Text>
-                  </View>
-                  <View>
-                    <Text style={s.t24}>{"Push and call · outside known zones"}</Text>
-                  </View>
-                </View>
-                <View style={s.v26}>
-                  <View style={s.v12}>
-                    <View style={s.v11} />
-                  </View>
-                </View>
-              </View>
-              <View style={s.v29}>
-                <View style={s.v30}>
-                  <Icon xml={X4} width={21} height={21} style={s.v21} />
-                </View>
-                <View style={s.v25}>
-                  <View>
-                    <Text style={s.t23}>{"Known signal-loss zones"}</Text>
-                  </View>
-                  <View>
-                    <Text style={s.t24}>{"Show as predicted, no alert"}</Text>
-                  </View>
-                </View>
-                <View style={s.v26}>
-                  <View style={s.v31}>
-                    <View style={s.v11} />
-                  </View>
-                </View>
-              </View>
+                </Tap>
+              ))}
             </View>
           </View>
           <View style={s.v33}>
@@ -173,35 +132,16 @@ export default function ScreenDsp33MeAndAlertRules() {
             <View style={s.v32}>
               <View style={s.v27}>
                 <View style={s.v34}>
-                  <Icon xml={X5} width={21} height={21} style={s.v21} />
+                  <Icon xml={X12} width={21} height={21} style={s.v21} />
                 </View>
                 <View style={s.v25}>
                   <View>
-                    <Text style={s.t23}>{"Fingerprint unlock"}</Text>
+                    <Text style={s.t23}>{"This phone"}</Text>
                   </View>
                   <View>
-                    <Text style={s.t24} testID="device-id">{"This phone only · "}{device ?? "…"}</Text>
+                    <Text style={s.t24} testID="device-id">{device ?? "…"}</Text>
                   </View>
                 </View>
-                <View style={s.v26}>
-                  <View style={s.v12}>
-                    <View style={s.v11} />
-                  </View>
-                </View>
-              </View>
-              <View style={s.v29}>
-                <View style={s.v34}>
-                  <Icon xml={X6} width={21} height={21} style={s.v21} />
-                </View>
-                <View style={s.v25}>
-                  <View>
-                    <Text style={s.t23}>{"Backup on call"}</Text>
-                  </View>
-                  <View>
-                    <Text style={s.t24}>{"Depot shift lead"}</Text>
-                  </View>
-                </View>
-                <Icon xml={X7} width={18} height={18} style={s.v21} />
               </View>
               <Tap style={s.v29} testID="sign-out" onPress={() => signOutTo('dsp-26-sign-in')}>
                 <View style={s.v22}>
@@ -252,9 +192,6 @@ const X1 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#b45309\" stroke-w
 const X2 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#b45309\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"21\" height=\"21\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z\" fill=\"none\" stroke=\"#b45309\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M3.3 7 12 12l8.7-5M12 22V12\" fill=\"none\" stroke=\"#b45309\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const X3 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#b42318\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"21\" height=\"21\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M12 20h.01M8.5 16.43a5 5 0 0 1 7 0M2 8.82a15 15 0 0 1 4.17-2.65M10.66 5c4.01-.36 8.14.9 11.34 3.76M16.85 11.25a10 10 0 0 1 2.22 1.68M5 13a10 10 0 0 1 5.24-2.76M2 2l20 20\" fill=\"none\" stroke=\"#b42318\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const X4 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#57534e\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"21\" height=\"21\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M12 20h.01M8.5 16.43a5 5 0 0 1 7 0M2 8.82a15 15 0 0 1 4.17-2.65M10.66 5c4.01-.36 8.14.9 11.34 3.76M16.85 11.25a10 10 0 0 1 2.22 1.68M5 13a10 10 0 0 1 5.24-2.76M2 2l20 20\" fill=\"none\" stroke=\"#57534e\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
-const X5 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"21\" height=\"21\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M14 13.12c0 2.38 0 6.38-1 8.88\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M17.29 21.02c.12-.6.43-2.3.5-3.02\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M2 12a10 10 0 0 1 18-6\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M2 16h.01\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M21.8 16c.2-2 .131-5.354 0-6\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M8.65 22c.21-.66.45-1.32.57-2\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M9 6.8a6 6 0 0 1 9 5.2v2\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
-const X6 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"21\" height=\"21\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"9\" cy=\"8\" r=\"4\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></circle><path d=\"M1 21a8 8 0 0 1 16 0M16 4a4 4 0 0 1 0 8M23 21a8 8 0 0 0-5-7.4\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
-const X7 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"18\" height=\"18\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m9 18 6-6-6-6\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const X8 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#b42318\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"21\" height=\"21\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9\" fill=\"none\" stroke=\"#b42318\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const X9 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"24\" height=\"24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M10.3 21a1.94 1.94 0 0 0 3.4 0\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const X10 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"24\" height=\"24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m3 11 19-9-9 19-2-8-8-2z\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";

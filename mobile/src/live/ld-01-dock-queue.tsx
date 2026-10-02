@@ -3,7 +3,7 @@
 import { Text, View, StyleSheet } from 'react-native';
 import { dayLabel, hm, until } from '@/lib/time';
 import { plural, signOutTo, titleCase } from '@/lodestar/live';
-import { useRePlanAlert } from '@/model/dock';
+import { nextToLoad, useMyBay, useRePlanAlert } from '@/model/dock';
 import { useBayQueue, useClaims, useOutbox } from '@/model/hooks';
 import type { Trip } from '@/model/types';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
@@ -27,7 +27,8 @@ export default function ScreenLd01DockQueue() {
   const { data, loading, error } = useBayQueue();
   const { waiting } = useOutbox();
   const trips = data?.trips ?? [];
-  const next = trips.find(t => t.status === 'PLANNED' || t.status === 'LOADING') ?? null;
+  const [bay] = useMyBay();
+  const next = nextToLoad(trips, bay);
   const depot = data?.depot ?? claims?.depots[0];
   // a re-plan published for this depot while the queue is open (P5) opens LD-14
   useRePlanAlert(depot);

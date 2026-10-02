@@ -2,13 +2,13 @@
 // SM-25 Offline draft saved · phone (P1, phone)
 // SM-14 opens this when the orders are submitted with no signal (route param `runDate`): the ORDER writes waiting
 // in the outbox, the cut-off count-down, and "Try sending now" (the outbox sync). Once everything is sent it goes
-// on to "Received" (SM-01).
+// on to "Received" (SM-01). "Keep editing" takes the orders still waiting back into the draft (SM-13).
 import { Text, View, StyleSheet } from 'react-native';
 import { dayLabel } from '@/lib/time';
 import { useClaims, useOnline, useOutbox, useParam, useStoreDay } from '@/model/hooks';
 import { depotName } from '@/model/plan';
 import { sendNow } from '@/model/run';
-import { cutoffFor, left, nextRunDate, useNow } from '@/model/store-face';
+import { cutoffFor, left, reopenOrders, useNextRun, useNow } from '@/model/store-face';
 import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L108":{"to":"sm-01-received","kind":"go"},"L109":{"to":"sm-13-new-order","kind":"go"},"B":{"to":"sm-11-today-order-day","kind":"back"}}};
@@ -28,7 +28,9 @@ export default function ScreenSm25OfflineDraftSaved() {
   const claims = useClaims();
   const online = useOnline();
   const now = useNow();
-  const runDate = useParam('runDate') ?? nextRunDate(now);
+  const next = useNextRun();
+  const runDate = useParam('runDate') ?? next;
+  const since = useParam('since');
   const day = useStoreDay();
   const outlet = day.data?.outlet ?? null;
   const { items } = useOutbox();
@@ -144,12 +146,12 @@ export default function ScreenSm25OfflineDraftSaved() {
           </View>
         </Scroll>
         <View style={s.v43}>
-          <Tap lk="L108" style={s.v40} onPress={trySend} to={{ to: 'sm-01-received', params: { runDate } }}>
+          <Tap lk="L108" style={s.v40} onPress={trySend} to={{ to: 'sm-01-received', params: since ? { runDate, since } : { runDate } }}>
             <Grad g={G0} style={s.v38} />
             <Icon xml={X6} width={22} height={22} style={s.v1} />
             <Text style={s.t39}>{"Try sending now"}</Text>
           </Tap>
-          <Tap lk="L109" style={s.v42}>
+          <Tap lk="L109" style={s.v42} onPress={async () => { await reopenOrders(drafts); return true; }}>
             <Text style={s.t41}>{"Keep editing"}</Text>
           </Tap>
         </View>

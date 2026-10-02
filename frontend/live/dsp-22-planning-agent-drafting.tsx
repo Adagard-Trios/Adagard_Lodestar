@@ -11,16 +11,23 @@ import { useRouter } from 'next/navigation';
 import Btn from '@/components/live/Btn';
 import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
-import { infeasibility, useAgentRun, usePlanScope, useStartAgentRun } from '@/components/live/plan-data';
+import { tripTwoHead } from '@/components/live/board';
+import { infeasibility, useReviewRun, usePlanScope, useStartAgentRun } from '@/components/live/plan-data';
+import { type AgentConfig, useAgentConfig } from '@/components/live/settings-data';
 import { Empty, ErrorBanner } from '@/components/live/states';
 import { DEPOT_NAME, fmtNum, fmtRunDate, fmtTime, isoDay } from '@/lib/format';
 import type { AgentRunDetail } from '@/lib/odata/types';
-import { useAgentRunId } from '@/lib/workday';
 
 const BOARD = '/plan/dsp-02-plan-board';
 export const INFEASIBLE = '/plan/dsp-23-plan-infeasible';
 
-type Step = { node: string; label: (d: AgentRunDetail) => React.ReactNode; value?: (d: AgentRunDetail) => string };
+type Step = { node: string; label: (d: AgentRunDetail, c?: AgentConfig) => React.ReactNode; value?: (d: AgentRunDetail) => string };
+
+/** "Checking the N rules: weight, volume, …" from the agent's own rule list (AgentConfig), never a fixed count. */
+const rulesLine = (c?: AgentConfig) => {
+  const rules = Array.isArray(c?.rules) ? c!.rules : [];
+  return rules.length ? `Checking the ${rules.length} rules: ${rules.map(r => r.label.toLowerCase()).join(', ')}` : 'Checking the rules';
+};
 const cs = (d: AgentRunDetail) => (d.contextSummary ?? {}) as {
   orders?: number; vehicles?: number; vehiclesDown?: string[]; chilledDemand?: { m3?: number }; reeferCapacity?: { m3?: number };
 };
@@ -33,7 +40,7 @@ const STEPS: Step[] = [
     value: d => (cs(d).vehicles !== undefined ? `${(cs(d).vehicles ?? 0) - (cs(d).vehiclesDown?.length ?? 0)} / ${cs(d).vehicles} ready` : ''),
   },
   { node: 'draft_plan', label: d => <><b>Packing trips:</b> {d.plan?.trips?.length ?? 0}{" trips, 1 brand and 1 district a trip"}</>, value: d => (cs(d).reeferCapacity?.m3 ? `${fmtNum(cs(d).reeferCapacity!.m3, 1)} m³ reefer` : '') },
-  { node: 'check_rules', label: () => <>{"Checking the 7 booklet rules: weight, volume, 270 min, 2 trips, fuel, van_only, mall"}</>, value: d => (d.ruleChecks ? `${d.ruleChecks.filter(r => r.passed).length} / ${d.ruleChecks.length} pass` : '') },
+  { node: 'check_rules', label: (_d, c) => <>{rulesLine(c)}</>, value: d => (d.ruleChecks ? `${d.ruleChecks.filter(r => r.passed).length} / ${d.ruleChecks.length} pass` : '') },
   { node: 'rank_deferrals', label: () => <>{"Ranking deferral candidates if anything is left over, protected outlets kept"}</>, value: d => (d.deferrals ? `${d.deferrals.length} candidates` : '') },
   { node: 'explain', label: () => <>{"Writing what it did and what it checked"}</> },
 ];
@@ -41,8 +48,8 @@ const STEPS: Step[] = [
 export default function LiveDsp22PlanningAgentDrafting() {
   const router = useRouter();
   const scope = usePlanScope();
-  const [runId, setRunId] = useAgentRunId();
-  const run = useAgentRun(runId);
+  const { runId, run, setRunId } = useReviewRun();
+  const config = useAgentConfig();
   const start = useStartAgentRun(r => setRunId(r.id));
   const status = String(run.data?.status ?? '').toUpperCase();
   const detail: AgentRunDetail = run.data?.detail ?? {};
@@ -119,7 +126,7 @@ export default function LiveDsp22PlanningAgentDrafting() {
                       return (
                         <div key={i} className="dx-step" style={ok || working ? undefined : { color: 'var(--text-3)' }}>
                           {ok ? <span className="dx-step__i dx-step__i--ok"><Ic n="check" /></span> : working ? <span className="dx-spin lv-spin" /> : <span className="dx-step__i dx-step__i--wait" />}
-                          <span>{s.label(detail)}</span>
+                          <span>{s.label(detail, config.data)}</span>
                           {(ok || working) && <span className="dx-step__v">{ok ? s.value?.(detail) ?? 'done' : 'working'}</span>}
                         </div>
                       );
@@ -155,7 +162,7 @@ export default function LiveDsp22PlanningAgentDrafting() {
               <div className="x-lanehead">
                 <span style={{ width: '168px' }}>{"Vehicle · Fresh minutes"}</span>
                 <span style={{ flex: '1' }}>{"Trip 1"}</span>
-                <span style={{ flex: '1' }}>{"Trip 2 · max 2 trips a day"}</span>
+                <span style={{ flex: '1' }}>{tripTwoHead(config.data?.limits)}</span>
               </div>
               {[0, 1, 2].map(i => (
                 <div key={i} className="hstack" style={{ gap: '14px' }}>

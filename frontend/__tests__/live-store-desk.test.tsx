@@ -62,16 +62,35 @@ describe('SM-01 Place order', () => {
     expect(screen.getByText(/2 h 30 m/)).toBeInTheDocument();
     expect(await screen.findByText('Avurudu')).toBeInTheDocument();
     expect(screen.getByText('+25%')).toBeInTheDocument();
-    expect(view.calls.find(c => c.path === 'Calendar')!.query).toMatchObject({ $filter: 'date eq 2026-04-07T00:00:00Z', $top: '1' });
+    expect(view.calls.find(c => c.path === 'Calendar' && c.query.$top === '1')!.query).toMatchObject({ $filter: 'date eq 2026-04-07T00:00:00Z', $top: '1' });
+    // the closed days ahead are read too, so a day the operating Calendar closes is never offered
+    expect(view.calls.find(c => c.path === 'Calendar' && c.query.$top === '60')!.query.$filter).toBe('isOperating eq false and date ge 2026-04-06T00:00:00Z and date lt 2026-04-22T00:00:00Z');
 
     fireEvent.change(screen.getByLabelText('Delivery date'), { target: { value: '2026-04-10' } });
     expect(await screen.findByText('Order for Fri 10 Apr')).toBeInTheDocument();
     await waitFor(() => expect(view.calls.some(c => c.path === 'Calendar' && c.query.$filter === 'date eq 2026-04-10T00:00:00Z')).toBe(true));
   });
 
-  it('warns when the calendar has no run on the chosen date', async () => {
-    renderLive(<PlaceOrder />, { session: SESSIONS.store, handler: req => storeBase(req) ?? (req.path === 'Calendar' ? page([{ isOperating: false }]) : page([])) });
-    expect(await screen.findByText('No run on this date. Pick another day.')).toBeInTheDocument();
+  it('warns when the calendar has no run on the chosen date, and that date cannot be submitted', async () => {
+    const last = [order('ORDT1', { lineItems: [{ id: 'l1', orderId: 'ORDT1', name: 'Rice 5 kg', qty: 3, kg: 15, tempClass: 'AMBIENT' }] })];
+    renderLive(<PlaceOrder />, {
+      session: SESSIONS.store,
+      handler: req => storeBase(req) ?? (req.path === 'Calendar' ? (req.query.$top === '1' && req.query.$filter === 'date eq 2026-04-10T00:00:00Z' ? page([{ isOperating: false }]) : page([])) : req.path === 'Orders' ? page(last) : page([])),
+    });
+    await screen.findByText(/Delivered before your/);
+    expect(disabled(screen.getByTestId('submit-order'))).toBe(false);
+    fireEvent.change(screen.getByLabelText('Delivery date'), { target: { value: '2026-04-10' } });
+    expect(await screen.findByTestId('closed-day')).toHaveTextContent('No run on this date. The next operating day is Sat 11 Apr.');
+    expect(disabled(screen.getByTestId('submit-order'))).toBe(true);
+  });
+
+  it('never offers a day the operating Calendar closes: the next run is the next operating day', async () => {
+    const view = renderLive(<PlaceOrder />, {
+      session: SESSIONS.store,
+      handler: req => storeBase(req) ?? (req.path === 'Calendar' && req.query.$top === '60' ? page([{ date: '2026-04-07T00:00:00Z' }, { date: '2026-04-08T00:00:00Z' }]) : page([])),
+    });
+    expect(await screen.findByText('Order for Thu 9 Apr')).toBeInTheDocument();
+    await waitFor(() => expect(view.calls.some(c => c.path === 'Calendar' && c.query.$filter === 'date eq 2026-04-09T00:00:00Z')).toBe(true));
   });
 
   it('first order: empty tables, nothing to submit until a valid item is added', async () => {
@@ -205,7 +224,7 @@ describe('SM-01 Place order', () => {
     await screen.findByText(/Delivered before your/);
     fireEvent.change(screen.getByLabelText('Delivery date'), { target: { value: '2026-04-07' } });
     expect(await screen.findByText('Closed')).toBeInTheDocument();
-    expect(screen.getByText(/This run is closed/)).toHaveTextContent('Submit now and the order goes to the next open run, Wed 8 Apr or the next operating day after it.');
+    expect(screen.getByText(/This run is closed/)).toHaveTextContent('Submit now and the order goes to the next open run, Wed 8 Apr.');
     expect(disabled(screen.getByTestId('submit-order'))).toBe(false);
     fireEvent.click(screen.getByTestId('submit-order'));
     const moved = await screen.findByTestId('order-moved');
@@ -267,11 +286,28 @@ describe('SM-02 Deliveries', () => {
 
   it('switches the order list between this week and the last 4 weeks', async () => {
     const view = renderLive(<Deliveries />, { session: SESSIONS.store, handler: req => storeBase(req) ?? (req.path === 'Orders' ? page([order('ORDT1')]) : page([])) });
-    expect(await screen.findByText('Delivered · see receipts')).toBeInTheDocument();
+    expect(await screen.findByText('Delivered · count it')).toBeInTheDocument();
     const week = view.calls.find(c => c.path === 'Orders')!;
     expect(week.query.$filter).toBe("outletId eq 'OUTT01' and runDate ge 2026-03-30T00:00:00Z");
     fireEvent.click(screen.getByRole('button', { name: 'Last 4 weeks' }));
     await waitFor(() => expect(view.calls.some(c => c.path === 'Orders' && c.query.$filter === "outletId eq 'OUTT01' and runDate ge 2026-03-09T00:00:00Z")).toBe(true));
+  });
+
+  it('shows a notice by its title, and refreshes when a trip leaves the depot or a plan is published', async () => {
+    const notice = { id: 'N1', recipientId: 'u-s', type: 'ORDER_AT_RISK', channel: 'WEBSOCKET', payload: { orderId: 'ORDT1', title: 'Order ORDT1 at risk: dispatch is placing it' }, sentAt: DAY, readAt: null };
+    const view = renderLive(<Deliveries />, { session: SESSIONS.store, handler: req => storeBase(req) ?? (req.path === 'Notifications' ? page([notice]) : page([])) });
+    expect(await screen.findByTestId('notice-text')).toHaveTextContent('Order ORDT1 at risk: dispatch is placing it');
+    const stopsCalls = () => view.calls.filter(c => c.path === 'TripStops').length;
+    await waitFor(() => expect(stopsCalls()).toBe(1));
+    view.hub.emit('trip_released', { tripId: 'TRT1' });
+    await waitFor(() => expect(stopsCalls()).toBe(2));
+    view.hub.emit('plan_published', { planId: 'P1' });
+    await waitFor(() => expect(stopsCalls()).toBe(3));
+  });
+
+  it('counts down to the next run still open, skipping a day the operating Calendar closes', async () => {
+    renderLive(<Deliveries />, { session: SESSIONS.store, handler: req => storeBase(req) ?? (req.path === 'Calendar' ? page([{ date: '2026-04-07T00:00:00Z' }]) : page([])) });
+    await waitFor(() => expect(screen.getByTestId('next-run')).toHaveTextContent('Wed 8 Apr orders close 4:00 PM tomorrow · 26 h 30 m left'));
   });
 
   it('shows the API error and retries the deliveries', async () => {
@@ -360,12 +396,12 @@ describe('SM-28 Receipts and credit notes', () => {
   ];
   const orders = [order('ORDT1', { runDate: DAY }), order('ORDT2', { runDate: '2026-04-06T00:00:00.000Z', tempClass: 'CHILLED' })];
 
-  it('lists the PODs with their orders, the KPIs, and opens the credit note first', async () => {
+  it('lists the delivered orders with their PODs, the KPIs, and opens the credit note first', async () => {
     const view = renderLive(<Receipts />, { session: SESSIONS.store, handler: req => storeBase(req) ?? (req.path === 'PODs' ? page(pods) : req.path === 'Orders' ? page(orders) : page([])) });
     const list = await screen.findByTestId('receipts');
     await waitFor(() => expect(list.querySelectorAll('[data-pod]')).toHaveLength(2));
     expect(screen.getByTestId('matched')).toHaveTextContent('1of 2');
-    expect(screen.getByText('Some proofs are still syncing from the phone')).toBeInTheDocument();
+    expect(screen.getByText("Some counts differ from the driver's record, or the record is still syncing")).toBeInTheDocument();
     expect(screen.getByText('1 credit note')).toBeInTheDocument();
     expect(screen.getByText('nothing waiting on you')).toBeInTheDocument();
     const detail = screen.getByTestId('credit-detail');
@@ -375,7 +411,9 @@ describe('SM-28 Receipts and credit notes', () => {
     expect(detail).toHaveTextContent('Delivered9 of 10');
     expect(within(list.querySelector('[data-pod="P1"]') as HTMLElement).getByText('Tue 7 Apr')).toBeInTheDocument();
     const ordersCall = view.calls.find(c => c.path === 'Orders')!;
-    expect(ordersCall.query.$filter).toBe("id in ('ORDT1','ORDT2')");
+    expect(ordersCall.query).toMatchObject({ $filter: "outletId eq 'OUTT01' and (unitsReceived ne null or status in ('DELIVERED','EXCEPTION'))", $expand: 'tripStop($expand=pod)' });
+    // both orders came with the outlet's delivered orders: no lookup by id
+    expect(view.calls.some(c => c.path === 'Orders' && String(c.query.$filter).startsWith('id in'))).toBe(false);
     expect(view.calls.find(c => c.path === 'PODs')!.query).toMatchObject({ $expand: 'tripStop', $orderby: 'savedAt desc' });
 
     fireEvent.click(list.querySelector('[data-pod="P2"]')!);
@@ -396,11 +434,28 @@ describe('SM-28 Receipts and credit notes', () => {
     expect(screen.getByText('Open disputes').parentElement).toHaveTextContent('Open disputes1short without a credit note');
   });
 
-  it('empty: no receipts yet, and no order lookup', async () => {
+  it('shows the credit note of a short count confirmed before the driver’s POD exists, with the credited units', async () => {
+    const counted = order('ORDT3', { unitsReceived: 7, unitsExpected: 10, creditNoteId: 'CN-2604-0009', receiptSavedAt: '2026-04-07T01:30:00.000Z', receiptNote: '3 short at receipt' });
+    renderLive(<Receipts />, { session: SESSIONS.store, handler: req => storeBase(req) ?? (req.path === 'Orders' ? page([counted]) : page([])) });
+    const list = await screen.findByTestId('receipts');
+    await waitFor(() => expect(list.querySelector('[data-order="ORDT3"]')).not.toBeNull());
+    const row = list.querySelector('[data-order="ORDT3"]') as HTMLElement;
+    expect(row).toHaveTextContent('7 of 10');
+    expect(row).toHaveTextContent('CN-2604-0009 3 units');
+    expect(row).toHaveTextContent('not synced yet');
+    expect(screen.getByTestId('units-credited')).toHaveTextContent('3');
+    expect(screen.getByText('1 credit note')).toBeInTheDocument();
+    const detail = screen.getByTestId('credit-detail');
+    expect(detail).toHaveTextContent('CN-2604-0009');
+    expect(detail).toHaveTextContent('Your count7 of 10');
+    expect(detail).toHaveTextContent('3 short at receipt');
+  });
+
+  it('empty: no receipts yet, and only the outlet’s own orders are asked for', async () => {
     const view = renderLive(<Receipts />, { session: SESSIONS.store, handler: req => storeBase(req) ?? page([]) });
     expect(await screen.findByText('No receipts yet')).toBeInTheDocument();
     expect(screen.queryByTestId('credit-detail')).not.toBeInTheDocument();
-    expect(view.calls.some(c => c.path === 'Orders')).toBe(false);
+    expect(view.calls.filter(c => c.path === 'Orders').every(c => String(c.query.$filter).startsWith("outletId eq 'OUTT01'"))).toBe(true);
   });
 
   it('shows the error and retries', async () => {

@@ -242,6 +242,39 @@ describe('NotificationsService', () => {
       expect(capture(gateway.emit).last()[2]).toMatchObject({ item: 'Milk 1L', by: 'Nilanthi Perera' });
     });
 
+    describe("one acknowledgement resolves every dispatcher's copy of the flag", () => {
+      let siblings: { findMany: jest.Mock; updateMany: jest.Mock };
+      beforeEach(() => {
+        siblings = {
+          findMany: jest.fn(async () => [
+            { id: 'N8', recipientId: 'kandy-dispatcher', payload: { ...flag.payload } }, // the same flag, another dispatcher
+            { id: 'N9', recipientId: 'kandy-dispatcher', payload: { ...flag.payload, item: 'Yoghurt 80g' } }, // another flag
+          ]),
+          updateMany: jest.fn(async () => ({ count: 1 })),
+        };
+        const prisma = { notification: { create: instance(notification).create, update: instance(notification).update, ...siblings } };
+        service = new NotificationsService(prisma as any, instance(gateway));
+      });
+
+      it("marks the other dispatchers' unread copies read and tells them (shortfall_ack)", async () => {
+        await service.acknowledgeShortfall(flag, { sub: 'nilanthi', name: 'Nilanthi Perera' });
+        expect(siblings.findMany).toHaveBeenCalledWith({
+          where: { type: 'SHORTFALL_FLAGGED', tripId: 'T1', readAt: null, id: { not: 'N7' }, recipient: { role: 'DISPATCHER' } },
+          select: { id: true, recipientId: true, payload: true },
+        });
+        expect(siblings.updateMany).toHaveBeenCalledWith({ where: { id: { in: ['N8'] }, readAt: null }, data: { readAt: expect.any(Date) } });
+        verify(gateway.emit('user:kandy-dispatcher', 'shortfall_ack', anything())).once();
+        verify(gateway.emit('dispatcher:KANDY', 'shortfall_ack', anything())).once();
+        expect(capture(gateway.emit).last()[2]).toMatchObject({ flagIds: ['N7', 'N8'] });
+      });
+
+      it('with no other copies it marks nothing', async () => {
+        siblings.findMany.mockResolvedValue([]);
+        await service.acknowledgeShortfall(flag, { sub: 'nilanthi' });
+        expect(siblings.updateMany).not.toHaveBeenCalled();
+      });
+    });
+
     it('without a loader on record it still tells the dock', async () => {
       await service.acknowledgeShortfall({ ...flag, payload: { ...flag.payload, loaderId: undefined } }, { sub: 'nilanthi' });
       verify(notification.create(anything())).never();
