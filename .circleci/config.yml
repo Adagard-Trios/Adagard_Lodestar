@@ -285,6 +285,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Data-model diagram is up to date with schema.prisma
+          command: node tools/docs/erd.mjs --check
+      - run:
           name: node --check tools/screengen/*.js
           command: |
             status=0

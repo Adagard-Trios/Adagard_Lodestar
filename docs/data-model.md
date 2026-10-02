@@ -32,12 +32,9 @@ erDiagram
     string phone
     string refreshToken
     bool isActive
-    The ///
-    receiving ///
     json preferences
     datetime createdAt
     datetime updatedAt
-    Relations //
   }
   Outlet {
     string id PK
@@ -56,7 +53,6 @@ erDiagram
     float lng
     bool isActive
     datetime updatedAt
-    Relations //
   }
   Vehicle {
     string id PK
@@ -72,7 +68,6 @@ erDiagram
     VehicleStatus status
     string workshopNote
     datetime updatedAt
-    Relations //
   }
   Order {
     string id PK
@@ -93,7 +88,6 @@ erDiagram
     string lateReason
     datetime createdAt
     datetime updatedAt
-    Store //
     int unitsReceived
     int unitsExpected
     string receiptNote
@@ -101,7 +95,6 @@ erDiagram
     datetime receivedAt
     string receivedBy
     string creditNoteId UK
-    Relations //
   }
   OrderLineItem {
     string id PK
@@ -133,7 +126,6 @@ erDiagram
     string planId FK
     datetime createdAt
     datetime updatedAt
-    Relations //
   }
   TripStop {
     string id PK
@@ -212,8 +204,6 @@ erDiagram
     string recipientId FK
     string tripId FK
     string type
-    DEFERRAL_SUGGESTED //
-    SHORTFALL_ACK //
     NotificationChannel channel
     json payload
     datetime sentAt
@@ -299,8 +289,6 @@ erDiagram
     string platform
     string model
     DeviceStatus status
-    A ///
-    Its ///
     bool sharedDemo
     datetime registeredAt
     datetime lastSeenAt

@@ -8,7 +8,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const schema = readFileSync(join(root, 'backend/prisma/schema.prisma'), 'utf8');
+// normalise line endings: on a CRLF checkout '.' stops at a carriage return, so '//' and '///' comments would leak
+// into the diagram as attributes
+const schema = readFileSync(join(root, 'backend/prisma/schema.prisma'), 'utf8').replace(/\r\n?/g, '\n');
 
 const blocks = [...schema.matchAll(/^(model|enum)\s+(\w+)\s*\{([\s\S]*?)^\}/gm)];
 const enums = new Set(blocks.filter(b => b[1] === 'enum').map(b => b[2]));

@@ -16,6 +16,7 @@ step() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 failed=()
 run() { local name=$1; shift; step "$name"; if "$@"; then echo "PASS $name"; else echo "FAIL $name"; failed+=("$name"); fi; }
 
+run "data-model doc"   node tools/docs/erd.mjs --check
 run "frontend lint"        bash -c 'cd frontend && npm run lint'
 run "frontend typecheck"   bash -c 'cd frontend && npm run typecheck'
 run "mobile typecheck"     bash -c 'cd mobile && npx tsc --noEmit'
