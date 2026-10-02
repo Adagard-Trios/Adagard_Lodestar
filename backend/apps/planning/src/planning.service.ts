@@ -16,6 +16,22 @@ export const PLAN_PREFIX: Record<Depot, string> = { PELIYAGODA: 'PLG', KANDY: 'P
 /** Plans a human may still approve or reject. */
 export const OPEN_PLAN_STATUSES: PlanStatus[] = [PlanStatus.DRAFT, PlanStatus.NEEDS_APPROVAL];
 
+/** Hard-rule violations a plan was drafted with (the agent's check_rules output in Plan.summary). */
+export function planViolations(summary: unknown): Array<{ rule?: string }> {
+  const v = (summary as { violations?: unknown } | null)?.violations;
+  return Array.isArray(v) ? v : [];
+}
+
+/** 422 OverrideReasonRequired: approving a plan that breaks hard rules needs a stated reason. */
+export function overrideReasonRequired(what: string, violations: Array<{ rule?: string }>) {
+  const rules = [...new Set(violations.map((v) => v.rule ?? '?'))].join(', ');
+  return ODataError.unprocessable(
+    'OverrideReasonRequired',
+    `${what} breaks ${violations.length} hard rule check(s) (${rules}); approving it needs an overrideReason`,
+    'overrideReason',
+  );
+}
+
 /** Stored window of a run date (a Date is read as its Sri Lanka calendar date). */
 export function dayRange(runDate: string | Date) {
   return runDateRange(runDate);
@@ -147,11 +163,21 @@ export class PlanningService {
     return { id: `${PLAN_PREFIX[depot]}-${iso}-v${version}`, version, runDate: start };
   }
 
+  /** There is no run to plan on a day the Calendar marks as non-operating (422 NonOperatingDay). */
+  async assertOperatingDay(runDate: string | Date) {
+    const { start, iso } = dayRange(runDate);
+    const day = await this.prisma.calendar.findUnique({ where: { date: start }, select: { isOperating: true } });
+    if (day && !day.isOperating) {
+      throw ODataError.unprocessable('NonOperatingDay', `${iso} is not an operating day: there is no run to plan`, 'runDate');
+    }
+  }
+
   /**
    * Auto-plan: computes the capacity picture and deferral suggestions, and
    * stores them as a new plan version awaiting a dispatcher's approval.
    */
   async runAutoPlan(depot: Depot, runDate: string, requestedBy: string) {
+    await this.assertOperatingDay(runDate);
     const { summary, suggestions } = await this.suggestDeferrals(depot, runDate);
     const next = await this.nextPlanId(depot, runDate);
 
@@ -221,8 +247,9 @@ export class PlanningService {
    * Publishes a plan (dispatcher only) and puts it into effect in the same transaction: trips and stops,
    * order statuses and deferrals (plan-execution.ts). Earlier published versions become SUPERSEDED and
    * their trips that have not started are replaced. Stores, the dock and drivers are told afterwards.
+   * A plan drafted with hard-rule violations is only approved with an override reason, kept in its summary.
    */
-  async approvePlan(planId: string, approvedBy: string, note?: string) {
+  async approvePlan(planId: string, approvedBy: string, note?: string, overrideReason?: string) {
     let execution: ExecutionResult | undefined;
     const published = await this.prisma.$transaction(async (tx) => {
       const plan = await tx.plan.findUnique({ where: { id: planId } });
@@ -230,6 +257,9 @@ export class PlanningService {
       if (!OPEN_PLAN_STATUSES.includes(plan.status)) {
         throw ODataError.conflict(`Plan ${planId} is ${plan.status} and cannot be approved`);
       }
+      const violations = planViolations(plan.summary);
+      const reason = overrideReason?.trim();
+      if (violations.length && !reason) throw overrideReasonRequired(`Plan ${planId}`, violations);
       await tx.plan.updateMany({
         where: { depot: plan.depot, runDate: plan.runDate, status: PlanStatus.PUBLISHED, id: { not: plan.id } },
         data: { status: PlanStatus.SUPERSEDED },
@@ -244,6 +274,14 @@ export class PlanningService {
           approvedAt: now,
           publishedAt: now,
           ...(note ? { notes: note } : {}),
+          ...(violations.length && reason
+            ? {
+              summary: {
+                ...(plan.summary as Record<string, unknown>),
+                override: { reason: reason.slice(0, 500), by: approvedBy, at: now.toISOString(), violations: violations.length },
+              } as Prisma.InputJsonValue,
+            }
+            : {}),
         },
       });
     }, { timeout: 60_000, maxWait: 10_000 });

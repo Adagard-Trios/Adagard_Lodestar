@@ -1,9 +1,13 @@
 import { anything, capture, deepEqual, instance, mock, verify, when } from 'ts-mockito';
 import { NotifyClient } from '@lodestar/security';
 import { personas } from '../../../libs/security/test/principals';
-import { TripsService } from './trips.service';
+import { FleetClient } from './fleet.client';
+import { TripsService, tripLitres } from './trips.service';
 import { LoadRecordsSet, TripsSet, TripStopsSet } from './trips.sets';
 
+interface TravelDelegate {
+  findUnique(args: any): Promise<any>;
+}
 interface TripDelegate {
   findUnique(args: any): Promise<any>;
   findMany(args: any): Promise<any[]>;
@@ -161,6 +165,8 @@ describe('TripsService', () => {
   let txStop: UpdateDelegate;
   let service: TripsService;
   let notify: NotifyClient;
+  let fleet: FleetClient;
+  let travel: TravelDelegate;
 
   beforeEach(() => {
     trip = mock<TripDelegate>();
@@ -170,11 +176,14 @@ describe('TripsService', () => {
     txOrder = mock<UpdateDelegate>();
     txStop = mock<UpdateDelegate>();
     const tx = { trip: instance(txTrip), loadRecord: instance(txLoad), pOD: instance(txPod), order: instance(txOrder), tripStop: instance(txStop) };
-    const prisma = { trip: instance(trip), $transaction: async (cb: (t: any) => any) => cb(tx) };
+    travel = mock<TravelDelegate>();
+    const prisma = { trip: instance(trip), districtTravel: instance(travel), $transaction: async (cb: (t: any) => any) => cb(tx) };
     notify = mock(NotifyClient);
     when(notify.notice(anything())).thenResolve(true);
     when(notify.publish(anything(), anything(), anything())).thenResolve(true);
-    service = new TripsService(prisma as any, instance(notify));
+    fleet = mock(FleetClient);
+    when(fleet.recordFuel(anything(), anything())).thenResolve(true);
+    service = new TripsService(prisma as any, instance(notify), instance(fleet));
     for (const d of [trip, txLoad, txOrder, txStop]) when(d.update(anything())).thenCall(async (a: any) => a);
     // a released trip comes back with its stops' outlets (for the stores to tell)
     when(txTrip.update(anything())).thenCall(async (a: any) => ({ ...a, id: 'T1', depot: 'KANDY', vehicleId: 'VEH057', driverId: 'ruwan', bay: 'K2', stops: [{ outletId: 'OUT106' }, { outletId: 'OUT108' }] }));
@@ -214,6 +223,34 @@ describe('TripsService', () => {
       expect(capture(trip.update).last()[0].data).toEqual({ status: 'LOADING', departTime });
       await service.updateStatus('T1', 'ENROUTE', 'COMPLETE');
       expect(capture(trip.update).last()[0].data.returnTime).toBeInstanceOf(Date);
+    });
+
+    describe('fuel', () => {
+      beforeEach(() => {
+        // Alpha: 15 km out, 10 min between stops; 3 stops on a 5 km/L truck → (2 × 15 + 2 × 5) / 5 = 8 L
+        when(trip.findUnique(anything())).thenResolve({ vehicleId: 'V-T1', district: 'Alpha', vehicle: { kmPerLitre: 5 }, _count: { stops: 3 } });
+        when(travel.findUnique(anything())).thenResolve({ district: 'Alpha', distKm: 15, depotToDistMin: 20, interStopMin: 10 });
+      });
+
+      it('a completed trip records the litres of its route with fleet', async () => {
+        await service.updateStatus('T1', 'ENROUTE', 'COMPLETE');
+        verify(fleet.recordFuel('V-T1', 8)).once();
+        expect(capture(travel.findUnique).last()[0]).toEqual({ where: { district: 'Alpha' } });
+      });
+
+      it.each([['PLANNED', 'LOADING'], ['LOADING', 'ENROUTE'], ['COMPLETE', 'COMPLETE']])('records no fuel for %s → %s', async (from, to) => {
+        await service.updateStatus('T1', from as any, to as any);
+        verify(fleet.recordFuel(anything(), anything())).never();
+      });
+    });
+  });
+
+  describe('tripLitres', () => {
+    it('is the round trip plus the hops between stops, at the vehicle km/L', () => {
+      expect(tripLitres({ distKm: 30, depotToDistMin: 40, interStopMin: 12 }, 1, 6)).toBe(10);
+      expect(tripLitres({ distKm: null, depotToDistMin: 50, interStopMin: 10 }, 2, 5)).toBe(13); // 2 × 50 × 0.6 + 5 = 65 km
+      expect(tripLitres(null, 2, 5)).toBe(0);
+      expect(tripLitres({ distKm: 30, depotToDistMin: 40, interStopMin: 12 }, 1, 0)).toBe(0);
     });
   });
 

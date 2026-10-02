@@ -20,8 +20,8 @@ Plan = dict[str, Any]
 
 # ---------------------------------------------------------------- trip maths
 def _stop_sort_key(ctx: PlanningContext, oid: str) -> tuple[int, int, str, str]:
-    outlet = ctx.outlet_of(oid)
-    return (h.to_min(outlet.get("windowOpen")), h.to_min(outlet.get("windowClose"), 1440), str(outlet["id"]), oid)
+    opens, closes = ctx.window_of(oid)
+    return (h.to_min(opens), h.to_min(closes), str(ctx.outlet_of(oid)["id"]), oid)
 
 
 def build_trip(ctx: PlanningContext, vehicle_id: str, trip_no: int, order_ids: list[str]) -> dict[str, Any]:
@@ -66,20 +66,21 @@ def schedule(ctx: PlanningContext, plan: Plan) -> Plan:
             travel = ctx.travel_for(trip["district"])
             to_dist = int(travel.get("depotToDistMin") or 0)
             inter = int(travel.get("interStopMin") or 0)
-            earliest_open = min(h.to_min(ctx.outlet_of(o).get("windowOpen")) for o in trip["orderIds"])
+            earliest_open = min(h.to_min(ctx.window_of(o)[0]) for o in trip["orderIds"])
             depart = max(first_dep, earliest_open - to_dist, prev_return)
             t = depart + to_dist
             stops = []
             for i, oid in enumerate(trip["orderIds"]):
                 outlet = ctx.outlet_of(oid)
+                opens, closes = ctx.window_of(oid)
                 if i:
                     t += inter
-                arrive = max(t, h.to_min(outlet.get("windowOpen")))
+                arrive = max(t, h.to_min(opens))
                 eta = h.compute_model_eta(
                     eta_plan_min=arrive,
                     road_class=str(travel.get("roadClass") or ""),
                     is_monsoon=monsoon,
-                    window_close=str(outlet.get("windowClose") or "23:59"),
+                    window_close=closes,
                 )
                 svc = ctx.service_min(oid)
                 stops.append(
@@ -89,7 +90,7 @@ def schedule(ctx: PlanningContext, plan: Plan) -> Plan:
                         "outletId": outlet["id"],
                         "dockType": outlet.get("dockType"),
                         "parking": outlet.get("parking"),
-                        "window": f"{outlet.get('windowOpen')}-{outlet.get('windowClose')}",
+                        "window": f"{opens}-{closes}",
                         "serviceMin": svc,
                         "arrive": h.fmt_min(arrive),
                         "etaModel": h.fmt_min(eta["etaModel"]),
@@ -138,7 +139,13 @@ def _unplaced_reason(ctx: PlanningContext, oid: str, avoid: dict[str, dict[str, 
 
 
 # ---------------------------------------------------------------- the drafter
+class NonOperatingDay(ValueError):
+    """The calendar has no run on this date."""
+
+
 def draft_plan(ctx: PlanningContext, constraints: list[dict[str, Any]] | None = None, version: int = 1) -> Plan:
+    if not ctx.is_operating():
+        raise NonOperatingDay(f"{ctx.run_date} is not an operating day: there is no run to plan")
     constraints = constraints or []
     avoid, prioritise = _index_constraints(constraints)
 
@@ -149,9 +156,10 @@ def draft_plan(ctx: PlanningContext, constraints: list[dict[str, Any]] | None = 
     def group_key(item: tuple[tuple[str, str, bool, bool], list[str]]) -> tuple[Any, ...]:
         key, oids = item
         m3 = sum(float(ctx.orders[o].get("m3") or 0) for o in oids)
-        earliest = min(h.to_min(ctx.outlet_of(o).get("windowOpen")) for o in oids)
-        # prioritised first, then chilled (scarce reefers), van_only, earliest window, biggest volume
-        return (not any(o in prioritise for o in oids), not key[2], not key[3], earliest, -m3, key)
+        earliest = min(h.to_min(ctx.window_of(o)[0]) for o in oids)
+        # chilled first (scarce reefers go to chilled orders before anything else may take one), then
+        # prioritised, van_only, earliest window, biggest volume
+        return (not key[2], not any(o in prioritise for o in oids), not key[3], earliest, -m3, key)
 
     vehicle_trips: dict[str, list[dict[str, Any]]] = defaultdict(list)
     unassigned: list[dict[str, Any]] = []

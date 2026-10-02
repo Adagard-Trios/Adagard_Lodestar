@@ -192,7 +192,9 @@ export async function planOntoVan(d: OData, runDate: string, storeOrderIds: stri
     await expectStatus(await d.post(`AgentRuns('${run.id}')/Lodestar.Resume`, { decision: 'edit', edits }), 200, 'move the store orders onto the van');
     run = await waitForDraft(d, run.id);
   }
-  await expectStatus(await d.post(`AgentRuns('${run.id}')/Lodestar.Resume`, { decision: 'approve' }), 200, 'approve the draft');
+  // the van may break a hard rule (e.g. its minutes); approving that needs a stated reason (WP5)
+  const overrideReason = run.detail?.violations?.length ? 'Store orders ride the van as agreed (e2e setup)' : undefined;
+  await expectStatus(await d.post(`AgentRuns('${run.id}')/Lodestar.Resume`, { decision: 'approve', overrideReason }), 200, 'approve the draft');
   await expect.poll(async () => (await d.json<Row>(`AgentRuns('${run.id}')`)).planId, { timeout: 120_000 }).toBeTruthy();
   const planId = (await d.json<Row>(`AgentRuns('${run.id}')`)).planId as string;
   await expect.poll(async () => (await d.json<Row>(`Plans('${planId}')`)).status, { timeout: 120_000 }).toBe('PUBLISHED');

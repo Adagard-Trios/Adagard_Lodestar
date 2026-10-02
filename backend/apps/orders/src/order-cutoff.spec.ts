@@ -1,6 +1,6 @@
 import { ODataError } from '@lodestar/odata';
 import { Roles } from '@lodestar/security';
-import { assertStoreMayEdit, cutoffSettings, decideCutoff } from './order-cutoff';
+import { assertStoreMayEdit, cutoffSettings, decideCutoff, movedNote } from './order-cutoff';
 
 // Run Tue 7 Apr 2026 closes at Mon 6 Apr 16:00 Colombo = 10:30 UTC.
 const RUN = '2026-04-07';
@@ -20,19 +20,19 @@ describe('4:00 PM order cut-off', () => {
     expect(decideCutoff({ roles: store, runDate: RUN, now }, ON)).toEqual({ orderedAt: now, latePhone: false, lateReason: null });
   });
 
-  it('refuses a store order after the cut-off with the next orderable run date', () => {
+  it('accepts a store order after the cut-off into the following run', () => {
     const now = at('2026-04-06T10:31:00Z'); // 4:01 PM Colombo
-    let err: ODataError | undefined;
-    try { decideCutoff({ roles: store, runDate: RUN, now }, ON); } catch (e) { err = e as ODataError; }
-    expect(err?.status).toBe(422);
-    expect(err?.code).toBe('OrderCutoffPassed');
-    expect(err?.message).toContain('2026-04-07');
-    expect(err?.message).toContain('2026-04-08'); // the next run still open at 4:01 PM Mon
+    expect(decideCutoff({ roles: store, runDate: RUN, now }, ON)).toEqual({
+      orderedAt: now, latePhone: false, lateReason: null,
+      moved: { from: '2026-04-07', earliest: '2026-04-08' }, // the next run still open at 4:01 PM Mon
+    });
+    expect(movedNote('2026-04-07', '2026-04-08')).toBe('Placed after the 4:00 PM cut-off for 2026-04-07; moved to the 2026-04-08 run.');
   });
 
   it('cuts off on Colombo time whatever the server time zone', () => {
     // 10:30 UTC is exactly 16:00 Colombo: closed
-    expect(code(() => decideCutoff({ roles: store, runDate: RUN, now: at('2026-04-06T10:30:00Z') }, ON))).toBe('OrderCutoffPassed');
+    expect(decideCutoff({ roles: store, runDate: RUN, now: at('2026-04-06T10:30:00Z') }, ON).moved?.from).toBe(RUN);
+    expect(decideCutoff({ roles: store, runDate: RUN, now: at('2026-04-06T10:29:59Z') }, ON).moved).toBeUndefined();
   });
 
   it('honours an order saved offline before the cut-off when it arrives within the grace window', () => {
@@ -42,14 +42,16 @@ describe('4:00 PM order cut-off', () => {
       .toEqual({ orderedAt: saved, latePhone: false, lateReason: null });
   });
 
-  it('refuses an offline order that arrives after the grace window', () => {
+  it('moves an offline order that arrives after the grace window to the following run', () => {
     const saved = '2026-04-06T10:00:00Z';
-    expect(code(() => decideCutoff({ roles: store, runDate: RUN, now: at('2026-04-06T17:00:00Z'), clientOrderedAt: saved }, ON))).toBe('OrderCutoffPassed');
+    const now = at('2026-04-06T17:00:00Z'); // 10:30 PM Mon Colombo
+    expect(decideCutoff({ roles: store, runDate: RUN, now, clientOrderedAt: saved }, ON))
+      .toEqual({ orderedAt: now, latePhone: false, lateReason: null, moved: { from: RUN, earliest: '2026-04-08' } });
   });
 
   it('does not trust a phone clock ahead of the server', () => {
     const now = at('2026-04-06T11:00:00Z'); // after the cut-off
-    expect(code(() => decideCutoff({ roles: store, runDate: RUN, now, clientOrderedAt: '2026-04-06T12:00:00Z' }, ON))).toBe('OrderCutoffPassed');
+    expect(decideCutoff({ roles: store, runDate: RUN, now, clientOrderedAt: '2026-04-06T12:00:00Z' }, ON)).toMatchObject({ orderedAt: now, moved: { from: RUN } });
     const early = at('2026-04-06T09:00:00Z');
     expect(decideCutoff({ roles: store, runDate: RUN, now: early, clientOrderedAt: '2026-04-06T12:00:00Z' }, ON).orderedAt).toEqual(early);
   });

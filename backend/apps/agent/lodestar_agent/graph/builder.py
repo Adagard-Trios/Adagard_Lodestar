@@ -109,7 +109,7 @@ def build_graph(
             update["redrafts"] = redrafts + 1
             update["redraftRequested"] = True
         failed = sorted({v["rule"] for v in violations})
-        update["history"] = [{"node": "check_rules", "at": _now(), "note": "all 7 pass" if not failed else "violations: " + ", ".join(failed)}]
+        update["history"] = [{"node": "check_rules", "at": _now(), "note": f"all {len(rules.RULES)} pass" if not failed else "violations: " + ", ".join(failed)}]
         return update
 
     def route_after_check(state: AgentState) -> str:

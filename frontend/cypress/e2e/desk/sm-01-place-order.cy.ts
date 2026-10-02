@@ -135,17 +135,27 @@ describe('SM-01 Place order (live, stubbed API)', () => {
     cy.get('[role="alert"]').should('not.exist');
   });
 
-  // DEFECT (also in Jest): after the 4:00 PM cutoff the screen says the run is closed but still lets the store
-  // submit for it; the API refuses such orders (backend/apps/orders/src/order-cutoff.ts).
-  it('does not let the store submit for a run that has closed', () => {
+  // After the 4:00 PM cutoff the API takes the order and moves it to the next open run
+  // (backend/apps/orders/src/order-cutoff.ts); the screen says so and shows the run date the API returned.
+  it('submits for a run that has closed and shows the later run the API moved it to', () => {
+    const note = 'Placed after the 4:00 PM cut-off for 2026-04-07; moved to the 2026-04-08 run.';
     stubApi(store());
-    cy.intercept('POST', '/odata/v4/Orders', { statusCode: 201, body: { id: 'X' } }).as('createOrder');
+    cy.intercept('POST', '/odata/v4/Orders', req => req.reply({ statusCode: 201, body: { ...req.body, id: 'ORDNEW1', runDate: '2026-04-08T00:00:00Z', notes: note } })).as('createOrder');
     openAs('store', '/store/sm-01-place-order', NOW + 3 * 3600_000); // 16:30 in Colombo
     cy.contains('.d-h1', 'Order for Wed 8 Apr').should('be.visible');
     cy.contains('Delivered in your window').should('exist');
     cy.get('[aria-label="Delivery date"]').clear().type('2026-04-07');
     cy.contains('.d-h1', 'Order for Tue 7 Apr').should('be.visible');
     cy.contains('.d-kpi__v', 'Closed').should('be.visible');
+    cy.contains('.d-kpi__s', 'Submit now and the order goes to the next open run, Wed 8 Apr').should('be.visible');
+    submit().should('not.have.attr', 'aria-disabled');
+    submit().click();
+    cy.wait('@createOrder').its('request.body.runDate').should('eq', DAY);
+    cy.get('[data-testid="order-moved"]').should('be.visible').and('contain.text', 'Received: ORDNEW1 for Wed 8 Apr').and('contain.text', note);
+    cy.location('pathname').should('eq', '/store/sm-01-place-order');
     submit().should('have.attr', 'aria-disabled', 'true');
+    cy.contains('[data-testid="order-moved"] [role="button"]', 'See your orders').click();
+    cy.location('pathname').should('eq', '/store/sm-27-orders-and-history');
+    cy.get('@createOrder.all').should('have.length', 1);
   });
 });

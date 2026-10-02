@@ -138,6 +138,24 @@ describe('DSP-28 approve re-plan', () => {
     await waitFor(() => expect(client.action).toHaveBeenCalledWith("Plans('PLAN-T-v4')/Lodestar.Approve", {}));
   });
 
+  it('a plan with rule violations needs an override reason, sent as overrideReason', async () => {
+    await signInAs({ sub: 'u-dsp28c', name: 'Test Dispatcher', realm_access: { roles: ['dispatcher'] }, depot: ['KANDY'] });
+    const bad = { ...plan, summary: { violations: [{ rule: 'weight', tripId: 'T-1', vehicleId: 'VAN-T9', orderIds: ['O-1'], reason: 'Over weight' }] } };
+    routes.set('Plans', [bad]);
+    routes.set("Plans('PLAN-T-v4')", bad);
+    const Screen = require('@/live/dsp-28-approve-re-plan').default;
+    await render(<Screen />);
+    await waitFor(() => expect(screen.getByTestId('plan-title').props.children).toContain('v4'));
+    expect(screen.getByText('1 rule violation')).toBeTruthy();
+    await fireEvent.changeText(screen.getByTestId('override-reason'), '  ');
+    await fireEvent.press(screen.getByTestId('lk-L180'));
+    expect(await screen.findByText('Give a reason to override the rule violations')).toBeTruthy();
+    expect(client.action).not.toHaveBeenCalled();
+    await fireEvent.changeText(screen.getByTestId('override-reason'), 'Scale reads high ');
+    await fireEvent.press(screen.getByTestId('lk-L180'));
+    await waitFor(() => expect(client.action).toHaveBeenCalledWith("Plans('PLAN-T-v4')/Lodestar.Approve", { overrideReason: 'Scale reads high' }));
+  });
+
   it('refuses to approve without signal', async () => {
     await signInAs({ sub: 'u-dsp28b', name: 'Test Dispatcher', realm_access: { roles: ['dispatcher'] }, depot: ['KANDY'] });
     routes.set('Plans', [plan]);

@@ -165,6 +165,7 @@ describe('DSP-12 Approve and go live', () => {
     await screen.findByText(/Approve \d+ orders and go live/);
     expect(screen.getByTestId('approve')).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByTestId('reject-draft')).not.toHaveAttribute('aria-disabled');
+    expect(screen.getByTestId('violations')).toHaveTextContent('1050 kg of 1000 kg');
     fireEvent.change(screen.getByLabelText('Override reason'), { target: { value: 'Checked on the scale' } });
     fireEvent.click(screen.getByTestId('approve'));
     expect(await screen.findByText('Plan PLT-v4 is live')).toBeInTheDocument();

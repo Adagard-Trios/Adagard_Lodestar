@@ -87,8 +87,7 @@ Any brand × dock combination missing from the file gets a generated value, and 
 | parking | no (NORMAL) | `parking_constraint`, `parking` | `normal`, `van_only`, `mall_dock`; blank → NORMAL |
 | windowOpen | yes | `window_open_time`, `window_open` | `H:mm`, `HH:mm`, `HH:mm:ss` or `HHmm` → stored `HH:mm` |
 | windowClose | yes | `window_close_time`, `window_close` | same |
-
-`mall_window` is ignored.
+| mallWindow | no (null) | `mall_window` | `H:mm-H:mm` → stored `HH:mm-HH:mm`; blank → null. The mall's delivery window: planning checks mall stops against it as well as the store window |
 
 ### `vehicles.csv` → `Vehicle`
 

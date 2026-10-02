@@ -143,4 +143,19 @@ test.describe('Plan execution · approve → trips → release', { tag: '@stack'
       listener.socket.close();
     }
   });
+
+  test('completing the trip burns its route fuel against the vehicle weekly quota (fleet)', async ({ as }) => {
+    d = await as('dispatcher');
+    const loader = await as('loader');
+    const trip = (await loader.json<{ value: Row[] }>(`Trips?$filter=planId eq '${planId}' and status eq 'ENROUTE'&$top=1`)).value[0];
+    expect(trip).toBeTruthy();
+    const used = async () => (await d.json<Row>(`Vehicles('${trip.vehicleId}')?$select=usedLThisWeek`)).usedLThisWeek as number;
+    const before = await used();
+    await expectStatus(await loader.post(`Trips('${trip.id}')/Lodestar.SetStatus`, { status: 'COMPLETE' }), 200, 'complete trip');
+    await pwExpect.poll(used, { timeout: 15_000 }).toBeGreaterThan(before);
+    const after = await used();
+    // completing it again is not a second trip
+    await expectStatus(await loader.post(`Trips('${trip.id}')/Lodestar.SetStatus`, { status: 'COMPLETE' }), 200, 'complete again');
+    expect(await used()).toBe(after);
+  });
 });

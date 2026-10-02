@@ -20,12 +20,16 @@ const order = (runDate: string, extra: Record<string, unknown> = {}) => ({
 test.describe('Orders · 4:00 PM cut-off', { tag: '@stack' }, () => {
   requireStack();
 
-  test('a store cannot order for a run whose cut-off has passed', async ({ as }) => {
+  test('a store order for a run whose cut-off has passed is taken into the following operating run', async ({ as }) => {
     const store = await as('storeManager');
     const res = await store.post('Orders', order(SEEDED_RUN));
-    const err = await expectODataError(res, 422);
-    expect(err.code).toBe('OrderCutoffPassed');
-    expect(err.message).toContain(nextOpenRun());
+    await expectStatus(res, 201, 'POST Orders (closed run)');
+    const created = await res.json();
+    const runDate = String(created.runDate).slice(0, 10);
+    expect(runDate >= nextOpenRun()).toBe(true); // the next open run, or the first operating day after it
+    expect(created.notes).toBe(`e2e cut-off check Placed after the 4:00 PM cut-off for ${SEEDED_RUN}; moved to the ${runDate} run.`);
+    expect(created.latePhone).toBe(false);
+    await expectStatus(await store.post(`Orders('${created.id}')/Lodestar.Cancel`, { reason: 'e2e cleanup' }), [200, 204], 'Cancel');
   });
 
   test('a store can order for the next open run, and orderedAt in the future is not trusted', async ({ as }) => {

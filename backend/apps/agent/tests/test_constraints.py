@@ -14,6 +14,7 @@ import pytest
 from lodestar_agent.domain import heuristics as h
 from lodestar_agent.domain.context import PlanningContext
 from lodestar_agent.domain.deferrals import REASON_CODES, rank_deferrals
+from lodestar_agent.domain.edits import EditError, apply_edits
 from lodestar_agent.domain.planner import draft_plan, planned_order_ids, schedule
 from lodestar_agent.domain.rules import check_rules, constraints_for
 
@@ -423,3 +424,30 @@ def test_over_capacity_day_outlet_skipped_yesterday_is_never_deferred_again_even
     result = run_pipeline(ctx)
     assert "Y-A" not in deferral_reasons(result)
     assert [(r["orderId"], r["reason"]) for r in result["needsReview"]] == [("Y-A", "PROTECTED_UNPLACED")]
+
+
+# ---------------------------------------------------------------- manual moves (dispatcher edits)
+def test_manual_move_is_checked_against_every_constraint():
+    remote = fx.outlet("D-R", "STYLE", "Remote", "REAR_DOCK", "NORMAL", "04:00", "05:00")
+    low_fuel = fx.vehicle("V-T2", "TRUCK", "AMBIENT", 1000, 8, 5, 100, 95)  # an Alpha round trip needs 6 L
+    orders = [
+        fx.order("E-1", "T-A", "STYLE", "AMBIENT", 400, 1.0),
+        fx.order("E-2", "P-V", "STYLE", "AMBIENT", 100, 1.0),
+        fx.order("E-3", "D-R", "STYLE", "AMBIENT", 100, 1.0),
+        fx.order("E-4", "T-A", "STYLE", "AMBIENT", 700, 1.0),
+    ]
+    ctx = ctx_for(world(outlets=[STYLE_ALPHA, VAN_OUTLET, remote], vehicles=[TRUCK, VAN, low_fuel], orders=orders))
+    plan = schedule(ctx, {"version": 1, "trips": [{"vehicleId": "V-T1", "tripNo": 1, "orderIds": ["E-1"]}], "unassigned": []})
+
+    def move(oid: str, vid: str, trip_no: int = 1) -> str:
+        return apply_edits(ctx, plan, [{"op": "move", "orderId": oid, "vehicleId": vid, "tripNo": trip_no}])[1][0]
+
+    assert move("E-4", "V-T1", 2) == "Moved E-4 to V-T1 trip 2"  # inside every rule: no flag
+    assert "flagged, breaks weight CAP_TIME" in move("E-4", "V-T1")  # 400 + 700 kg on a 1000 kg truck
+    assert "flagged, breaks van_only ACCESS" in move("E-2", "V-T1", 2)
+    assert "flagged, breaks window WINDOW" in move("E-3", "V-T1", 2)  # 150 min out: arrives after 05:00
+    assert "flagged, breaks fuel FUEL" in move("E-4", "V-T2")
+    with pytest.raises(EditError, match="at most 2 trips"):
+        move("E-4", "V-T1", 3)
+    with pytest.raises(EditError, match="Unknown vehicle"):  # another depot's vehicle is never in scope
+        move("E-4", "V-X9")

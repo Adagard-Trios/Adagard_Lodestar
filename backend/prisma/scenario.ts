@@ -417,7 +417,7 @@ export async function applyScenario(db: ScenarioDb, log: Log = console.log): Pro
     if (!(await db.vehicle.findUnique({ where: { id: v.id } }))) { s.missingOverlayTargets.push(v.id); continue; }
     await db.vehicle.update({
       where: { id: v.id },
-      data: { status: v.status, workshopNote: v.workshopNote, ...(v.usedLThisWeek !== undefined ? { usedLThisWeek: v.usedLThisWeek } : {}) },
+      data: { status: v.status, workshopNote: v.workshopNote, ...(v.usedLThisWeek !== undefined ? { usedLThisWeek: v.usedLThisWeek, fuelWeekStart: new Date() } : {}) },
     });
   }
   for (const c of CALENDAR_NOTES) {

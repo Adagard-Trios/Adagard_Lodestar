@@ -3,6 +3,8 @@
 // Starts from the outlet's last dry and chilled orders (Orders + OrderLineItems), the store adjusts quantities or
 // adds items, and "Submit" sends POST /Orders with lineItems — one order per temperature class, for the outlet
 // in the user's token (the API refuses any other outlet). The Calendar row of the run date feeds the festival card.
+// After a run's 4:00 PM cutoff the API still takes the order and moves it to the next open operating run; the
+// screen then shows the run date and note the API returned instead of moving on.
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useScreenNav } from '@/components/ScreenShell';
@@ -115,6 +117,7 @@ export default function LiveSm01PlaceOrder() {
   const outlet = useMyOutlet();
   const outletId = session?.outletId;
   const [runDate, setRunDate] = useState(nextOpenRun);
+  const [moved, setMoved] = useState<Order[] | null>(null);
 
   const history = useQuery<Order[]>(outletId ? `order-base:${outletId}` : null, async c =>
     (await c.list<Order>('Orders', { filter: `outletId eq '${outletId}' and status ne 'CANCELLED'`, expand: 'lineItems', orderby: 'runDate desc', top: 12 })).value);
@@ -169,7 +172,9 @@ export default function LiveSm01PlaceOrder() {
   }, {
     onSuccess: created => {
       nav.notify(`Received: ${created.map(o => o.id).join(', ')}`);
-      router.push('/store/sm-27-orders-and-history');
+      // the API moved an order placed after the cutoff to a later run: say so before moving on
+      if (created.some(o => isoDay(o.runDate) !== runDate)) setMoved(created);
+      else router.push('/store/sm-27-orders-and-history');
     },
   });
 
@@ -199,17 +204,27 @@ export default function LiveSm01PlaceOrder() {
               </span>
               <span style={{ fontSize: '13px', color: 'var(--text-3)' }}>{"\"Received\" with order numbers at once"}</span>
             </div>
-            <Btn className="d-btn d-btn--primary" style={{ padding: '0 20px' }} testId="submit-order" busy={submit.pending} disabled={!orders || !o} onClick={() => void submit.run()}>
+            <Btn className="d-btn d-btn--primary" style={{ padding: '0 20px' }} testId="submit-order" busy={submit.pending} disabled={!orders || !o || Boolean(moved)} onClick={() => void submit.run()}>
               <Ic n="send" />Submit {orders} order{orders === 1 ? '' : 's'}
             </Btn>
           </div>
           <ErrorBanner error={submit.error ?? history.error ?? outlet.error} onRetry={history.error ? history.refresh : undefined} />
+          {moved && (
+            <div className="lv-banner lv-banner--warn" role="status" data-testid="order-moved">
+              <Ic n="clock" />
+              <div className="lv-banner__txt">
+                <b>Received: {moved.map(x => `${x.id} for ${fmtRunDate(x.runDate)}`).join(', ')}</b>
+                <span>{moved.find(x => x.notes)?.notes}</span>
+              </div>
+              <Btn className="d-btn d-btn--ghost lv-btn" onClick={() => router.push('/store/sm-27-orders-and-history')}>{"See your orders"}</Btn>
+            </div>
+          )}
           <div className="d-kpis">
             <div className="d-kpi d-kpi--hero" style={{ flex: '1.75', gap: '8px' }}>
               <div className="between"><span className="d-kpi__l"><Ic n="clock" className="ic ic--sm" />{"Orders close at 4:00 PM"}</span><span className="d-kpi__l">for the {fmtRunDate(runDate)} run</span></div>
               <span className="d-kpi__v cd__v">{late ? 'Closed' : `${h} h ${m} m`}<small>{late ? '' : 'left'}</small></span>
               <div className="m-progress cd__bar"><div style={{ width: `${late ? 100 : Math.max(0, Math.min(100, 100 - (msLeft / 86_400_000) * 100))}%` }} /></div>
-              <span className="d-kpi__s">{late ? <>This run is closed. Pick a later date; after 4:00 PM orders go to the <b style={{ color: '#FFFFFF' }}>next run</b>.</> : <>After 4:00 PM this order goes to the <b style={{ color: '#FFFFFF' }}>{fmtRunDate(addDays(runDate, 1))} run</b></>}</span>
+              <span className="d-kpi__s">{late ? <>This run is closed. Submit now and the order goes to the next open run, <b style={{ color: '#FFFFFF' }}>{fmtRunDate(nextOpenRun())}</b> or the next operating day after it.</> : <>After 4:00 PM this order goes to the <b style={{ color: '#FFFFFF' }}>{fmtRunDate(addDays(runDate, 1))} run</b></>}</span>
             </div>
             <div className="d-kpi">
               <span className="d-kpi__l"><span className="m-tag"><span className="dot" />{"Dry order"}</span><span className="m-sep" />{dryLines.length} lines</span>

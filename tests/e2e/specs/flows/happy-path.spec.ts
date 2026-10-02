@@ -107,12 +107,23 @@ test.describe('Happy path · order → plan → load → deliver → receipt', {
     await test.step('DSP-12: approve & go live publishes the plan; deferrals are recorded with their reason', async () => {
       const page = dsp.page;
       await page.goto(`/plan/dsp-12-approve-and-go-live?runDate=${runDate}`);
+      // moving the store's orders onto the van can break a hard rule: the screen lists it and asks for a reason
+      const violations: Row[] = (await waitForDraft(d, runId)).detail.violations ?? [];
+      const reason = 'Store orders ride the van as agreed with the store (e2e)';
+      if (violations.length) {
+        await expect(page.getByTestId('violations')).toContainText(violations[0].detail, { timeout: 30_000 });
+        await expect(page.getByTestId('approve')).toHaveAttribute('aria-disabled', 'true');
+        await page.getByLabel('Override reason').fill(reason);
+      }
       await page.getByTestId('approve').click();
       await expect.poll(async () => (await d.json<Row>(`AgentRuns('${runId}')`)).status, { timeout: 120_000 }).toBe('APPROVED');
       await expect.poll(async () => (await d.json<Row>(`AgentRuns('${runId}')`)).planId, { timeout: 120_000 }).toBeTruthy();
       planId = (await d.json<Row>(`AgentRuns('${runId}')`)).planId;
       // the run records the decision first, then planning publishes the plan with the dispatcher's authority
       await expect.poll(async () => (await d.json<Row>(`Plans('${planId}')`)).status, { timeout: 120_000 }).toBe('PUBLISHED');
+      if (violations.length) {
+        expect((await d.json<Row>(`Plans('${planId}')`)).summary.override).toMatchObject({ reason, violations: violations.length });
+      }
       await expect(page.getByTestId('approve')).toBeHidden({ timeout: 60_000 }).catch(() => undefined);
       for (const id of storeIds) {
         expect((await d.json<Row>(`Orders('${id}')`)).status).toBe('PLANNED');

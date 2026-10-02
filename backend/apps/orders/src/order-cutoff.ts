@@ -1,6 +1,6 @@
 // The 4:00 PM order cut-off (Asia/Colombo): an order for a run date must be placed before 16:00 on
-// the day before. Stores are held to it; dispatch may log a late phone order (DSP-10) with a reason,
-// which planning flags. An order saved on a store phone before the cut-off but synced after it (no
+// the day before. A store order placed after it is accepted into the following run; dispatch may
+// instead log a late phone order for the closed run (DSP-10) with a reason, which planning flags. An order saved on a store phone before the cut-off but synced after it (no
 // signal) still counts, within a grace window, because the store did order in time.
 import { ODataError } from '@lodestar/odata';
 import { businessDate, isBeforeOrderCutoff, nextOrderableRunDate, orderCutoffFor, toBusinessDate } from '@lodestar/platform';
@@ -33,12 +33,14 @@ export interface CutoffDecision {
   orderedAt: Date;
   latePhone: boolean;
   lateReason: string | null;
+  /** a store order after the cut-off: the run it asked for (closed) and the earliest run still open */
+  moved?: { from: string; earliest: string };
 }
 
 /** a run date as YYYY-MM-DD */
 const day = (d: string | Date) => toBusinessDate(d);
 
-/** Decide whether an order may be placed now, and with which orderedAt and late flags. */
+/** Decide how an order placed now is taken: orderedAt, late flags, and whether it moves to a later run. */
 export function decideCutoff(input: CutoffInput, settings: CutoffSettings): CutoffDecision {
   const { roles, runDate, now } = input;
   const reason = (input.lateReason ?? '').trim();
@@ -71,12 +73,13 @@ export function decideCutoff(input: CutoffInput, settings: CutoffSettings): Cuto
     return { orderedAt: now, latePhone: true, lateReason: reason.slice(0, 500) };
   }
 
-  throw ODataError.unprocessable(
-    'OrderCutoffPassed',
-    `Orders for ${day(runDate)} closed at 4:00 PM on ${businessDate(cutoff)}. The next run you can order for is ${nextOrderableRunDate(now)}; ` +
-      'for anything urgent, call dispatch.',
-    'runDate',
-  );
+  // a store order after the cut-off goes to the following run (the caller skips non-operating days)
+  return { orderedAt: now, latePhone: false, lateReason: null, moved: { from: day(runDate), earliest: nextOrderableRunDate(now) } };
+}
+
+/** The note a moved order carries, so the store sees why its run date changed. */
+export function movedNote(from: string, to: string): string {
+  return `Placed after the 4:00 PM cut-off for ${from}; moved to the ${to} run.`;
 }
 
 /** A store may only change an order (or move it to another run) before the cut-off of both run dates. */

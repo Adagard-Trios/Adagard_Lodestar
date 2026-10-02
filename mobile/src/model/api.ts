@@ -134,8 +134,8 @@ export async function plansAwaitingApproval(c: C): Promise<Plan[]> {
   return (await c.list<Plan>('Plans', { filter: `status eq 'NEEDS_APPROVAL' or status eq 'DRAFT'`, orderby: 'createdAt desc', top: 10 })).value;
 }
 
-export async function approvePlan(c: C, id: string, note?: string): Promise<Plan> {
-  return c.action<Plan>(`Plans${key(id)}/Lodestar.Approve`, note ? { note } : {});
+export async function approvePlan(c: C, id: string, note?: string, overrideReason?: string): Promise<Plan> {
+  return c.action<Plan>(`Plans${key(id)}/Lodestar.Approve`, { ...(note ? { note } : {}), ...(overrideReason ? { overrideReason } : {}) });
 }
 
 export async function rejectPlan(c: C, id: string, reason?: string): Promise<Plan> {

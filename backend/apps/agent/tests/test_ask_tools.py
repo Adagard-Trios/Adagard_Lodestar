@@ -32,7 +32,7 @@ def test_ask_tools_over_a_constrained_run(make_runtime):
     assert "not a vehicle of depot" in summary(tools, "lookup_vehicle", {"vehicle_id": "V-404"})
     assert "window 10:00-12:00; open orders: O-5" in summary(tools, "lookup_outlet", {"outlet_id": "S-05"})
     assert "not an outlet of depot" in summary(tools, "lookup_outlet", {"outlet_id": "S-99"})
-    assert "All 7 hard rules pass" in summary(tools, "rule_checks")
+    assert "All 8 hard rules pass" in summary(tools, "rule_checks")
     assert "it would break: V-D1 would reach" in summary(tools, "propose_edit", {"op": "move", "order_id": "O-5", "vehicle_id": "V-D1", "trip_no": 1})
     assert proposals[0]["edits"] == [{"op": "move", "orderId": "O-5", "vehicleId": "V-D1", "tripNo": 1}]
 

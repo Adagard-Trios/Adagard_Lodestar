@@ -1,8 +1,9 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // DSP-28 Approve re-plan · phone (P2, phone)
 // A human dispatcher approves here (Plans('…')/Lodestar.Approve); the app never approves by itself.
+// A plan with rule violations (summary.violations) needs a reason to override them, sent as overrideReason.
 import { useState } from 'react';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, TextInput, View, StyleSheet } from 'react-native';
 import { dayLabel, hm } from '@/lib/time';
 import { plural, titleCase } from '@/lodestar/live';
 import * as api from '@/model/api';
@@ -18,7 +19,9 @@ export default function ScreenDsp28ApproveRePlan() {
   const online = useOnline();
   const { plan, loading, plans } = usePlan();
   const [busy, setBusy] = useState(false);
+  const [reason, setReason] = useState('');
   const v = readPlan(plan);
+  const violations: unknown[] = Array.isArray(plan?.summary?.violations) ? plan.summary.violations : [];
   const open = plan ? plan.status === 'NEEDS_APPROVAL' || plan.status === 'DRAFT' : false;
 
   const banner = !claims
@@ -49,9 +52,10 @@ export default function ScreenDsp28ApproveRePlan() {
     if (!online) throw new Error('Approving needs signal');
     if (!plan) throw new Error('No plan is waiting for approval');
     if (!open) throw new Error(`Plan v${plan.version} is already ${titleCase(plan.status).toLowerCase()}`);
+    if (violations.length && !reason.trim()) throw new Error('Give a reason to override the rule violations');
     setBusy(true);
     try {
-      const done = await api.approvePlan(client, plan.id);
+      const done = await api.approvePlan(client, plan.id, undefined, violations.length ? reason.trim() : undefined);
       bumpRevision();
       showToast(`Plan v${done?.version ?? plan.version} approved and sent`);
       return true;
@@ -156,6 +160,28 @@ export default function ScreenDsp28ApproveRePlan() {
               ))}
             </View>
           ) : null}
+          {violations.length ? (
+            <View style={s.v31}>
+              <View style={s.v19}>
+                <View style={s.v18}>
+                  <Text style={s.t17}>{"Override reason"}</Text>
+                </View>
+                <View style={s.v18}>
+                  <Text style={s.t32}>{plural(violations.length, 'rule violation')}</Text>
+                </View>
+              </View>
+              <View style={s.v41}>
+                <TextInput
+                  value={reason}
+                  onChangeText={setReason}
+                  placeholder="Why you approve despite the violations"
+                  placeholderTextColor="#8f98aa"
+                  style={[s.t35, x.input]}
+                  testID="override-reason"
+                />
+              </View>
+            </View>
+          ) : null}
         </Scroll>
         <View style={s.v49}>
           <Tap lk="L180" style={s.v46} onPress={approve} disabled={busy}>
@@ -176,6 +202,10 @@ const X0 = "<svg viewBox=\"0 0 24 24\" data-lk=\"B\" fill=\"none\" stroke=\"#3b4
 const X1 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#b42318\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"20\" height=\"20\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z\" fill=\"none\" stroke=\"#b42318\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const X2 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m22 2-7 20-4-9-9-4Z\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M22 2 11 13\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const G0: GradSpec[] = [{"type":"linear","angle":135,"at":null,"repeat":false,"stops":[{"c":"#4f5fe0","p":0},{"c":"#3b4cca","p":0.55},{"c":"#2f3cb0","p":1}]}];
+
+const x = StyleSheet.create({
+  input: { flex: 1, paddingVertical: 0, paddingHorizontal: 0, borderWidth: 0 },
+});
 
 const s = StyleSheet.create({
   v0: {"flexDirection":"column","alignItems":"stretch","backgroundColor":"#ffffff","flex":1},

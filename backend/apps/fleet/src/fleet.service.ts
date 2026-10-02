@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { Prisma, VehicleStatus } from '@prisma/client';
+import { startOfBusinessWeek } from '@lodestar/platform';
 
 @Injectable()
 export class FleetService {
@@ -17,7 +18,20 @@ export class FleetService {
     });
   }
 
-  async updateFuelUsage(id: string, litresUsed: number) {
+  /**
+   * Weekly fuel quotas restart on Monday 00:00 (Asia/Colombo). Lazily, without a scheduler: a vehicle whose
+   * counter belongs to an earlier week starts again at 0 the first time the fleet service reads or writes it.
+   */
+  resetFuelWeek(now: Date = new Date()) {
+    const weekStart = startOfBusinessWeek(now);
+    return this.prisma.vehicle.updateMany({
+      where: { fuelWeekStart: { lt: weekStart } },
+      data: { usedLThisWeek: 0, fuelWeekStart: weekStart },
+    });
+  }
+
+  async updateFuelUsage(id: string, litresUsed: number, now: Date = new Date()) {
+    await this.resetFuelWeek(now);
     return this.prisma.vehicle.update({
       where: { id },
       data: { usedLThisWeek: { increment: Math.round(litresUsed) } },

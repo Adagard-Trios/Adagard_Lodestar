@@ -76,22 +76,30 @@ describe('POST Orders and the 4:00 PM cut-off (orders service, real Postgres)', 
     expect(await svc.prisma.order.count({ where: { outletId: OUT.K1 } })).toBe(1);
   });
 
-  // CURRENT behaviour. A later package changes after-cut-off store orders to "goes to the next run":
-  // update this test (and its name) then.
-  it('CURRENT: an order created after 16:00 is refused with 422 OrderCutoffPassed and nothing is stored', async () => {
+  it('an order created after 16:00 is accepted into the following run, and says so', async () => {
     const savedAt = '2026-10-05T10:45:00Z'; // 16:15 Colombo, on the phone
     const res = await placeAt(hours(1), order(savedAt));
-    expect(res.status).toBe(422);
-    expect(res.body.error).toMatchObject({ code: 'OrderCutoffPassed', target: 'runDate' });
-    expect(res.body.error.message).toContain('2026-10-07'); // the next run the store can order for
-    expect(await svc.prisma.order.count()).toBe(0);
+    expect(res.status).toBe(201);
+    expect(res.body.runDate).toBe('2026-10-07T00:00:00.000Z');
+    expect(res.body.notes).toBe('Placed after the 4:00 PM cut-off for 2026-10-06; moved to the 2026-10-07 run.');
+    const row = await svc.prisma.order.findUniqueOrThrow({ where: { id: res.body.id } });
+    expect(row).toMatchObject({ runDate: new Date('2026-10-07T00:00:00Z'), status: 'RECEIVED', latePhone: false });
+    expect(row.orderedAt.toISOString()).toBe(hours(1).toISOString());
   });
 
-  it('CURRENT: an order saved before 16:00 but synced after the grace window is refused (422 OrderCutoffPassed)', async () => {
+  it('a moved order skips a non-operating day on the Calendar and keeps the store note', async () => {
+    await svc.prisma.calendar.create({ data: { date: new Date('2026-10-07T00:00:00Z'), isOperating: false } });
+    const res = await placeAt(hours(1), { ...order(), notes: 'Extra milk' });
+    expect(res.status).toBe(201);
+    expect(res.body.runDate).toBe('2026-10-08T00:00:00.000Z');
+    expect(res.body.notes).toBe('Extra milk Placed after the 4:00 PM cut-off for 2026-10-06; moved to the 2026-10-08 run.');
+  });
+
+  it('an order saved before 16:00 but synced after the grace window goes to the following run', async () => {
     const res = await placeAt(hours(6.5), order('2026-10-05T10:00:00Z'));
-    expect(res.status).toBe(422);
-    expect(res.body.error.code).toBe('OrderCutoffPassed');
-    expect(await svc.prisma.order.count()).toBe(0);
+    expect(res.status).toBe(201);
+    expect(res.body.runDate).toBe('2026-10-07T00:00:00.000Z');
+    expect(await svc.prisma.order.count({ where: { runDate: new Date(`${RUN}T00:00:00Z`) } })).toBe(0);
   });
 
   it('a phone clock ahead of the server is not trusted: the order is stamped with the server time', async () => {
@@ -101,10 +109,10 @@ describe('POST Orders and the 4:00 PM cut-off (orders service, real Postgres)', 
     const row = await svc.prisma.order.findUniqueOrThrow({ where: { id: res.body.id } });
     expect(row.orderedAt.toISOString()).toBe(hours(-0.5).toISOString());
 
-    // and after the cut-off a "future" phone time cannot pass as saved in time
+    // and after the cut-off a "future" phone time cannot pass as saved in time: the order goes to the next run
     const late = await placeAt(hours(1), order('2026-10-05T20:00:00Z'));
-    expect(late.status).toBe(422);
-    expect(await svc.prisma.order.count()).toBe(1);
+    expect(late.status).toBe(201);
+    expect(late.body.runDate).toBe('2026-10-07T00:00:00.000Z');
   });
 
   it('dispatch may still log a late phone order after the cut-off, with a reason, and it is flagged', async () => {

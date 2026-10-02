@@ -1,4 +1,4 @@
-"""The 7 booklet hard rules: weight, volume, 270 min, 2 trips, fuel, van_only, mall."""
+"""The booklet hard rules: weight, volume, 270 min, 2 trips, fuel, van_only, mall, plus every stop's window close."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ RULES: list[tuple[str, str]] = [
     ("fuel", "Weekly fuel quota not exceeded"),
     ("van_only", "van_only outlets served by vans"),
     ("mall", "Mall-dock stops inside the mall window"),
+    ("window", "Every stop arrives before its window closes"),
 ]
 
 REASON_BY_RULE = {
@@ -26,6 +27,7 @@ REASON_BY_RULE = {
     "fuel": "FUEL",
     "van_only": "ACCESS",
     "mall": "WINDOW",
+    "window": "WINDOW",
 }
 
 
@@ -59,10 +61,12 @@ def check_rules(ctx: PlanningContext, plan: dict[str, Any]) -> tuple[list[dict[s
             oid = stop["orderId"]
             if ctx.needs_van(oid) and v.get("type") != "VAN":
                 violations.append(_violation("van_only", trip, [oid], f"{stop['outletId']} is van_only but {v['id']} is a {str(v.get('type')).lower()}"))
-            if ctx.is_mall(oid):
-                close = ctx.outlet_of(oid).get("windowClose")
-                if h.to_min(stop["arrive"]) > h.to_min(close, 1440):
+            close = ctx.window_of(oid)[1]
+            if h.to_min(stop["arrive"]) > h.to_min(close):
+                if ctx.is_mall(oid):
                     violations.append(_violation("mall", trip, [oid], f"{stop['outletId']} arrival {stop['arrive']} after mall window closes {close}"))
+                else:
+                    violations.append(_violation("window", trip, [oid], f"{stop['outletId']} arrival {stop['arrive']} after its window closes {close}"))
 
     for vid, trips in sorted(by_vehicle.items()):
         v = ctx.vehicles[vid]

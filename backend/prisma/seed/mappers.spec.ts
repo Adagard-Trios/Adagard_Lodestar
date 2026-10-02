@@ -127,7 +127,7 @@ describe('mapOutlet', () => {
       ok: true,
       row: {
         id: 'OUT901', name: 'Waypoint Fresh Testville 901', brand: 'FRESH', district: 'Testville', depot: 'KANDY',
-        dockType: 'REAR_DOCK', parking: 'NORMAL', windowOpen: '05:00', windowClose: '08:15',
+        dockType: 'REAR_DOCK', parking: 'NORMAL', windowOpen: '05:00', windowClose: '08:15', mallWindow: null,
       },
     });
   });
@@ -135,6 +135,12 @@ describe('mapOutlet', () => {
   it('accepts aliases and an explicit name', () => {
     const m = mapOutlet(rec('id,name,brand,district,depot,dockType,parking,windowOpen,windowClose\nOUT902,Test Shop,Style,Testburg,Peliyagoda,Mall Bay,mall_dock,10:00,12:00\n'));
     expect(m.ok && m.row).toMatchObject({ id: 'OUT902', name: 'Test Shop', dockType: 'MALL_BAY', parking: 'MALL_DOCK' });
+  });
+
+  it('reads mall_window as the mall delivery window ("HH:mm-HH:mm")', () => {
+    const m = mapOutlet(rec(header + 'OUT905,Style,T,Kandy,mall_bay,mall_dock,9:15-11:45,09:15,11:45\n'));
+    expect(m.ok && m.row.mallWindow).toBe('09:15-11:45');
+    expect(mapOutlet(rec(header + 'OUT906,Style,T,Kandy,mall_bay,mall_dock,soon,09:15,11:45\n'))).toEqual({ ok: false, reason: 'not a time window: "soon"' });
   });
 
   it('skips unknown dock type and unknown parking', () => {

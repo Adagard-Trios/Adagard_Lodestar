@@ -23,8 +23,8 @@ const EVERYONE = [...HUMAN_ROLES, Roles.Service];
     vehicle: (vehicleId) => ({ tripStops: { some: { trip: { is: { vehicleId } } } } }),
   },
   search: ['id', 'name', 'district', 'address'],
-  insertable: ['id', 'name', 'brand', 'district', 'depot', 'dockType', 'parking', 'windowOpen', 'windowClose', 'address', 'accessNote', 'lat', 'lng'],
-  updatable: ['name', 'dockType', 'parking', 'windowOpen', 'windowClose', 'address', 'accessNote', 'lat', 'lng', 'isActive'],
+  insertable: ['id', 'name', 'brand', 'district', 'depot', 'dockType', 'parking', 'windowOpen', 'windowClose', 'mallWindow', 'address', 'accessNote', 'lat', 'lng'],
+  updatable: ['name', 'dockType', 'parking', 'windowOpen', 'windowClose', 'mallWindow', 'address', 'accessNote', 'lat', 'lng', 'isActive'],
   defaultOrderBy: 'depot,district,brand,id',
 })
 export class OutletsSet extends ODataEntitySet {
@@ -39,8 +39,18 @@ export class OutletsSet extends ODataEntitySet {
     if (!this.outlets.validWindow(open, close)) throw ODataError.badRequest('Delivery window must be HH:mm with open before close');
   }
 
+  /** A mall's delivery window is "HH:mm-HH:mm" (or null). */
+  private checkMallWindow(mallWindow: unknown) {
+    if (mallWindow === undefined || mallWindow === null) return;
+    const [open, close, ...rest] = String(mallWindow).split('-');
+    if (rest.length || !this.outlets.validWindow(open, close ?? '')) {
+      throw ODataError.badRequest('mallWindow must be "HH:mm-HH:mm" with open before close', 'mallWindow');
+    }
+  }
+
   async beforeCreate(data: Record<string, any>) {
     this.checkWindow(data.windowOpen, data.windowClose);
+    this.checkMallWindow(data.mallWindow);
     return data;
   }
 
@@ -48,6 +58,7 @@ export class OutletsSet extends ODataEntitySet {
     if (patch.windowOpen || patch.windowClose) {
       this.checkWindow(patch.windowOpen ?? current.windowOpen, patch.windowClose ?? current.windowClose);
     }
+    this.checkMallWindow(patch.mallWindow);
     return patch;
   }
 

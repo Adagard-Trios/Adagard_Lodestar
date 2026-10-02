@@ -6,7 +6,7 @@ import {
 import { AUDIT_SINK, AuditSink, canAccessDepot, Principal, Roles, serviceName } from '@lodestar/security';
 import { Depot, DeferralStatus, PlanSource, PlanStatus } from '@prisma/client';
 import { AgentClient, AgentRunSnapshot } from './agent.client';
-import { dayRange, OPEN_PLAN_STATUSES, PlanningService } from './planning.service';
+import { dayRange, OPEN_PLAN_STATUSES, overrideReasonRequired, PlanningService, planViolations } from './planning.service';
 
 function assertDepot(p: Principal, depot: string) {
   if (!canAccessDepot(p, depot)) throw ODataError.forbidden(`You do not plan for depot ${depot}`, 'depot');
@@ -59,10 +59,16 @@ export class PlansSet extends ODataEntitySet {
   }
 
   /** POST Plans('PLG-2026-04-07-v3')/Lodestar.Approve — human dispatchers only (not svc, not admin). */
-  @ODataAction({ name: 'Approve', binding: 'entity', roles: [Roles.Dispatcher], params: { note: 'Edm.String' }, returns: 'Lodestar.Plan' })
+  @ODataAction({
+    name: 'Approve',
+    binding: 'entity',
+    roles: [Roles.Dispatcher],
+    params: { note: 'Edm.String', overrideReason: 'Edm.String' },
+    returns: 'Lodestar.Plan',
+  })
   approve(ctx: OperationContext) {
     if (ctx.principal.isService) throw ODataError.forbidden('Only a human dispatcher can approve a plan');
-    return this.planning.approvePlan(ctx.entity.id, ctx.principal.sub, ctx.params.note);
+    return this.planning.approvePlan(ctx.entity.id, ctx.principal.sub, ctx.params.note, ctx.params.overrideReason);
   }
 
   /** POST Plans('…')/Lodestar.Reject {reason?} */
@@ -229,6 +235,7 @@ export class AgentRunsSet extends ODataEntitySet {
   async beforeCreate(data: Record<string, any>, ctx: WriteContext) {
     if (!data.depot || !data.runDate) throw ODataError.badRequest('depot and runDate are required');
     assertDepot(ctx.principal, data.depot);
+    await this.planning.assertOperatingDay(data.runDate);
     return data;
   }
 
@@ -260,16 +267,17 @@ export class AgentRunsSet extends ODataEntitySet {
   }
 
   /**
-   * POST AgentRuns('…')/Lodestar.Resume {decision: approve|edit|reject, edits?, comment?}
+   * POST AgentRuns('…')/Lodestar.Resume {decision: approve|edit|reject, edits?, comment?, overrideReason?}
    * The human decision. On "approve", planning stores the agent's draft as a
    * plan version and publishes it with the dispatcher's authority (Plans
-   * Approve) — the agent itself can never publish.
+   * Approve) — the agent itself can never publish. A draft with hard-rule
+   * violations needs an overrideReason, checked before the agent records the approval.
    */
   @ODataAction({
     name: 'Resume',
     binding: 'entity',
     roles: [Roles.Dispatcher],
-    params: { decision: { type: 'Edm.String', required: true }, edits: 'Collection(Edm.Untyped)', comment: 'Edm.String' },
+    params: { decision: { type: 'Edm.String', required: true }, edits: 'Collection(Edm.Untyped)', comment: 'Edm.String', overrideReason: 'Edm.String' },
     returns: 'Lodestar.AgentRun',
   })
   async resume(ctx: OperationContext) {
@@ -277,6 +285,11 @@ export class AgentRunsSet extends ODataEntitySet {
     if (!['approve', 'edit', 'reject'].includes(decision)) throw ODataError.badRequest('decision must be approve, edit or reject', 'decision');
     if (decision === 'edit' && !(ctx.params.edits as unknown[] | undefined)?.length) {
       throw ODataError.badRequest("decision 'edit' needs at least one edit", 'edits');
+    }
+    const overrideReason = typeof ctx.params.overrideReason === 'string' ? ctx.params.overrideReason.trim() : '';
+    if (decision === 'approve' && !overrideReason) {
+      const violations = planViolations(await this.agent.getRun(ctx.entity.id, this.authorization(ctx.headers)));
+      if (violations.length) throw overrideReasonRequired('This draft', violations);
     }
 
     const snapshot = await this.agent.resume(ctx.entity.id, this.authorization(ctx.headers), decision, ctx.params.edits, ctx.params.comment);
@@ -293,7 +306,7 @@ export class AgentRunsSet extends ODataEntitySet {
         run = await this.prisma.agentRun.update({ where: { id: run.id }, data: { planId } });
       }
       // If publishing fails here, the draft stays NEEDS_APPROVAL and can be approved with Plans('…')/Lodestar.Approve.
-      await this.planning.approvePlan(planId, ctx.principal.sub, `Approved via planning-agent run ${ctx.entity.id}`);
+      await this.planning.approvePlan(planId, ctx.principal.sub, `Approved via planning-agent run ${ctx.entity.id}`, overrideReason || undefined);
       // The publication is its own audited write, attributed to the dispatcher.
       await this.audit.record({
         at: new Date().toISOString(),
@@ -304,7 +317,7 @@ export class AgentRunsSet extends ODataEntitySet {
         entitySet: 'Plans',
         entityKey: planId,
         outcome: 'SUCCESS',
-        payload: { via: 'AgentRuns.Resume', agentRunId: ctx.entity.id },
+        payload: { via: 'AgentRuns.Resume', agentRunId: ctx.entity.id, ...(overrideReason ? { overrideReason } : {}) },
       });
     }
     return run;

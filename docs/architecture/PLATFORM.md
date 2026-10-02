@@ -84,7 +84,7 @@ The graph (`backend/apps/agent`), one run per depot and run date:
 
 1. `load_context`: reads Orders, Vehicles, Outlets, Calendar and DistrictTravel via OData with its service token.
 2. `draft_plan`: uses the capacity and packing heuristics (chilled on reefers, 1 brand + 1 district per trip, max 2 trips per vehicle, windows).
-3. `check_rules`: the 7 booklet hard rules. On a violation it loops back to `draft_plan` with constraints, at most 3 times.
+3. `check_rules`: the 7 booklet hard rules plus window close at every stop. On a violation it loops back to `draft_plan` with constraints, at most 3 times.
 4. `rank_deferrals`: protected outlets are never deferred, and each deferral gets a reason code.
 5. `explain`: the model writes the "What it did / what it checked" text shown on DSP-02.
 6. `await_approval`: a LangGraph interrupt. The run stops at status `NEEDS_APPROVAL`. Only a human `dispatcher` can resume it, with `approve`, `edit` or `reject`. **The agent can never publish a plan.**

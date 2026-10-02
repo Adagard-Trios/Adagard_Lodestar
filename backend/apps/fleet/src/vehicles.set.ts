@@ -30,6 +30,17 @@ export class VehiclesSet extends ODataEntitySet {
     super(prisma);
   }
 
+  // Reads see this week's fuel use (the planner checks quotas against it).
+  async findMany(args: Parameters<ODataEntitySet['findMany']>[0]) {
+    await this.fleet.resetFuelWeek();
+    return super.findMany(args);
+  }
+
+  async findFirst(args: Parameters<ODataEntitySet['findFirst']>[0]) {
+    await this.fleet.resetFuelWeek();
+    return super.findFirst(args);
+  }
+
   /** POST Vehicles('VEH004')/Lodestar.SetStatus {status, workshopNote?} (ADM-11) */
   @ODataAction({
     name: 'SetStatus',

@@ -5,6 +5,7 @@ import { VehiclesSet } from './vehicles.set';
 
 interface VehicleDelegate {
   update(args: any): Promise<any>;
+  updateMany(args: any): Promise<{ count: number }>;
   count(args: any): Promise<number>;
   groupBy(args: any): Promise<any[]>;
 }
@@ -39,6 +40,15 @@ describe('VehiclesSet', () => {
     });
   });
 
+  it('reads start a new fuel week first, so the planner never sees the litres of an earlier week', async () => {
+    const prisma = { vehicle: { findMany: async () => [{ id: 'VEH057' }], findFirst: async () => ({ id: 'VEH057' }) } };
+    set = new VehiclesSet(prisma as any, instance(fleet));
+    when(fleet.resetFuelWeek()).thenResolve({ count: 1 });
+    await expect(set.findMany({})).resolves.toEqual([{ id: 'VEH057' }]);
+    await expect(set.findFirst({ where: { id: 'VEH057' } })).resolves.toEqual({ id: 'VEH057' });
+    verify(fleet.resetFuelWeek()).twice();
+  });
+
   it('Summary passes the caller row filter', async () => {
     const rowFilter = { depot: { in: ['KANDY'] } };
     when(fleet.getSummary(anything())).thenResolve({ total: 3 } as any);
@@ -55,6 +65,7 @@ describe('FleetService', () => {
     vehicle = mock<VehicleDelegate>();
     service = new FleetService({ vehicle: instance(vehicle) } as any);
     when(vehicle.update(anything())).thenCall(async (a: any) => a);
+    when(vehicle.updateMany(anything())).thenResolve({ count: 0 });
   });
 
   describe('updateStatus', () => {
@@ -77,6 +88,14 @@ describe('FleetService', () => {
   it('updateFuelUsage increments the weekly litres (rounded)', async () => {
     await service.updateFuelUsage('VEH057', 12.6);
     expect(capture(vehicle.update).last()[0]).toEqual({ where: { id: 'VEH057' }, data: { usedLThisWeek: { increment: 13 } } });
+  });
+
+  it('a new week (Monday 00:00 Colombo) starts the fuel count again before litres are added', async () => {
+    const wednesday = new Date('2026-04-08T06:00:00Z');
+    const monday = new Date('2026-04-05T18:30:00.000Z'); // Mon 6 Apr 00:00 Colombo
+    await service.updateFuelUsage('VEH057', 5, wednesday);
+    expect(capture(vehicle.updateMany).last()[0]).toEqual({ where: { fuelWeekStart: { lt: monday } }, data: { usedLThisWeek: 0, fuelWeekStart: monday } });
+    verify(vehicle.updateMany(anything())).calledBefore(vehicle.update(anything()));
   });
 
   describe('getSummary', () => {

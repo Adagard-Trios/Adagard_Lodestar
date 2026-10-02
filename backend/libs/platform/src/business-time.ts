@@ -129,6 +129,12 @@ export function todayRunDate(at: Date = new Date()): Date {
   return runDateValue(businessDate(at));
 }
 
+/** Monday 00:00 Colombo of the week of `at`: weekly fuel quotas start again then. */
+export function startOfBusinessWeek(at: Date = new Date()): Date {
+  const { date, weekday } = businessParts(at);
+  return startOfBusinessDay(addBusinessDays(date, -((weekday + 6) % 7)));
+}
+
 /** Order cut-off for a run date: 4:00 PM Colombo on the day before. */
 export function orderCutoffFor(runDate: string | Date): Date {
   return businessDateTime(addBusinessDays(runDate, -1), ORDER_CUTOFF_HHMM);

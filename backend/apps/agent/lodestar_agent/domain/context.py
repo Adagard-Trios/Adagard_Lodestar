@@ -84,6 +84,18 @@ class PlanningContext:
         outlet = self.outlet_of(order_id)
         return outlet.get("parking") == "MALL_DOCK" or outlet.get("dockType") == "MALL_BAY"
 
+    def window_of(self, order_id: str) -> tuple[str, str]:
+        """(open, close) of an order's delivery: a mall's delivery window (``mallWindow`` "HH:mm-HH:mm")
+        narrows the store hours."""
+        outlet = self.outlet_of(order_id)
+        opens, closes = str(outlet.get("windowOpen") or "00:00"), str(outlet.get("windowClose") or "24:00")
+        mall = str(outlet.get("mallWindow") or "")
+        if self.is_mall(order_id) and "-" in mall:
+            m_open, m_close = (x.strip() for x in mall.split("-", 1))
+            opens = max(opens, m_open, key=h.to_min)
+            closes = min(closes, m_close, key=h.to_min)
+        return opens, closes
+
     def travel_for(self, district: str) -> dict[str, Any]:
         return self.travel.get(district, {"district": district, "depotToDistMin": 60, "interStopMin": 15, "roadClass": "suburban"})
 

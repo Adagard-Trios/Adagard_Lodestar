@@ -216,4 +216,26 @@ describe('Plans approval (planning service, real Postgres)', () => {
     expect(await svc.prisma.trip.count()).toBe(0);
     expect((await svc.prisma.order.findMany()).every((o) => o.status === 'RECEIVED')).toBe(true);
   });
+
+  it('a plan drafted with rule violations is refused without an override reason, and keeps the reason when given one', async () => {
+    const id = await draft({ ...V1, violations: [{ rule: 'window', orderIds: [O.b], reason: 'WINDOW' }] });
+    const refused = await approve(id);
+    expect(refused.status).toBe(422);
+    expect(refused.body.error).toMatchObject({ code: 'OverrideReasonRequired', target: 'overrideReason' });
+    expect((await svc.prisma.plan.findUniqueOrThrow({ where: { id } })).status).toBe('DRAFT');
+    expect(await svc.prisma.trip.count()).toBe(0);
+
+    const res = await svc.as(dispatcher).post(`Plans('${id}')/Lodestar.Approve`, { note: 'ok', overrideReason: 'Store agreed to a late drop' });
+    expect(res.status).toBe(200);
+    const plan = await svc.prisma.plan.findUniqueOrThrow({ where: { id } });
+    expect(plan.status).toBe('PUBLISHED');
+    expect((plan.summary as any).override).toMatchObject({ reason: 'Store agreed to a late drop', by: USERS.dispatcherKandy, violations: 1 });
+  });
+
+  it('auto-plan refuses a non-operating day (422 NonOperatingDay)', async () => {
+    const res = await svc.as(dispatcher).post('Plans/Lodestar.AutoPlan', { depot: 'KANDY', runDate: '2026-10-07' });
+    expect(res.status).toBe(422);
+    expect(res.body.error).toMatchObject({ code: 'NonOperatingDay', target: 'runDate' });
+    expect(await svc.prisma.plan.count()).toBe(0);
+  });
 });

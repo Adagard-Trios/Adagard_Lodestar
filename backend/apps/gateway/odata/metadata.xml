@@ -129,6 +129,7 @@
         <Property Name="parking" Type="Lodestar.ParkingType" Nullable="false"/>
         <Property Name="windowOpen" Type="Edm.String" Nullable="false"/>
         <Property Name="windowClose" Type="Edm.String" Nullable="false"/>
+        <Property Name="mallWindow" Type="Edm.String"/>
         <Property Name="address" Type="Edm.String"/>
         <Property Name="accessNote" Type="Edm.String"/>
         <Property Name="lat" Type="Edm.Double"/>
@@ -152,6 +153,7 @@
         <Property Name="kmPerLitre" Type="Edm.Double" Nullable="false"/>
         <Property Name="weeklyLFuel" Type="Edm.Int32" Nullable="false"/>
         <Property Name="usedLThisWeek" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="fuelWeekStart" Type="Edm.DateTimeOffset" Nullable="false"/>
         <Property Name="status" Type="Lodestar.VehicleStatus" Nullable="false"/>
         <Property Name="workshopNote" Type="Edm.String"/>
         <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
@@ -525,6 +527,7 @@
       <Action Name="Approve" IsBound="true">
         <Parameter Name="bindingParameter" Type="Lodestar.Plan" Nullable="false"/>
         <Parameter Name="note" Type="Edm.String"/>
+        <Parameter Name="overrideReason" Type="Edm.String"/>
         <ReturnType Type="Lodestar.Plan"/>
       </Action>
       <Action Name="Reject" IsBound="true">
@@ -569,6 +572,7 @@
         <Parameter Name="decision" Type="Edm.String" Nullable="false"/>
         <Parameter Name="edits" Type="Collection(Edm.Untyped)"/>
         <Parameter Name="comment" Type="Edm.String"/>
+        <Parameter Name="overrideReason" Type="Edm.String"/>
         <ReturnType Type="Lodestar.AgentRun"/>
       </Action>
       <Action Name="Ask" IsBound="true">

@@ -54,6 +54,21 @@ export function parseTime(v: string | undefined): string | null {
   return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
 }
 
+/** "H:mm-H:mm" (a mall delivery window) -> "HH:mm-HH:mm"; blank -> null. */
+export function parseTimeWindow(v: string | undefined): string | null {
+  if (isBlank(v)) return null;
+  const bad = new ValueError(`not a time window: "${v}"`);
+  const parts = v.split('-');
+  if (parts.length !== 2) throw bad;
+  try {
+    const [open, close] = parts.map(parseTime);
+    if (!open || !close) throw bad;
+    return `${open}-${close}`;
+  } catch {
+    throw bad;
+  }
+}
+
 /** ISO "YYYY-MM-DD" (optionally with a time part) or "YYYY/MM/DD" -> UTC midnight. */
 export function parseDate(v: string | undefined): Date | null {
   if (isBlank(v)) return null;

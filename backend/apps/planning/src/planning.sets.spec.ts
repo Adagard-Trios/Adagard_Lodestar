@@ -75,10 +75,16 @@ describe('PlansSet', () => {
 
   describe('Lodestar.Approve', () => {
     it('delegates a dispatcher approval to PlanningService.approvePlan', async () => {
-      when(planning.approvePlan('PLK-1', 'nilanthi', 'ok')).thenResolve({ id: 'PLK-1', status: 'PUBLISHED' } as any);
+      when(planning.approvePlan('PLK-1', 'nilanthi', 'ok', undefined)).thenResolve({ id: 'PLK-1', status: 'PUBLISHED' } as any);
       const res = await set.approve({ principal: personas.nilanthi, params: { note: 'ok' }, entity: { id: 'PLK-1' }, headers: {} });
       expect(res).toMatchObject({ status: 'PUBLISHED' });
-      verify(planning.approvePlan('PLK-1', 'nilanthi', 'ok')).once();
+      verify(planning.approvePlan('PLK-1', 'nilanthi', 'ok', undefined)).once();
+    });
+
+    it('passes the override reason through', async () => {
+      when(planning.approvePlan(anything(), anything(), anything(), anything())).thenResolve({ id: 'PLK-1' } as any);
+      await set.approve({ principal: personas.nilanthi, params: { note: 'ok', overrideReason: 'agreed' }, entity: { id: 'PLK-1' }, headers: {} });
+      verify(planning.approvePlan('PLK-1', 'nilanthi', 'ok', 'agreed')).once();
     });
 
     it('refuses a service principal even if it carries the dispatcher role', async () => {
@@ -87,7 +93,7 @@ describe('PlansSet', () => {
       expect(() => set.approve({ principal: personas.agent, params: {}, entity: { id: 'PLK-1' }, headers: {} })).toThrow(
         expect.objectContaining({ status: 403 }),
       );
-      verify(planning.approvePlan(anything(), anything(), anything())).never();
+      verify(planning.approvePlan(anything(), anything(), anything(), anything())).never();
     });
   });
 
@@ -210,6 +216,14 @@ describe('AgentRunsSet', () => {
       await expect(set.beforeCreate({ depot: 'PELIYAGODA', runDate: RUN_DATE }, { principal: kandyOnly, headers })).rejects.toMatchObject({ status: 403 });
       await expect(set.beforeCreate({ depot: 'KANDY' }, { principal: kandyOnly, headers })).rejects.toMatchObject({ status: 400 });
       await expect(set.beforeCreate({ depot: 'KANDY', runDate: RUN_DATE }, { principal: kandyOnly, headers })).resolves.toBeDefined();
+      verify(planning.assertOperatingDay(RUN_DATE)).once();
+    });
+
+    it('refuses a non-operating day before the agent is asked', async () => {
+      when(planning.assertOperatingDay(anything())).thenReject(ODataError.unprocessable('NonOperatingDay', 'closed', 'runDate'));
+      await expect(set.beforeCreate({ depot: 'KANDY', runDate: RUN_DATE }, { principal: personas.nilanthi, headers })).rejects.toMatchObject({
+        status: 422, code: 'NonOperatingDay',
+      });
     });
   });
 
@@ -295,7 +309,7 @@ describe('AgentRunsSet', () => {
         calls.push('createAgentPlan');
         return { id: 'PLK-2026-04-07-v3' };
       });
-      when(planning.approvePlan(anything(), anything(), anything())).thenCall(async () => {
+      when(planning.approvePlan(anything(), anything(), anything(), anything())).thenCall(async () => {
         calls.push('approvePlan');
         return {};
       });
@@ -321,7 +335,7 @@ describe('AgentRunsSet', () => {
       when(agent.resume(anything(), anything(), anything(), anything(), anything())).thenReject(ODataError.conflict('not waiting'));
       await expect(set.resume({ principal: personas.nilanthi, params: { decision: 'approve' }, entity, headers })).rejects.toMatchObject({ status: 409 });
       verify(runs.update(anything())).never();
-      verify(planning.approvePlan(anything(), anything(), anything())).never();
+      verify(planning.approvePlan(anything(), anything(), anything(), anything())).never();
     });
 
     it('records the agent state and decision right after the agent call', async () => {
@@ -350,16 +364,33 @@ describe('AgentRunsSet', () => {
       ]);
       expect(capture(planning.createAgentPlan).last()).toEqual([entity, snapshot, 'nilanthi']);
       expect(capture(runs.update).second()[0]).toEqual({ where: { id: 'run-1' }, data: { planId: 'PLK-2026-04-07-v3' } });
-      verify(planning.approvePlan('PLK-2026-04-07-v3', 'nilanthi', 'Approved via planning-agent run run-1')).once();
+      verify(planning.approvePlan('PLK-2026-04-07-v3', 'nilanthi', 'Approved via planning-agent run run-1', undefined)).once();
       const [event] = capture(audit.record).last();
       expect(event).toMatchObject({ actor: 'nilanthi', action: 'Plans.Approve', entitySet: 'Plans', entityKey: 'PLK-2026-04-07-v3', outcome: 'SUCCESS' });
       expect(run).toMatchObject({ id: 'run-1', status: 'APPROVED', decision: 'approve', decidedBy: 'nilanthi', planId: 'PLK-2026-04-07-v3' });
       verify(runs.update(anything())).twice();
     });
 
+    it('refuses to approve a draft with violations without an override reason, before the agent records anything', async () => {
+      when(agent.getRun('run-1', AUTH)).thenResolve({ id: 'run-1', status: 'NEEDS_APPROVAL', violations: [{ rule: 'mall' }] });
+      await expect(set.resume({ principal: personas.nilanthi, params: { decision: 'approve', overrideReason: '  ' }, entity, headers })).rejects.toMatchObject({
+        status: 422, code: 'OverrideReasonRequired', target: 'overrideReason',
+      });
+      verify(agent.resume(anything(), anything(), anything(), anything(), anything())).never();
+      verify(runs.update(anything())).never();
+    });
+
+    it('approves a draft with violations given a reason, and records it on the plan and in the audit', async () => {
+      when(agent.resume(anything(), anything(), anything(), anything(), anything())).thenResolve({ id: 'run-1', status: 'APPROVED', violations: [{ rule: 'mall' }] });
+      await set.resume({ principal: personas.nilanthi, params: { decision: 'approve', overrideReason: ' Mall agreed a late slot ' }, entity, headers });
+      verify(agent.getRun(anything(), anything())).never();
+      verify(planning.approvePlan('PLK-2026-04-07-v3', 'nilanthi', 'Approved via planning-agent run run-1', 'Mall agreed a late slot')).once();
+      expect(capture(audit.record).last()[0].payload).toEqual({ via: 'AgentRuns.Resume', agentRunId: 'run-1', overrideReason: 'Mall agreed a late slot' });
+    });
+
     it('keeps the decision and plan link when publishing fails', async () => {
       when(agent.resume(anything(), anything(), anything(), anything(), anything())).thenResolve({ id: 'run-1', status: 'APPROVED' });
-      when(planning.approvePlan(anything(), anything(), anything())).thenReject(ODataError.conflict('Plan is PUBLISHED'));
+      when(planning.approvePlan(anything(), anything(), anything(), anything())).thenReject(ODataError.conflict('Plan is PUBLISHED'));
       await expect(set.resume({ principal: personas.nilanthi, params: { decision: 'approve' }, entity, headers })).rejects.toMatchObject({ status: 409 });
       expect(rows['run-1']).toMatchObject({ status: 'APPROVED', decision: 'approve', decidedBy: 'nilanthi', planId: 'PLK-2026-04-07-v3' });
       verify(audit.record(anything())).never();
@@ -370,7 +401,7 @@ describe('AgentRunsSet', () => {
       when(agent.resume(anything(), anything(), anything(), anything(), anything())).thenResolve({ id: 'run-1', status: 'APPROVED' });
       const run = await set.resume({ principal: personas.nilanthi, params: { decision: 'approve' }, entity: { ...entity, planId: 'PLK-X' }, headers });
       verify(planning.createAgentPlan(anything(), anything(), anything())).never();
-      verify(planning.approvePlan('PLK-X', 'nilanthi', anything())).once();
+      verify(planning.approvePlan('PLK-X', 'nilanthi', anything(), undefined)).once();
       verify(runs.update(anything())).once();
       expect(run.planId).toBe('PLK-X');
     });
@@ -384,7 +415,7 @@ describe('AgentRunsSet', () => {
       expect(run).toMatchObject({ status: 'REJECTED', decision: 'reject' });
       expect(capture(agent.resume).second()).toEqual(['run-1', AUTH, 'edit', [{ op: 'move' }], undefined]);
       verify(planning.createAgentPlan(anything(), anything(), anything())).never();
-      verify(planning.approvePlan(anything(), anything(), anything())).never();
+      verify(planning.approvePlan(anything(), anything(), anything(), anything())).never();
       verify(audit.record(anything())).never();
     });
   });

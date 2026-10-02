@@ -39,7 +39,7 @@ def test_full_http_flow_edit_then_approve(api, make_token):
 
     run = api.get(f"/runs/{run_id}", headers=h).json()
     assert run["status"] == "NEEDS_APPROVAL" and run["canPublish"] is False
-    assert "raw" not in run and len(run["ruleChecks"]) == 7
+    assert "raw" not in run and len(run["ruleChecks"]) == 8
     assert run["explanation"]["text"].startswith("Draft v1 for NORTH")
 
     ask = api.post("/ask", json={"runId": run_id, "question": "move O-6 to V-R1"}, headers=h).json()
@@ -95,6 +95,15 @@ def test_upstream_errors_map_to_502(settings, make_runtime, verifier, make_token
     with TestClient(create_app(settings=settings, runtime=runtime, verifier=verifier)) as api:
         r = api.post("/runs", json=START, headers=bearer(make_token()))
         assert r.status_code == 502 and r.json()["error"]["code"] == "ServiceIdentityError"
+
+
+def test_non_operating_day_is_refused_with_422(settings, make_runtime, verifier, make_token):
+    data = fx.raw()
+    data["calendar"] = [{**c, "isOperating": c["date"] != fx.RUN_DATE} for c in data["calendar"]]
+    with TestClient(create_app(settings=settings, runtime=make_runtime(data), verifier=verifier)) as api:
+        r = api.post("/runs", json=START, headers=bearer(make_token()))
+        assert r.status_code == 422 and r.json()["error"]["code"] == "NonOperatingDay"
+        assert fx.RUN_DATE in r.json()["error"]["message"]
 
 
 def test_request_id_is_echoed(api, make_token):

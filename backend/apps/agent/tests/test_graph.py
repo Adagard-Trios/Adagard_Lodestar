@@ -25,7 +25,7 @@ def test_happy_path_stops_at_needs_approval(make_runtime):
     assert run["status"] == "NEEDS_APPROVAL"
     assert run["canPublish"] is False
     assert nodes(run) == ["load_context", "draft_plan", "check_rules", "rank_deferrals", "explain"]
-    assert all(c["passed"] for c in run["ruleChecks"]) and len(run["ruleChecks"]) == 7
+    assert all(c["passed"] for c in run["ruleChecks"]) and len(run["ruleChecks"]) == 8
     assert run["redrafts"] == 0
     planned = {o for t in run["plan"]["trips"] for o in t["orderIds"]}
     assert planned == {"O-1", "O-2", "O-3", "O-4", "O-5", "O-6", "O-7"}  # other depot's order never loaded into scope
@@ -155,7 +155,7 @@ def test_ask_is_grounded_and_uses_tools(make_runtime):
 
     res = rt.ask(run["id"], "Did every rule pass?")
     assert res["toolCalls"] == ["rule_checks"]
-    assert "All 7 hard rules pass" in res["answer"]
+    assert "All 8 hard rules pass" in res["answer"]
 
 
 def test_ask_proposes_an_edit_as_new_draft(make_runtime):

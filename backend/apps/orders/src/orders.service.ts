@@ -2,12 +2,15 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { ODataError } from '@lodestar/odata';
 import { Prisma, OrderStatus, TempClass } from '@prisma/client';
-import { businessDate, runDateRange } from '@lodestar/platform';
+import { addBusinessDays, businessDate, runDateRange } from '@lodestar/platform';
 
 /** Stored window [start, end) of a run date (YYYY-MM-DD, or a Date read in Sri Lanka time). */
 export function dayRange(runDate: string | Date) {
   return runDateRange(runDate);
 }
+
+/** How far ahead a moved order looks for an operating day before taking the earliest date anyway. */
+const OPERATING_DAY_HORIZON = 14;
 
 /** Orders that may still be changed by their store (before planning picks them up). */
 export const EDITABLE_STATUSES: OrderStatus[] = [OrderStatus.RECEIVED];
@@ -214,6 +217,21 @@ export class OrdersService {
     ]);
     const last = Math.max(creditNoteSequence(order?.creditNoteId, prefix), creditNoteSequence(pod?.creditNoteId, prefix));
     return `${prefix}${String(last + 1).padStart(4, '0')}`;
+  }
+
+  /** The first run date on or after `from` that the Calendar does not mark as non-operating (a silent calendar runs). */
+  async nextOperatingRunDate(from: string): Promise<string> {
+    const { start } = dayRange(from);
+    const closed = await this.prisma.calendar.findMany({
+      where: { date: { gte: start, lt: dayRange(addBusinessDays(from, OPERATING_DAY_HORIZON)).start }, isOperating: false },
+      select: { date: true },
+    });
+    const shut = new Set(closed.map((c) => businessDate(c.date)));
+    for (let i = 0; i < OPERATING_DAY_HORIZON; i++) {
+      const d = addBusinessDays(from, i);
+      if (!shut.has(d)) return d;
+    }
+    return from;
   }
 
   /** Next order number in the ORD0000000 format. */

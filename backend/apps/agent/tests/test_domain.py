@@ -1,4 +1,4 @@
-"""Ported heuristics, the drafter, the 7 rules, deferral ranking and edits."""
+"""Ported heuristics, the drafter, the hard rules, deferral ranking and edits."""
 
 from __future__ import annotations
 

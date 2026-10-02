@@ -4,7 +4,8 @@ import { EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, Oper
 import { canAccessDepot, canAccessOutlet, HUMAN_ROLES, isPrivileged, Roles } from '@lodestar/security';
 import { OrderStatus, TempClass } from '@prisma/client';
 import { CANCELLABLE_STATUSES, EDITABLE_STATUSES, OrdersService } from './orders.service';
-import { assertStoreMayEdit, cutoffSettings, decideCutoff } from './order-cutoff';
+import { runDateValue } from '@lodestar/platform';
+import { assertStoreMayEdit, cutoffSettings, decideCutoff, movedNote } from './order-cutoff';
 
 /** Row filters shared by Orders and (through `order`) OrderLineItems. */
 const orderAbac = {
@@ -75,6 +76,10 @@ export class OrdersSet extends ODataEntitySet {
       { roles: p.roles, runDate: data.runDate, now: new Date(), clientOrderedAt: data.orderedAt, lateReason: data.lateReason },
       cutoffSettings(),
     );
+    if (cutoff.moved) {
+      const next = await this.orders.nextOperatingRunDate(cutoff.moved.earliest);
+      data = { ...data, runDate: runDateValue(next), notes: [data.notes, movedNote(cutoff.moved.from, next)].filter(Boolean).join(' ') };
+    }
     return {
       ...data,
       id: data.id ?? this.generated(await this.orders.nextOrderId()),

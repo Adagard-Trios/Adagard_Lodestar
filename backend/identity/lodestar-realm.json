@@ -853,7 +853,8 @@
         "roles",
         "audit.write",
         "orders.read",
-        "notifications.write"
+        "notifications.write",
+        "fleet.write"
       ],
       "optionalClientScopes": []
     },

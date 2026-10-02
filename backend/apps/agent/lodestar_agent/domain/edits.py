@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from . import heuristics as h
 from .context import PlanningContext
 from .deferrals import REASON_CODES
 from .planner import schedule
+from .rules import check_rules
 
 
 class EditError(ValueError):
@@ -35,10 +37,22 @@ def validate_edit(ctx: PlanningContext, plan: dict[str, Any], edit: dict[str, An
     if ctx.needs_reefer(oid) and v.get("tempClass") != "CHILLED":
         raise EditError(f"{oid} is chilled and {vid} is not a reefer")
     trip_no = int(edit.get("tripNo") or 1)
+    if not 1 <= trip_no <= h.MAX_TRIPS_PER_VEHICLE:
+        raise EditError(f"{vid} runs at most {h.MAX_TRIPS_PER_VEHICLE} trips a day: there is no trip {trip_no}")
     target = next((t for t in plan["trips"] if t["vehicleId"] == vid and t["tripNo"] == trip_no), None)
     if target and [o for o in target["orderIds"] if o != oid]:
         if target["brand"] != ctx.brand_of(oid) or target["district"] != ctx.district_of(oid):
             raise EditError(f"{vid} trip {trip_no} is {target['brand']}/{target['district']}: one brand and one district per trip")
+
+
+def _move_breaks(ctx: PlanningContext, before: dict[str, Any], after: dict[str, Any], oid: str, vid: str) -> list[str]:
+    """Hard rules a move newly breaks on the order or its new vehicle (flagged with the reason, not refused)."""
+    had = {(v["rule"], v["vehicleId"]) for v in check_rules(ctx, before)[1]}
+    return [
+        f"{v['rule']} {v['reason']}: {v['detail']}"
+        for v in check_rules(ctx, after)[1]
+        if (oid in v["orderIds"] or v["vehicleId"] == vid) and (oid in v["orderIds"] or (v["rule"], v["vehicleId"]) not in had)
+    ]
 
 
 def apply_edits(ctx: PlanningContext, plan: dict[str, Any], edits: list[dict[str, Any]]) -> tuple[dict[str, Any], list[str]]:
@@ -63,7 +77,9 @@ def apply_edits(ctx: PlanningContext, plan: dict[str, Any], edits: list[dict[str
             trips.append({"vehicleId": vid, "tripNo": trip_no, "orderIds": [oid]})
         else:
             target["orderIds"].append(oid)
-        applied.append(f"Moved {oid} to {vid} trip {trip_no}")
+        after = schedule(ctx, {**plan, "trips": [dict(t) for t in trips if t["orderIds"]]})
+        breaks = _move_breaks(ctx, current, after, oid, vid)
+        applied.append(f"Moved {oid} to {vid} trip {trip_no}" + (f" (flagged, breaks {'; '.join(breaks)})" if breaks else ""))
     new_plan = {
         **plan,
         "version": int(plan.get("version", 1)) + 1,

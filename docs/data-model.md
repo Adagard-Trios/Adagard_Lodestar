@@ -45,6 +45,7 @@ erDiagram
     ParkingType parking
     string windowOpen
     string windowClose
+    string mallWindow
     string address
     string accessNote
     float lat
@@ -62,6 +63,7 @@ erDiagram
     float kmPerLitre
     int weeklyLFuel
     int usedLThisWeek
+    datetime fuelWeekStart
     VehicleStatus status
     string workshopNote
     datetime updatedAt

@@ -4,6 +4,7 @@ import { ODataError } from '@lodestar/odata';
 import { Depot, OrderStatus, Prisma, TripStatus } from '@prisma/client';
 import { runDateRange } from '@lodestar/platform';
 import { NOTIFY, NotifyClient } from '@lodestar/security';
+import { FleetClient } from './fleet.client';
 
 /** Stored window [start, end) of a run date (YYYY-MM-DD, or a Date read in Sri Lanka time). */
 export function dayRange(runDate: string | Date) {
@@ -23,6 +24,21 @@ export interface PodInput {
   leaveActual?: Date;
 }
 
+/** Used when the travel table has no distance (same constants as the planning agent's trip_km). */
+const DEPOT_KM_PER_MIN = 0.6;
+const INTER_STOP_KM_PER_MIN = 0.5;
+
+/** Litres a trip burns: depot → district and back, plus the hops between its stops, at the vehicle's km/L. */
+export function tripLitres(
+  travel: { distKm: number | null; depotToDistMin: number; interStopMin: number } | null,
+  stops: number,
+  kmPerLitre: number,
+): number {
+  if (!travel || !(kmPerLitre > 0) || stops < 1) return 0;
+  const km = 2 * (travel.distKm ?? travel.depotToDistMin * DEPOT_KM_PER_MIN) + travel.interStopMin * INTER_STOP_KM_PER_MIN * (stops - 1);
+  return Math.round((km / kmPerLitre) * 10) / 10;
+}
+
 /** Allowed trip status moves: planned → loading → enroute → complete. */
 const NEXT_TRIP_STATUS: Record<TripStatus, TripStatus[]> = {
   PLANNED: [TripStatus.LOADING, TripStatus.ENROUTE],
@@ -36,6 +52,7 @@ export class TripsService {
   constructor(
     private prisma: PrismaService,
     @Inject(NOTIFY) private notify: NotifyClient,
+    private fleet: FleetClient,
   ) {}
 
   /** Loader: trips of a depot and run date in bay order (bay queue). */
@@ -57,7 +74,7 @@ export class TripsService {
     if (current !== status && !NEXT_TRIP_STATUS[current].includes(status)) {
       throw ODataError.conflict(`A ${current} trip cannot move to ${status}`);
     }
-    return this.prisma.trip.update({
+    const trip = await this.prisma.trip.update({
       where: { id },
       data: {
         status,
@@ -65,6 +82,20 @@ export class TripsService {
         ...(status === TripStatus.COMPLETE ? { returnTime: new Date() } : {}),
       },
     });
+    if (status === TripStatus.COMPLETE && current !== TripStatus.COMPLETE) await this.consumeFuel(id);
+    return trip;
+  }
+
+  /** A completed trip's fuel counts against its vehicle's weekly quota (recorded by fleet, which owns Vehicle). */
+  private async consumeFuel(tripId: string) {
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: tripId },
+      select: { vehicleId: true, district: true, vehicle: { select: { kmPerLitre: true } }, _count: { select: { stops: true } } },
+    });
+    if (!trip) return;
+    const travel = await this.prisma.districtTravel.findUnique({ where: { district: trip.district } });
+    const litres = tripLitres(travel, trip._count.stops, trip.vehicle.kmPerLitre);
+    if (litres > 0) await this.fleet.recordFuel(trip.vehicleId, litres);
   }
 
   /**

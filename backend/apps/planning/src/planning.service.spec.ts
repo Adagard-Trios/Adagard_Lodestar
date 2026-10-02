@@ -131,6 +131,63 @@ describe('PlanningService', () => {
       when(txPlan.findUnique(anything())).thenResolve(null);
       await expect(service.approvePlan('nope', 'nilanthi')).rejects.toMatchObject({ status: 404 });
     });
+
+    describe('a plan drafted with hard-rule violations', () => {
+      const summary = { plan: { trips: [] }, violations: [{ rule: 'window', orderIds: ['O-1'] }, { rule: 'fuel', orderIds: ['O-2'] }] };
+
+      beforeEach(() => {
+        when(txPlan.findUnique(anything())).thenResolve({ ...open, summary });
+        when(txPlan.updateMany(anything())).thenResolve({ count: 0 });
+        when(txPlan.update(anything())).thenCall(async (a: any) => a.data);
+      });
+
+      it.each([undefined, '', '   '])('is refused without an override reason (%p → 422 OverrideReasonRequired)', async (reason) => {
+        await expect(service.approvePlan(open.id, 'nilanthi', 'ok', reason)).rejects.toMatchObject({
+          status: 422, code: 'OverrideReasonRequired', target: 'overrideReason',
+        });
+        expect(executed).not.toHaveBeenCalled();
+        verify(txPlan.update(anything())).never();
+      });
+
+      it('is published with a reason, which is kept on the plan', async () => {
+        const data = await service.approvePlan(open.id, 'nilanthi', 'ok', ' Reefer swap agreed with the depot manager ');
+        expect(data.summary).toEqual({
+          ...summary,
+          override: { reason: 'Reefer swap agreed with the depot manager', by: 'nilanthi', at: expect.any(String), violations: 2 },
+        });
+        expect(data).toMatchObject({ status: 'PUBLISHED', notes: 'ok' });
+      });
+    });
+
+    it('a plan without violations needs no reason and keeps its summary', async () => {
+      when(txPlan.findUnique(anything())).thenResolve({ ...open, summary: { violations: [] } });
+      when(txPlan.updateMany(anything())).thenResolve({ count: 0 });
+      when(txPlan.update(anything())).thenCall(async (a: any) => a.data);
+      const data = await service.approvePlan(open.id, 'nilanthi');
+      expect(data).toMatchObject({ status: 'PUBLISHED' });
+      expect(data).not.toHaveProperty('summary');
+    });
+  });
+
+  describe('assertOperatingDay', () => {
+    it('refuses a run date the Calendar marks as non-operating (422 NonOperatingDay); a silent calendar runs', async () => {
+      const calendar = { findUnique: jest.fn() };
+      const svc = new PlanningService({ calendar } as any, scoring, instance(capacity), instance(notify));
+      calendar.findUnique.mockResolvedValueOnce({ isOperating: false });
+      await expect(svc.assertOperatingDay('2026-04-12')).rejects.toMatchObject({ status: 422, code: 'NonOperatingDay', target: 'runDate' });
+      expect(calendar.findUnique).toHaveBeenLastCalledWith({ where: { date: new Date('2026-04-12T00:00:00.000Z') }, select: { isOperating: true } });
+      calendar.findUnique.mockResolvedValueOnce({ isOperating: true });
+      await expect(svc.assertOperatingDay('2026-04-13')).resolves.toBeUndefined();
+      calendar.findUnique.mockResolvedValueOnce(null);
+      await expect(svc.assertOperatingDay('2026-04-14')).resolves.toBeUndefined();
+    });
+
+    it('runAutoPlan checks the day before planning anything', async () => {
+      const calendar = { findUnique: jest.fn().mockResolvedValue({ isOperating: false }) };
+      const svc = new PlanningService({ calendar } as any, scoring, instance(capacity), instance(notify));
+      await expect(svc.runAutoPlan('KANDY' as any, '2026-04-12', 'nilanthi')).rejects.toMatchObject({ code: 'NonOperatingDay' });
+      verify(capacity.getReeferCapacity(anything())).never();
+    });
   });
 
   describe('rejectPlan', () => {

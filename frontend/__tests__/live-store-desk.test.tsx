@@ -191,20 +191,33 @@ describe('SM-01 Place order', () => {
     expect(posts(view.calls)).toHaveLength(0);
   });
 
-  // DEFECT: the screen says the run is closed but still lets the store submit; the API refuses every such order
-  // (backend/apps/orders/src/order-cutoff.ts), so Submit should be off for a closed run.
-  it('does not offer to submit for a run whose cutoff has passed', async () => {
+  // After the cutoff the API takes the order and moves it to the next open run (backend/apps/orders/src/order-cutoff.ts):
+  // Submit stays on, the screen says where the order goes, and shows the run date and note the API returned.
+  it('submits for a run whose cutoff has passed and shows the later run the API moved it to', async () => {
     jest.setSystemTime(new Date('2026-04-06T11:00:00.000Z')); // 16:30 in Colombo: Tue 7 Apr has closed
     const last = [order('ORDT1', { lineItems: [{ id: 'l1', orderId: 'ORDT1', name: 'Rice 5 kg', qty: 3, kg: 15, tempClass: 'AMBIENT' }] })];
-    const view = renderLive(<PlaceOrder />, { session: SESSIONS.store, handler: req => storeBase(req) ?? (req.method === 'POST' ? { status: 201, body: { id: 'X' } } : req.path === 'Orders' ? page(last) : page([])) });
+    const note = 'Placed after the 4:00 PM cut-off for 2026-04-07; moved to the 2026-04-08 run.';
+    const view = renderLive(<PlaceOrder />, {
+      session: SESSIONS.store,
+      handler: req => storeBase(req) ?? (req.method === 'POST' ? { status: 201, body: { ...(req.body as object), id: 'ORDNEW', runDate: '2026-04-08T00:00:00Z', notes: note } } : req.path === 'Orders' ? page(last) : page([])),
+    });
     expect(await screen.findByText('Order for Wed 8 Apr')).toBeInTheDocument();
     await screen.findByText(/Delivered in your window/);
     fireEvent.change(screen.getByLabelText('Delivery date'), { target: { value: '2026-04-07' } });
     expect(await screen.findByText('Closed')).toBeInTheDocument();
-    expect(screen.getByText(/This run is closed/)).toBeInTheDocument();
-    expect(disabled(screen.getByTestId('submit-order'))).toBe(true);
+    expect(screen.getByText(/This run is closed/)).toHaveTextContent('Submit now and the order goes to the next open run, Wed 8 Apr or the next operating day after it.');
+    expect(disabled(screen.getByTestId('submit-order'))).toBe(false);
     fireEvent.click(screen.getByTestId('submit-order'));
-    expect(posts(view.calls)).toHaveLength(0);
+    const moved = await screen.findByTestId('order-moved');
+    expect(posts(view.calls)).toHaveLength(1);
+    expect(posts(view.calls)[0].body).toMatchObject({ runDate: '2026-04-07T00:00:00.000Z' });
+    expect(moved).toHaveTextContent('Received: ORDNEW for Wed 8 Apr');
+    expect(moved).toHaveTextContent(note);
+    // the store sees the moved date before moving on, and cannot send the same order twice
+    expect(router.push).not.toHaveBeenCalled();
+    expect(disabled(screen.getByTestId('submit-order'))).toBe(true);
+    fireEvent.click(within(moved).getByRole('button', { name: 'See your orders' }));
+    expect(router.push).toHaveBeenCalledWith('/store/sm-27-orders-and-history');
   });
 });
 

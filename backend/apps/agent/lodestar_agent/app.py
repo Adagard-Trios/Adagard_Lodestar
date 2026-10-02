@@ -18,6 +18,7 @@ from .auth import Principal, TokenVerifier, require_depot, require_roles
 from .checkpoint import create_checkpointing
 from .config import Settings, get_settings
 from .domain.edits import EditError
+from .domain.planner import NonOperatingDay
 from .llm import create_chat_model
 from .logging_setup import configure_logging
 from .odata import ODataClient, ODataError, ServiceAuthError, ServiceTokenProvider
@@ -97,6 +98,10 @@ def create_app(settings: Settings | None = None, runtime: AgentRuntime | None = 
     @app.exception_handler(EditError)
     async def _bad_edit(_: Request, exc: EditError):
         return _error(422, "InvalidEdit", str(exc))
+
+    @app.exception_handler(NonOperatingDay)
+    async def _non_operating(_: Request, exc: NonOperatingDay):
+        return _error(422, "NonOperatingDay", str(exc))
 
     @app.exception_handler(ODataError)
     async def _odata(_: Request, exc: ODataError):

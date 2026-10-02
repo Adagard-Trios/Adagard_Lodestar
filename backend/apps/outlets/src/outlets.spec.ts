@@ -38,6 +38,14 @@ describe('OutletsSet', () => {
       await expect(set.beforeUpdate({ windowOpen: '08:30' }, current)).rejects.toMatchObject({ status: 400 });
     });
 
+    it('accepts a mall delivery window "HH:mm-HH:mm" or null, and nothing else', async () => {
+      await expect(set.beforeUpdate({ mallWindow: '09:15-11:45' }, current)).resolves.toEqual({ mallWindow: '09:15-11:45' });
+      await expect(set.beforeUpdate({ mallWindow: null }, current)).resolves.toEqual({ mallWindow: null });
+      for (const bad of ['11:45-09:15', '09:15', '9-11', '09:15-10:00-11:00']) {
+        await expect(set.beforeUpdate({ mallWindow: bad }, current)).rejects.toMatchObject({ status: 400, target: 'mallWindow' });
+      }
+    });
+
     it('skips validation when the window is untouched', async () => {
       await expect(set.beforeUpdate({ name: 'New name' }, current)).resolves.toEqual({ name: 'New name' });
     });

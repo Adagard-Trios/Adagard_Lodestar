@@ -205,6 +205,7 @@ model Outlet {
   parking     ParkingType
   windowOpen  String // "05:30" HH:mm
   windowClose String // "08:00" HH:mm
+  mallWindow  String? // mall_dock outlets: the mall's delivery window "HH:mm-HH:mm" (outlet master mall_window)
   address     String?
   accessNote  String? // e.g. "Rear dock · enter via Lawson St service lane"
   lat         Float?
@@ -230,6 +231,7 @@ model Vehicle {
   kmPerLitre    Float
   weeklyLFuel   Int // weekly fuel quota in litres
   usedLThisWeek Int           @default(0)
+  fuelWeekStart DateTime      @default(now()) // week usedLThisWeek counts (Monday 00:00 Colombo); an older week reads as 0 L
   status        VehicleStatus @default(AVAILABLE)
   workshopNote  String?
   updatedAt     DateTime      @default(now()) @updatedAt

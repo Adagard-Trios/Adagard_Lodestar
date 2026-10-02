@@ -15,15 +15,15 @@ function files(map: Record<string, string>, dirExists = true): FileSource {
 const OUTLETS_CSV =
   'outlet_id,brand,district,depot,dock_type,parking_constraint,mall_window,window_open_time,window_close_time\n' +
   'OUT106,Fresh,Testshire,Kandy,rear_dock,,,05:00,08:00\n' +
-  'OUT901,Tech,Testburg,Peliyagoda,mall_bay,mall_dock,1,10:00,12:00\n' +
+  'OUT901,Tech,Testburg,Peliyagoda,mall_bay,mall_dock,10:05-11:35,10:05,11:35\n' +
   'OUT902,Fresh,Testburg,Peliyagoda,loading_ramp,,,05:00,07:00\n' + // bad dock -> skipped
-  'OUT901,Tech,Testburg,Peliyagoda,mall_bay,mall_dock,1,10:30,12:30\n'; // duplicate id -> last wins
+  'OUT901,Tech,Testburg,Peliyagoda,mall_bay,mall_dock,10:35-12:05,10:35,12:05\n'; // duplicate id -> last wins
 
 describe('mapCsv', () => {
   it('counts skipped rows with line numbers and de-duplicates keys', () => {
     const res = mapCsv(OUTLETS_CSV, mapOutlet, (r) => r.id);
     expect(res.rows.map((r) => r.id)).toEqual(['OUT106', 'OUT901']);
-    expect(res.rows[1].windowOpen).toBe('10:30');
+    expect(res.rows[1].windowOpen).toBe('10:35');
     expect(res.skipped).toBe(1);
     expect(res.skipReasons).toEqual(['line 4: unknown dock type: "loading_ramp"']);
   });

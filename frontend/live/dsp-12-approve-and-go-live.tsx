@@ -5,6 +5,8 @@
 //    plan version and publishes it with the dispatcher's authority; the agent itself can never publish), or
 //    {decision: 'reject'};
 //  - a plan waiting for approval (auto-plan or manual): Plans('…')/Lodestar.Approve {note}.
+// A plan or draft with rule violations needs a reason to override them: the note becomes required and is also sent
+// as overrideReason (the API refuses the approval without one, OverrideReasonRequired).
 // On success the design's link continues to the loaders' Lodestar Dock (the cross-device notice).
 import { useState } from 'react';
 import { useScreenNav } from '@/components/ScreenShell';
@@ -65,9 +67,13 @@ export default function LiveDsp12ApproveAndGoLive() {
   const deferred = useCount('Deferrals', deferralFilter);
   const [note, setNote] = useState('');
   const [done, setDone] = useState<string | null>(null);
+  const violations = (draft ? draft.detail?.violations : pending?.summary?.violations) ?? [];
+  const needsReason = violations.length > 0 && !note.trim();
 
   const approveDraft = useAction<{ decision: 'approve' | 'reject' }, AgentRun>(
-    (c, p) => c.action<AgentRun>('AgentRuns', runId!, 'Resume', { decision: p.decision, comment: note || undefined }),
+    (c, p) => c.action<AgentRun>('AgentRuns', runId!, 'Resume', {
+      decision: p.decision, comment: note || undefined, overrideReason: p.decision === 'approve' && violations.length ? note.trim() : undefined,
+    }),
     {
       onSuccess: (r, p) => {
         void run.refresh();
@@ -81,7 +87,7 @@ export default function LiveDsp12ApproveAndGoLive() {
       },
     },
   );
-  const approvePlan = useAction<Plan, Plan>((c, p) => c.action<Plan>('Plans', p.id, 'Approve', { note: note || undefined }), {
+  const approvePlan = useAction<Plan, Plan>((c, p) => c.action<Plan>('Plans', p.id, 'Approve', { note: note || undefined, overrideReason: violations.length ? note.trim() : undefined }), {
     onSuccess: p => {
       void plans.refresh();
       setDone(`Plan ${p.id} is live`);
@@ -163,14 +169,22 @@ export default function LiveDsp12ApproveAndGoLive() {
                   {draft ? (
                     <Check label={failing.length ? `${failing.length} hard rule(s) still failing` : 'All hard rules pass'} value={`${rules.length - failing.length} / ${rules.length}`} ok={!failing.length} />
                   ) : (
-                    <Check label="Plan checked by the planner" value={pending ? title(pending.source) : ''} />
+                    <Check label={violations.length ? `${violations.length} rule violation(s) in the plan` : 'Plan checked by the planner'} value={pending ? title(pending.source) : ''} ok={!violations.length} />
                   )}
                   <Check label="Deferrals with a reason code" value={`${deferred ?? 0}`} />
                   <Check label="Orders to review" value={review.length ? `${review.length} open` : 'none'} ok={!review.length} />
                   <Check label="Protected outlets kept" value="never deferred" />
+                  {violations.length > 0 && (
+                    <ul className="dx-t14" data-testid="violations" style={{ margin: '6px 0 0', paddingLeft: '18px' }}>
+                      {violations.map((v, i) => {
+                        const x = v as { rule?: string; detail?: string };
+                        return <li key={i}>{x.detail ?? x.rule ?? 'rule violation'}</li>;
+                      })}
+                    </ul>
+                  )}
                   <div className="dx-field" style={{ marginTop: '10px' }}>
-                    <span className="dx-label">{"Note for the log (optional)"}</span>
-                    <div className="dx-input"><input className="lv-input" aria-label="Approval note" value={note} onChange={e => setNote(e.target.value)} placeholder="Why you approve, or what you changed" /></div>
+                    <span className="dx-label">{violations.length ? 'Reason to override the rule violations (required)' : 'Note for the log (optional)'}</span>
+                    <div className="dx-input"><input className="lv-input" aria-label={violations.length ? 'Override reason' : 'Approval note'} value={note} onChange={e => setNote(e.target.value)} placeholder="Why you approve, or what you changed" /></div>
                   </div>
                 </div>
                 <div className="dx-inset dx-inset--info" style={{ width: '340px', flexShrink: '0' }} data-lk="L161">
@@ -192,7 +206,7 @@ export default function LiveDsp12ApproveAndGoLive() {
             <Btn className="d-btn d-btn--ghost" testId="reject-draft" busy={approveDraft.pending} onClick={() => void approveDraft.run({ decision: 'reject' })}>{"Reject draft"}</Btn>
           )}
           <span className="d-btn d-btn--ghost" data-lk="C">{"Not yet"}</span>
-          <Btn className="d-btn d-btn--primary" testId="approve" busy={busy} disabled={!target || Boolean(done)} onClick={approve}>
+          <Btn className="d-btn d-btn--primary" testId="approve" busy={busy} disabled={!target || Boolean(done) || needsReason} onClick={approve}>
             <Ic n="check" />{done ? 'Live' : 'Approve & go live'}
           </Btn>
         </div>

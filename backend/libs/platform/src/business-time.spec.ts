@@ -17,6 +17,7 @@ import {
   runDateRange,
   runDateValue,
   startOfBusinessDay,
+  startOfBusinessWeek,
   toBusinessDate,
   todayRunDate,
 } from './business-time';
@@ -119,5 +120,13 @@ describe('business time (Asia/Colombo)', () => {
     expect(nextOrderableRunDate(new Date('2026-04-06T16:05:00+05:30'))).toBe('2026-04-08');
     // Mon 11 PM Colombo (still Monday afternoon in New York): Wednesday.
     expect(nextOrderableRunDate(new Date('2026-04-06T23:00:00+05:30'))).toBe('2026-04-08');
+  });
+
+  it('starts the business week on Monday 00:00 Colombo', () => {
+    const monday = '2026-04-05T18:30:00.000Z'; // Mon 6 Apr 00:00 Colombo
+    expect(startOfBusinessWeek(new Date('2026-04-07T00:00:00Z')).toISOString()).toBe(monday); // Tue
+    expect(startOfBusinessWeek(new Date(monday)).toISOString()).toBe(monday); // the first instant of Monday
+    expect(startOfBusinessWeek(new Date('2026-04-12T18:29:59Z')).toISOString()).toBe(monday); // Sun 23:59:59 Colombo
+    expect(startOfBusinessWeek(new Date('2026-04-12T18:30:00Z')).toISOString()).toBe('2026-04-12T18:30:00.000Z'); // next Monday
   });
 });

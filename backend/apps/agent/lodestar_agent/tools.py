@@ -122,10 +122,10 @@ def build_ask_tools(ctx: PlanningContext, run: dict[str, Any]) -> tuple[list[Bas
 
     @tool
     def rule_checks() -> str:
-        """Report the 7 booklet hard-rule checks for the current draft."""
+        """Report the hard-rule checks (the 7 booklet rules and window close) for the current draft."""
         failed = [c for c in run["ruleChecks"] if not c["passed"]]
         if not failed:
-            s = "All 7 hard rules pass: " + ", ".join(c["rule"] for c in run["ruleChecks"]) + f" (after {run['redrafts']} redraft(s))."
+            s = f"All {len(run['ruleChecks'])} hard rules pass: " + ", ".join(c["rule"] for c in run["ruleChecks"]) + f" (after {run['redrafts']} redraft(s))."
         else:
             s = "Rules with problems: " + "; ".join(v["detail"] for v in run["violations"])
         return json.dumps({"summary": s})
@@ -213,7 +213,7 @@ def build_ask_tools(ctx: PlanningContext, run: dict[str, Any]) -> tuple[list[Bas
         except EditError as exc:
             return json.dumps({"summary": f"I can't propose that: {exc}.", "proposal": False})
         checks, violations = check_rules(ctx, new_plan)
-        verdict = "all 7 hard rules still pass" if not violations else "it would break: " + "; ".join(v["detail"] for v in violations)
+        verdict = f"all {len(checks)} hard rules still pass" if not violations else "it would break: " + "; ".join(v["detail"] for v in violations)
         proposals.append({"edits": [edit], "draftVersion": new_plan["version"], "ruleChecks": checks, "violations": violations})
         return json.dumps({"summary": f"Proposal v{new_plan['version']}: {'; '.join(applied)}; {verdict}.", "proposal": True})
 

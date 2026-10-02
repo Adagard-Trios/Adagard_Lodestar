@@ -8,7 +8,7 @@ import { Prisma } from '@prisma/client';
 import { CsvRecord, pick } from './csv';
 import {
   ValueError, parseBool, parseBrand, parseDate, parseDepot, parseDockType, parseIntish,
-  parseNumber, parseParking, parseTempClass, parseText, parseTime, parseVehicleType,
+  parseNumber, parseParking, parseTempClass, parseText, parseTime, parseTimeWindow, parseVehicleType,
 } from './normalize';
 
 export type CalendarRow = Prisma.CalendarCreateManyInput & { date: Date };
@@ -54,6 +54,7 @@ export const ALIASES = {
     parking: ['parking_constraint', 'parking'],
     windowOpen: ['window_open_time', 'window_open'],
     windowClose: ['window_close_time', 'window_close'],
+    mallWindow: ['mall_window'],
   },
   vehicle: {
     id: ['vehicle_id', 'id'],
@@ -161,6 +162,7 @@ export function mapOutlet(rec: CsvRecord): Mapped<OutletRow> {
       parking: parseParking(pick(rec, a.parking)),
       windowOpen: req(parseTime(pick(rec, a.windowOpen)), 'window_open_time'),
       windowClose: req(parseTime(pick(rec, a.windowClose)), 'window_close_time'),
+      mallWindow: parseTimeWindow(pick(rec, a.mallWindow)),
     };
   });
 }
