@@ -125,7 +125,7 @@ export default function ScreenSm18ReportIssue() {
               multiline
               maxLength={300}
               placeholder="What happened? e.g. tray torn, leaking at one corner"
-              placeholderTextColor="#98a2b3"
+              placeholderTextColor="#98A1B3"
               accessibilityLabel="Note for Kandy Hub"
               testID="issue-note"
             />

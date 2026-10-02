@@ -135,8 +135,8 @@ export default function ScreenSm13NewOrder() {
               {adding ? (
                 <View style={s.v34}>
                   <View style={s.v28}>
-                    <TextInput style={[s.t24, x.input]} value={name} onChangeText={setName} placeholder="Item name" placeholderTextColor="#98a2b3" testID="add-name" autoFocus />
-                    <TextInput style={[s.t25, x.input]} value={kg} onChangeText={setKg} placeholder="kg per unit" placeholderTextColor="#98a2b3" keyboardType="decimal-pad" testID="add-kg" />
+                    <TextInput style={[s.t24, x.input]} value={name} onChangeText={setName} placeholder="Item name" placeholderTextColor="#98A1B3" testID="add-name" autoFocus />
+                    <TextInput style={[s.t25, x.input]} value={kg} onChangeText={setKg} placeholder="kg per unit" placeholderTextColor="#98A1B3" keyboardType="decimal-pad" testID="add-kg" />
                   </View>
                   <Tap style={s.v36} testID="add-save" to={null} onPress={addLine}>
                     <Text style={s.t37}>{"Add"}</Text>
@@ -192,7 +192,7 @@ export default function ScreenSm13NewOrder() {
 }
 
 const x = StyleSheet.create({
-  input: { paddingVertical: 4, paddingHorizontal: 8, borderWidth: 1, borderColor: '#d0d5dd', borderRadius: 8, backgroundColor: '#ffffff' },
+  input: { paddingVertical: 4, paddingHorizontal: 8, borderWidth: 1, borderColor: '#CDD3DE', borderRadius: 8, backgroundColor: '#ffffff' },
 });
 
 const X0 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#101828\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"20\" height=\"20\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M18 6 6 18M6 6l12 12\" fill=\"none\" stroke=\"#101828\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";

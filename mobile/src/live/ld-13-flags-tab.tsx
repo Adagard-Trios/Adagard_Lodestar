@@ -206,7 +206,7 @@ export default function ScreenLd13FlagsTab() {
 
 const x = StyleSheet.create({
   border: { borderTopWidth: 1, borderTopColor: '#e3e6ed' },
-  waitPill: { backgroundColor: '#fdf1dc' },
+  waitPill: { backgroundColor: '#FFF4E0' },
   waitText: { color: '#b45309' },
 });
 

@@ -84,7 +84,7 @@ export function Frame({ bg, nav, children, style }: { bg: string; nav: ScreenNav
         ) : body}
         {toast && (
           <View style={{ position: 'absolute', left: 16, right: 16, bottom: 32, alignItems: 'center', pointerEvents: 'box-none' }}>
-            <Pressable accessibilityRole="alert" testID="toast" onPress={() => setToast(null)} style={{ paddingVertical: 12, paddingHorizontal: 16, borderRadius: 14, backgroundColor: toast.tone === 'error' ? '#7F1D1D' : '#141B4D', boxShadow: '0 12px 32px rgba(10,15,40,0.28)' }}>
+            <Pressable accessibilityRole="alert" testID="toast" onPress={() => setToast(null)} style={{ paddingVertical: 12, paddingHorizontal: 16, borderRadius: 14, backgroundColor: toast.tone === 'error' ? '#7A271A' : '#141B4D', boxShadow: '0 12px 32px rgba(10,15,40,0.28)' }}>
               {toast.text ? (
                 <Text style={{ color: '#FFFFFF', fontFamily: 'Inter_600SemiBold', fontSize: 14, lineHeight: 20 }}>{toast.text}</Text>
               ) : (
