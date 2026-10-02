@@ -77,13 +77,29 @@ The production override:
 
 Open `https://<fqdn>/`, pick each role on the start page and sign in with the README accounts. Driver and loader open the field app at `/field/`.
 
-## Updating
+## Automatic deploys (every push to `main`)
+
+```
+push to main ──► GitHub Actions: deploy-demo ──► GHCR ◄── demo VM (timer, every 3 min) ──► docker compose up
+                 builds only the changed images          pulls the newest successful run's commit and images
+```
+
+- [`.github/workflows/deploy-demo.yml`](../../.github/workflows/deploy-demo.yml) runs when a push changes app code or deploy config (`backend/`, `frontend/`, `mobile/`, `docker-compose.yml`, `deploy/azure-demo/`). Markdown, tests and docs never trigger it. [`changed-images.sh`](changed-images.sh) picks the images to rebuild (a change in `backend/libs` or the Prisma schema rebuilds every NestJS service; a frontend change only the frontend). Images are tagged `:main` and `:<sha>`.
+- The VM pulls; nothing pushes to it. [`autodeploy.sh`](autodeploy.sh) asks the GitHub API for the newest successful run, checks that commit out, pulls the images and restarts only what changed. SSH stays closed to everyone but the admin address, and no Azure or SSH secret lives in this public repository.
+- Install once on the VM: `deploy/azure-demo/install-autodeploy.sh`. Watch: `journalctl -u lodestar-autodeploy -f`.
+- Pause: `touch /opt/lodestar/.deploy-freeze` (remove the file to resume), or `DEPLOY_UNTIL=2026-10-04T23:59:00+05:30` in `.env` to stop deploying after a deadline.
+- The GHCR packages must be public, or put `GHCR_USER` and a `read:packages` `GHCR_TOKEN` in the VM's `.env`.
+- Cost: GitHub Actions is free for public repositories; pulling images into Azure is free (inbound data).
+
+## Updating by hand
 
 ```bash
+# images built on your machine, streamed to the VM (no registry)
+deploy/azure-demo/ship.sh lodestar@<fqdn>
 ssh lodestar@<fqdn> 'cd /opt/lodestar && git pull && deploy/azure-demo/up.sh'
 ```
 
-In pull mode, set `TAG` in `.env` to the new commit SHA first.
+With `REGISTRY` and `TAG` in `.env` (set by the automatic deploys), `up.sh` pulls `TAG` from GHCR instead.
 
 The demo day is created once per date (`DEMO_DATE` in `.env`, empty = today in Sri Lanka). To start the day again from scratch: `deploy/azure-demo/up.sh down && docker volume rm lodestar_pgdata && deploy/azure-demo/up.sh`.
 

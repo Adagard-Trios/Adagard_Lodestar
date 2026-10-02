@@ -1,0 +1,95 @@
+# Continuous deployment of the public demo (deploy/azure-demo/README.md, "Automatic deploys").
+#   push to main that changes app code or deploy config → build only the changed images → push them to GHCR
+#   (tags :main and :<sha>). The demo VM polls for the newest successful run of this workflow and deploys that
+#   commit itself (deploy/azure-demo/autodeploy.sh): nothing here can reach the VM, and no cloud or SSH secret
+#   lives in this public repository.
+name: deploy-demo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'mobile/**'
+      - 'docker-compose.yml'
+      - 'deploy/azure-demo/**'
+      - 'deploy/local/postgres/**'
+      - 'tools/qa/wait-stack.sh'
+      - '.github/workflows/deploy-demo.yml'
+      - '!**/*.md'
+  workflow_dispatch:
+    inputs:
+      all:
+        description: Rebuild every image
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+# one deploy at a time, in push order
+concurrency:
+  group: deploy-demo
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io/adagard-trios
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.pick.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: pick
+        env:
+          BEFORE: ${{ github.event.before }}
+          ALL: ${{ inputs.all || 'false' }}
+        run: |
+          deploy/azure-demo/changed-images.sh
+          cat "$GITHUB_OUTPUT"
+
+  build:
+    needs: changes
+    if: needs.changes.outputs.matrix != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      max-parallel: 6
+      matrix:
+        image: ${{ fromJson(needs.changes.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.image.context }}
+          file: ${{ matrix.image.file }}
+          push: true
+          build-args: GIT_SHA=${{ github.sha }}
+          tags: |
+            ${{ env.REGISTRY }}/lodestar-${{ matrix.image.name }}:main
+            ${{ env.REGISTRY }}/lodestar-${{ matrix.image.name }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.image.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image.name }}
+
+  # The VM deploys the newest commit whose run succeeded; this job only marks the run as complete.
+  release:
+    needs: [changes, build]
+    if: always() && needs.changes.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Ready to deploy ${{ github.sha }}; the demo VM picks it up within a few minutes."
