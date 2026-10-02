@@ -8,7 +8,7 @@
 import type { Page } from '@playwright/test';
 import { expect, requireStack, test, type OData } from '../../lib/fixtures';
 import {
-  STORE, VAN, fieldPage, freeRunDate, loadAndRelease, onScreen, openField, placeOrder, planOntoVan, settleOpenReceipts, signInFrom, type Row,
+  STORE, VAN, fieldPage, freeRunDate, loadAndRelease, onScreen, openField, placeOrder, planOntoVan, settleOpenReceipts, type Row,
 } from '../../lib/flows';
 
 /** What the server holds for the trip: stops, PODs and the replayed offline events. */
@@ -52,6 +52,8 @@ test.describe('Dead zone · offline run, restart, reconnect, reconcile', { tag: 
       await expect(page).toHaveURL(/\/field\/s\/dr-01-today-s-run/, { timeout: 30_000 });
       await expect(onScreen(page, 'run-day')).toContainText(VAN, { timeout: 30_000 });
       for (const s of stops) await expect(onScreen(page, `stop-${s.stopSeq}`)).toBeVisible();
+      // the app itself is kept on the phone (its service worker has cached the shell)
+      await expect.poll(() => page.evaluate(async () => !!(await navigator.serviceWorker?.getRegistration())?.active), { timeout: 60_000, message: 'app shell installed for offline use' }).toBe(true);
     });
 
     await dr.context.setOffline(true);
@@ -82,22 +84,22 @@ test.describe('Dead zone · offline run, restart, reconnect, reconcile', { tag: 
         await page.reload().catch(() => undefined);
         // designed: the run and its waiting records open offline (records are only cleared after the server confirms)
         await expect.soft(onScreen(page, 'outbox-waiting'), 'the app opens offline after a restart with the waiting records').toBeVisible({ timeout: 15_000 });
+        const waiting = (await outbox(page)).filter(i => i.status !== 'synced');
+        expect(waiting.filter(i => i.kind === 'POD_SAVE').length, 'PODs still waiting on the phone after the restart').toBe(stops.length);
       });
     } finally {
       await dr.context.setOffline(false);
     }
 
-    await test.step('signal returns: the app opens, the driver signs in again, the outbox is kept and sent', async () => {
-      await page.goto('/field/s/dr-01-today-s-run');
-      const waiting = (await outbox(page)).filter(i => i.status !== 'synced');
-      expect(waiting.filter(i => i.kind === 'POD_SAVE').length, 'PODs still waiting on the phone after the restart').toBe(stops.length);
-      // web tokens live in memory only, so a restart asks for the sign-in again (DR-30); the outbox waits for it
-      await expect(page.getByText(/records? waiting to send/).locator('visible=true').first()).toBeVisible({ timeout: 30_000 });
-      {
-        await openField(page, 'dr-06-sign-in');
-        await signInFrom(page, 'lk-L229', 'driver');
-      }
+    await test.step('signal returns: the session resumes without a new sign-in, the outbox is kept and sent', async () => {
+      // the session survived the offline restart (sessionStorage of the tab): the phone refreshes its token silently
+      // and sends what it saved, on the screen it is on
       await expect.poll(async () => (await outbox(page)).filter(i => i.status !== 'synced').length, { timeout: 90_000, message: 'outbox drained' }).toBe(0);
+      await expect(page).not.toHaveURL(/sign-in|session-expired/);
+      // and the app opens signed in on the next start
+      await page.goto('/field/s/dr-01-today-s-run');
+      await expect(onScreen(page, 'run-day')).toContainText(VAN, { timeout: 30_000 });
+      await expect(page).not.toHaveURL(/sign-in|session-expired/);
     });
 
     let counted: Record<string, number> = {};

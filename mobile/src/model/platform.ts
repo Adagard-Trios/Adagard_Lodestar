@@ -11,11 +11,13 @@ import { Session } from '@/auth/session';
 import { network, reportReachable, startNetwork } from '@/offline/network';
 import { OfflineQueue } from '@/offline/queue';
 import { queueStorage } from '@/offline/storage';
+import { registerServiceWorker } from '@/offline/service-worker';
 import { SyncEngine } from '@/offline/sync';
 
-export const session = new Session(tokenStore, oidcClient());
-
 export const getDeviceId = () => deviceId(deviceStore, () => Crypto.randomUUID());
+
+// A stored session is resumed only on the phone its token is bound to (where the API can check X-Device-Id).
+export const session = new Session(tokenStore, oidcClient(), undefined, sameOriginApi() ? getDeviceId : undefined);
 
 export const client = new ODataClient({
   baseUrl: apiBase,
@@ -46,6 +48,8 @@ export function startPlatform(): () => void {
   started = true;
   const stops: (() => void)[] = [];
   stops.push(startNetwork());
+  // web build: cache the app shell so a reload with no signal still opens the app
+  void registerServiceWorker();
   void queue.ready();
   void session.restore().then(() => sync.flush());
 

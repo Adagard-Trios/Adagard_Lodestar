@@ -4,7 +4,8 @@
 // keep the session and ask for access, see enrollment.ts).
 //
 // Storage: the refresh token and the (non-secret) claims go to the secret store (expo-secure-store on
-// native; memory on web). The access token stays in memory and is refreshed on start.
+// native; the tab's sessionStorage on web, see secure.ts). The access token stays in memory and is refreshed on
+// start; offline, the stored claims open the signed-in app and the refresh waits for the network.
 import { Store } from '@/lib/store';
 import type { ODataError } from '@/lib/odata';
 import { claimsFromToken, type Claims } from './claims';
@@ -44,6 +45,8 @@ export class Session {
     private readonly store: SecretStore,
     private readonly oidc: OidcClient,
     now?: () => number,
+    /** This install's device id (X-Device-Id): a stored session bound to another phone is not resumed. */
+    private readonly installDevice?: () => Promise<string>,
   ) {
     this.now = now ?? Date.now;
   }
@@ -66,7 +69,10 @@ export class Session {
     } catch {
       claims = null;
     }
-    if (!rt || !claims) {
+    // The token names another phone than this install (the stored session was carried over): drop it, sign in again.
+    const otherPhone = !!claims?.deviceId && !!this.installDevice && (await this.installDevice().catch(() => null)) !== claims.deviceId;
+    if (!rt || !claims || otherPhone) {
+      if (otherPhone) await Promise.all([this.store.remove(RT).catch(() => undefined), this.store.remove(CLAIMS).catch(() => undefined)]);
       this.state.set(s => ({ ...s, status: 'signed-out', claims: null }));
       return;
     }

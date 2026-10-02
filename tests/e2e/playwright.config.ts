@@ -63,7 +63,9 @@ export default defineConfig({
       name: 'flows',
       testMatch: 'flows/**/*.spec.ts',
       fullyParallel: false,
-      use: { ...devices['Desktop Chrome'], channel, baseURL: WEB_URL, viewport: { width: 1440, height: 900 } },
+      // ignoreHTTPSErrors does not cover service workers: Chromium refuses to register the field app's worker
+      // over the self-signed dev certificate without this flag (the dead-zone flow reloads offline from it).
+      use: { ...devices['Desktop Chrome'], channel, baseURL: WEB_URL, viewport: { width: 1440, height: 900 }, launchOptions: { args: ['--ignore-certificate-errors'] } },
     },
     // Every designed click (links.json) and every interactive control on every route, per role.
     {

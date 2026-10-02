@@ -6,7 +6,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci --fetch-retries=10 --fetch-retry-maxtimeout=600000 --fetch-timeout=600000
 COPY . .
-RUN npx expo export --platform web --output-dir dist
+# the web export, then its service worker listing the app shell to cache for offline use (scripts/build-sw.js)
+RUN npx expo export --platform web --output-dir dist && node scripts/build-sw.js dist
 
 FROM nginxinc/nginx-unprivileged:1.27-alpine
 # experiments.baseUrl is /field: the export is served from /field/ (routed there by the gateway)
