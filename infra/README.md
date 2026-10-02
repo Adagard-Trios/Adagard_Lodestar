@@ -1,5 +1,7 @@
 # Waypoint Lodestar · Azure infrastructure
 
+> **What is applied, and what is not.** The live demo runs on **`envs/demo`** only: one VM, a static IP with an Azure DNS name, an NSG and a budget (see [`deploy/azure-demo/README.md`](../deploy/azure-demo/README.md)). Everything else on this page is **target architecture that was not applied**: `envs/dev`, `envs/prod` and the modules behind them (AKS with Istio, Front Door, Premium ACR, managed Postgres and Redis, Key Vault, Entra apps, Log Analytics), together with the AKS overlays `deploy/k8s/overlays/dev` and `deploy/k8s/overlays/prod`. Their cost is well beyond the event's $100 Azure credit. They are kept as the design for a production rollout.
+
 Terraform for the Azure platform described in `docs/architecture/PLATFORM.md` §8. The workloads themselves are delivered by Argo CD from `deploy/` (see `deploy/argocd/README.md`).
 
 ```
@@ -17,7 +19,8 @@ infra/terraform/
     monitoring/       Log Analytics, Container Insights, diagnostic settings
     argocd/           Helm: argo-cd + root app-of-apps
     openai/           Azure OpenAI (declared, enable_openai = false)
-  envs/dev, envs/prod root modules (sizing in main.tf, tenant IDs in tfvars)
+  envs/demo           APPLIED: one VM + static IP/DNS label + NSG + budget (the public demo)
+  envs/dev, envs/prod target architecture, not applied (sizing in main.tf, tenant IDs in tfvars)
 ```
 
 ## Architecture

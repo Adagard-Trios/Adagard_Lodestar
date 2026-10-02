@@ -1,0 +1,43 @@
+# Production override for the demo VM (deploy/azure-demo/README.md). Use only through ./up.sh, which checks .env first:
+#   docker compose -f docker-compose.yml -f deploy/azure-demo/compose.prod.yml --env-file .env up -d --build
+#
+# - Caddy owns 80/443 and gets a Let's Encrypt certificate for PUBLIC_HOST (the Azure DNS name).
+# - Nothing else is published: no 8443/8080 (gateway), no 8180 (Keycloak admin), no 9000 (SonarQube).
+# - Keycloak runs in production mode behind the proxy; every secret comes from the VM's .env (no dev defaults).
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:?set PUBLIC_HOST in .env}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+    volumes:
+      - ./deploy/azure-demo/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [edge]
+    depends_on:
+      gateway: { condition: service_healthy }
+
+  gateway:
+    ports: !reset []
+
+  identity:
+    command: ["start", "--import-realm"]   # production mode (start-dev locally)
+    ports: !reset []
+    environment:
+      KC_HOSTNAME_ADMIN: !reset null
+      KC_HTTP_ENABLED: "true"           # TLS ends at Caddy; identity is only reachable on the internal network
+      KC_PROXY_HEADERS: xforwarded
+
+  migrate:
+    environment:
+      DEMO_DATE: ${DEMO_DATE:-}
+
+volumes:
+  caddy_data:
+  caddy_config:

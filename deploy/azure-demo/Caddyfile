@@ -1,0 +1,17 @@
+# The public edge of the demo VM: HTTPS with an automatic Let's Encrypt certificate for the Azure DNS name,
+# then everything to the gateway, which routes /, /field/, /odata/v4/, /auth/ and /ws/ as it does locally.
+{
+	email {$ACME_EMAIL}
+}
+
+{$PUBLIC_HOST} {
+	encode zstd gzip
+	reverse_proxy https://gateway:8443 {
+		# the gateway's own certificate is self-signed and only seen on the internal network
+		transport http {
+			tls_insecure_skip_verify
+		}
+		header_up Host {host}
+		header_up X-Forwarded-Proto https
+	}
+}

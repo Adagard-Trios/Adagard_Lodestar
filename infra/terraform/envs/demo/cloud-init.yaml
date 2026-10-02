@@ -1,0 +1,22 @@
+#cloud-config
+# Docker (engine + compose plugin), a 4 GiB swap file, and k3s with its ingress NOT bound to 80/443
+# (Caddy in the compose stack owns 80/443 until the GitOps cut-over: deploy/azure-demo/README.md).
+package_update: true
+packages: [ca-certificates, curl, git, jq]
+
+write_files:
+  - path: /etc/sysctl.d/90-lodestar.conf
+    content: |
+      vm.swappiness = 10
+      vm.max_map_count = 262144
+
+runcmd:
+  - fallocate -l 4G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+  - echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  - sysctl --system
+  - curl -fsSL https://get.docker.com | sh
+  - usermod -aG docker lodestar || true
+  - systemctl enable --now docker
+  # k3s without Traefik and without its service load balancer, so nothing in k3s listens on 80/443 yet
+  - curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--disable=traefik --disable=servicelb --write-kubeconfig-mode=600" sh -
+  - mkdir -p /opt/lodestar && chown lodestar:lodestar /opt/lodestar
