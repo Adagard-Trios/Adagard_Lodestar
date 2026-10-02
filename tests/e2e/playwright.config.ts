@@ -18,7 +18,8 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: CI,
   retries: CI ? 1 : 0,
-  workers: CI ? 2 : undefined,
+  // E2E_WORKERS overrides (tools/qa/test-screens.sh passes --workers itself)
+  workers: process.env.E2E_WORKERS ? Number(process.env.E2E_WORKERS) : CI ? 2 : undefined,
   outputDir: 'test-results',
   reporter: [
     ['list'],
@@ -67,11 +68,19 @@ export default defineConfig({
       // over the self-signed dev certificate without this flag (the dead-zone flow reloads offline from it).
       use: { ...devices['Desktop Chrome'], channel, baseURL: WEB_URL, viewport: { width: 1440, height: 900 }, launchOptions: { args: ['--ignore-certificate-errors'] } },
     },
-    // Every designed click (links.json) and every interactive control on every route, per role.
+    // Every designed click (the generated nav tables) and every interactive control on every route, per role
+    // (specs/clicks, docs/QA.md "Every screen, every click"). clicks-setup signs each persona in once, first.
+    {
+      name: 'clicks-setup',
+      testMatch: 'clicks/auth.setup.ts',
+      use: { ...devices['Desktop Chrome'], channel, baseURL: WEB_URL },
+    },
     {
       name: 'clicks',
       testMatch: 'clicks/**/*.spec.ts',
-      use: { ...devices['Desktop Chrome'], channel, baseURL: WEB_URL, viewport: { width: 1440, height: 900 } },
+      dependencies: ['clicks-setup'],
+      // Chromium refuses the field app's service worker over the self-signed dev certificate without this flag
+      use: { ...devices['Desktop Chrome'], channel, baseURL: WEB_URL, viewport: { width: 1440, height: 900 }, launchOptions: { args: ['--ignore-certificate-errors'] } },
     },
     // Design conformance against tests/visual/baselines (frozen clock, masked dynamic regions).
     {

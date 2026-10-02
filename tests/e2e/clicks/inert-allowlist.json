@@ -1,0 +1,14 @@
+{
+  "$comment": [
+    "Reviewed exceptions for the click specs (tests/e2e/specs/clicks). Every entry needs a reason a reviewer agrees with.",
+    "inert: '<screen key>#<control id>' -> reason, for a control that is meant to do nothing (every-control.spec.ts).",
+    "links: '<screen key>#<link code>' -> reason, for a designed link the screen deliberately does not follow (designed-links.spec.ts).",
+    "Control ids are printed in the report: lk:<code>, testid:<id>, or <role>:<accessible name> (digits shown as #). '*' matches anything.",
+    "ignoreConsole / ignoreHttp: { pattern (regular expression, case-insensitive), reason }. HTTP text is '<status> <METHOD> <url>'.",
+    "Judge-walkthrough screens (README.md) may not appear in inert or links: the spec fails if they do."
+  ],
+  "inert": {},
+  "links": {},
+  "ignoreConsole": [],
+  "ignoreHttp": []
+}

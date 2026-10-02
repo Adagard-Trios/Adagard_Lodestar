@@ -11,6 +11,7 @@ How the platform is tested and shipped. The binding contract is [architecture/PL
 | Unit, agent (Python) | pytest + mockito | `backend/apps/agent/tests` | owned by the agent team |
 | UI e2e, desk screens | Cypress | `frontend/cypress` | Design preview: every generated desktop screen is visited and every `data-lk` element clicked; it must land on the destination path, or show the cross-device notice for phone-only targets. Auto-advancing screens are checked with a frozen clock. Plus the three demo flows as readable specs. Live mode (`CYPRESS_LIVE=1`, against the stack): signs in through Keycloak per persona (`cy.session`, `cy.origin` when identity is on another origin) and checks the live screens show the seeded scenario. |
 | Full stack e2e | Playwright | `tests/e2e` | Zero trust (401, 403, ABAC row filters, expired, tampered and unsigned tokens), OData v4 conformance ($metadata CSDL, query options, paging, errors, ETags), actions (Approve, AgentRuns human-in-the-loop), audit hash chain, and UI smoke on Chromium, Firefox, WebKit and the mobile-web build in a phone viewport. |
+| Every screen, every click | Playwright (`clicks` project) | `tests/e2e/specs/clicks` | Every designed screen (desk and field, live and static) opened as its persona: every designed link reaches its destination, every control does something observable, no page/console errors or unexpected 4xx/5xx. Writes mocked, so it runs repeatedly on the demo data. See [Every screen, every click](#every-screen-every-click). |
 | Static analysis, coverage gate | SonarQube | `sonar-project.properties`, compose profile `qa` | Frontend, mobile, backend (TS) and the agent (Python). Generated screens, `node_modules` and migrations are excluded. |
 
 The generated screens (`frontend/screens`, `frontend/app/<face>/<screen>/page.tsx`, `mobile/src/screens`) are design output from `tools/screengen`. They are tested through behaviour (Cypress click-through), never edited by hand, and excluded from coverage and duplication.
@@ -140,6 +141,60 @@ Step 2 opens each screen as its persona (one Keycloak sign-in per app, in the sa
 | style-guide tokens vs desk CSS (computed in the live app); field app colour literals vs the design palette, its fonts vs the design typefaces | **exactly equal** |
 
 Masks: elements whose text has a digit, a weekday or a month name (times, dates, ids, counts, quantities) on either side are painted out of both images (+2 px) and never position-matched. A screen whose route renders the generated static mock (desk page without `LiveSwitch`, field key not in `LIVE`) is **not implemented** and fails; one that differs is **drifted** (live capture + diff image in the report); one that could not be opened (sign-in or navigation failed) is **error** and fails. Results: `tests/visual/report/index.html` and `report.json`. No retries (verdicts are deterministic); thresholds are not to be raised to get green.
+
+### Every screen, every click
+
+Two Playwright specs open every designed screen of the desk website and the field app as its persona and click everything on it, against the running stack. They are meant to be run by hand before a demo, as often as you like: they do not change the demo data.
+
+```bash
+# bash (Git Bash on Windows, macOS, Linux), from the repo root; the stack must be up (docker compose up -d --build)
+tools/qa/test-screens.sh                  # both specs; waits for the stack first (tools/qa/wait-stack.sh)
+tools/qa/test-screens.sh links            # every designed link only
+tools/qa/test-screens.sh controls         # every control only
+tools/qa/test-screens.sh walkthrough      # only the README judge-walkthrough screens
+E2E_BASE_URL=https://<azure-host> tools/qa/test-screens.sh     # the deployed demo (plus E2E_PASSWORD / E2E_PASSWORD_ADMIN if they differ)
+```
+
+```powershell
+# PowerShell
+cd tests\e2e
+npm ci; npx playwright install chromium         # once
+npm run test:screens                            # refresh clicks/manifest.json, then both specs
+npm run test:clicks:links                       # or: test:clicks:controls, test:clicks:walkthrough, test:clicks
+npm run test:clicks:list                        # list the tests without running them
+$env:E2E_CLICKS_ONLY = "^dsp-0[1-3]"; npm run test:clicks      # some screens only (regex on key or id)
+$env:E2E_BASE_URL = "https://<azure-host>"; npm run test:screens
+npm run report                                  # open the HTML report
+```
+
+Where the screens and links come from: `tests/e2e/lib/clicks/manifest.ts` reads the repo's generated nav tables, the committed copy of the design's links: desk `frontend/app/{store,plan,admin}/<key>/page.tsx` (`const nav`, elements carry `data-lk="CODE"`; sidebar codes N0… come from `frontend/components/live/chrome.tsx`), field `mobile/src/screens/registry.ts` (every `/field/s/<key>` route; `LIVE` = has a live screen) and `mobile/src/screens/<key>.tsx` (on the web a designed tap is `data-testid="lk-CODE"`). The specs build it when they load, so new and newly-live screens are picked up automatically. `npm run clicks:manifest` also writes it to `tests/e2e/clicks/manifest.json` for reading. Today: 186 screens (62 desk, 124 field), 778 designed links.
+
+| Spec | One test per screen; per step | Fails when |
+|---|---|---|
+| `specs/clicks/designed-links.spec.ts` | each designed link: open the screen fresh, click `data-lk` / `lk-CODE`, check the app reaches the designed path, or shows the "Continues in …" notice for a phone/desk hand-off; `auto` (static screens advance by themselves) and `whole` (tap anywhere) too | the destination is not reached; the link is not on the screen (a live screen whose source names the code only notes it: it shows the link only with data, or follows it after an action); any page error, console error or unexpected 4xx/5xx while opening or clicking |
+| `specs/clicks/every-control.spec.ts` | each interactive control (button, link, `role=button/tab/checkbox/…`, `data-lk`, `lk-*`, input, select, textarea, focusable Pressable; on live desk screens also the design's button-looking elements): reload the screen, activate it (click, type, pick, toggle, attach a file) and wait up to 4 s for a navigation, popup, dialog, file chooser, download, API call, DOM change or the value taking | a dead control (nothing observable); a control that cannot be clicked; any page error, console error or unexpected 4xx/5xx |
+
+How it runs:
+- Personas: SM → `fathima`, DSP → `nilanthi`, LD → `kasun`, DR → `ruwan`, ADM → `admin`. Desk at 1440×900, phone screens at 390×844 (touch), tablet screens at 1194×834; field screens run as the persona's seeded phone (`DEV-FR-01`, `DEV-NP-01`, `DEV-KJ-01`, `DEV-RB-01`).
+- Sign-in: the `clicks-setup` project signs each persona in once, one after another, and saves the Keycloak SSO cookie in `tests/e2e/.auth/clicks-<persona>.json`. Every test reuses it, so the apps' own sign-in completes through SSO without a password and parallel workers never trip Keycloak's brute-force lockout. The runner uses 4 workers (`E2E_CLICKS_WORKERS`).
+- Nothing is changed for real: POST/PUT/PATCH/DELETE to the OData API (and Keycloak's admin API) get a mocked 200 and count as the control's effect; Keycloak logout/revoke are mocked so a "Sign out" button cannot end the session the other tests share; `confirm()` dialogs are dismissed. Page errors that follow a mocked write are listed as notes, not failures (the mock is not the backend's real answer). `E2E_CLICKS_WRITES=1` sends writes for real (only on a throwaway stack).
+- Dates: `page.clock.setFixedTime` freezes `Date` at the moment each page opens (`E2E_CLICKS_CLOCK=<ISO instant>` pins it; keep it near the real time, tokens are checked against the server's clock). No fixed sleeps: every wait is on a condition.
+- Kept short: identical repeats (list rows with the same control id) are clicked twice (`E2E_CLICKS_PER_ID`); the desk sidebar and store top bar are crawled on each face's home screen only (`E2E_CLICKS_FULL=1` for everywhere); at most 200 controls per screen (`E2E_CLICKS_MAX`). Other filters: `E2E_CLICKS_ONLY=<regex>`, `E2E_CLICKS_APP=desk|field`, `E2E_CLICKS_LIVE=1`, and Playwright's `--grep` on the tags `@desk @field @live @static @walkthrough @entry @storeManager @dispatcher @loader @driver @admin`.
+
+Reading the report (`tests/e2e/reports/html`, `npm run report`): one test per screen, titled `<ID> <name> · <path> · …`, tagged as above (`@static` = the route still renders the generated mock, no live screen yet). Open a test to see one step per link or control; a red step has the reason (`expected to reach /plan/dsp-02-plan-board; stayed on /plan/dsp-01-cutoff-queue (write POST /odata/v4/AgentRuns (mocked))`, `dead control — nothing observable after click`, `errors after click: HTTP 500 GET …`). The annotations list what was not a failure: `static mock`, `not shown` (link only shown with data), `redirected` (another role's face sent the persona home), `disabled`, `after mocked write`, `warning` (401s the app renews, Keycloak's own checks). Every-control tests attach `controls.txt` (one line per control: `ok` / `DEAD` / `ERR`, what it did) and `controls.json`. Failures keep a trace and a screenshot (`npx playwright show-trace <zip>`).
+
+The allowlist, `tests/e2e/clicks/inert-allowlist.json`, holds reviewed exceptions, each with a reason:
+
+```json
+{
+  "inert": { "dsp-20-settings#button:Coming soon": "drawn in the design, not part of the MVP" },
+  "links": { "dr-02-stop-arrival#L252": "the live screen reads the stop aloud instead of opening DR-35" },
+  "ignoreConsole": [{ "pattern": "ResizeObserver loop", "reason": "browser noise, not an app error" }],
+  "ignoreHttp": [{ "pattern": "^404 GET .*/favicon", "reason": "no favicon on the field export" }]
+}
+```
+
+Keys are `<screen key>#<control id>` (the id printed in the report: `lk:<code>`, `testid:<id>` or `<role>:<name>` with digits shown as `#`) or `<screen key>#<link code>`; `*` matches anything. It ships empty, and it must stay empty for the README judge-walkthrough screens (SM-01, SM-02, SM-27, DSP-01/22/02/03/39/40/12/04/13/17 on the desk; LD-01/02/03/04/15, DR-01/36/02/03/A1/A2/A3, SM-03/18 on the phone): the test `allowlist: judge-walkthrough screens have no exemptions` fails otherwise. Fix the screen instead.
 
 ### SonarQube (local)
 

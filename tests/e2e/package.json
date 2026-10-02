@@ -9,6 +9,13 @@
     "test:api": "playwright test --project=api",
     "test:web": "playwright test --project=web-chromium --project=web-firefox --project=web-webkit",
     "test:mobile": "playwright test --project=mobile-web",
+    "clicks:manifest": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tools/gen-clicks-manifest.mts",
+    "test:screens": "npm run clicks:manifest && playwright test --project=clicks --workers=4",
+    "test:clicks": "playwright test --project=clicks --workers=4",
+    "test:clicks:links": "playwright test --project=clicks --workers=4 specs/clicks/designed-links.spec.ts",
+    "test:clicks:controls": "playwright test --project=clicks --workers=4 specs/clicks/every-control.spec.ts",
+    "test:clicks:walkthrough": "playwright test --project=clicks --workers=4 --grep @walkthrough",
+    "test:clicks:list": "playwright test --project=clicks --list",
     "report": "playwright show-report reports/html",
     "typecheck": "tsc --noEmit",
     "install:browsers": "playwright install --with-deps chromium firefox webkit"
