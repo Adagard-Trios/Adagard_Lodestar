@@ -95,7 +95,7 @@ export default function LiveAdm01SignIn() {
               </span>
             </div>
             <Btn as="div" className="dx-bigbtn" testId="sign-in" busy={entry.busy} disabled={entry.loading} onClick={entry.start}>
-              <Ic n="key" />{entry.signedIn ? entry.label : "Continue to sign in"}
+              <Ic n="key" />{entry.label}
             </Btn>
             <div className="dx-inset dx-inset--brand" style={{"flexDirection": "row", "alignItems": "flex-start", "gap": "12px", "padding": "14px 16px"}}>
               <svg className="ic" viewBox="0 0 24 24" style={{"width": "20px", "height": "20px", "color": "var(--brand-600)", "flexShrink": "0", "marginTop": "1px"}}>

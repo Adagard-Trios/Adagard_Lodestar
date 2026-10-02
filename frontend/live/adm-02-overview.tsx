@@ -39,7 +39,7 @@ export default function LiveAdm02Overview() {
             <div className="d-head__txt">
               <div className="d-eyebrow">{fmtDay(new Date())} <span className="m-sep" /> {fmtTime(new Date())} <span className="m-sep" />{" Both depots"}</div>
               <div className="d-h1">Hello{first ? `, ${first}` : ''}</div>
-              <div className="d-sub">{needs ? `${needs} thing${needs === 1 ? ' is' : 's are'} waiting for you.` : 'Nothing is waiting for you. Everything is quiet.'}</div>
+              <div className="d-sub">{!(pending.data && denied.data) ? ' ' : needs ? `${needs} thing${needs === 1 ? ' is' : 's are'} waiting for you.` : 'Nothing is waiting for you. Everything is quiet.'}</div>
             </div>
             <span className="d-btn d-btn--ghost" data-lk="L287"><Ic n="history" />{"Open audit log"}</span>
           </div>
