@@ -4,11 +4,12 @@
 import { Store } from '@/lib/store';
 
 /** Driver events go through OfflineEvents/Lodestar.PushBatch; the rest are replayed as their OData call. */
-export type EventKind = 'ARRIVAL' | 'LEAVE' | 'POD_SAVE';
-export type CommandKind = 'SHORTFALL' | 'RELEASE' | 'RECEIPT' | 'ORDER';
+export type EventKind = 'ARRIVAL' | 'LEAVE' | 'POD_SAVE' | 'STATUS_CHANGE';
+export type CommandKind = 'SHORTFALL' | 'RELEASE' | 'RECEIPT' | 'ORDER' | 'PRECOOL';
 export type QueueKind = EventKind | CommandKind;
 
-export const BATCH_KINDS: readonly QueueKind[] = ['ARRIVAL', 'LEAVE', 'POD_SAVE'];
+// STATUS_CHANGE: a driver's report to dispatch (delay, reefer alert, problem, vehicle check), stored as the trip's OfflineEvent.
+export const BATCH_KINDS: readonly QueueKind[] = ['ARRIVAL', 'LEAVE', 'POD_SAVE', 'STATUS_CHANGE'];
 
 export type QueueStatus = 'pending' | 'sending' | 'synced' | 'conflict' | 'rejected';
 

@@ -22,6 +22,8 @@ export type Outlet = Etag & {
   windowClose: string;
   address?: string | null;
   accessNote?: string | null;
+  /** mall_dock outlets: the mall's delivery window "HH:mm-HH:mm". */
+  mallWindow?: string | null;
 };
 
 export type OrderLineItem = Etag & { id: string; orderId: string; name: string; qty: number; kg: number; tempClass: TempClass };

@@ -10,6 +10,9 @@ import { useOutbox, useSession } from '@/model/hooks';
 import { session } from '@/model/platform';
 
 const live = new Set(LIVE);
+// Only screens that run on real data are opened from here; the design-only mocks stay out of navigation.
+const faces = FACES.map(f => ({ ...f, screens: f.screens.filter(s => live.has(s.key)) }));
+const flows = FLOWS.filter(f => live.has(f.key));
 
 // One build carries the four field faces for the demo; each opens at its own splash screen.
 const COLOR: Record<string, string> = { store: '#047857', plan: '#3B4CCA', dock: '#6D28D9', run: '#0369A1' };
@@ -65,7 +68,7 @@ export default function Home() {
 
         <SessionCard />
 
-        {FACES.map(face => (
+        {faces.map(face => (
           <View key={face.title} style={{ borderRadius: 18, backgroundColor: '#141B2E', borderWidth: 1, borderColor: '#28314A', overflow: 'hidden' }}>
             <Pressable onPress={() => open(face.start)} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, opacity: pressed ? 0.8 : 1 })}>
               <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: COLOR[face.app] ?? '#334155' }} />
@@ -82,14 +85,13 @@ export default function Home() {
               <Pressable key={s.key} onPress={() => open(s.key)} style={({ pressed }) => ({ flexDirection: 'row', gap: 10, paddingVertical: 10, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: '#1F2740', backgroundColor: pressed ? '#1A2340' : 'transparent' })}>
                 <Text style={{ color: '#7F89A3', fontFamily: 'JetBrainsMono_700Bold', fontSize: 12, width: 64 }}>{s.id}</Text>
                 <Text style={{ color: '#DCE4F5', fontFamily: 'Inter_500Medium', fontSize: 14, flex: 1 }}>{s.name.replace(/^\S+\s/, '')}</Text>
-                {live.has(s.key) ? <Text style={{ color: '#5EE0A8', fontFamily: 'Inter_700Bold', fontSize: 11 }}>LIVE</Text> : null}
               </Pressable>
             ))}
           </View>
         ))}
 
         <Text style={{ color: '#8F98AA', fontFamily: 'Inter_700Bold', fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', marginTop: 10 }}>Demo flows</Text>
-        {FLOWS.map(f => (
+        {flows.map(f => (
           <Pressable key={f.name} onPress={() => open(f.key)} style={({ pressed }) => ({ padding: 14, borderRadius: 14, backgroundColor: pressed ? '#232C50' : '#1A2340' })}>
             <Text style={{ color: '#F2F4FA', fontFamily: 'Inter_600SemiBold', fontSize: 15 }}>{f.name}</Text>
           </Pressable>

@@ -1,0 +1,163 @@
+// Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
+// LD-27 Tablet locked · Dock tablet (P3, tablet)
+// The tablet load sheet locks after 2 min with no tick (route param `trip`); the bay's state stays on show.
+// "Tap badge here" opens the bay overview (LD-21). There is no PIN check in the backend: the PIN pad is left out.
+// Shift hours are not in the data.
+import { Text, View, StyleSheet } from 'react-native';
+import { dayLabel, hm } from '@/lib/time';
+import { ackFor, loadGroups, shortfallFor, useTicks } from '@/model/dock';
+import { useClaims, useLoadSheet, useNotifications } from '@/model/hooks';
+import { depotName } from '@/model/plan';
+import { useNow } from '@/model/store-face';
+import type { OrderLineItem } from '@/model/types';
+import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+
+const nav: ScreenNav = {"links":{"L227":{"to":"ld-21-bay-overview","kind":"go"}}};
+
+export default function ScreenLd27TabletLocked() {
+  const claims = useClaims();
+  const now = useNow();
+  const sheet = useLoadSheet();
+  const data = sheet.data;
+  const trip = data?.trip ?? null;
+  const notes = useNotifications().data;
+  const t = useTicks(sheet.tripId);
+  const accounted = (l: OrderLineItem) => t.isTicked(l.id) || !!shortfallFor(sheet.shortfalls, l);
+  const lines = loadGroups(data, accounted).flatMap(g => g.lines);
+  const done = lines.filter(accounted).length;
+  const waiting = trip ? sheet.shortfalls.filter(f => !ackFor(notes, trip.id, f.item)).length : 0;
+  const nowIso = new Date(now).toISOString();
+  const depot = trip?.depot ?? claims?.depots[0];
+  const pct = lines.length ? Math.round((done / lines.length) * 100) : 0;
+  return (
+    <Frame bg="#f2f4f8" nav={nav} style={s.v0}>
+      <View style={s.v49}>
+        <Scroll style={s.v47} contentStyle={s.v48}>
+          <View style={s.v22}>
+            <Grad g={G0} />
+            <View style={s.v10}>
+              <Icon xml={X2} width={44} height={44} style={s.v6} />
+              <View style={s.v9}>
+                <View>
+                  <Text style={s.t7}>{"Lodestar Dock"}</Text>
+                </View>
+                <View>
+                  <Text style={s.t8}>{[trip?.bay ? `Bay ${trip.bay} terminal` : 'Dock terminal', depot ? depotName(depot) : ''].filter(Boolean).join(' · ')}</Text>
+                </View>
+              </View>
+            </View>
+            <View style={s.v11} />
+            <View>
+              <Text style={s.t12}>{hm(nowIso)}</Text>
+            </View>
+            <View>
+              <Text style={s.t13}>{dayLabel(nowIso)}</Text>
+            </View>
+            {trip ? (
+              <View style={s.v19}>
+                <View>
+                  <Text style={s.t14}>{trip.bay ? `Bay ${trip.bay} now` : 'Now'}</Text>
+                </View>
+                <View>
+                  <Text style={s.t16}><Text style={s.t15}>{trip.vehicleId}</Text>{` · ${trip.district}`}</Text>
+                </View>
+                <View style={s.v18}>
+                  <View style={[s.v17, { width: `${pct}%` }]} />
+                </View>
+                <View>
+                  <Text style={s.t14} testID="locked-progress">{`${done} of ${lines.length} lines${trip.departTime ? ` · departs ${hm(trip.departTime)}` : ''}`}</Text>
+                </View>
+                {waiting ? (
+                  <View>
+                    <Text style={s.t14}>{`${waiting} ${waiting === 1 ? 'flag' : 'flags'} waiting for dispatch`}</Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+            <View style={s.v11} />
+            <View style={s.v21}>
+              <Icon xml={X3} width={18} height={18} style={s.v3} />
+              <Text style={s.t20}>{"Locked after 2 min idle. Every tick is saved."}</Text>
+            </View>
+          </View>
+          <View style={s.v46}>
+            <View style={s.v26}>
+              <View style={s.v24}>
+                <Text style={s.t23}>{trip?.bay ? `Bay ${trip.bay} terminal is locked` : 'This terminal is locked'}</Text>
+              </View>
+              <View>
+                <Text style={s.t25}>{"Tap your badge"}</Text>
+              </View>
+            </View>
+            <View style={s.v45}>
+              <Tap lk="L227" style={s.v30}>
+                <Icon xml={X4} width={120} height={120} style={s.v27} />
+                <View>
+                  <Text style={s.t28}>{"Tap badge here"}</Text>
+                </View>
+              </Tap>
+            </View>
+          </View>
+        </Scroll>
+      </View>
+    </Frame>
+  );
+}
+
+const X2 = "<svg viewBox=\"0 0 32 32\" fill=\"#000000\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"44\" height=\"44\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"32\" height=\"32\" rx=\"8\" fill=\"#6d28d9\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect><g transform=\"translate(7.36 7.36) scale(0.72)\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"><path d=\"M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M3.3 7 12 12l8.7-5M12 22V12\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></g></svg>";
+const X3 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#b9c0e6\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"18\" height=\"18\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\" fill=\"none\" stroke=\"#b9c0e6\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect><path d=\"M7 11V7a5 5 0 0 1 10 0v4\" fill=\"none\" stroke=\"#b9c0e6\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X4 = "<svg width=\"120\" height=\"120\" viewBox=\"0 0 120 120\" data-name=\"Badge tap illustration\" fill=\"#000000\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" xmlns=\"http://www.w3.org/2000/svg\"> <circle cx=\"60\" cy=\"60\" r=\"58\" fill=\"#ffffff\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></circle> <rect x=\"26\" y=\"32\" width=\"44\" height=\"60\" rx=\"8\" fill=\"#141b4d\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect> <rect x=\"34\" y=\"42\" width=\"28\" height=\"6\" rx=\"3\" fill=\"#f5b83d\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect> <circle cx=\"48\" cy=\"64\" r=\"8\" fill=\"#3b4cca\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></circle> <rect x=\"36\" y=\"78\" width=\"24\" height=\"4\" rx=\"2\" fill=\"#8f98aa\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect> <path d=\"M80 50a14 14 0 0 1 0 20M87 43a24 24 0 0 1 0 34M94 36a34 34 0 0 1 0 48\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path> </svg>";
+const G0: GradSpec[] = [{"type":"linear","angle":170,"at":null,"repeat":false,"stops":[{"c":"#26318a","p":0},{"c":"#141b4d","p":0.55},{"c":"#0a0f2e","p":1}]}];
+
+const s = StyleSheet.create({
+  v0: {"flexDirection":"column","alignItems":"stretch","backgroundColor":"#ffffff","flex":1},
+  t1: {"color":"#0a0f1a","fontSize":13,"lineHeight":19.5,"fontVariant":["tabular-nums"],"fontFamily":"JetBrainsMono_600SemiBold"},
+  v2: {"flexShrink":1},
+  v3: {"flexShrink":0,"overflow":"hidden"},
+  v4: {"flexDirection":"row","alignItems":"center","rowGap":6,"columnGap":6,"flexShrink":1},
+  v5: {"flexDirection":"row","justifyContent":"space-between","alignItems":"center","flexShrink":0,"paddingRight":22,"paddingLeft":22,"height":28},
+  v6: {"flexShrink":1,"overflow":"hidden"},
+  t7: {"color":"#ffffff","fontSize":22,"lineHeight":33,"letterSpacing":-0.4,"fontFamily":"PlusJakartaSans_800ExtraBold"},
+  t8: {"color":"#b9c0e6","fontSize":13,"lineHeight":19.5,"fontFamily":"Inter_600SemiBold"},
+  v9: {"flexDirection":"column","alignItems":"stretch","rowGap":2,"columnGap":2,"flexShrink":1},
+  v10: {"flexDirection":"row","alignItems":"center","rowGap":12,"columnGap":12},
+  v11: {"flexGrow":1,"flexBasis":"0%"},
+  t12: {"color":"#ffffff","fontSize":88,"lineHeight":88,"letterSpacing":-3.5,"fontVariant":["tabular-nums"],"fontFamily":"PlusJakartaSans_800ExtraBold"},
+  t13: {"color":"#b9c0e6","fontSize":16,"lineHeight":24,"fontFamily":"Inter_600SemiBold"},
+  t14: {"color":"#c9cfe8","fontSize":13,"lineHeight":19.5,"fontFamily":"Inter_600SemiBold"},
+  t15: {"color":"#c9cfe8","fontSize":13,"lineHeight":19.5,"letterSpacing":-0.1,"fontFamily":"JetBrainsMono_600SemiBold"},
+  t16: {"color":"#ffffff","fontSize":16,"lineHeight":24,"fontFamily":"Inter_700Bold"},
+  v17: {"flexShrink":1,"width":"77%","backgroundColor":"#c9cfe8","borderRadius":3},
+  v18: {"flexDirection":"row","alignItems":"stretch","flexShrink":1,"height":6,"backgroundColor":"rgba(255, 255, 255, 0.14)","borderRadius":3,"overflow":"hidden"},
+  v19: {"flexDirection":"column","alignItems":"stretch","rowGap":6,"columnGap":6,"paddingTop":14,"marginTop":18,"paddingRight":16,"paddingBottom":14,"paddingLeft":16,"backgroundColor":"rgba(255, 255, 255, 0.08)","borderRadius":16},
+  t20: {"color":"#b9c0e6","fontSize":13,"lineHeight":18.9,"fontFamily":"Inter_400Regular"},
+  v21: {"flexDirection":"row","alignItems":"flex-start","rowGap":8,"columnGap":8},
+  v22: {"flexDirection":"column","alignItems":"stretch","rowGap":10,"columnGap":10,"flexShrink":0,"paddingTop":28,"paddingRight":28,"paddingBottom":28,"paddingLeft":28,"width":320},
+  t23: {"color":"#4a5467","fontSize":13,"lineHeight":19.5,"fontFamily":"Inter_600SemiBold"},
+  v24: {"flexDirection":"row","alignItems":"center","rowGap":8,"columnGap":8},
+  t25: {"color":"#0a0f1a","fontSize":40,"lineHeight":44.8,"letterSpacing":-1,"fontFamily":"PlusJakartaSans_800ExtraBold"},
+  v26: {"flexDirection":"column","alignItems":"stretch","rowGap":6,"columnGap":6},
+  v27: {"flexShrink":1,"marginBottom":8,"overflow":"hidden"},
+  t28: {"color":"#141b4d","fontSize":22,"lineHeight":33,"textAlign":"center","fontFamily":"PlusJakartaSans_800ExtraBold"},
+  t29: {"color":"#344054","fontSize":14,"lineHeight":21,"textAlign":"center","fontFamily":"Inter_600SemiBold"},
+  v30: {"flexDirection":"column","justifyContent":"center","alignItems":"center","rowGap":8,"columnGap":8,"flexShrink":0,"width":280,"backgroundColor":"#e6e9f8","borderRadius":24,"boxShadow":"rgb(59, 76, 202) 0px 0px 0px 2px inset"},
+  t31: {"color":"#0a0f1a","fontFamily":"Inter_800ExtraBold"},
+  t32: {"color":"#344054","fontSize":15,"lineHeight":22.5,"fontFamily":"Inter_600SemiBold"},
+  v33: {"flexShrink":1,"width":16,"height":16,"borderRadius":8,"boxShadow":"rgb(20, 27, 77) 0px 0px 0px 2px inset"},
+  v34: {"flexDirection":"row","alignItems":"center","rowGap":14,"columnGap":14,"flexShrink":1,"paddingTop":4},
+  v35: {"flexDirection":"row","justifyContent":"space-between","alignItems":"center","height":32},
+  t36: {"color":"#0a0f1a","fontSize":26,"lineHeight":39,"fontFamily":"PlusJakartaSans_800ExtraBold"},
+  v37: {"flexDirection":"row","justifyContent":"center","alignItems":"center","flexGrow":1,"flexShrink":1,"flexBasis":"0%","height":72,"backgroundColor":"#ffffff","borderRadius":16,"boxShadow":"rgba(15, 20, 50, 0.08) 0px 1px 2px 0px"},
+  v38: {"flexDirection":"row","alignItems":"stretch","rowGap":10,"columnGap":10},
+  t39: {"color":"#344054","fontSize":16,"lineHeight":24,"fontFamily":"Inter_700Bold"},
+  v40: {"flexDirection":"row","justifyContent":"center","alignItems":"center","flexGrow":1,"flexShrink":1,"flexBasis":"0%","height":72,"borderRadius":16},
+  v41: {"flexDirection":"column","alignItems":"stretch","rowGap":10,"columnGap":10},
+  t42: {"color":"#3b4cca","fontSize":16,"lineHeight":24,"fontFamily":"Inter_700Bold"},
+  v43: {"flexDirection":"row","justifyContent":"center","alignItems":"center","rowGap":10,"columnGap":10,"height":56,"backgroundColor":"#ffffff","borderRadius":16},
+  v44: {"flexDirection":"column","alignItems":"stretch","rowGap":16,"columnGap":16,"flexGrow":1,"flexShrink":1,"flexBasis":"0%"},
+  v45: {"flexDirection":"row","alignItems":"stretch","rowGap":28,"columnGap":28},
+  v46: {"flexDirection":"column","alignItems":"stretch","rowGap":22,"columnGap":22,"flexGrow":1,"flexShrink":1,"flexBasis":"0%","paddingTop":28,"paddingRight":32,"paddingBottom":28,"paddingLeft":32},
+  v47: {"flexGrow":1,"flexShrink":1,"flexBasis":"0%"},
+  v48: {"flexDirection":"row","alignItems":"stretch"},
+  v49: {"flexDirection":"column","alignItems":"stretch","flexGrow":1,"flexShrink":1,"flexBasis":"0%","backgroundColor":"#f2f4f8"},
+});

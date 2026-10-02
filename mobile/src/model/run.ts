@@ -1,14 +1,17 @@
 // Driver (Lodestar Run) helpers for the live screens: network/sync state, outbox labels, the run
 // summary, and dispatch notices (stored Notifications + live socket notices, newest first).
-import { useMemo } from 'react';
-import { useStore } from '@/lib/store';
+import { useEffect, useMemo } from 'react';
+import { kv } from '@/lib/kv';
+import { inList } from '@/lib/odata';
+import { Store, useStore } from '@/lib/store';
 import { hm } from '@/lib/time';
 import { network } from '@/offline/network';
 import type { QueueItem } from '@/offline/queue';
-import { notices } from '@/realtime/notices';
+import { notices, type Notice } from '@/realtime/notices';
 import * as api from './api';
 import { useNotifications, type RunView } from './hooks';
 import { bumpRevision, client, sync } from './platform';
+import { useQuery } from './query';
 import type { Trip, TripStop } from './types';
 
 /** Online flag plus the time it last changed ("no signal since …"). */
@@ -199,4 +202,65 @@ export async function markNoticeRead(n: DispatchNotice, online: boolean): Promis
 /** Whole minutes from now until `iso` (NaN without a time). */
 export function minutesUntil(iso?: string | null, now: number = Date.now()): number {
   return iso ? Math.round((Date.parse(iso) - now) / 60_000) : NaN;
+}
+
+// ---------------------------------------------------------------- handover, offline save, new phone (DR-11/13/14/32)
+
+const RUN_KEY = (what: 'accepted' | 'saved', tripId: string) => `lodestar.run.${what}.${tripId}`;
+
+/** Per trip: when this phone accepted the load (DR-11) and when the run was saved for offline (DR-13), from the device store. */
+export const runMarks = new Store<Record<string, string | null>>({});
+
+async function loadMark(k: string) {
+  if (k in runMarks.get()) return;
+  const v = await kv.get(k).catch(() => null);
+  runMarks.set(m => (k in m ? m : { ...m, [k]: v }));
+}
+
+export async function setRunMark(what: 'accepted' | 'saved', tripId: string, at: string = new Date().toISOString()) {
+  const k = RUN_KEY(what, tripId);
+  runMarks.set(m => ({ ...m, [k]: at }));
+  await kv.set(k, at).catch(() => undefined);
+}
+
+/** The marks of a trip (`loaded` once read from the device store; null when none). */
+export function useRunMarks(tripId?: string | null): { loaded: boolean; accepted: string | null; saved: string | null } {
+  const all = useStore(runMarks);
+  useEffect(() => {
+    if (!tripId) return;
+    void loadMark(RUN_KEY('accepted', tripId));
+    void loadMark(RUN_KEY('saved', tripId));
+  }, [tripId]);
+  if (!tripId) return { loaded: false, accepted: null, saved: null };
+  const a = RUN_KEY('accepted', tripId);
+  const s = RUN_KEY('saved', tripId);
+  return { loaded: a in all && s in all, accepted: all[a] ?? null, saved: all[s] ?? null };
+}
+
+/** A trip_released notice for one of the driver's trips that arrived after `since` (DR-11 opens on it). */
+export function useReleasedNotice(tripIds: string[], since: string): Notice | undefined {
+  const live = useStore(notices);
+  const ids = tripIds.join(',');
+  return useMemo(() => live.find(n => n.event === 'trip_released' && n.at >= since && ids.split(',').includes(String(n.payload.tripId ?? n.payload.id ?? ''))), [live, ids, since]);
+}
+
+export type ServerEvent = { id: string; tripId?: string | null; eventType: string; savedAt: string; syncedAt?: string | null };
+
+/** The day's offline events the server holds for the driver's trips (the vehicle scope comes from the token). */
+export function useServerEvents(tripIds: string[]) {
+  const ids = [...tripIds].sort().join(',');
+  return useQuery<ServerEvent[]>(ids ? `run.events.${ids}` : null, c => c.all<ServerEvent>('OfflineEvents', { filter: inList('tripId', ids.split(',')), select: ['id', 'tripId', 'eventType', 'savedAt', 'syncedAt'], orderby: 'syncedAt desc' }));
+}
+
+/**
+ * Run moved to a new phone (DR-32): the server holds records for today's trip that this phone never saved, and
+ * this phone has not saved the run for offline yet. The outbox keeps each record's id (the server's event id).
+ */
+export function movedRun(events: ServerEvent[] | undefined, mine: QueueItem[], saved: string | null): { moved: boolean; lastSynced?: string } {
+  if (!events?.length || saved) return { moved: false };
+  const own = new Set(mine.map(i => i.id));
+  const others = events.filter(e => !own.has(e.id));
+  if (!others.length) return { moved: false };
+  const lastSynced = others.map(e => e.syncedAt ?? e.savedAt).filter(Boolean).sort().at(-1);
+  return { moved: true, lastSynced };
 }

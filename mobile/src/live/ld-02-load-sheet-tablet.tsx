@@ -1,13 +1,13 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // LD-02 Load sheet · Tablet (P3, tablet)
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { hm, until } from '@/lib/time';
 import { signOutTo, titleCase } from '@/lodestar/live';
 import { useClaims, useLoadSheet } from '@/model/hooks';
-import { loadGroups, ordinal, reeferOf, shortfallFor, tempLabel, useTicks } from '@/model/dock';
+import { loadGroups, ordinal, reeferOf, shortfallFor, tempLabel, useRePlanAlert, useTicks } from '@/model/dock';
 import type { OrderLineItem, Trip } from '@/model/types';
-import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec, type Target } from '@/lodestar/runtime';
+import { Frame, Grad, Icon, Scroll, Tap, openScreen, type ScreenNav, type GradSpec, type Target } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L224":{"to":"ld-22-release-checklist","kind":"go"}}};
 
@@ -28,6 +28,15 @@ export default function ScreenLd02LoadSheetTablet() {
   const data = sheet.data;
   const trip = data?.trip;
   const t = useTicks(sheet.tripId);
+  // a re-plan published while this trip is loading: what changed (LD-23)
+  useRePlanAlert(trip?.depot, planId => trip && openScreen('ld-23-plan-changed', { trip: trip.id, plan: planId }));
+  // the shared tablet locks after 2 min with no tick (LD-27)
+  const tripId = trip?.id;
+  useEffect(() => {
+    if (!tripId) return;
+    const idle = setTimeout(() => openScreen('ld-27-tablet-locked', { trip: tripId }, 'nav'), 120_000);
+    return () => clearTimeout(idle);
+  }, [tripId, t.map]);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const flagged = (l: OrderLineItem) => shortfallFor(sheet.shortfalls, l);
   const accounted = (l: OrderLineItem) => t.isTicked(l.id) || !!flagged(l);

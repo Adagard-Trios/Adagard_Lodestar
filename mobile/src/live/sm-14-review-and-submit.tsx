@@ -35,7 +35,8 @@ export default function ScreenSm14ReviewAndSubmit() {
     }
     await clearDraft();
     const online = network.get().online;
-    openScreen('sm-01-received');
+    // no signal: the orders wait in the outbox as drafts (SM-25); with signal they are received (SM-01)
+    openScreen(online ? 'sm-01-received' : 'sm-25-offline-draft-saved', { runDate });
     setTimeout(() => showToast(online ? `${plural(orders, 'order')} sent for ${dayLabel(runDate)}` : 'Saved on this phone · it sends when there is signal'), 350);
     return false;
   };

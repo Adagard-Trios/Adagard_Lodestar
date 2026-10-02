@@ -6,7 +6,7 @@ import { hm } from '@/lib/time';
 import { plural } from '@/lodestar/live';
 import { showToast } from '@/lodestar/runtime';
 import { completeStop } from '@/model/actions';
-import { useOnline, useStop } from '@/model/hooks';
+import { useOnline, useStop, useParam } from '@/model/hooks';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L15":{"to":"sm-02-order-status-and-eta","kind":"go"},"L257":{"to":"dr-16-store-code-entry","kind":"go"},"B":{"to":"dr-02-stop-arrival","kind":"back"}}};
@@ -21,6 +21,11 @@ export default function ScreenDr03ProofOfDelivery() {
   const ordered = order?.units ?? 0;
   const [units, setUnits] = useState<number | null>(null);
   const [receiver, setReceiver] = useState('');
+  // damaged goods reported on DR-18 come back here and are recorded with the proof of delivery
+  const damaged = Number(useParam('damaged') ?? '') || 0;
+  const damagedItem = useParam('item');
+  const damageNote = useParam('note');
+  const damage = damaged > 0 ? [{ type: 'DAMAGED', description: damageNote || `${damaged} × ${damagedItem ?? 'item'} damaged` }] : [];
   const count = units ?? stop?.pod?.unitsDelivered ?? Math.max(0, ordered - short);
   const delivered = stop?.status === 'DELIVERED';
   const later = view ? view.tripStops.filter(x => x.status !== 'DELIVERED' && x.id !== stop?.id) : [];
@@ -174,7 +179,7 @@ export default function ScreenDr03ProofOfDelivery() {
             onPress={async () => {
               if (!stop || !order) return true; // prototype mode: just navigate
               // a delivered stop can be corrected: the POD is saved again (the server upserts it)
-              await completeStop(stop, { unitsDelivered: count, unitsOrdered: ordered, receiverName: (receiver || '').trim() || undefined });
+              await completeStop(stop, { unitsDelivered: count, unitsOrdered: ordered, receiverName: (receiver || '').trim() || undefined, ...(damage.length ? { exceptions: damage } : {}) });
               showToast(online ? (delivered ? 'Delivery updated · sending' : 'Stop completed · sending') : 'Saved on this phone · sends when there is signal');
               return true;
             }}
@@ -183,7 +188,7 @@ export default function ScreenDr03ProofOfDelivery() {
             <Icon xml={X12} width={22} height={22} style={s.v1} />
             <Text style={s.t77}>{delivered ? 'Update delivery' : "Complete stop"}</Text>
           </Tap>
-          <Tap lk="L257" style={s.v80}>
+          <Tap lk="L257" style={s.v80} to={stop ? { to: 'dr-16-store-code-entry', params: { stop: stop.id, units: String(count), ...(damaged ? { damaged: String(damaged), note: damageNote ?? '' } : {}) } } : undefined}>
             <Icon xml={X13} width={18} height={18} style={s.v1} />
             <Text style={s.t79}>{"Can't sign? Use store OTP"}</Text>
           </Tap>

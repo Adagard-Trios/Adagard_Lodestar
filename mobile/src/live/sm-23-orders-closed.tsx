@@ -4,6 +4,7 @@ import { Text, View, StyleSheet } from 'react-native';
 import { addDays, dayLabel, hm } from '@/lib/time';
 import { plural } from '@/lodestar/live';
 import { today } from '@/model/hooks';
+import { depotName } from '@/model/plan';
 import { nextRunDate, useDelivery, useNow } from '@/model/store-face';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
@@ -102,7 +103,7 @@ export default function ScreenSm23OrdersClosed() {
                 <Text style={s.t32}>{"Something urgent for tomorrow?"}</Text>
               </View>
               <View>
-                <Text style={s.t11}>{"Call Kandy Hub. They add it only if the van has space."}</Text>
+                <Text style={s.t11}>{`Call ${outlet ? depotName(outlet.depot) : 'the depot'}. They add it only if the van has space.`}</Text>
               </View>
             </View>
           </View>

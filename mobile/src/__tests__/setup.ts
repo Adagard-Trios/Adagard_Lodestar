@@ -3,7 +3,21 @@
 
 jest.mock('@react-native-community/netinfo', () => require('@react-native-community/netinfo/jest/netinfo-mock.js'));
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
-jest.mock('expo-speech', () => ({ speak: jest.fn(), stop: jest.fn() }));
+jest.mock('expo-speech', () => ({
+  speak: jest.fn(),
+  stop: jest.fn(async () => undefined),
+  isSpeakingAsync: jest.fn(async () => false),
+  getAvailableVoicesAsync: jest.fn(async () => [{ identifier: 'en-GB-1', name: 'English (UK)', quality: 'Default', language: 'en-GB' }]),
+}));
+// The camera: permission not granted, so screens show their designed placeholder and the manual fallback.
+jest.mock('expo-camera', () => ({
+  CameraView: () => null,
+  useCameraPermissions: () => [{ granted: false, canAskAgain: true, status: 'undetermined' }, jest.fn(async () => ({ granted: false })), jest.fn()],
+}));
+jest.mock('expo-notifications', () => ({
+  getPermissionsAsync: jest.fn(async () => ({ granted: false, status: 'undetermined' })),
+  requestPermissionsAsync: jest.fn(async () => ({ granted: true, status: 'granted' })),
+}));
 jest.mock('expo-secure-store', () => {
   const m = new Map<string, string>();
   return {

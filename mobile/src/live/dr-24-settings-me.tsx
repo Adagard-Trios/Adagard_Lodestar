@@ -1,7 +1,9 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // DR-24 Settings · me · phone (P4, phone)
 import { Text, View, StyleSheet } from 'react-native';
+import { LANGUAGE_NAMES, setSettings, useSettings, type ScreenTheme } from '@/lib/settings';
 import { hm } from '@/lib/time';
+import { appVersion } from '@/lib/version';
 import { plural, signOutTo, titleCase, useDeviceId } from '@/lodestar/live';
 import { useClaims, useOutbox, useRun } from '@/model/hooks';
 import { Frame, Icon, Scroll, Tap, type ScreenNav } from '@/lodestar/runtime';
@@ -13,6 +15,13 @@ export default function ScreenDr24SettingsMe() {
   const device = useDeviceId();
   const { view, updatedAt } = useRun();
   const { waiting } = useOutbox();
+  const settings = useSettings();
+  // the segment saves the setting; only Day follows the designed link to the daylight run
+  const pick = (theme: ScreenTheme) => async () => {
+    await setSettings({ theme });
+    return theme === 'day';
+  };
+  const seg = (theme: ScreenTheme) => settings.theme === theme;
   const name = claims?.name ?? claims?.username ?? '';
   const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join('') || '—';
   const trip = view?.trip ?? null;
@@ -54,19 +63,19 @@ export default function ScreenDr24SettingsMe() {
                 <Text style={s.t16}>{"auto follows sunrise"}</Text>
               </View>
             </View>
-            <Tap lk="L35" style={s.v22}>
-              <View style={s.v19}>
-                <Text style={s.t18}>{"Auto"}</Text>
-              </View>
-              <View style={s.v21}>
+            <View style={s.v22}>
+              <Tap lk="L35" style={seg('auto') ? s.v19 : s.v21} onPress={pick('auto')} testID="theme-auto">
+                <Text style={seg('auto') ? s.t18 : s.t20}>{"Auto"}</Text>
+              </Tap>
+              <Tap lk="L35" style={seg('night') ? s.v19 : s.v21} onPress={pick('night')} testID="theme-night">
                 <Icon xml={X1} width={14} height={14} style={s.v1} />
-                <Text style={s.t20}>{"Night"}</Text>
-              </View>
-              <View style={s.v21}>
+                <Text style={seg('night') ? s.t18 : s.t20}>{"Night"}</Text>
+              </Tap>
+              <Tap lk="L35" style={seg('day') ? s.v19 : s.v21} onPress={pick('day')} testID="lk-L35">
                 <Icon xml={X2} width={14} height={14} style={s.v1} />
-                <Text style={s.t20}>{"Day"}</Text>
-              </View>
-            </Tap>
+                <Text style={seg('day') ? s.t18 : s.t20}>{"Day"}</Text>
+              </Tap>
+            </View>
           </View>
           <View style={s.v32}>
             <Tap lk="L268" style={s.v28}>
@@ -78,11 +87,11 @@ export default function ScreenDr24SettingsMe() {
                   <Text style={s.t25}>{"Language and voice"}</Text>
                 </View>
                 <View style={s.v11}>
-                  <Text style={s.t10}>{"Read aloud at stops · on"}</Text>
+                  <Text style={s.t10}>{`Read aloud at stops · ${settings.readAloud ? 'on' : 'off'}`}</Text>
                 </View>
               </View>
               <View style={s.v15}>
-                <Text style={s.t27} numberOfLines={1}><Text style={s.t26}>{"සිංහල"}</Text></Text>
+                <Text style={s.t27} numberOfLines={1}><Text style={s.t26} testID="me-language">{LANGUAGE_NAMES[settings.language]}</Text></Text>
               </View>
               <Icon xml={X4} width={18} height={18} style={s.v1} />
             </Tap>
@@ -159,7 +168,7 @@ export default function ScreenDr24SettingsMe() {
             </View>
           </Tap>
           <Tap lk="L37" style={s.v36}>
-            <Text style={s.t35}>{"Lodestar Run 2.0 · works offline"}</Text>
+            <Text style={s.t35} testID="app-version">{`Lodestar Run ${appVersion()} · works offline`}</Text>
           </Tap>
         </Scroll>
       </View>

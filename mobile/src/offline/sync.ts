@@ -6,6 +6,8 @@
 //     RELEASE   → Trips('…')/Lodestar.Release (records the load first if the server asks for it)
 //     RECEIPT   → Orders('…')/Lodestar.ConfirmReceipt
 //     ORDER     → POST Orders
+//     PRECOOL   → POST LoadRecords {tripId, bay, reeferTempC} (LD-09 pre-cool reading)
+//   STATUS_CHANGE (driver reports to dispatch) goes in the PushBatch with the other driver events.
 // Outcomes: applied → synced (a server conflict note is kept and shown); 409/412 → conflict;
 // other 4xx → rejected (shown, the user can discard); network / 5xx / 429 → stays pending.
 import { Store } from '@/lib/store';
@@ -182,6 +184,15 @@ export class SyncEngine {
             }
             throw e;
           }
+          return { status: 'synced' };
+        }
+        case 'PRECOOL': {
+          // LD-09: the reefer reading goes on the trip's load record when it is created; a record that exists
+          // already cannot be changed (LoadRecords takes reeferTempC on create only), so the reading then
+          // travels with the release (Trips Release reeferTempC) and is kept here as a note.
+          const found = await this.client.list<{ id: string }>('LoadRecords', { filter: `tripId eq ${lit(p.tripId)}`, select: ['id'], top: 1 });
+          if (found.value[0]) return { status: 'synced', conflict: 'Load record already open: the reading goes with the release' };
+          await this.client.create('LoadRecords', { tripId: p.tripId, bay: p.bay, reeferTempC: p.reeferTempC }, idem);
           return { status: 'synced' };
         }
         case 'ORDER': {

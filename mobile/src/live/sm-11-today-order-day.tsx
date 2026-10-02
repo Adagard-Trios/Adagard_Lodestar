@@ -1,17 +1,23 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // SM-11 Today · order day · phone (P1, phone)
+import { useEffect } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { dayLabel, hm } from '@/lib/time';
 import { plural, titleCase } from '@/lodestar/live';
 import { today, useClaims, useOutbox } from '@/model/hooks';
 import { byClass, cutoffFor, initials, left, nextRunDate, receiptFor, totals, useDelivery, useNow, useOrderDraft } from '@/model/store-face';
-import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { Frame, Grad, Icon, Scroll, Tap, openScreen, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L78":{"to":"sm-13-new-order","kind":"go"},"L80":{"to":"sm-22-profile-and-settings","kind":"go"},"N1":{"to":"sm-12-orders","kind":"nav"},"N2":{"to":"sm-19-receipts-and-credit-notes","kind":"nav"},"N3":{"to":"sm-21-messages","kind":"nav"}}};
 
 export default function ScreenSm11TodayOrderDay() {
   const claims = useClaims();
-  const { outlet, delivery, isToday, loading, error } = useDelivery();
+  const { outlet, delivery, isToday, loading, error, data } = useDelivery();
+  // no order for today: the Today tab is "No delivery today" (SM-24)
+  const noDelivery = !!claims && data !== undefined && !isToday;
+  useEffect(() => {
+    if (noDelivery) openScreen('sm-24-no-delivery-today', undefined, 'nav');
+  }, [noDelivery]);
   const { draft, template } = useOrderDraft();
   const { items } = useOutbox();
   const now = useNow();

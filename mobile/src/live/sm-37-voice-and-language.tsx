@@ -1,0 +1,261 @@
+// Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
+// SM-37 Voice and language · phone (P1, phone)
+// The app language (also the read-aloud language) and read aloud on/off are this phone's settings (@/lib/settings).
+// "Test" speaks a sample line with the phone's voice for the chosen language (expo-speech, on the phone).
+// Voice packs: which languages the phone has a voice for (Speech.getAvailableVoicesAsync); the app downloads
+// nothing, so the rows show what the phone has. Screen text stays English; the voice speaks in the chosen language.
+import { Text, View, StyleSheet } from 'react-native';
+import { setSettings, useSettings, type AppLanguage } from '@/lib/settings';
+import { speakIn, useVoiceCheck, type VoiceCheck } from '@/lodestar/voice';
+import { Frame, Icon, Scroll, Tap, type ScreenNav } from '@/lodestar/runtime';
+
+const nav: ScreenNav = {"links":{"L116":{"to":"sm-38-voice-pack-downloading","kind":"go"},"L117":{"to":"sm-22-profile-and-settings","kind":"go"}}};
+
+const SAMPLE = 'Van arrives between 6:15 and 6:55.';
+const voiceLine = (v: VoiceCheck) => (v.checking ? 'Checking this phone…' : v.available ? 'On this phone · works offline' : 'No voice on this phone · text still works');
+
+export default function ScreenSm37VoiceAndLanguage() {
+  const { language, readAloud } = useSettings();
+  const en = useVoiceCheck('en');
+  const ta = useVoiceCheck('ta');
+  const si = useVoiceCheck('si');
+  const pick = (l: AppLanguage) => () => {
+    void setSettings({ language: l });
+    return false;
+  };
+  return (
+    <Frame bg="#f4f5f9" nav={nav} style={s.v0}>
+      <View style={s.v49}>
+        <View style={s.v7}>
+          <Tap lk="L117" style={s.v2}>
+            <Icon xml={X0} width={20} height={20} style={s.v1} />
+          </Tap>
+          <View style={s.v5}>
+            <View>
+              <Text style={s.t3}>{"Voice & language"}</Text>
+            </View>
+            <View>
+              <Text style={s.t4} numberOfLines={1}>{"Profile & settings"}</Text>
+            </View>
+          </View>
+          <View style={s.v6} />
+        </View>
+        <Scroll style={s.v47} contentStyle={s.v48}>
+          <View style={s.v20}>
+            <View style={s.v11}>
+              <View style={s.v9}>
+                <Text style={s.t8}>{"Language"}</Text>
+              </View>
+              <View style={s.v9}>
+                <Text style={s.t10}>{"screen and voice"}</Text>
+              </View>
+            </View>
+            <View style={s.v19}>
+              <Tap to={null} onPress={pick('en')} style={language === 'en' ? s.v13 : s.v16} testID="lang-en">
+                <Text style={[s.t12, language !== 'en' && x.off]}>{"English"}</Text>
+              </Tap>
+              <Tap to={null} onPress={pick('si')} style={language === 'si' ? s.v13 : s.v16} testID="lang-si">
+                <Text style={[s.t15, language === 'si' && x.on]}><Text style={s.t14}>{"සිංහල"}</Text></Text>
+              </Tap>
+              <Tap to={null} onPress={pick('ta')} style={language === 'ta' ? s.v13 : s.v16} testID="lang-ta">
+                <Text style={[s.t18, language === 'ta' && x.on]}><Text style={s.t17}>{"தமிழ்"}</Text></Text>
+              </Tap>
+            </View>
+          </View>
+          <View style={s.v20}>
+            <View style={s.v11}>
+              <View style={s.v9}>
+                <Text style={s.t8}>{"Read aloud"}</Text>
+              </View>
+              <View style={s.v9}>
+                <Text style={s.t10}>{"speaks only, never listens"}</Text>
+              </View>
+            </View>
+            <View style={s.v36}>
+              <Tap to={null} onPress={() => { void setSettings({ readAloud: !readAloud }); return false; }} style={s.v28} testID="read-aloud-toggle">
+                <View style={s.v21}>
+                  <Icon xml={X1} width={22} height={22} style={s.v1} />
+                </View>
+                <View style={s.v25}>
+                  <View>
+                    <Text style={s.t22}>{"Read ETA and notices aloud"}</Text>
+                  </View>
+                  <View style={s.v24}>
+                    <Text style={s.t23}>{readAloud ? "adds Read aloud to each" : "off · notices are not spoken"}</Text>
+                  </View>
+                </View>
+                <View style={[s.v27, !readAloud && x.toggleOff]} testID={readAloud ? 'read-aloud-on' : 'read-aloud-off'}>
+                  <View style={s.v26} />
+                </View>
+              </Tap>
+              <View style={s.v33}>
+                <View style={s.v25}>
+                  <View>
+                    <Text style={s.t22}>{"Speed"}</Text>
+                  </View>
+                </View>
+                <View style={s.v32}>
+                  <View style={s.v30}>
+                    <Text style={s.t29}>{"Slower"}</Text>
+                  </View>
+                  <View style={s.v31}>
+                    <Text style={s.t8}>{"Normal"}</Text>
+                  </View>
+                  <View style={s.v30}>
+                    <Text style={s.t29}>{"Faster"}</Text>
+                  </View>
+                </View>
+              </View>
+              <View style={s.v33}>
+                <View style={s.v25}>
+                  <View>
+                    <Text style={s.t22}>{"Test"}</Text>
+                  </View>
+                  <View style={s.v24}>
+                    <Text style={s.t23}>{`"${SAMPLE}"`}</Text>
+                  </View>
+                </View>
+                <Tap to={null} onPress={() => { speakIn(SAMPLE, language); return false; }} style={s.v35} testID="voice-test">
+                  <Icon xml={X2} width={20} height={20} style={s.v1} />
+                  <Text style={s.t34} numberOfLines={1}>{"Read aloud"}</Text>
+                </Tap>
+              </View>
+            </View>
+          </View>
+          <View style={s.v20}>
+            <View style={s.v11}>
+              <View style={s.v9}>
+                <Text style={s.t8}>{"Voice packs"}</Text>
+              </View>
+              <View style={s.v9}>
+                <Text style={s.t10}>{"on this phone · works offline"}</Text>
+              </View>
+            </View>
+            <View style={s.v36}>
+              <View style={s.v28}>
+                <View style={en.available ? s.v37 : s.v40}>
+                  <Icon xml={en.available ? X3 : X4} width={22} height={22} style={s.v1} />
+                </View>
+                <View style={s.v25}>
+                  <View>
+                    <Text style={s.t22}>{"English"}</Text>
+                  </View>
+                  <View style={s.v24}>
+                    <Text style={s.t23}>{voiceLine(en)}</Text>
+                  </View>
+                </View>
+                <View style={s.v38}>
+                  <Text style={s.t29} numberOfLines={1}>{en.available ? (en.voiceName ?? 'Built in') : '—'}</Text>
+                </View>
+              </View>
+              <View style={s.v33}>
+                <View style={ta.available ? s.v37 : s.v40}>
+                  <Icon xml={ta.available ? X3 : X4} width={22} height={22} style={s.v1} />
+                </View>
+                <View style={s.v25}>
+                  <View>
+                    <Text style={s.t39}><Text style={s.t17}>{"தமிழ்"}</Text></Text>
+                  </View>
+                  <View style={s.v24}>
+                    <Text style={s.t23}>{voiceLine(ta)}</Text>
+                  </View>
+                </View>
+                <View style={s.v38}>
+                  <Text style={s.t29} numberOfLines={1}>{ta.available ? (ta.voiceName ?? 'Built in') : '—'}</Text>
+                </View>
+              </View>
+              <Tap lk="L116" style={s.v33} to={{ to: 'sm-38-voice-pack-downloading', params: { lang: 'si' } }}>
+                <View style={si.available ? s.v37 : s.v40}>
+                  <Icon xml={si.available ? X3 : X4} width={22} height={22} style={s.v1} />
+                </View>
+                <View style={s.v25}>
+                  <View>
+                    <Text style={s.t41}><Text style={s.t14}>{"සිංහල"}</Text></Text>
+                  </View>
+                  <View style={s.v24}>
+                    <Text style={s.t23}>{voiceLine(si)}</Text>
+                  </View>
+                </View>
+                <View style={s.v42}>
+                  <Text style={s.t34} numberOfLines={1}>{si.available ? 'Ready' : 'Check'}</Text>
+                </View>
+              </Tap>
+            </View>
+          </View>
+          <View style={s.v46}>
+            <Icon xml={X5} width={14} height={14} style={s.v43} />
+            <View style={s.v9}>
+              <Text style={s.t45}><Text style={s.t44}>{"The voice is made on this phone."}</Text>{" Nothing is sent anywhere, so it keeps working when the Nuwara Eliya signal drops."}</Text>
+            </View>
+          </View>
+        </Scroll>
+      </View>
+    </Frame>
+  );
+}
+
+const x = StyleSheet.create({
+  on: { color: '#101828' },
+  off: { color: '#475467' },
+  toggleOff: { justifyContent: 'flex-start', backgroundColor: '#d0d5dd' },
+});
+
+const X0 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#101828\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"20\" height=\"20\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M19 12H5M12 19l-7-7 7-7\" fill=\"none\" stroke=\"#101828\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X1 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M11 5 6 9H2v6h4l5 4V5Z\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X2 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"20\" height=\"20\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M11 5 6 9H2v6h4l5 4V5Z\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X3 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#047857\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M20 6 9 17l-5-5\" fill=\"none\" stroke=\"#047857\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X4 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#475467\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" fill=\"none\" stroke=\"#475467\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M7 10l5 5 5-5M12 15V3\" fill=\"none\" stroke=\"#475467\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X5 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"14\" height=\"14\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"12\" cy=\"12\" r=\"10\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></circle><path d=\"M12 16v-4M12 8h.01\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+
+const s = StyleSheet.create({
+  v0: {"flexDirection":"column","alignItems":"stretch","backgroundColor":"#ffffff","flex":1},
+  v1: {"flexShrink":0,"overflow":"hidden"},
+  v2: {"flexDirection":"row","justifyContent":"center","alignItems":"center","flexShrink":0,"width":40,"height":40,"backgroundColor":"#ffffff","borderRadius":20,"boxShadow":"rgba(0, 0, 0, 0.06) 0px 1px 2px 0px"},
+  t3: {"color":"#101828","fontSize":15,"lineHeight":22.5,"fontFamily":"Inter_700Bold"},
+  t4: {"color":"#636c80","fontSize":13,"lineHeight":19.5,"fontFamily":"Inter_600SemiBold"},
+  v5: {"flexDirection":"column","alignItems":"center","flexGrow":1,"flexShrink":1,"flexBasis":"0%"},
+  v6: {"flexShrink":0,"width":40},
+  v7: {"flexDirection":"row","alignItems":"center","rowGap":10,"columnGap":10,"flexShrink":0,"paddingRight":16,"paddingLeft":16,"height":52},
+  t8: {"color":"#101828","fontSize":13,"lineHeight":19.5,"fontFamily":"Inter_700Bold"},
+  v9: {"flexShrink":1},
+  t10: {"color":"#636c80","fontSize":13,"lineHeight":19.5,"fontFamily":"Inter_700Bold"},
+  v11: {"flexDirection":"row","justifyContent":"space-between","alignItems":"baseline","paddingRight":20,"paddingLeft":20},
+  t12: {"color":"#101828","fontSize":14,"lineHeight":21,"fontFamily":"Inter_700Bold"},
+  v13: {"flexDirection":"row","justifyContent":"center","alignItems":"center","flexGrow":1,"flexShrink":1,"flexBasis":"0%","height":36,"backgroundColor":"#ffffff","borderRadius":10,"boxShadow":"rgba(0, 0, 0, 0.08) 0px 1px 3px 0px"},
+  t14: {"fontFamily":"NotoSansSinhala_700Bold"},
+  t15: {"color":"#475467","fontSize":14,"lineHeight":21,"fontFamily":"NotoSansSinhala_700Bold"},
+  v16: {"flexDirection":"row","justifyContent":"center","alignItems":"center","flexGrow":1,"flexShrink":1,"flexBasis":"0%","height":36,"borderRadius":10},
+  t17: {"fontFamily":"NotoSansTamil_700Bold"},
+  t18: {"color":"#475467","fontSize":14,"lineHeight":21,"fontFamily":"NotoSansTamil_700Bold"},
+  v19: {"flexDirection":"row","alignItems":"stretch","rowGap":4,"columnGap":4,"paddingTop":4,"paddingRight":4,"marginRight":16,"paddingBottom":4,"paddingLeft":4,"marginLeft":16,"backgroundColor":"#eff1f7","borderRadius":14},
+  v20: {"flexDirection":"column","alignItems":"stretch","rowGap":8,"columnGap":8,"flexShrink":0},
+  v21: {"flexDirection":"row","justifyContent":"center","alignItems":"center","flexShrink":0,"width":44,"height":44,"backgroundColor":"#eef0ff","borderRadius":14},
+  t22: {"color":"#101828","fontSize":16,"lineHeight":20.8,"fontFamily":"Inter_700Bold"},
+  t23: {"color":"#475467","fontSize":13,"lineHeight":18.2,"fontFamily":"Inter_500Medium"},
+  v24: {"flexDirection":"row","flexWrap":"wrap","alignItems":"center","rowGap":6,"columnGap":6},
+  v25: {"flexDirection":"column","alignItems":"stretch","rowGap":3,"columnGap":3,"flexGrow":1,"flexShrink":1,"flexBasis":"0%"},
+  v26: {"flexShrink":1,"width":22,"height":22,"backgroundColor":"#ffffff","borderRadius":11,"boxShadow":"rgba(0, 0, 0, 0.2) 0px 1px 3px 0px"},
+  v27: {"flexDirection":"row","justifyContent":"flex-end","alignItems":"center","flexShrink":0,"paddingTop":3,"paddingRight":3,"paddingBottom":3,"paddingLeft":3,"width":48,"height":28,"backgroundColor":"#3b4cca","borderRadius":14},
+  v28: {"flexDirection":"row","alignItems":"center","rowGap":14,"columnGap":14,"paddingTop":10,"paddingRight":16,"paddingBottom":10,"paddingLeft":16,"minHeight":56},
+  t29: {"color":"#475467","fontSize":13,"lineHeight":19.5,"fontFamily":"Inter_700Bold"},
+  v30: {"flexDirection":"row","justifyContent":"center","alignItems":"center","flexGrow":1,"flexShrink":1,"flexBasis":"0%","height":32,"borderRadius":10},
+  v31: {"flexDirection":"row","justifyContent":"center","alignItems":"center","flexGrow":1,"flexShrink":1,"flexBasis":"0%","height":32,"backgroundColor":"#ffffff","borderRadius":10,"boxShadow":"rgba(0, 0, 0, 0.08) 0px 1px 3px 0px"},
+  v32: {"flexDirection":"row","alignItems":"stretch","rowGap":4,"columnGap":4,"flexShrink":0,"paddingTop":4,"paddingRight":4,"paddingBottom":4,"paddingLeft":4,"width":212,"backgroundColor":"#eff1f7","borderRadius":14},
+  v33: {"flexDirection":"row","alignItems":"center","rowGap":14,"columnGap":14,"paddingTop":10,"paddingRight":16,"paddingBottom":10,"paddingLeft":16,"minHeight":56,"borderTopWidth":1,"borderTopColor":"#eceef3"},
+  t34: {"color":"#3b4cca","fontSize":14,"lineHeight":21,"fontFamily":"Inter_700Bold"},
+  v35: {"flexDirection":"row","alignItems":"center","rowGap":8,"columnGap":8,"flexShrink":0,"paddingRight":16,"paddingLeft":14,"height":44,"backgroundColor":"#eef0ff","borderRadius":22},
+  v36: {"flexDirection":"column","alignItems":"stretch","flexShrink":1,"marginRight":16,"marginLeft":16,"backgroundColor":"#ffffff","borderRadius":20,"boxShadow":"rgba(15, 20, 50, 0.04) 0px 1px 2px 0px","overflow":"hidden"},
+  v37: {"flexDirection":"row","justifyContent":"center","alignItems":"center","flexShrink":0,"width":44,"height":44,"backgroundColor":"#e8f8f0","borderRadius":14},
+  v38: {"flexDirection":"column","alignItems":"flex-end","rowGap":2,"columnGap":2,"flexShrink":0},
+  t39: {"color":"#101828","fontSize":16,"lineHeight":20.8,"fontFamily":"NotoSansTamil_700Bold"},
+  v40: {"flexDirection":"row","justifyContent":"center","alignItems":"center","flexShrink":0,"width":44,"height":44,"backgroundColor":"#eff1f7","borderRadius":14},
+  t41: {"color":"#101828","fontSize":16,"lineHeight":20.8,"fontFamily":"NotoSansSinhala_700Bold"},
+  v42: {"flexDirection":"row","alignItems":"center","rowGap":6,"columnGap":6,"flexShrink":0,"paddingRight":12,"paddingLeft":12,"height":32,"backgroundColor":"#eff1f7","borderRadius":10},
+  v43: {"flexShrink":0,"marginTop":1,"overflow":"hidden"},
+  t44: {"color":"#101828","fontFamily":"Inter_700Bold"},
+  t45: {"color":"#636c80","fontSize":13,"lineHeight":18.9,"fontFamily":"Inter_400Regular"},
+  v46: {"flexDirection":"row","alignItems":"flex-start","rowGap":8,"columnGap":8,"flexShrink":0,"paddingRight":20,"paddingLeft":20},
+  v47: {"flexGrow":1,"flexShrink":1,"flexBasis":"0%"},
+  v48: {"flexDirection":"column","alignItems":"stretch","rowGap":14,"columnGap":14,"paddingTop":4,"paddingBottom":16},
+  v49: {"flexDirection":"column","alignItems":"stretch","flexGrow":1,"flexShrink":1,"flexBasis":"0%","backgroundColor":"#f4f5f9"},
+});

@@ -1,14 +1,16 @@
 // Lodestar Dock (loader) helpers: line ticks kept on the device per trip, the load order of a sheet,
 // the day's flags (load-record shortfalls + unsent SHORTFALL writes) and their acknowledgements.
-import { useEffect, useMemo } from 'react';
+import { useEffect, useEffectEvent, useMemo, useState } from 'react';
 import { kv } from '@/lib/kv';
-import type { ODataClient } from '@/lib/odata';
+import { inList, key, lit, type ODataClient } from '@/lib/odata';
+import { openScreen } from '@/lodestar/runtime';
+import { notices, type Notice } from '@/realtime/notices';
 import { Store, useStore } from '@/lib/store';
-import { colomboDate, isoDay } from '@/lib/time';
+import { colomboDate, dayFilter, isoDay } from '@/lib/time';
 import type { QueueItem } from '@/offline/queue';
 import type { LoadSheet } from './api';
 import { useQuery } from './query';
-import type { LoadRecord, Notification, OrderLineItem, Shortfall, Trip, TripStop } from './types';
+import type { LoadRecord, Notification, OrderLineItem, Plan, Shortfall, Trip, TripStop, Vehicle } from './types';
 
 // ---------------------------------------------------------------- line ticks (local, persisted)
 
@@ -77,6 +79,16 @@ export function useTickCount(tripIds: string[]): number {
     for (const id of keyList ? keyList.split(',') : []) ensure(id);
   }, [keyList]);
   return tripIds.reduce((n, id) => n + Object.keys(all[id] ?? {}).length, 0);
+}
+
+/** Ticked lines per trip (bay overview: each bay's progress). */
+export function useTickCounts(tripIds: string[]): Record<string, number> {
+  const all = useStore(ticks);
+  const keyList = tripIds.join(',');
+  useEffect(() => {
+    for (const id of keyList ? keyList.split(',') : []) ensure(id);
+  }, [keyList]);
+  return Object.fromEntries(tripIds.map(id => [id, Object.keys(all[id] ?? {}).length]));
 }
 
 // ---------------------------------------------------------------- load order
@@ -178,4 +190,184 @@ export function collectFlags(records: FlagRecord[], items: QueueItem[], notes: N
     }
   }
   return out.sort((a, b) => (b.shortfall.at ?? '').localeCompare(a.shortfall.at ?? ''));
+}
+
+// ---------------------------------------------------------------- shift, plans, re-plans
+
+/** Order lines per trip (shift summary: "n of m lines"). */
+export async function tripLineCounts(c: Pick<ODataClient, 'all'>, tripIds: string[]): Promise<Record<string, number>> {
+  if (!tripIds.length) return {};
+  const stops = await c.all<Pick<TripStop, 'id' | 'tripId' | 'orderId'>>('TripStops', { filter: inList('tripId', tripIds), select: ['id', 'tripId', 'orderId'] });
+  const orderIds = [...new Set(stops.map(s => s.orderId))];
+  const lines = orderIds.length ? await c.all<Pick<OrderLineItem, 'id' | 'orderId'>>('OrderLineItems', { filter: inList('orderId', orderIds), select: ['id', 'orderId'] }) : [];
+  const perOrder = new Map<string, number>();
+  for (const l of lines) perOrder.set(l.orderId, (perOrder.get(l.orderId) ?? 0) + 1);
+  const out: Record<string, number> = {};
+  for (const id of tripIds) out[id] = 0;
+  for (const s of stops) out[s.tripId] = (out[s.tripId] ?? 0) + (perOrder.get(s.orderId) ?? 0);
+  return out;
+}
+
+export function useTripLineCounts(tripIds: string[]) {
+  const ids = [...tripIds].sort().join(',');
+  return useQuery(ids ? `dock.lines.${ids}` : null, c => tripLineCounts(c, ids.split(',')), { persist: true });
+}
+
+/** Released: the server says so (release time or the trip left), or a release is waiting on this phone. */
+export function isReleased(t: Pick<Trip, 'id' | 'status' | 'loadRecord'>, items: QueueItem[] = []): boolean {
+  if (t.loadRecord?.releasedAt || t.status === 'ENROUTE' || t.status === 'COMPLETE') return true;
+  return items.some(i => i.kind === 'RELEASE' && i.tripId === t.id && i.status !== 'rejected' && i.status !== 'conflict');
+}
+
+/** On time: released at or before the planned departure (undefined when either time is missing). */
+export function onTime(t: Pick<Trip, 'departTime' | 'loadRecord'>): boolean | undefined {
+  const rel = Date.parse(t.loadRecord?.releasedAt ?? '');
+  const dep = Date.parse(t.departTime ?? '');
+  if (!Number.isFinite(rel) || !Number.isFinite(dep)) return undefined;
+  return rel <= dep;
+}
+
+/** A plan as the API returns it (publishedAt and approvedBy are not in the shared Plan type). */
+export type PublishedPlan = Plan & { publishedAt?: string | null; approvedBy?: string | null };
+
+/** The depot's latest published plan (of `date` when given). */
+export async function latestPlan(c: Pick<ODataClient, 'list'>, depot: string, date?: string): Promise<PublishedPlan | null> {
+  const f = [`depot eq ${lit(depot)}`, `status eq 'PUBLISHED'`, ...(date ? [dayFilter('runDate', date)] : [])].join(' and ');
+  const r = await c.list<PublishedPlan>('Plans', { filter: f, orderby: 'publishedAt desc,createdAt desc', top: 1 });
+  return r.value[0] ?? null;
+}
+
+export function useLatestPlan(depot: string | undefined, date: string | undefined) {
+  return useQuery(depot && date ? `dock.plan.${depot}.${date}` : null, c => latestPlan(c, depot!, date), { persist: true });
+}
+
+/** Orders a plan left out (Plan.summary deferrals, else the plan's unassigned list); undefined when not recorded. */
+export function deferredCount(plan?: Pick<Plan, 'summary'> | null): number | undefined {
+  const s = (plan?.summary ?? null) as Record<string, any> | null;
+  if (!s) return undefined;
+  if (Array.isArray(s.deferrals)) return s.deferrals.length;
+  if (Array.isArray(s.plan?.unassigned)) return s.plan.unassigned.length;
+  return undefined;
+}
+
+export type RePlan = { plan: PublishedPlan | null; down: Vehicle[]; trips: Trip[]; stops: TripStop[] };
+
+/** A re-plan for the dock: the plan (by id, else the depot's latest published), vehicles in the workshop, the plan's trips and stops. */
+export async function rePlan(c: Pick<ODataClient, 'list' | 'all' | 'get'>, depot: string, planId?: string): Promise<RePlan> {
+  const plan = planId ? await c.get<PublishedPlan>('Plans', planId).catch(() => null) : await latestPlan(c, depot);
+  const [down, trips] = await Promise.all([
+    c.all<Vehicle>('Vehicles', { filter: `depot eq ${lit(depot)} and status eq 'WORKSHOP'` }),
+    plan ? c.all<Trip>('Trips', { filter: `planId eq ${lit(plan.id)}`, orderby: 'bay,departTime', expand: 'vehicle($select=id,type,tempClass)' }) : Promise.resolve([] as Trip[]),
+  ]);
+  const stops = trips.length
+    ? await c.all<TripStop>('TripStops', { filter: inList('tripId', trips.map(t => t.id)), expand: 'order($select=id,m3)', orderby: 'tripId,stopSeq' })
+    : [];
+  return { plan, down, trips, stops };
+}
+
+export function useRePlan(depot: string | undefined, planId: string | undefined) {
+  return useQuery(depot ? `dock.replan.${depot}.${planId ?? 'latest'}` : null, c => rePlan(c, depot!, planId), { persist: true });
+}
+
+/** "PLG-2026-04-07-v3" → 3 */
+export const planVersionOf = (planId?: string) => {
+  const m = /-v(\d+)$/.exec(planId ?? '');
+  return m ? Number(m[1]) : undefined;
+};
+
+/** A plan_published notice that replaces an earlier plan (a first plan of the day is not a re-plan). */
+export function isRePlanNotice(n: Notice, depot: string | undefined): boolean {
+  if (n.event !== 'plan_published' || !depot || n.payload.depot !== depot || typeof n.payload.planId !== 'string') return false;
+  if (typeof n.payload.supersededTrips === 'number') return n.payload.supersededTrips > 0 || (planVersionOf(n.payload.planId) ?? 1) > 1;
+  return (planVersionOf(n.payload.planId) ?? 1) > 1;
+}
+
+/**
+ * When dispatch publishes a re-plan for `depot` after the screen mounted: opens LD-14 (re-plan received), or what
+ * `open` says (the load sheet opens "plan changed" for the trip being loaded).
+ */
+export function useRePlanAlert(depot: string | undefined, open?: (planId: string) => void) {
+  const list = useStore(notices);
+  // notices already here when the screen opened are not news
+  const [seen] = useState(() => new Set(notices.get().map(n => n.id)));
+  const go = useEffectEvent((planId: string) => (open ? open(planId) : openScreen('ld-14-re-plan-received', { plan: planId })));
+  useEffect(() => {
+    const fresh = list.filter(n => !seen.has(n.id));
+    for (const n of fresh) seen.add(n.id);
+    const hit = fresh.find(n => isRePlanNotice(n, depot));
+    if (hit) go(String(hit.payload.planId));
+  }, [list, depot, seen]);
+}
+
+/** A re-plan dispatch is working on for the trip's depot and day (a newer draft plan): the load sheet locks (LD-18). */
+export async function openRePlan(c: Pick<ODataClient, 'list'>, trip: Pick<Trip, 'depot' | 'runDate' | 'planVersion'>): Promise<Plan | null> {
+  const r = await c.list<Plan>('Plans', {
+    filter: `depot eq ${lit(trip.depot)} and ${dayFilter('runDate', isoDay(trip.runDate))} and (status eq 'DRAFT' or status eq 'NEEDS_APPROVAL') and version gt ${trip.planVersion}`,
+    orderby: 'createdAt desc',
+    top: 1,
+  });
+  return r.value[0] ?? null;
+}
+
+export function useOpenRePlan(trip: Pick<Trip, 'id' | 'depot' | 'runDate' | 'planVersion' | 'status'> | null | undefined) {
+  const active = !!trip && (trip.status === 'LOADING' || trip.status === 'ENROUTE');
+  return useQuery(active ? `dock.locked.${trip!.id}.${trip!.planVersion}` : null, c => openRePlan(c, trip!));
+}
+
+export type PlanChange = {
+  plan: PublishedPlan | null;
+  before: Trip | null;
+  after: Trip | null;
+  /** Lines whose stop changed between the two versions (or that came on / went off this vehicle). */
+  moved: { line: OrderLineItem; from: number | null; to: number | null; outletId: string }[];
+  lines: number;
+};
+
+/** What changed for the vehicle of `tripId` in plan `planId`: its trip in the new plan and the order lines that moved. */
+export async function planChange(c: Pick<ODataClient, 'list' | 'all' | 'get'>, tripId: string, planId?: string): Promise<PlanChange> {
+  const before = await c.get<Trip>('Trips', tripId).catch(() => null);
+  const plan = planId ? await c.get<PublishedPlan>('Plans', planId).catch(() => null) : null;
+  const after = plan && before
+    ? ((await c.all<Trip>('Trips', { filter: `planId eq ${lit(plan.id)} and vehicleId eq ${lit(before.vehicleId)}`, orderby: 'tripNumber', top: 1 }))[0] ?? before)
+    : before;
+  const ids = [...new Set([before?.id, after?.id].filter((x): x is string => !!x))];
+  const stops = ids.length ? await c.all<TripStop>('TripStops', { filter: inList('tripId', ids), select: ['id', 'tripId', 'orderId', 'outletId', 'stopSeq'] }) : [];
+  const orderIds = [...new Set(stops.map(st => st.orderId))];
+  const lines = orderIds.length ? await c.all<OrderLineItem>('OrderLineItems', { filter: inList('orderId', orderIds), orderby: 'orderId,name' }) : [];
+  const seqOf = (trip: string | undefined, orderId: string) => stops.find(st => st.tripId === trip && st.orderId === orderId)?.stopSeq ?? null;
+  const moved: PlanChange['moved'] = [];
+  if (before && after && before.id !== after.id) {
+    for (const l of lines) {
+      const from = seqOf(before.id, l.orderId);
+      const to = seqOf(after.id, l.orderId);
+      if (from !== to) moved.push({ line: l, from, to, outletId: stops.find(st => st.orderId === l.orderId)?.outletId ?? '' });
+    }
+  }
+  const afterOrders = new Set(stops.filter(st => st.tripId === after?.id).map(st => st.orderId));
+  return { plan, before, after, moved, lines: lines.filter(l => afterOrders.has(l.orderId)).length };
+}
+
+export function usePlanChange(tripId: string | undefined, planId: string | undefined) {
+  return useQuery(tripId ? `dock.change.${tripId}.${planId ?? ''}` : null, c => planChange(c, tripId!, planId), { persist: true });
+}
+
+// ---------------------------------------------------------------- vehicle can't depart (LD-B1)
+
+export type VehicleFault = 'NOT_COOLING' | 'ENGINE' | 'DOOR_SEAL' | 'OTHER';
+
+/** POST Trips('…')/Lodestar.ReportVehicleFault: the vehicle goes to the workshop and the depot's dispatchers are told. Needs signal. */
+export async function reportVehicleFault(c: Pick<ODataClient, 'action'>, tripId: string, fault: VehicleFault, reeferTempC?: number, note?: string) {
+  return c.action(`Trips${key(tripId)}/Lodestar.ReportVehicleFault`, { fault, ...(reeferTempC !== undefined ? { reeferTempC } : {}), ...(note ? { note } : {}) });
+}
+
+
+/** What a vehicle still has on the dock today: its trips not yet released, with stops (outlet, order volume). */
+export async function vehicleDockLoad(c: Pick<ODataClient, 'all'>, tripIds: string[]): Promise<TripStop[]> {
+  if (!tripIds.length) return [];
+  return c.all<TripStop>('TripStops', { filter: inList('tripId', tripIds), expand: 'outlet($select=id,name,district),order($select=id,m3,tempClass)', orderby: 'tripId,stopSeq' });
+}
+
+export function useVehicleDockLoad(tripIds: string[]) {
+  const ids = [...tripIds].sort().join(',');
+  return useQuery(ids ? `dock.vehicle.${ids}` : null, c => vehicleDockLoad(c, ids.split(',')), { persist: true });
 }

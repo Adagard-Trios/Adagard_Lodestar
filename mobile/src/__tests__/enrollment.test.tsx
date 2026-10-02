@@ -298,7 +298,9 @@ describe('SM-32 access request (live)', () => {
   const manager = (device_id?: string) => ({ sub: 'u-sm32', name: 'Test Manager', realm_access: { roles: ['store_manager'] }, depot: ['KANDY'], outlet_id: 'OUT-T1', ...(device_id ? { device_id } : {}) });
   let enrollment: DeviceEnrollment;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // first-run screens already seen on this device: sign-in goes straight to the role's home
+    await require('@/lib/settings').markOnboardingSeen('u-sm32');
     enrollment = require('@/auth/device-access').enrollment;
     enrollment.reset();
     routes.clear();

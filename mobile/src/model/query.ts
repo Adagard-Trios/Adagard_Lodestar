@@ -99,3 +99,17 @@ export function peek<T>(queryKey: string): T | undefined {
   const sub = session.claims?.sub;
   return sub ? (entries.get(`${sub}.${queryKey}`)?.get().data as T | undefined) : undefined;
 }
+
+/**
+ * Loads one query into the device cache without a screen showing it (DR-13 saves the whole run for offline):
+ * the same key a screen's useQuery uses, persisted. Resolves to the cached answer (undefined on failure).
+ */
+export async function prefetch<T>(queryKey: string, fetcher: Fetcher<T>): Promise<T | undefined> {
+  const s = session.state.get();
+  const sub = s.claims?.sub;
+  if (!sub || s.status !== 'signed-in') return undefined;
+  const k = `${sub}.${queryKey}`;
+  await load(k, fetcher, true, network.get().online);
+  const st = entry<T>(k).get();
+  return st.error && st.fromCache ? undefined : st.data;
+}

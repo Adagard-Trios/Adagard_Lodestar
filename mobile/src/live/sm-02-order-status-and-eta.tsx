@@ -1,12 +1,14 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // SM-02 Order status & ETA · phone (P1, phone)
-import { Fragment } from 'react';
+import { Fragment, useEffect } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { dayLabel, hm, isoDay } from '@/lib/time';
 import { plural, titleCase } from '@/lodestar/live';
 import { today, useClaims, useOrder } from '@/model/hooks';
-import { STEPS, timeline } from '@/model/store-face';
-import { Frame, Icon, Scroll, Tap, type ScreenNav } from '@/lodestar/runtime';
+import { useStore } from '@/lib/store';
+import { STEPS, signalByTrip, signalLostFor, timeline } from '@/model/store-face';
+import { notices } from '@/realtime/notices';
+import { Frame, Icon, Scroll, Tap, openScreen, type ScreenNav } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L16":{"to":"sm-03-confirm-receipt-count","kind":"go"},"L52":{"to":"sm-16-why-this-window-sheet","kind":"go"},"L53":{"to":"sm-15-order-detail","kind":"go"},"N0":{"to":"sm-11-today-order-day","kind":"nav"},"N1":{"to":"sm-12-orders","kind":"nav"},"N2":{"to":"sm-19-receipts-and-credit-notes","kind":"nav"},"N3":{"to":"sm-21-messages","kind":"nav"}}};
 
@@ -24,6 +26,15 @@ export default function ScreenSm02OrderStatusAndEta() {
   const late = (st?.lateRiskPct ?? 0) >= 50;
   const band = st?.etaModelBandEarly && st.etaModelBandLate ? `${hm(st.etaModelBandEarly)}–${hm(st.etaModelBandLate)}` : '';
   const { reached, times } = timeline(order);
+  // dead zone (P5): while the van of an undelivered order has no signal, the status shows as SM-A1 "in progress, low signal"
+  const live = useStore(notices);
+  const lost = order && order.status !== 'DELIVERED' ? signalLostFor(signalByTrip(live), st?.tripId) : null;
+  const lostAt = lost?.at;
+  const orderId = order?.id;
+  const tripId = st?.tripId;
+  useEffect(() => {
+    if (lostAt && orderId) openScreen('sm-a1-store-in-progress-low-signal', { order: orderId, ...(tripId ? { trip: tripId } : {}) }, 'nav');
+  }, [lostAt, orderId, tripId]);
   const delivered = order?.status === 'DELIVERED';
   const heading = !order ? (!claims ? 'Sign in to see your delivery' : q.loading || q.day.loading ? 'Loading…' : 'No order yet') : st?.arrivalActual ? `Arrived ${hm(st.arrivalActual)} · you're stop ${st.stopSeq}` : st ? `Arriving · you're stop ${st.stopSeq}` : `${titleCase(order.status)} · not on a trip yet`;
   const etaLine = st?.etaModel ? `ETA ~${hm(st.etaModel)}` : 'ETA —';

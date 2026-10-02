@@ -9,6 +9,7 @@ import { hm } from '@/lib/time';
 import { plural } from '@/lodestar/live';
 import * as api from '@/model/api';
 import { useClaims, useOrder } from '@/model/hooks';
+import { depotName } from '@/model/plan';
 import { useQuery } from '@/model/query';
 import { ISSUE_LABEL, receiptIssues, saveIssue, type IssueKind } from '@/model/store-face';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
@@ -26,6 +27,8 @@ export default function ScreenSm18ReportIssue() {
   const claims = useClaims();
   const q = useOrder();
   const order = q.data ?? q.day.data?.orders.find(o => o.id === q.id) ?? null;
+  const depot = order?.outlet?.depot ?? q.day.data?.outlet?.depot;
+  const hub = depot ? depotName(depot) : '';
   const lines = useQuery(order ? `lines.${order.id}` : null, c => api.orderLines(c, [order!.id]), { persist: true });
   const saved = order ? receiptIssues.get()[order.id] : undefined;
   const [kind, setKind] = useState<IssueKind>(saved?.kind ?? 'DAMAGED');
@@ -126,11 +129,11 @@ export default function ScreenSm18ReportIssue() {
               maxLength={300}
               placeholder="What happened? e.g. tray torn, leaking at one corner"
               placeholderTextColor="#98A1B3"
-              accessibilityLabel="Note for Kandy Hub"
+              accessibilityLabel={hub ? `Note for ${hub}` : 'Note for the depot'}
               testID="issue-note"
             />
             <View>
-              <Text style={s.t40}>{"Note for Kandy Hub · optional"}</Text>
+              <Text style={s.t40}>{`Note for ${hub || 'the depot'} · optional`}</Text>
             </View>
           </View>
         </Scroll>

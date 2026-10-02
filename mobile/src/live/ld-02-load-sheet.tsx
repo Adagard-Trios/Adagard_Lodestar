@@ -1,12 +1,12 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // LD-02 Load sheet · Phone (P3, phone)
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { hm } from '@/lib/time';
 import { useClaims, useLoadSheet } from '@/model/hooks';
-import { loadGroups, ordinal, reeferOf, shortfallFor, tempLabel, useTicks, type LoadGroup } from '@/model/dock';
+import { loadGroups, ordinal, reeferOf, shortfallFor, tempLabel, useOpenRePlan, useRePlanAlert, useTicks, type LoadGroup } from '@/model/dock';
 import type { OrderLineItem } from '@/model/types';
-import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { Frame, Grad, Icon, Scroll, Tap, openScreen, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L7":{"to":"ld-03-flag-shortfall","kind":"go"},"L64":{"to":"ld-03-flag-shortfall","kind":"go"},"L195":{"to":"ld-30-load-sheet-speaking","kind":"go"},"L196":{"to":"ld-28-voice-and-language","kind":"go"},"B":{"to":"ld-01-dock-queue","kind":"back"}}};
 
@@ -18,6 +18,13 @@ export default function ScreenLd02LoadSheet() {
   const data = sheet.data;
   const trip = data?.trip;
   const t = useTicks(sheet.tripId);
+  // dispatch re-plans while this trip is loading: locked while the draft is open (LD-18), then what changed (LD-12)
+  useRePlanAlert(trip?.depot, planId => trip && openScreen('ld-12-plan-changed', { trip: trip.id, plan: planId }));
+  const lockedBy = useOpenRePlan(trip).data?.id;
+  const tripId = trip?.id;
+  useEffect(() => {
+    if (lockedBy && tripId) openScreen('ld-18-plan-locked', { trip: tripId }, 'nav');
+  }, [lockedBy, tripId]);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const flagged = (l: OrderLineItem) => shortfallFor(sheet.shortfalls, l);
   const accounted = (l: OrderLineItem) => t.isTicked(l.id) || !!flagged(l);

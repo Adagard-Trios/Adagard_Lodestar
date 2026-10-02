@@ -2,12 +2,13 @@
 // built from Notifications, Plans, the day's trips and the live socket notices.
 import { useMemo } from 'react';
 import { useStore } from '@/lib/store';
-import { dayLabel, hm } from '@/lib/time';
+import { inList } from '@/lib/odata';
+import { addDays, dayFilter, dayLabel, hm } from '@/lib/time';
 import { titleCase } from '@/lodestar/live';
 import { notices, type Notice } from '@/realtime/notices';
 import { useClaims, useLiveRoutes, useNotifications, useParam, usePlans } from './hooks';
 import { useQuery } from './query';
-import type { Notification, Plan, Trip, TripStop } from './types';
+import type { Deferral, Notification, Order, Outlet, Plan, Trip, TripStop } from './types';
 
 /** Late risk at or above this needs the dispatcher. */
 export const LATE_RISK = 50;
@@ -310,4 +311,94 @@ export function tripProgress(t: Trip) {
   const risk = Math.max(0, ...stops.filter(s => s.status !== 'DELIVERED').map(s => s.lateRiskPct ?? 0));
   const exception = stops.some(s => s.status === 'EXCEPTION');
   return { stops, done, next, risk, exception };
+}
+
+// ---------------------------------------------------------------- DSP-32 plans (read-only on phone)
+
+/** Depot names as the design writes them. */
+export const DEPOT_NAME: Record<string, string> = { PELIYAGODA: 'Peliyagoda DC', KANDY: 'Kandy Hub' };
+export const depotName = (d: string) => DEPOT_NAME[d] ?? titleCase(d);
+
+/** CAP_REEFER → CAP-REEFER (the reason code as the design prints it). */
+export const reasonCode = (r: string) => r.replace(/_/g, '-');
+
+/** The 4:00 PM (Colombo) order cut-off for a run date: 16:00 on the day before. */
+export function orderCutoff(runDate: string): number {
+  return Date.parse(`${addDays(runDate, -1)}T16:00:00+05:30`);
+}
+
+export type RunningPlan = {
+  depot: string;
+  /** The plan in effect (newest approved / published version), if any. */
+  plan: Plan | null;
+  /** The first approved version of the day when a later one replaced it (a re-plan). */
+  base: Plan | null;
+  orders: number;
+  vehicles: number;
+  delivered: number;
+};
+
+export type MovedOrder = Deferral & { order?: Order; outlet?: Outlet };
+
+/** Per depot: the plan in effect for the run day and how far its trips are. */
+export function runningPlans(depots: string[], plans: Plan[], trips: Trip[]): RunningPlan[] {
+  return depots.map(depot => {
+    const approved = plans
+      .filter(p => p.depot === depot && (p.status === 'APPROVED' || p.status === 'PUBLISHED' || (p.status === 'SUPERSEDED' && !!p.approvedAt)))
+      .sort((a, b) => a.version - b.version);
+    const live = approved.filter(p => p.status === 'APPROVED' || p.status === 'PUBLISHED');
+    const plan = live.at(-1) ?? null;
+    const first = approved[0] ?? null;
+    const base = plan && first && first.version < plan.version ? first : null;
+    const mine = trips.filter(t => t.depot === depot);
+    const stops = mine.flatMap(t => t.stops ?? []);
+    return {
+      depot,
+      plan,
+      base,
+      orders: stops.length,
+      vehicles: new Set(mine.map(t => t.vehicleId)).size,
+      delivered: stops.filter(s => s.status === 'DELIVERED').length,
+    };
+  });
+}
+
+/** Orders for a run date per depot (cancelled ones left out). */
+export function queueByDepot(depots: string[], orders: Pick<Order, 'status' | 'outlet'>[]): { depot: string; orders: number }[] {
+  return depots.map(depot => ({ depot, orders: orders.filter(o => o.status !== 'CANCELLED' && o.outlet?.depot === depot).length }));
+}
+
+/** Everything for DSP-32: the plans in effect on the run day, what moved off it, and the queue for the next run. */
+export function usePlansBoard() {
+  const claims = useClaims();
+  const routes = useLiveRoutes();
+  const date = routes.data?.date;
+  const next = date ? addDays(date, 1) : undefined;
+  const signedIn = !!claims;
+  const plans = useQuery<Plan[]>(signedIn && date ? `plans.running.${date}` : null, c =>
+    c.all<Plan>('Plans', { filter: `${dayFilter('runDate', date!)} and (status eq 'APPROVED' or status eq 'PUBLISHED' or status eq 'SUPERSEDED')`, orderby: 'depot,version' }), { persist: true });
+  const moved = useQuery<MovedOrder[]>(signedIn && date ? `deferrals.moved.${date}` : null, async c => {
+    const rows = await c.all<MovedOrder>('Deferrals', { filter: `${dayFilter('order/runDate', date!)} and (status eq 'CONFIRMED' or status eq 'SUGGESTED')`, expand: 'order', orderby: 'score' });
+    const ids = [...new Set(rows.map(r => r.order?.outletId).filter((x): x is string => !!x))];
+    const outlets = ids.length ? await c.all<Outlet>('Outlets', { filter: inList('id', ids), select: ['id', 'name', 'depot'] }) : [];
+    const byId = new Map(outlets.map(o => [o.id, o]));
+    return rows.map(r => ({ ...r, outlet: byId.get(r.order?.outletId ?? '') }));
+  }, { persist: true });
+  const queue = useQuery<Order[]>(signedIn && next ? `orders.queue.${next}` : null, c =>
+    c.all<Order>('Orders', { filter: dayFilter('runDate', next!), select: ['id', 'outletId', 'status'], expand: 'outlet($select=id,depot)' }), { persist: true });
+
+  const depots = useMemo(() => claims?.depots ?? [], [claims?.depots]);
+  const running = useMemo(() => runningPlans(depots, plans.data ?? [], routes.data?.trips ?? []), [depots, plans.data, routes.data]);
+  const nextQueue = useMemo(() => (queue.data ? queueByDepot(depots, queue.data) : null), [depots, queue.data]);
+  return {
+    signedIn,
+    date,
+    next,
+    running,
+    moved: moved.data ?? [],
+    queue: nextQueue,
+    loading: routes.loading || plans.loading,
+    error: routes.error ?? plans.error,
+    hasData: routes.data !== undefined,
+  };
 }

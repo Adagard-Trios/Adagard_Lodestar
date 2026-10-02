@@ -190,7 +190,7 @@ export default function ScreenLd15HandoverConfirmed() {
           </View>
         </Scroll>
         <View style={s.v42}>
-          <Tap lk="L207" style={s.v41} to={moreTrips ? { to: "ld-01-dock-queue", kind: "nav" } : undefined}>
+          <Tap lk="L207" style={s.v41} to={moreTrips ? { to: "ld-01-dock-queue", kind: "nav" } : { to: "ld-19-empty-queue", kind: "nav" }}>
             <Grad g={G0} style={s.v39} />
             <Icon xml={X5} width={22} height={22} style={s.v8} />
             <Text style={s.t40}>{"Back to the dock"}</Text>

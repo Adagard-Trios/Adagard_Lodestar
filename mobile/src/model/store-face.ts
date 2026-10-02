@@ -10,7 +10,7 @@ import type { NewOrderLine } from './api';
 import { today, useClaims, useOutbox, useStoreDay } from './hooks';
 import { session } from './platform';
 import { useQuery } from './query';
-import type { Order, OrderLineItem, POD, TempClass } from './types';
+import type { Notification, Order, OrderLineItem, POD, TempClass, Trip } from './types';
 
 // ---------------------------------------------------------------- clock
 
@@ -299,4 +299,95 @@ export function issueText(i: ReceiptIssue): string {
 export function receiptNoteFor(units: number, counted: number, issue?: ReceiptIssue): string | undefined {
   const parts = [counted < units ? `${units - counted} short at receipt` : '', issue ? issueText(issue) : ''].filter(Boolean);
   return parts.join(' · ') || undefined;
+}
+
+// ---------------------------------------------------------------- degradation (P5: SM-A1 dead zone, SM-B1 reefer down)
+
+type NoticeLike = { id: string; type: string; at: string; payload: Record<string, unknown> | null };
+type PlanOrder = { orderId?: string; tripId?: string; etaModel?: string };
+
+const planOrders = (p: Record<string, unknown> | null): PlanOrder[] => (Array.isArray(p?.orders) ? (p!.orders as PlanOrder[]) : []);
+
+/**
+ * PLAN_PUBLISHED notices that move an order which an earlier plan notice had already placed on another trip
+ * (or at another time): a re-plan, e.g. after a vehicle fault at the depot (SM-B1).
+ */
+export function rePlanNoticeIds(list: NoticeLike[]): Set<string> {
+  const plans = list.filter(m => m.type === 'PLAN_PUBLISHED').sort((a, b) => a.at.localeCompare(b.at));
+  const seen = new Map<string, PlanOrder>();
+  const out = new Set<string>();
+  for (const m of plans) {
+    for (const o of planOrders(m.payload)) {
+      if (!o.orderId) continue;
+      const before = seen.get(o.orderId);
+      if (before && (before.tripId !== o.tripId || before.etaModel !== o.etaModel)) out.add(m.id);
+      seen.set(o.orderId, o);
+    }
+  }
+  return out;
+}
+
+export type RePlan = { noticeId: string; at: string; orderId: string; tripId?: string; etaModel?: string; previous?: PlanOrder; reason?: string };
+
+/** The re-plan of `orderId` (or the newest re-plan) from the store's plan notices; the previous placement when known. */
+export function rePlanFor(list: NoticeLike[], orderId?: string, noticeId?: string): RePlan | null {
+  const ids = rePlanNoticeIds(list);
+  const plans = list.filter(m => m.type === 'PLAN_PUBLISHED').sort((a, b) => a.at.localeCompare(b.at));
+  const hit = [...plans].reverse().find(m => ids.has(m.id) && (!noticeId || m.id === noticeId) && (!orderId || planOrders(m.payload).some(o => o.orderId === orderId)));
+  if (!hit) return null;
+  const o = planOrders(hit.payload).find(x => !orderId || x.orderId === orderId);
+  if (!o?.orderId) return null;
+  const earlier = plans.slice(0, plans.indexOf(hit));
+  const previous = earlier.flatMap(m => planOrders(m.payload)).filter(x => x.orderId === o.orderId).at(-1);
+  const reason = typeof hit.payload?.reason === 'string' ? (hit.payload.reason as string) : undefined;
+  return { noticeId: hit.id, at: hit.at, orderId: o.orderId, tripId: o.tripId, etaModel: o.etaModel, previous, reason };
+}
+
+export type SignalState = { lost: boolean; at: string; tripId?: string; vehicleId?: string; location?: string };
+
+/**
+ * The van's signal for the store's trips, from the live signal_lost / signal_back notices (the server sends
+ * them only to stores still waiting on that trip). Keyed by trip id ('' when the notice names no trip).
+ */
+export function signalByTrip(list: { event: string; at: string; payload: Record<string, unknown> }[]): Map<string, SignalState> {
+  const out = new Map<string, SignalState>();
+  const events = list.filter(n => n.event === 'signal_lost' || n.event === 'signal_back').sort((a, b) => a.at.localeCompare(b.at));
+  for (const n of events) {
+    const p = n.payload ?? {};
+    const tripId = typeof p.tripId === 'string' ? p.tripId : '';
+    const location = [p.location, p.lastLocation, p.note].find((x): x is string => typeof x === 'string' && !!x);
+    out.set(tripId, { lost: n.event === 'signal_lost', at: n.at, tripId: tripId || undefined, vehicleId: typeof p.vehicleId === 'string' ? p.vehicleId : undefined, location });
+  }
+  return out;
+}
+
+/** Whether the order's van is in a low-signal area now (its trip's latest notice is a loss). */
+export function signalLostFor(map: Map<string, SignalState>, tripId?: string | null): SignalState | null {
+  const s = (tripId ? map.get(tripId) : undefined) ?? map.get('');
+  return s?.lost ? s : null;
+}
+
+// ---------------------------------------------------------------- order detail (SM-15)
+
+/** The trip an order travels on (vehicle, bay, seal, reefer at release); store managers read their outlet's trips. */
+export function useTrip(tripId?: string | null) {
+  return useQuery<Trip>(tripId ? `trip.${tripId}` : null, c => c.get<Trip>('Trips', tripId!, { select: ['id', 'vehicleId', 'tripNumber', 'bay', 'depot', 'district', 'status', 'departTime', 'sealNumber', 'reeferTempC', 'runDate'] }), { persist: true });
+}
+
+export type StoreShortfall = { id: string; at: string; item: string; qtyOrdered?: number; qtyLoaded?: number; short?: number; reason?: string };
+
+/** Shortfalls flagged at loading for an order (SHORTFALL_FLAGGED notices to the store). */
+export function shortfallsFor(notes: Notification[] | undefined, orderId?: string): StoreShortfall[] {
+  if (!orderId) return [];
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
+  const seen = new Map<string, StoreShortfall>();
+  for (const n of [...(notes ?? [])].sort((a, b) => a.sentAt.localeCompare(b.sentAt))) {
+    const p = (n.payload ?? {}) as Record<string, unknown>;
+    if (n.type !== 'SHORTFALL_FLAGGED' || p.orderId !== orderId || typeof p.item !== 'string') continue;
+    const qtyOrdered = num(p.qtyOrdered);
+    const qtyLoaded = num(p.qtyLoaded);
+    const short = num(p.short) ?? (qtyOrdered !== undefined && qtyLoaded !== undefined ? qtyOrdered - qtyLoaded : undefined);
+    seen.set(p.item, { id: n.id, at: n.sentAt, item: p.item, qtyOrdered, qtyLoaded, short, reason: typeof p.reason === 'string' ? p.reason : undefined });
+  }
+  return [...seen.values()];
 }

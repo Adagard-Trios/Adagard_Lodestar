@@ -1,11 +1,13 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // DR-01 Today's run (P4, phone)
+import { useEffect, useState } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { firstName } from '@/auth/claims';
 import { dayLabel, greeting, hm } from '@/lib/time';
 import { plural, titleCase } from '@/lodestar/live';
 import { isUnsent, today, useClaims, useOnline, useOutbox, useRun } from '@/model/hooks';
-import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { movedRun, useReleasedNotice, useRunMarks, useServerEvents } from '@/model/run';
+import { Frame, Grad, Icon, Scroll, Tap, openScreen, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L12":{"to":"dr-36-en-route-driving-mode","kind":"go"},"L41":{"to":"dr-15-route-overview","kind":"go"},"L243":{"to":"dr-24-settings-me","kind":"go"},"N1":{"to":"dr-21-records","kind":"nav"},"N2":{"to":"dr-23-dispatch-notices","kind":"nav"}}};
 
@@ -13,8 +15,24 @@ export default function ScreenDr01TodaySRun() {
   const claims = useClaims();
   const online = useOnline();
   const { view, updatedAt, fromCache, loading, error } = useRun();
-  const { waiting } = useOutbox();
+  const { waiting, items } = useOutbox();
   const trip = view?.trip ?? null;
+  // the dock releases the van while the run is open: the load handover (DR-11)
+  const [since] = useState(() => new Date().toISOString());
+  const tripIds = (view?.trips ?? []).map(t => t.id);
+  const released = useReleasedNotice(tripIds, since);
+  const releasedTrip = String(released?.payload.tripId ?? released?.payload.id ?? '');
+  useEffect(() => {
+    if (releasedTrip) openScreen('dr-11-load-handover-received', { trip: releasedTrip });
+  }, [releasedTrip]);
+  // the server has records of today's run that this phone never saved: the run moved to this phone (DR-32)
+  const marks = useRunMarks(trip?.id);
+  const events = useServerEvents(tripIds);
+  const moved = movedRun(events.data, items, marks.saved).moved;
+  const movedTrip = marks.loaded && moved ? trip?.id : undefined;
+  useEffect(() => {
+    if (movedTrip) openScreen('dr-32-run-moved-to-a-new-phone', { trip: movedTrip }, 'nav');
+  }, [movedTrip]);
   const stops = view?.tripStops ?? [];
   // one stop per outlet visit: a stop can carry several orders (e.g. chilled + dry), stored as rows with the same stopSeq
   const groups = stops.reduce<{ st: (typeof stops)[number]; rows: typeof stops }[]>((acc, st) => {

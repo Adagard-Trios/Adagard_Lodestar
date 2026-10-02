@@ -10,7 +10,9 @@ import { session } from '@/model/platform';
 import type { Claims } from './claims';
 import { enrollment } from './device-access';
 import { discovery } from './oidc';
-import { homeFor } from './roles';
+import { faceOf, homeFor, type Face } from './roles';
+import { onboardingSeen } from '@/lib/settings';
+import { checkVersion, UPDATE_SCREEN, versionState } from '@/lib/version';
 
 const DISCOVERY = discovery();
 
@@ -38,8 +40,26 @@ export async function enterApp(claims: Claims, width: number): Promise<boolean> 
     return false;
   }
   if (!(await enrollment.ensure(claims))) return false;
-  router.replace({ pathname: '/s/[key]', params: { key: home } });
+  router.replace({ pathname: '/s/[key]', params: { key: await firstScreen(claims, home) } });
   return true;
+}
+
+/** First-run screens per face (the dispatcher's phone has none). */
+export const ONBOARDING: Partial<Record<Face, string>> = {
+  store: 'sm-07-onboarding-1',
+  dock: 'ld-07-start-shift',
+  run: 'dr-08-permissions',
+};
+
+/** Update required beats everything; then the first-run screens once per user on this device; else home. */
+async function firstScreen(claims: Claims, home: string): Promise<string> {
+  const face = faceOf(claims);
+  if (!face) return home;
+  const v = await checkVersion().catch(() => versionState.get());
+  if (v.required) return UPDATE_SCREEN[face];
+  const onboarding = ONBOARDING[face];
+  if (onboarding && !(await onboardingSeen(claims.sub))) return onboarding;
+  return home;
 }
 
 export function useSignIn() {

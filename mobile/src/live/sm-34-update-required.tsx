@@ -1,0 +1,124 @@
+// Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
+// SM-34 Update required · phone (P1, phone)
+import { Text, View, StyleSheet } from 'react-native';
+import { applyUpdate, useVersion } from '@/lib/version';
+import { useDraft } from '@/model/store-face';
+import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+
+const nav: ScreenNav = {"links":{"L114":{"to":"sm-04-splash","kind":"go"},"L115":{"to":"sm-11-today-order-day","kind":"go"}}};
+
+export default function ScreenSm34UpdateRequired() {
+  const { current, minimum } = useVersion();
+  const { draft } = useDraft();
+  const update = async () => {
+    if (await applyUpdate()) return true;
+    showToast(`This build (${current}) is still below ${minimum ?? 'the minimum'}. Install the new version to carry on.`, 'error');
+    return false;
+  };
+  return (
+    <Frame bg="#f4f5f9" nav={nav} style={s.v0}>
+      <View style={s.v31}>
+        <View style={s.v7}>
+          <View style={s.v2}>
+            <Icon xml={X0} width={36} height={36} style={s.v1} />
+          </View>
+          <View style={s.v5}>
+            <View>
+              <Text style={s.t3}>{"Lodestar Store"}</Text>
+            </View>
+            <View>
+              <Text style={s.t4} numberOfLines={1}>{`Version ${current}`}</Text>
+            </View>
+          </View>
+          <View style={s.v6} />
+        </View>
+        <Scroll style={s.v23} contentStyle={s.v24}>
+          <View style={s.v12}>
+            <Icon xml={X1} width={160} height={112} style={s.v8} />
+            <View>
+              <Text style={s.t9}>{"Update to keep ordering"}</Text>
+            </View>
+            <View>
+              <Text style={s.t11}>{`Version ${minimum ?? '—'} is needed. `}<Text style={s.t10}>{"This phone has:"}</Text>{` ${current}.`}</Text>
+            </View>
+          </View>
+          <View style={s.v19}>
+            <View style={s.v16}>
+              <View style={s.v14}>
+                <Text style={s.t13}>{"New version"}</Text>
+              </View>
+              <View style={s.v14}>
+                <Text style={s.t15}>{minimum ?? '—'}</Text>
+              </View>
+            </View>
+            <View style={s.v18}>
+              <View style={s.v14}>
+                <Text style={s.t13}>{"Your draft order"}</Text>
+              </View>
+              <View style={s.v14}>
+                <Text style={s.t17}>{draft ? 'Kept on this phone' : 'None saved'}</Text>
+              </View>
+            </View>
+          </View>
+          <View style={s.v22}>
+            <Icon xml={X2} width={14} height={14} style={s.v20} />
+            <View style={s.v14}>
+              <Text style={s.t21}>{"Mid-order? You can send today's order first; orders close at "}<Text style={s.t10}>{"4:00 PM"}</Text>{". The app asks again the next time you sign in."}</Text>
+            </View>
+          </View>
+        </Scroll>
+        <View style={s.v30}>
+          <Tap lk="L114" style={s.v27} onPress={update}>
+            <Grad g={G0} style={s.v25} />
+            <Icon xml={X3} width={22} height={22} style={s.v1} />
+            <Text style={s.t26}>{"Update now"}</Text>
+          </Tap>
+          <Tap lk="L115" style={s.v29}>
+            <Text style={s.t28}>{"Remind me after today's order"}</Text>
+          </Tap>
+        </View>
+      </View>
+    </Frame>
+  );
+}
+
+const X0 = "<svg viewBox=\"0 0 32 32\" width=\"36\" height=\"36\" fill=\"#000000\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"32\" height=\"32\" rx=\"8\" fill=\"#047857\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect><g transform=\"translate(7.36 7.36) scale(0.72)\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"><path d=\"M3 9l1.5-5h15L21 9\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M5 13v8h14v-8M10 21v-5h4v5\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></g></svg>";
+const X1 = "<svg viewBox=\"0 0 160 112\" fill=\"#000000\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"160\" height=\"112\" xmlns=\"http://www.w3.org/2000/svg\"> <rect x=\"50\" y=\"4\" width=\"60\" height=\"104\" rx=\"14\" fill=\"#eef0ff\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect> <rect x=\"58\" y=\"16\" width=\"44\" height=\"80\" rx=\"8\" fill=\"#ffffff\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect> <circle cx=\"80\" cy=\"50\" r=\"18\" fill=\"#3b4cca\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></circle> <path d=\"M80 40v18M72 51l8 8 8-8\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"3.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path> <rect x=\"66\" y=\"80\" width=\"28\" height=\"6\" rx=\"3\" fill=\"#d5daf2\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect> <rect x=\"66\" y=\"80\" width=\"17\" height=\"6\" rx=\"3\" fill=\"#f5b83d\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect> <path d=\"M132 22 L134 28.5 L140.5 30.5 L134 32.5 L132 39 L130 32.5 L123.5 30.5 L130 28.5 Z\" fill=\"#f5b83d\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path> <circle cx=\"28\" cy=\"72\" r=\"4\" fill=\"#3b4cca\" fill-opacity=\"0.35\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></circle> </svg>";
+const X2 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"14\" height=\"14\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"12\" cy=\"12\" r=\"10\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></circle><path d=\"M12 6v6l4 2\" fill=\"none\" stroke=\"#636c80\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X3 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M7 10l5 5 5-5M12 15V3\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const G0: GradSpec[] = [{"type":"linear","angle":135,"at":null,"repeat":false,"stops":[{"c":"#4f5fe0","p":0},{"c":"#3b4cca","p":0.55},{"c":"#2f3cb0","p":1}]}];
+
+const s = StyleSheet.create({
+  v0: {"flexDirection":"column","alignItems":"stretch","backgroundColor":"#ffffff","flex":1},
+  v1: {"flexShrink":0,"overflow":"hidden"},
+  v2: {"flexDirection":"row","justifyContent":"center","alignItems":"center","flexShrink":0,"width":40,"height":40,"borderRadius":20},
+  t3: {"color":"#101828","fontSize":15,"lineHeight":22.5,"fontFamily":"Inter_700Bold"},
+  t4: {"color":"#636c80","fontSize":13,"lineHeight":19.5,"fontFamily":"Inter_600SemiBold"},
+  v5: {"flexDirection":"column","alignItems":"center","flexGrow":1,"flexShrink":1,"flexBasis":"0%"},
+  v6: {"flexShrink":0,"width":40},
+  v7: {"flexDirection":"row","alignItems":"center","rowGap":10,"columnGap":10,"flexShrink":0,"paddingRight":16,"paddingLeft":16,"height":52},
+  v8: {"flexShrink":1,"overflow":"hidden"},
+  t9: {"color":"#101828","fontSize":26,"lineHeight":29.1,"letterSpacing":-0.6,"textAlign":"center","fontFamily":"PlusJakartaSans_800ExtraBold"},
+  t10: {"color":"#101828","fontFamily":"Inter_700Bold"},
+  t11: {"color":"#475467","fontSize":15,"lineHeight":22.5,"textAlign":"center","fontFamily":"Inter_400Regular"},
+  v12: {"flexDirection":"column","alignItems":"center","rowGap":12,"columnGap":12,"flexShrink":0,"paddingTop":20,"paddingRight":20,"marginRight":16,"paddingBottom":20,"paddingLeft":20,"marginLeft":16,"backgroundColor":"#ffffff","borderRadius":24,"boxShadow":"rgba(15, 20, 50, 0.04) 0px 1px 2px 0px, rgba(15, 20, 50, 0.06) 0px 8px 24px 0px"},
+  t13: {"color":"#475467","fontSize":15,"lineHeight":22.5,"fontFamily":"Inter_400Regular"},
+  v14: {"flexShrink":1},
+  t15: {"color":"#101828","fontSize":15,"lineHeight":22.5,"fontVariant":["tabular-nums"],"fontFamily":"Inter_700Bold"},
+  v16: {"flexDirection":"row","justifyContent":"space-between","alignItems":"center","rowGap":12,"columnGap":12,"paddingTop":10,"paddingRight":16,"paddingBottom":10,"paddingLeft":16,"minHeight":48},
+  t17: {"color":"#047857","fontSize":15,"lineHeight":22.5,"fontVariant":["tabular-nums"],"fontFamily":"Inter_700Bold"},
+  v18: {"flexDirection":"row","justifyContent":"space-between","alignItems":"center","rowGap":12,"columnGap":12,"paddingTop":10,"paddingRight":16,"paddingBottom":10,"paddingLeft":16,"minHeight":48,"borderTopWidth":1,"borderTopColor":"#eceef3"},
+  v19: {"flexDirection":"column","alignItems":"stretch","flexShrink":0,"marginRight":16,"marginLeft":16,"backgroundColor":"#ffffff","borderRadius":20,"boxShadow":"rgba(15, 20, 50, 0.04) 0px 1px 2px 0px","overflow":"hidden"},
+  v20: {"flexShrink":0,"marginTop":1,"overflow":"hidden"},
+  t21: {"color":"#636c80","fontSize":13,"lineHeight":18.9,"fontFamily":"Inter_400Regular"},
+  v22: {"flexDirection":"row","alignItems":"flex-start","rowGap":8,"columnGap":8,"flexShrink":0,"paddingRight":20,"paddingLeft":20},
+  v23: {"flexGrow":1,"flexShrink":1,"flexBasis":"0%"},
+  v24: {"flexDirection":"column","alignItems":"stretch","rowGap":16,"columnGap":16,"paddingTop":4,"paddingBottom":16},
+  v25: {"borderRadius":18},
+  t26: {"color":"#ffffff","fontSize":17,"lineHeight":25.5,"letterSpacing":-0.2,"fontFamily":"PlusJakartaSans_800ExtraBold"},
+  v27: {"flexDirection":"row","justifyContent":"center","alignItems":"center","rowGap":10,"columnGap":10,"height":58,"borderRadius":18,"boxShadow":"rgba(59, 76, 202, 0.28) 0px 8px 20px 0px"},
+  t28: {"color":"#475467","fontSize":15,"lineHeight":22.5,"letterSpacing":-0.1,"fontFamily":"Inter_700Bold"},
+  v29: {"flexDirection":"row","justifyContent":"center","alignItems":"center","rowGap":10,"columnGap":10,"height":44,"borderRadius":18},
+  v30: {"flexDirection":"column","alignItems":"stretch","rowGap":8,"columnGap":8,"flexShrink":0,"paddingTop":12,"paddingRight":16,"paddingBottom":6,"paddingLeft":16,"backgroundColor":"#f4f5f9"},
+  v31: {"flexDirection":"column","alignItems":"stretch","flexGrow":1,"flexShrink":1,"flexBasis":"0%","backgroundColor":"#f4f5f9"},
+});

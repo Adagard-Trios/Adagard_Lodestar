@@ -1,0 +1,249 @@
+// Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
+// SM-B1 Store · later arrival notice · phone (P5, phone)
+// Reefer down (P5): a re-plan moved the store's order (a later PLAN_PUBLISHED for an order an earlier plan notice
+// had placed; route params `notice`, `order`). New arrival and vehicle come from the re-plan and the order's trip.
+// The plan notice carries no reason unless dispatch adds one, and there is no dispatch phone number in the store's
+// data: "Call dispatch" is left out.
+import { Text, View, StyleSheet } from 'react-native';
+import { dayLabel, hm, isoDay } from '@/lib/time';
+import { useClaims, useNotifications, useParam, useStoreDay } from '@/model/hooks';
+import { rePlanFor, useTrip } from '@/model/store-face';
+import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+
+const nav: ScreenNav = {"links":{"L49":{"to":"sm-11-today-order-day","kind":"go"}}};
+
+/** HH:MM on a run date (Colombo) as an instant. */
+const at = (date: string, time?: string) => (date && time ? Date.parse(`${date}T${time.padStart(5, '0')}:00+05:30`) : NaN);
+
+export default function ScreenSmB1StoreLaterArrivalNotice() {
+  const claims = useClaims();
+  const notice = useParam('notice');
+  const param = useParam('order');
+  const notes = useNotifications();
+  const day = useStoreDay();
+  const list = (notes.data ?? []).map(n => ({ id: n.id, type: n.type, at: n.sentAt, payload: n.payload }));
+  const re = rePlanFor(list, param, notice);
+  const outlet = day.data?.outlet ?? null;
+  const order = day.data?.orders.find(o => o.id === (re?.orderId ?? param)) ?? null;
+  const trip = useTrip(re?.tripId ?? order?.tripStop?.tripId).data ?? null;
+  const eta = re?.etaModel ?? order?.tripStop?.etaModel ?? undefined;
+  const date = isoDay(order?.runDate);
+  const close = outlet?.windowClose;
+  const closeMs = at(date, close);
+  const spare = eta && Number.isFinite(closeMs) ? Math.round((closeMs - Date.parse(eta)) / 60_000) : null;
+  const later = re?.previous?.etaModel && eta ? Date.parse(eta) > Date.parse(re.previous.etaModel) : true;
+  const others = (day.data?.orders ?? []).filter(o => o.id !== order?.id && isoDay(o.runDate) === date && o.status !== 'CANCELLED');
+  const heading = !claims ? 'Sign in to see your delivery' : !re ? (notes.loading ? 'Loading…' : 'No change to your delivery') : later ? 'Coming later than usual' : 'Your delivery was re-planned';
+  return (
+    <Frame bg="#f4f5f9" nav={nav} style={s.v0}>
+      <View style={s.v55}>
+        <View style={s.v7}>
+          <View style={s.v2}>
+            <Icon xml={X0} width={36} height={36} style={s.v1} />
+          </View>
+          <View style={s.v5}>
+            <Text style={s.t4}>{outlet ? `${outlet.district} · ` : ''}<Text style={s.t3}>{outlet?.id ?? claims?.outletId ?? ''}</Text></Text>
+          </View>
+          <View style={s.v6}>
+            <Icon xml={X1} width={20} height={20} style={s.v1} />
+          </View>
+        </View>
+        <Scroll style={s.v5} contentStyle={s.v48}>
+          <View style={s.v14}>
+            {re ? (
+              <View style={s.v12}>
+                <Text style={s.t8}>{order ? `${order.tempClass === 'CHILLED' ? 'Chilled' : 'Dry'} ·` : ''}</Text>
+                <View style={s.v10}>
+                  <Text style={s.t9}>{re.orderId}</Text>
+                </View>
+                <View style={s.v11} />
+                <Text style={s.t8}>{`re-planned ${hm(re.at)}`}</Text>
+              </View>
+            ) : null}
+            <View>
+              <Text style={s.t13} testID="b1-heading">{heading}</Text>
+            </View>
+          </View>
+          {re ? (
+            <View style={s.v24}>
+              <View style={s.v19}>
+                <View style={s.v16}>
+                  <View>
+                    <Text style={s.t8}>{"New arrival"}</Text>
+                  </View>
+                  <View>
+                    <Text style={s.t15} testID="new-arrival">{eta ? `~${hm(eta)}` : '—'}</Text>
+                  </View>
+                </View>
+                {close ? (
+                  <View style={s.v18}>
+                    <View>
+                      <Text style={s.t8} numberOfLines={1}>{"Window closes"}</Text>
+                    </View>
+                    <View>
+                      <Text style={s.t17}>{close}</Text>
+                    </View>
+                  </View>
+                ) : null}
+              </View>
+              <View style={s.v22}>
+                <View style={s.v21}>
+                  <Grad g={G0} style={s.v20} />
+                </View>
+              </View>
+              <View>
+                <Text style={s.t23}>{`${spare === null ? '' : spare >= 0 ? `About ${spare} min to spare. ` : `About ${-spare} min after your window closes. `}We'll message you if anything changes.`}</Text>
+              </View>
+            </View>
+          ) : null}
+          {re ? (
+            <View style={s.v28}>
+              <Icon xml={X2} width={20} height={20} style={s.v25} />
+              <View style={s.v27}>
+                <View>
+                  <Text style={s.t26}>{re.reason ? `${re.reason}, ${hm(re.at)}` : `Re-planned by dispatch, ${hm(re.at)}`}</Text>
+                </View>
+                {trip ? (
+                  <View>
+                    <Text style={s.t23}>{"Your goods now go on "}<Text style={s.t3}>{trip.vehicleId}</Text>{re.previous?.etaModel ? ` instead of arriving ~${hm(re.previous.etaModel)}.` : '.'}</Text>
+                  </View>
+                ) : null}
+              </View>
+            </View>
+          ) : null}
+          {re ? (
+            <View style={s.v47}>
+              <View style={s.v40}>
+                <View style={s.v39}>
+                  <View style={s.v29} />
+                  <View style={s.v30} />
+                  <View style={s.v34}>
+                    <View style={s.v31}>
+                      <Icon xml={X3} width={12} height={12} style={s.v1} />
+                    </View>
+                    <View>
+                      <Text style={s.t32}>{"Received"}</Text>
+                    </View>
+                    <View>
+                      <Text style={s.t33}>{order ? dayLabel(order.orderedAt).split(' ')[0] : '·'}</Text>
+                    </View>
+                  </View>
+                  <View style={s.v34}>
+                    <View style={s.v35}>
+                      <Icon xml={X4} width={12} height={12} style={s.v1} />
+                    </View>
+                    <View>
+                      <Text style={s.t36}>{"Moved"}</Text>
+                    </View>
+                    <View>
+                      <Text style={s.t33}>{hm(re.at)}</Text>
+                    </View>
+                  </View>
+                  {['Loaded', 'En route', 'Delivered'].map(label => (
+                    <View key={label} style={s.v34}>
+                      <View style={s.v37} />
+                      <View>
+                        <Text style={s.t38}>{label}</Text>
+                      </View>
+                      <View>
+                        <Text style={s.t33}>{label === 'Delivered' && eta ? `~${hm(eta)}` : '·'}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+              {close ? (
+                <View style={s.v46}>
+                  <View style={s.v41} />
+                  <View style={s.v45}>
+                    <View>
+                      <Text style={s.t42}>{`Keep 1 receiver until ${close}`}</Text>
+                    </View>
+                    {others.length ? (
+                      <View style={s.v44}>
+                        <Text style={s.t43}>{`Your ${others[0].tempClass === 'CHILLED' ? 'chilled' : 'dry'} order is on its usual run`}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+        </Scroll>
+        <View style={s.v54}>
+          <Tap lk="L49" style={s.v51}>
+            <Grad g={G1} style={s.v49} />
+            <Text style={s.t50}>{"Got it"}</Text>
+          </Tap>
+        </View>
+      </View>
+    </Frame>
+  );
+}
+
+const X0 = "<svg viewBox=\"0 0 32 32\" width=\"36\" height=\"36\" fill=\"#000000\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"32\" height=\"32\" rx=\"8\" fill=\"#047857\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect><g transform=\"translate(7.36 7.36) scale(0.72)\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"><path d=\"M3 9l1.5-5h15L21 9\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M5 13v8h14v-8M10 21v-5h4v5\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></g></svg>";
+const X1 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#101828\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"20\" height=\"20\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9\" fill=\"none\" stroke=\"#101828\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M10.3 21a1.94 1.94 0 0 0 3.4 0\" fill=\"none\" stroke=\"#101828\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X2 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#b45309\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"20\" height=\"20\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z\" fill=\"none\" stroke=\"#b45309\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"m9 12 2 2 4-4\" fill=\"none\" stroke=\"#b45309\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X3 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"12\" height=\"12\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M20 6 9 17l-5-5\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X4 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"12\" height=\"12\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M21 12a9 9 0 1 1-3-6.7L21 8\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M21 3v5h-5\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const G0: GradSpec[] = [{"type":"linear","angle":90,"at":null,"repeat":false,"stops":[{"c":"#ffd37a","p":0},{"c":"#f5b83d","p":1}]}];
+const G1: GradSpec[] = [{"type":"linear","angle":135,"at":null,"repeat":false,"stops":[{"c":"#4f5fe0","p":0},{"c":"#3b4cca","p":0.55},{"c":"#2f3cb0","p":1}]}];
+
+const s = StyleSheet.create({
+  v0: {"flexDirection":"column","alignItems":"stretch","backgroundColor":"#ffffff","flex":1},
+  v1: {"flexShrink":0,"overflow":"hidden"},
+  v2: {"flexDirection":"row","justifyContent":"center","alignItems":"center","flexShrink":0,"width":40,"height":40,"borderRadius":20},
+  t3: {"letterSpacing":-0.1,"fontFamily":"JetBrainsMono_600SemiBold"},
+  t4: {"color":"#101828","fontSize":15,"lineHeight":22.5,"textAlign":"center","fontFamily":"Inter_700Bold"},
+  v5: {"flexGrow":1,"flexShrink":1,"flexBasis":"0%"},
+  v6: {"flexDirection":"row","justifyContent":"center","alignItems":"center","flexShrink":0,"width":40,"height":40,"backgroundColor":"#ffffff","borderRadius":20,"boxShadow":"rgba(0, 0, 0, 0.06) 0px 1px 2px 0px"},
+  v7: {"flexDirection":"row","alignItems":"center","rowGap":10,"columnGap":10,"flexShrink":0,"paddingRight":16,"paddingLeft":16,"height":52},
+  t8: {"color":"#636c80","fontSize":13,"lineHeight":19.5,"fontFamily":"Inter_600SemiBold"},
+  t9: {"color":"#636c80","fontSize":13,"lineHeight":19.5,"letterSpacing":-0.1,"fontFamily":"JetBrainsMono_600SemiBold"},
+  v10: {"flexShrink":1},
+  v11: {"flexShrink":1,"width":3,"height":3,"backgroundColor":"#636c80","borderRadius":1.5,"opacity":0.6},
+  v12: {"flexDirection":"row","alignItems":"center","rowGap":8,"columnGap":8},
+  t13: {"color":"#101828","fontSize":22,"lineHeight":26.4,"letterSpacing":-0.4,"fontFamily":"PlusJakartaSans_800ExtraBold"},
+  v14: {"flexDirection":"column","alignItems":"stretch","rowGap":6,"columnGap":6,"paddingRight":20,"paddingLeft":20},
+  t15: {"color":"#101828","fontSize":56,"lineHeight":56,"letterSpacing":-1.7,"fontVariant":["tabular-nums"],"fontFamily":"PlusJakartaSans_800ExtraBold"},
+  v16: {"flexDirection":"column","alignItems":"stretch","rowGap":6,"columnGap":6,"flexShrink":1},
+  t17: {"color":"#101828","fontSize":26,"lineHeight":39,"letterSpacing":-0.5,"fontVariant":["tabular-nums"],"fontFamily":"PlusJakartaSans_800ExtraBold"},
+  v18: {"flexDirection":"column","alignItems":"flex-end","rowGap":2,"columnGap":2,"flexShrink":1},
+  v19: {"flexDirection":"row","justifyContent":"space-between","alignItems":"flex-end","rowGap":12,"columnGap":12},
+  v20: {"borderRadius":4},
+  v21: {"flexShrink":1,"width":"80%","borderRadius":4},
+  v22: {"flexDirection":"row","alignItems":"stretch","flexShrink":1,"height":8,"backgroundColor":"#eff1f7","borderRadius":4,"overflow":"hidden"},
+  t23: {"color":"#475467","fontSize":14,"lineHeight":20.3,"fontFamily":"Inter_400Regular"},
+  v24: {"flexDirection":"column","alignItems":"stretch","rowGap":10,"columnGap":10,"paddingTop":20,"paddingRight":20,"marginRight":16,"paddingBottom":20,"paddingLeft":20,"marginLeft":16,"backgroundColor":"#ffffff","borderRadius":24,"boxShadow":"rgba(15, 20, 50, 0.04) 0px 1px 2px 0px, rgba(15, 20, 50, 0.06) 0px 8px 24px 0px"},
+  v25: {"flexShrink":0,"marginTop":1,"overflow":"hidden"},
+  t26: {"color":"#b45309","fontSize":14,"lineHeight":20.3,"fontFamily":"Inter_700Bold"},
+  v27: {"flexDirection":"column","alignItems":"stretch","rowGap":2,"columnGap":2,"flexShrink":1},
+  v28: {"flexDirection":"row","alignItems":"flex-start","rowGap":12,"columnGap":12,"paddingTop":14,"paddingRight":16,"marginRight":16,"paddingBottom":14,"paddingLeft":16,"marginLeft":16,"backgroundColor":"#fff4e0","borderRadius":18},
+  v29: {"flexShrink":1,"position":"absolute","top":10,"right":228.2,"bottom":57.1,"left":32.6,"width":"20%","height":2,"backgroundColor":"#b45309","borderRadius":1},
+  v30: {"flexShrink":1,"position":"absolute","top":10,"right":32.6,"bottom":57.1,"left":97.8,"width":"60%","height":2,"backgroundColor":"#d3d8e3","borderRadius":1},
+  v31: {"flexDirection":"row","justifyContent":"center","alignItems":"center","width":22,"height":22,"backgroundColor":"#047857","borderWidth":2,"borderColor":"#047857","borderRadius":11,"boxShadow":"rgba(4, 120, 87, 0.25) 0px 2px 6px 0px"},
+  t32: {"color":"#101828","fontSize":13,"lineHeight":15.6,"textAlign":"center","fontFamily":"Inter_600SemiBold"},
+  t33: {"color":"#636c80","fontSize":13,"lineHeight":19.5,"fontVariant":["tabular-nums"],"fontFamily":"Inter_400Regular"},
+  v34: {"flexDirection":"column","alignItems":"center","rowGap":6,"columnGap":6,"flexShrink":0,"width":"20%","zIndex":1},
+  v35: {"flexDirection":"row","justifyContent":"center","alignItems":"center","width":22,"height":22,"backgroundColor":"#b45309","borderWidth":2,"borderColor":"#b45309","borderRadius":11},
+  t36: {"color":"#b45309","fontSize":13,"lineHeight":15.6,"textAlign":"center","fontFamily":"Inter_800ExtraBold"},
+  v37: {"flexDirection":"row","justifyContent":"center","alignItems":"center","width":22,"height":22,"backgroundColor":"#ffffff","borderWidth":2,"borderColor":"#d3d8e3","borderRadius":11},
+  t38: {"color":"#636c80","fontSize":13,"lineHeight":15.6,"textAlign":"center","fontFamily":"Inter_600SemiBold"},
+  v39: {"flexDirection":"row","alignItems":"flex-start","flexShrink":1,"width":"100%"},
+  v40: {"flexDirection":"row","justifyContent":"center","alignItems":"stretch","paddingTop":12,"paddingRight":8,"paddingBottom":10,"paddingLeft":8},
+  v41: {"flexDirection":"row","justifyContent":"center","alignItems":"center","flexShrink":0,"width":22,"height":22,"backgroundColor":"#ffffff","borderWidth":2,"borderColor":"#d3d8e3","borderRadius":7},
+  t42: {"color":"#101828","fontSize":15,"lineHeight":19.5,"fontFamily":"Inter_700Bold"},
+  t43: {"color":"#475467","fontSize":13,"lineHeight":18.2,"fontFamily":"Inter_500Medium"},
+  v44: {"flexDirection":"row","flexWrap":"wrap","alignItems":"center","rowGap":6,"columnGap":6},
+  v45: {"flexDirection":"column","alignItems":"stretch","rowGap":3,"columnGap":3,"flexGrow":1,"flexShrink":1,"flexBasis":"0%"},
+  v46: {"flexDirection":"row","alignItems":"center","rowGap":14,"columnGap":14,"paddingTop":12,"paddingRight":16,"paddingBottom":12,"paddingLeft":16,"minHeight":64},
+  v47: {"flexDirection":"column","alignItems":"stretch","flexShrink":1,"marginRight":16,"marginLeft":16,"backgroundColor":"#ffffff","borderRadius":20,"boxShadow":"rgba(15, 20, 50, 0.04) 0px 1px 2px 0px","overflow":"hidden"},
+  v48: {"flexDirection":"column","alignItems":"stretch","rowGap":14,"columnGap":14,"paddingTop":4,"paddingBottom":16},
+  v49: {"borderRadius":18},
+  t50: {"color":"#ffffff","fontSize":17,"lineHeight":25.5,"letterSpacing":-0.2,"fontFamily":"PlusJakartaSans_800ExtraBold"},
+  v51: {"flexDirection":"row","justifyContent":"center","alignItems":"center","rowGap":10,"columnGap":10,"height":58,"borderRadius":18,"boxShadow":"rgba(59, 76, 202, 0.28) 0px 8px 20px 0px"},
+  t52: {"color":"#475467","fontSize":15,"lineHeight":22.5,"letterSpacing":-0.1,"fontFamily":"Inter_700Bold"},
+  v53: {"flexDirection":"row","justifyContent":"center","alignItems":"center","rowGap":10,"columnGap":10,"height":44,"borderRadius":18},
+  v54: {"flexDirection":"column","alignItems":"stretch","rowGap":8,"columnGap":8,"flexShrink":0,"paddingTop":12,"paddingRight":16,"paddingBottom":6,"paddingLeft":16,"backgroundColor":"#f4f5f9"},
+  v55: {"flexDirection":"column","alignItems":"stretch","flexGrow":1,"flexShrink":1,"flexBasis":"0%","backgroundColor":"#f4f5f9"},
+});

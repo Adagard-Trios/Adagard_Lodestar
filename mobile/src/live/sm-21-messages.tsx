@@ -9,7 +9,7 @@ import * as api from '@/model/api';
 import { useClaims, useNotifications, useOnline } from '@/model/hooks';
 import { bumpRevision, client } from '@/model/platform';
 import { notices } from '@/realtime/notices';
-import { useNow } from '@/model/store-face';
+import { rePlanNoticeIds, useNow } from '@/model/store-face';
 import { Frame, Icon, Scroll, Tap, type ScreenNav, type Target } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L100":{"to":"sm-20-credit-note-detail","kind":"go"},"L101":{"to":"sm-16-why-this-window-sheet","kind":"go"},"N0":{"to":"sm-11-today-order-day","kind":"nav"},"N1":{"to":"sm-12-orders","kind":"nav"},"N2":{"to":"sm-19-receipts-and-credit-notes","kind":"nav"}}};
@@ -32,16 +32,30 @@ function body(m: Message): { main: string; sub: string } {
   return main ? { main, sub: facts.join(' · ') } : { main: facts[0] ?? titleCase(m.type), sub: facts.slice(1).join(' · ') };
 }
 
-/** Icon tile and where a tap leads, by notice type. */
-function kind(m: Message): { tile: 'ok' | 'info' | 'warn' | 'note'; to: Target | null } {
+/** Icon tile and where a tap leads, by notice type (`replans`: plan notices that moved an order already planned). */
+function kind(m: Message, replans: Set<string>): { tile: 'ok' | 'info' | 'warn' | 'note'; to: Target | null } {
   const t = m.type;
-  const order = str(m.payload.orderId);
+  const order = str(m.payload.orderId) || firstOrder(m.payload);
+  const trip = str(m.payload.tripId);
   const pod = str(m.payload.podId);
+  const status: Target = order ? { to: 'sm-02-order-status-and-eta', params: { order } } : { to: 'sm-02-order-status-and-eta' };
   if (/DEFER/.test(t)) return { tile: 'warn', to: { to: 'sm-17-deferral-notice-out027', params: order ? { order } : undefined } };
+  // dead zone (SM-A1): the van lost signal, then a proof of delivery recorded with no signal
+  if (t === 'POD_RECORDED_OFFLINE') return { tile: 'ok', to: { to: 'sm-a1-store-recorded-offline', params: order ? { order } : undefined } };
+  if (t === 'SIGNAL_LOST' || t === 'BLACKOUT_DETECTED') return { tile: 'info', to: { to: 'sm-a1-store-in-progress-low-signal', params: { ...(order ? { order } : {}), ...(trip ? { trip } : {}) } } };
+  // reefer down (SM-B1): a re-plan moved an order that was already planned
+  if (t === 'PLAN_PUBLISHED' && replans.has(m.id)) return { tile: 'warn', to: { to: 'sm-b1-store-later-arrival-notice', params: { notice: m.id, ...(order ? { order } : {}) } } };
   if (/CREDIT|POD|MATCH|RECEIPT/.test(t)) return { tile: 'ok', to: pod ? { to: 'sm-20-credit-note-detail', params: { pod } } : { to: 'sm-19-receipts-and-credit-notes' } };
-  if (/SHORT|DEFER|LATE|EXCEPTION|REEFER/.test(t)) return { tile: 'warn', to: order ? { to: 'sm-02-order-status-and-eta', params: { order } } : { to: 'sm-02-order-status-and-eta' } };
+  if (/SHORT|DEFER|LATE|EXCEPTION|REEFER/.test(t)) return { tile: 'warn', to: status };
   if (/ETA|ARRIV|WINDOW|TRIP|SIGNAL|DELIVER/.test(t)) return { tile: 'info', to: { to: 'sm-16-why-this-window-sheet', params: order ? { order } : undefined } };
+  if (/PLAN/.test(t)) return { tile: 'info', to: status };
   return { tile: 'note', to: null };
+}
+
+/** The first order of a plan notice ({orders: [{orderId}]}). */
+function firstOrder(p: Record<string, unknown>): string {
+  const list = Array.isArray(p.orders) ? (p.orders as Record<string, unknown>[]) : [];
+  return str(list[0]?.orderId);
 }
 
 export default function ScreenSm21Messages() {
@@ -54,6 +68,7 @@ export default function ScreenSm21Messages() {
   const server: Message[] = (q.data ?? []).map(n => ({ id: n.id, type: n.type, at: n.sentAt, payload: n.payload ?? {}, read: !!n.readAt, server: true }));
   const socket: Message[] = live.filter(n => !server.some(x => x.id === n.id)).map(n => ({ id: n.id, type: n.type, at: n.at, payload: n.payload, read: false, server: false }));
   const all = [...socket, ...server].sort((a, b) => b.at.localeCompare(a.at));
+  const replans = rePlanNoticeIds(all);
   const unread = all.filter(m => !m.read).length;
   const list = unreadOnly ? all.filter(m => !m.read) : all;
   const groups: { date: string; items: Message[] }[] = [];
@@ -115,7 +130,7 @@ export default function ScreenSm21Messages() {
               <View style={s.v29}>
                 {g.items.map((m, i) => {
                   const n = list.indexOf(m);
-                  const k = kind(m);
+                  const k = kind(m, replans);
                   const b = body(m);
                   const style = m.read ? (i === 0 ? s.v31 : s.v28) : i === 0 ? s.v24 : s.v26;
                   const tile = k.tile === 'ok' ? s.v17 : k.tile === 'warn' ? s.v27 : k.tile === 'info' ? s.v25 : s.v32;

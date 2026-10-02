@@ -1,0 +1,141 @@
+// Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
+// DSP-38 Update required · phone (P2, phone)
+import { Text, View, StyleSheet } from 'react-native';
+import { applyUpdate, useVersion } from '@/lib/version';
+import { hm } from '@/lib/time';
+import { titleCase } from '@/lodestar/live';
+import { usePlans } from '@/model/hooks';
+import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+
+const nav: ScreenNav = {"links":{"L185":{"to":"dsp-26-sign-in","kind":"go"}}};
+
+export default function ScreenDsp38UpdateRequired() {
+  const { current, minimum } = useVersion();
+  const plans = usePlans().data ?? [];
+  const first = plans[0];
+  const update = async () => {
+    if (await applyUpdate()) return true;
+    showToast(`This build (${current}) is still below ${minimum ?? 'the minimum'}. Install the new version to carry on.`, 'error');
+    return false;
+  };
+  return (
+    <Frame bg="#f4f5f9" nav={nav} style={s.v0}>
+      <View style={s.v27}>
+        <Scroll style={s.v19} contentStyle={s.v20}>
+          <View style={s.v5}>
+            <View style={s.v2}>
+              <Icon xml={X0} width={44} height={44} style={s.v1} />
+            </View>
+            <View>
+              <Text style={s.t3}>{"Update to keep approving"}</Text>
+            </View>
+            <View>
+              <Text style={s.t4}>{`Version ${minimum ?? '—'} is needed; this phone has ${current}.`}</Text>
+            </View>
+          </View>
+          <View style={s.v11}>
+            <View style={s.v10}>
+              <View style={s.v6}>
+                <Icon xml={X1} width={21} height={21} style={s.v1} />
+              </View>
+              <View style={s.v9}>
+                <View>
+                  <Text style={s.t7}>{`Approvals waiting: ${plans.length}`}</Text>
+                </View>
+                <View>
+                  <Text style={s.t8}>{first ? `${titleCase(first.depot)} plan v${first.version}, ${hm(first.createdAt)}. Still here after the update; nothing is sent until you approve.` : 'Nothing waiting. Plans stay on the server until you approve.'}</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+          <View style={s.v18}>
+            <View style={s.v15}>
+              <View style={s.v13}>
+                <Text style={s.t12}>{"What changed"}</Text>
+              </View>
+              <View style={s.v13}>
+                <Text style={s.t14}>{`${current} to ${minimum ?? '—'}`}</Text>
+              </View>
+            </View>
+            <View style={s.v11}>
+              <View style={s.v10}>
+                <View style={s.v16}>
+                  <Icon xml={X2} width={21} height={21} style={s.v1} />
+                </View>
+                <View style={s.v9}>
+                  <View>
+                    <Text style={s.t7}>{"Safer sign-in"}</Text>
+                  </View>
+                  <View>
+                    <Text style={s.t8}>{"Required by Waypoint IT for on-call phones"}</Text>
+                  </View>
+                </View>
+              </View>
+              <View style={s.v17}>
+                <View style={s.v16}>
+                  <Icon xml={X3} width={21} height={21} style={s.v1} />
+                </View>
+                <View style={s.v9}>
+                  <View>
+                    <Text style={s.t7}>{"All 7 booklet rules on re-plans"}</Text>
+                  </View>
+                  <View>
+                    <Text style={s.t8}>{"See every check before you approve"}</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+        </Scroll>
+        <View style={s.v26}>
+          <Tap lk="L185" style={s.v23} onPress={update}>
+            <Grad g={G0} style={s.v21} />
+            <Icon xml={X4} width={22} height={22} style={s.v1} />
+            <Text style={s.t22}>{"Update now"}</Text>
+          </Tap>
+          <View style={s.v25}>
+            <Text style={s.t24}>{"Approve on desktop instead"}</Text>
+          </View>
+        </View>
+      </View>
+    </Frame>
+  );
+}
+
+const X0 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"44\" height=\"44\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"m7 10 5 5 5-5\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M12 15V3\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X1 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#b42318\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"21\" height=\"21\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2\" fill=\"none\" stroke=\"#b42318\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M15 18H9\" fill=\"none\" stroke=\"#b42318\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14\" fill=\"none\" stroke=\"#b42318\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><circle cx=\"17\" cy=\"18\" r=\"2\" fill=\"none\" stroke=\"#b42318\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></circle><circle cx=\"7\" cy=\"18\" r=\"2\" fill=\"none\" stroke=\"#b42318\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></circle></svg>";
+const X2 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"21\" height=\"21\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"m9 12 2 2 4-4\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X3 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"21\" height=\"21\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M11 18H3M15 18l2 2 4-4M16 12H3M16 6H3\" fill=\"none\" stroke=\"#3b4cca\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X4 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"m7 10 5 5 5-5\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M12 15V3\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const G0: GradSpec[] = [{"type":"linear","angle":135,"at":null,"repeat":false,"stops":[{"c":"#4f5fe0","p":0},{"c":"#3b4cca","p":0.55},{"c":"#2f3cb0","p":1}]}];
+
+const s = StyleSheet.create({
+  v0: {"flexDirection":"column","alignItems":"stretch","backgroundColor":"#ffffff","flex":1},
+  v1: {"flexShrink":0,"overflow":"hidden"},
+  v2: {"flexDirection":"row","justifyContent":"center","alignItems":"center","width":96,"height":96,"backgroundColor":"#eef0ff","borderRadius":48,"boxShadow":"rgba(59, 76, 202, 0.06) 0px 0px 0px 10px"},
+  t3: {"color":"#0f1422","fontSize":28,"lineHeight":31.4,"letterSpacing":-0.7,"textAlign":"center","fontFamily":"PlusJakartaSans_800ExtraBold"},
+  t4: {"color":"#4a5467","fontSize":15,"lineHeight":21.8,"textAlign":"center","fontFamily":"Inter_400Regular"},
+  v5: {"flexDirection":"column","alignItems":"center","rowGap":14,"columnGap":14,"paddingRight":24,"paddingLeft":24},
+  v6: {"flexDirection":"row","justifyContent":"center","alignItems":"center","flexShrink":0,"width":42,"height":42,"backgroundColor":"#feeeec","borderRadius":14},
+  t7: {"color":"#0f1422","fontSize":15.5,"lineHeight":20.2,"fontFamily":"Inter_700Bold"},
+  t8: {"color":"#4a5467","fontSize":13,"lineHeight":18.2,"fontFamily":"Inter_400Regular"},
+  v9: {"flexDirection":"column","alignItems":"stretch","rowGap":3,"columnGap":3,"flexGrow":1,"flexShrink":1,"flexBasis":"0%"},
+  v10: {"flexDirection":"row","alignItems":"center","rowGap":12,"columnGap":12,"paddingTop":11,"paddingRight":16,"paddingBottom":11,"paddingLeft":16,"minHeight":64},
+  v11: {"flexDirection":"column","alignItems":"stretch","flexShrink":1,"marginRight":16,"marginLeft":16,"backgroundColor":"#ffffff","borderRadius":20,"boxShadow":"rgba(15, 20, 50, 0.04) 0px 1px 2px 0px","overflow":"hidden"},
+  t12: {"color":"#0f1422","fontSize":13,"lineHeight":19.5,"fontFamily":"Inter_700Bold"},
+  v13: {"flexShrink":1},
+  t14: {"color":"#636c80","fontSize":13,"lineHeight":19.5,"fontFamily":"Inter_700Bold"},
+  v15: {"flexDirection":"row","justifyContent":"space-between","alignItems":"baseline","paddingRight":20,"paddingLeft":20},
+  v16: {"flexDirection":"row","justifyContent":"center","alignItems":"center","flexShrink":0,"width":42,"height":42,"backgroundColor":"#eef0ff","borderRadius":14},
+  v17: {"flexDirection":"row","alignItems":"center","rowGap":12,"columnGap":12,"paddingTop":11,"paddingRight":16,"paddingBottom":11,"paddingLeft":16,"minHeight":64,"borderTopWidth":1,"borderTopColor":"#eceef3"},
+  v18: {"flexDirection":"column","alignItems":"stretch","rowGap":8,"columnGap":8},
+  v19: {"flexGrow":1,"flexShrink":1,"flexBasis":"0%"},
+  v20: {"flexDirection":"column","alignItems":"stretch","rowGap":20,"columnGap":20,"paddingTop":26,"paddingBottom":12},
+  v21: {"borderRadius":18},
+  t22: {"color":"#ffffff","fontSize":17,"lineHeight":25.5,"letterSpacing":-0.2,"fontFamily":"PlusJakartaSans_800ExtraBold"},
+  v23: {"flexDirection":"row","justifyContent":"center","alignItems":"center","rowGap":10,"columnGap":10,"height":58,"borderRadius":18,"boxShadow":"rgba(59, 76, 202, 0.28) 0px 8px 20px 0px"},
+  t24: {"color":"#4a5467","fontSize":15,"lineHeight":22.5,"letterSpacing":-0.1,"fontFamily":"Inter_700Bold"},
+  v25: {"flexDirection":"row","justifyContent":"center","alignItems":"center","rowGap":10,"columnGap":10,"height":44,"borderRadius":18},
+  v26: {"flexDirection":"column","alignItems":"stretch","rowGap":8,"columnGap":8,"flexShrink":0,"paddingTop":12,"paddingRight":16,"paddingBottom":6,"paddingLeft":16,"backgroundColor":"#f4f5f9"},
+  v27: {"flexDirection":"column","alignItems":"stretch","flexGrow":1,"flexShrink":1,"flexBasis":"0%","backgroundColor":"#f4f5f9"},
+});
