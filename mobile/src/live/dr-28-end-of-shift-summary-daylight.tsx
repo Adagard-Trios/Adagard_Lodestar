@@ -147,7 +147,6 @@ export default function ScreenDr28EndOfShiftSummaryDaylight() {
           <Tap
             lk="L22"
             style={s.v45}
-            testID="close-shift"
             onPress={async () => {
               if (!v) return true; // prototype mode: just navigate
               await finishDeliveredTrips(v.trips, v.stops);

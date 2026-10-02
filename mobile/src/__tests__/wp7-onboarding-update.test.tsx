@@ -156,7 +156,8 @@ describe('Update required', () => {
 
   it('DSP-38: the plans waiting and the versions; Update now stays while still required', async () => {
     await signInAs(dispatcher('u-dsp38'));
-    routes.set('Plans', [{ id: 'P-1', depot: 'KANDY', runDate: RUN, version: 3, status: 'NEEDS_APPROVAL', source: 'AGENT', createdAt: `${RUN}T00:00:00.000Z` }]);
+    // an executable plan waiting (drawn trips); an auto-plan suggestion without trips is not an approval
+    routes.set('Plans', [{ id: 'P-1', depot: 'KANDY', runDate: RUN, version: 3, status: 'NEEDS_APPROVAL', source: 'AGENT', createdAt: `${RUN}T00:00:00.000Z`, summary: { plan: { trips: [{ tripId: 'T-1', vehicleId: 'VAN-T9', orderIds: ['O-1'] }] } } }]);
     const Screen = require('@/live/dsp-38-update-required').default;
     await render(<Screen />);
     expect(await screen.findByText('Approvals waiting: 1')).toBeTruthy();

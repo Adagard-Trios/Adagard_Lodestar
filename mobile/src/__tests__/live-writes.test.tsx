@@ -171,7 +171,9 @@ describe('SM-18 report issue', () => {
 });
 
 describe('DSP-28 approve re-plan', () => {
-  const plan = { id: 'PLAN-T-v4', depot: 'KANDY', runDate: '2026-04-07T00:00:00.000Z', version: 4, status: 'NEEDS_APPROVAL', source: 'AGENT', createdAt: '2026-04-06T22:00:00.000Z', summary: null };
+  // an executable plan: it carries drawn trips (an auto-plan suggestion without trips is not listed for approval)
+  const drawn = { plan: { trips: [{ tripId: 'T-1', vehicleId: 'VAN-T9', orderIds: ['O-1'] }], unassigned: [] } };
+  const plan = { id: 'PLAN-T-v4', depot: 'KANDY', runDate: '2026-04-07T00:00:00.000Z', version: 4, status: 'NEEDS_APPROVAL', source: 'AGENT', createdAt: '2026-04-06T22:00:00.000Z', summary: drawn };
 
   it('approves with Plans Approve (a human dispatcher, online only)', async () => {
     await signInAs({ sub: 'u-dsp28', name: 'Test Dispatcher', realm_access: { roles: ['dispatcher'] }, depot: ['KANDY'] });
@@ -186,7 +188,7 @@ describe('DSP-28 approve re-plan', () => {
 
   it('a plan with rule violations needs an override reason, sent as overrideReason', async () => {
     await signInAs({ sub: 'u-dsp28c', name: 'Test Dispatcher', realm_access: { roles: ['dispatcher'] }, depot: ['KANDY'] });
-    const bad = { ...plan, summary: { violations: [{ rule: 'weight', tripId: 'T-1', vehicleId: 'VAN-T9', orderIds: ['O-1'], reason: 'Over weight' }] } };
+    const bad = { ...plan, summary: { ...drawn, violations: [{ rule: 'weight', tripId: 'T-1', vehicleId: 'VAN-T9', orderIds: ['O-1'], reason: 'Over weight' }] } };
     routes.set('Plans', [bad]);
     routes.set("Plans('PLAN-T-v4')", bad);
     const Screen = require('@/live/dsp-28-approve-re-plan').default;

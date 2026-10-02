@@ -14,7 +14,7 @@ import { STEPS, signalByTrip, signalLostFor, timeline, useDelivery, useTrip } fr
 import { notices } from '@/realtime/notices';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
-const nav: ScreenNav = {"links":{"L27":{"to":"dr-a3-sync-queue","kind":"go"}}};
+const nav: ScreenNav = {"links":{"L27":{"to":"sm-03-confirm-receipt-count","kind":"go"}}};
 
 export default function ScreenSmA1StoreInProgressLowSignal() {
   const claims = useClaims();
@@ -159,7 +159,7 @@ export default function ScreenSmA1StoreInProgressLowSignal() {
           </View>
         </Scroll>
         <View style={s.v49}>
-          <Tap lk="L27" style={s.v45}>
+          <Tap lk="L27" style={s.v45} to={order ? { to: 'sm-03-confirm-receipt-count', params: { order: order.id } } : undefined}>
             <Grad g={G0} style={s.v43} />
             <Icon xml={X6} width={22} height={22} style={s.v1} />
             <Text style={s.t44}>{"Confirm my receipt"}</Text>

@@ -6,6 +6,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-
 import { router } from 'expo-router';
 import { network } from '@/offline/network';
 import { notices } from '@/realtime/notices';
+import { runMarks } from '@/model/run';
 import { client, queue, routes, signInAs, sync } from './fake-platform';
 
 jest.mock('@/model/platform', () => require('./fake-platform'));
@@ -82,7 +83,7 @@ describe('Store', () => {
   it('SM-A1 in progress, low signal: a signal_lost notice for the order\'s trip pauses updates', async () => {
     await signInAs(store('u-sma1'));
     params.order = 'O-1';
-    act(() => notices.set([{ id: 'sl-1', event: 'signal_lost', type: 'SIGNAL_LOST', at: `${RUN}T00:40:00.000Z`, payload: { tripId: 'T-1', vehicleId: 'VAN-T9' } }]));
+    await act(async () => { notices.set([{ id: 'sl-1', event: 'signal_lost', type: 'SIGNAL_LOST', at: `${RUN}T00:40:00.000Z`, payload: { tripId: 'T-1', vehicleId: 'VAN-T9' } }]); });
     const Screen = require('@/live/sm-a1-store-in-progress-low-signal').default;
     await render(<Screen />);
     expect(await screen.findByTestId('updates-paused')).toBeTruthy();
@@ -94,7 +95,7 @@ describe('Store', () => {
   it('SM-02 opens SM-A1 while the van of an undelivered order has no signal', async () => {
     await signInAs(store('u-sm02a1'));
     params.order = 'O-1';
-    act(() => notices.set([{ id: 'sl-2', event: 'signal_lost', type: 'SIGNAL_LOST', at: `${RUN}T00:40:00.000Z`, payload: { tripId: 'T-1' } }]));
+    await act(async () => { notices.set([{ id: 'sl-2', event: 'signal_lost', type: 'SIGNAL_LOST', at: `${RUN}T00:40:00.000Z`, payload: { tripId: 'T-1' } }]); });
     const Screen = require('@/live/sm-02-order-status-and-eta').default;
     await render(<Screen />);
     await waitFor(() => expect(replace).toHaveBeenCalledWith(opened('sm-a1-store-in-progress-low-signal', { order: 'O-1', trip: 'T-1' })));
@@ -111,7 +112,7 @@ describe('Store', () => {
     expect(await screen.findByText('Recorded offline')).toBeTruthy();
     expect(screen.getByText(/^Synced 8:40\./)).toBeTruthy();
     await fireEvent.press(screen.getByTestId('lk-L30'));
-    expect(push).toHaveBeenCalledWith(opened('sm-20-credit-note-detail', { pod: 'P-1' }));
+    expect(push).toHaveBeenCalledWith(opened('sm-20-credit-note-detail', { order: 'O-1' }));
   });
 
   it('SM-B1 later arrival: a second plan notice that moves the order is a re-plan', async () => {
@@ -249,7 +250,7 @@ describe('Dock', () => {
     await render(<Screen />);
     expect(await screen.findByText('VAN-T9')).toBeTruthy();
     // the dock Wi-Fi drops after the trip opened
-    act(() => network.set({ online: false, since: new Date().toISOString() }));
+    await act(async () => { network.set({ online: false, since: new Date().toISOString() }); });
     await fireEvent.press(screen.getByTestId('notify-dispatch'));
     expect(await screen.findByText(/sends when signal is back/)).toBeTruthy();
     expect(queue.list().find(i => i.sub === 'u-ldb1o' && i.kind === 'VEHICLE_FAULT')).toMatchObject({ status: 'pending', payload: { fault: 'NOT_COOLING' } });
@@ -262,7 +263,7 @@ describe('Dock', () => {
     const Screen = require('@/live/ld-01-dock-queue').default;
     await render(<Screen />);
     await screen.findByTestId('lk-L190');
-    act(() => notices.set([{ id: 'pp-1', event: 'plan_published', type: 'PLAN_PUBLISHED', at: new Date().toISOString(), payload: { planId: 'PLG-T-v2', depot: 'KANDY', supersededTrips: 1 } }]));
+    await act(async () => { notices.set([{ id: 'pp-1', event: 'plan_published', type: 'PLAN_PUBLISHED', at: new Date().toISOString(), payload: { planId: 'PLG-T-v2', depot: 'KANDY', supersededTrips: 1 } }]); });
     await waitFor(() => expect(push).toHaveBeenCalledWith(opened('ld-14-re-plan-received', { plan: 'PLG-T-v2' })));
   });
 
@@ -400,6 +401,10 @@ describe('State screens', () => {
 
   it('DR-32 run moved: server records this phone never saved; download opens DR-13', async () => {
     await signInAs(driver('u-dr32'));
+    // a new phone: DR-13 above saved T-1 for offline on this (shared, in-memory) device store; the new one has not
+    const { kv } = require('@/lib/kv') as typeof import('@/lib/kv');
+    await kv.remove('lodestar.run.saved.T-1');
+    runMarks.set({});
     routes.set('OfflineEvents', [{ id: 'EV-other', tripId: 'T-1', eventType: 'ARRIVAL', savedAt: `${RUN}T00:30:00.000Z`, syncedAt: `${RUN}T00:36:00.000Z` }]);
     const Screen = require('@/live/dr-32-run-moved-to-a-new-phone').default;
     await render(<Screen />);

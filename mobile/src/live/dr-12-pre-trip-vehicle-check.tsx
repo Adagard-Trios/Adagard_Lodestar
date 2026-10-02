@@ -50,9 +50,13 @@ export default function ScreenDr12PreTripVehicleCheck() {
       if (!(await cam.ensure())) showToast('No camera · type the reading from the display', 'error');
       return false;
     }
-    const uri = await cam.capture();
-    if (uri) setPhotoAt(new Date().toISOString());
-    else showToast('No photo taken · type the reading from the display', 'error');
+    // read the display from the photo (OCR); the person checks the value, typing stays the fallback
+    const read = await cam.read('temperature');
+    if (read?.value) {
+      setText(read.value);
+      setPhotoAt(new Date().toISOString());
+      showToast(`Read ${read.value} °C from the photo · check it`);
+    } else showToast("Couldn't read the display · type the reading", 'error');
     return false;
   };
 

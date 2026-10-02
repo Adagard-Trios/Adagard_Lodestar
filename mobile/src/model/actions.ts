@@ -72,8 +72,14 @@ export async function completeStop(stop: TripStop, pod: PodInput, at: Date = new
 
 const STATUS_ORDER: TripStatus[] = ['PLANNED', 'LOADING', 'ENROUTE', 'COMPLETE'];
 
+/** The signed-in user's own outbox (the sync engine only sends these; the screens read the same through useOutbox). */
+const myItems = (): QueueItem[] => {
+  const me = session.claims?.sub;
+  return me ? queue.list().filter(i => i.sub === me) : [];
+};
+
 /** The trip's status as this phone knows it: the server's, moved on by a TRIP_STATUS write still on the phone. */
-export function tripStatusOf(trip: Pick<Trip, 'id' | 'status'>, items: QueueItem[] = queue.list()): TripStatus {
+export function tripStatusOf(trip: Pick<Trip, 'id' | 'status'>, items: QueueItem[] = myItems()): TripStatus {
   let st = trip.status;
   for (const i of items) {
     if (i.kind !== 'TRIP_STATUS' || i.tripId !== trip.id || i.status === 'rejected' || i.status === 'conflict') continue;

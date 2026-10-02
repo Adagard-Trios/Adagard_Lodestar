@@ -30,7 +30,9 @@ export default function ScreenDr22RecordDetailPod() {
   const gap = pod ? Math.max(0, pod.unitsOrdered - pod.unitsDelivered) : 0;
   const credited = pod ? gap || ex.reduce((n, e) => n + (e.qty ?? 0), 0) : 0;
   const chip = ex[0] ? `${ex[0].qty ?? 1} ${(ex[0].type ?? 'exception').toLowerCase().replace(/_/g, ' ')}` : gap ? `${gap} short` : '';
-  const notes = [gap && ex.length ? `${gap} short` : '', ...ex.map(e => e.description ?? e.item ?? '').filter(Boolean)].filter(Boolean).join(' · ');
+  // the gap is only worth a note when the exceptions don't already explain it (1 tray crushed = the 1 short)
+  const explained = ex.reduce((n, e) => n + (e.qty ?? 0), 0);
+  const notes = [gap > explained && ex.length ? `${gap - explained} short` : '', ...ex.map(e => e.description ?? e.item ?? '').filter(Boolean)].filter(Boolean).join(' · ');
   const synced = pod?.syncedAt ?? (pod && !pod.savedOffline && !stopOfLocal ? pod.savedAt : null);
   const empty = !claims ? 'Sign in to see your records' : q.loading || pods.loading ? 'Loading…' : 'No record selected';
   return (

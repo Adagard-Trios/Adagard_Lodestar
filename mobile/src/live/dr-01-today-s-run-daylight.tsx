@@ -171,7 +171,6 @@ export default function ScreenDr01TodaySRunDaylight() {
           <Tap
             lk="L12"
             style={s.v49}
-            testID="start-trip"
             onPress={async () => {
               if (!trip || !view) return true; // prototype mode: just navigate
               // the trips before this one are finished (Trip 2 starts after Trip 1), then this one is en route

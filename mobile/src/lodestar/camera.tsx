@@ -1,10 +1,11 @@
-// The camera where a design shows a viewfinder ("Read from photo · confirm"). It only captures: the
-// photo stays on the phone and the person types or confirms the value (no reading by AI). Barcodes are
+// The camera where a design shows a viewfinder ("Read from photo · confirm"). `read(kind)` photographs and asks the
+// OCR service (lodestar/ocr.ts) for the value; the person always confirms it, and typing stays the fallback. Barcodes are
 // read by expo-camera's built-in scanner (LD-10). No permission or no camera: the screen's own overlay
 // (children, real state only: the code read, or how to turn the camera on) shows and the manual fallback still works.
 import { useState, type ReactNode } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { CameraView, useCameraPermissions, type BarcodeType } from 'expo-camera';
+import { readPhoto, type OcrKind, type OcrResult } from './ocr';
 
 export type CameraHandle = { capture: () => Promise<string | null> };
 
@@ -36,7 +37,23 @@ export function useCamera() {
     }
   }
 
-  return { setView, permission, granted, ready, setReady, failed, setFailed, ensure, capture };
+  const [reading, setReading] = useState(false);
+  /** Photographs and reads it (OCR). null when there is no camera or nothing could be read: type it instead. */
+  async function read(kind: OcrKind): Promise<OcrResult | null> {
+    if (!granted || !ready || !view || reading) return null;
+    setReading(true);
+    try {
+      const pic = await view.takePictureAsync({ quality: 0.6, base64: true, skipProcessing: true });
+      const image = pic?.base64 ? `data:image/jpeg;base64,${pic.base64}` : pic?.uri ?? '';
+      return await readPhoto(image, kind);
+    } catch {
+      return null;
+    } finally {
+      setReading(false);
+    }
+  }
+
+  return { setView, permission, granted, ready, setReady, failed, setFailed, ensure, capture, read, reading };
 }
 
 /**

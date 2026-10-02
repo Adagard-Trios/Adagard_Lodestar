@@ -31,6 +31,21 @@ const stops = [
   { id: 'S-2', tripId: 'T-1', orderId: 'O-2', outletId: 'OUT-T2', stopSeq: 2, status: 'PLANNED', etaModel: `${RUN}T01:55:00.000Z`, outlet: outletB, order: { id: 'O-2', units: 6, tempClass: 'CHILLED', status: 'PLANNED' }, pod: null },
 ];
 const driver = (sub: string) => ({ sub, name: 'Test Driver', realm_access: { roles: ['driver'] }, depot: ['KANDY'], vehicle_id: 'VAN-T9' });
+/**
+ * The driver saved the run for offline before the signal dropped (DR-13 does this at the depot): the run, each
+ * order's lines and the notices are loaded while online into the phone's cache, then the phone goes offline.
+ */
+async function saveRunOnPhone() {
+  const { prefetch } = require('@/model/query') as typeof import('@/model/query');
+  const api = require('@/model/api') as typeof import('@/model/api');
+  const { today } = require('@/model/hooks') as typeof import('@/model/hooks');
+  const day = today();
+  network.set({ online: true, since: new Date().toISOString() });
+  const run = await prefetch(`run.${day}`, c => api.driverRun(c, day));
+  for (const id of new Set((run?.stops ?? []).map(st => st.orderId))) await prefetch(`lines.${id}`, c => api.orderLines(c, [id]));
+  await prefetch('notifications', c => api.notifications(c));
+  network.set({ online: false, since: new Date().toISOString() });
+}
 const reports = (sub: string) => queue.list().filter(i => i.sub === sub && i.kind === 'STATUS_CHANGE').map(i => i.payload);
 
 beforeEach(() => {
@@ -48,10 +63,11 @@ beforeEach(() => {
 describe('Driver reports', () => {
   it('DR-12 pre-trip check: ticks and the reefer reading are queued as VEHICLE_CHECK, then DR-13', async () => {
     await signInAs(driver('u-dr12'));
+    await saveRunOnPhone();
     const Screen = require('@/live/dr-12-pre-trip-vehicle-check').default;
     await render(<Screen />);
     expect(await screen.findByText('VAN-T9')).toBeTruthy();
-    fireEvent.changeText(screen.getByTestId('reefer-reading'), '3');
+    await fireEvent.changeText(screen.getByTestId('reefer-reading'), '3');
     for (const k of ['reefer', 'seal', 'fuel', 'tyres', 'lights']) await fireEvent.press(screen.getByTestId(`check-${k}`));
     expect(screen.getByTestId('checks-done').props.children).toBe('5 of 5 done');
     await fireEvent.press(screen.getByTestId('lk-L240'));
@@ -61,6 +77,7 @@ describe('Driver reports', () => {
 
   it('DR-16 store code: only today\'s code matches; confirm saves the POD and goes to the next stop', async () => {
     await signInAs(driver('u-dr16'));
+    await saveRunOnPhone();
     params.stop = 'S-1';
     params.units = '8';
     const { dailyStoreCode } = require('@/model/field-reports');
@@ -81,6 +98,7 @@ describe('Driver reports', () => {
 
   it('DR-17 report a problem: a store closed is queued and the driver is back at the stop', async () => {
     await signInAs(driver('u-dr17'));
+    await saveRunOnPhone();
     params.stop = 'S-1';
     const Screen = require('@/live/dr-17-report-a-problem').default;
     await render(<Screen />);
@@ -93,6 +111,7 @@ describe('Driver reports', () => {
 
   it('DR-18 damaged goods: the count is queued and carried back to the POD', async () => {
     await signInAs(driver('u-dr18'));
+    await saveRunOnPhone();
     params.stop = 'S-1';
     const Screen = require('@/live/dr-18-problem-detail-damaged-goods').default;
     await render(<Screen />);
@@ -106,10 +125,11 @@ describe('Driver reports', () => {
 
   it('DR-37 reefer alert: the typed reading is queued as REEFER_TEMP, then driving mode', async () => {
     await signInAs(driver('u-dr37'));
+    await saveRunOnPhone();
     const Screen = require('@/live/dr-37-reefer-temperature-alert').default;
     await render(<Screen />);
     expect(await screen.findByText('VAN-T9')).toBeTruthy();
-    fireEvent.changeText(screen.getByTestId('reefer-reading'), '6');
+    await fireEvent.changeText(screen.getByTestId('reefer-reading'), '6');
     expect(await screen.findByText('Too warm')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('lk-L247'));
     await waitFor(() => expect(push).toHaveBeenCalledWith(opened('dr-36-en-route-driving-mode')));
@@ -118,6 +138,7 @@ describe('Driver reports', () => {
 
   it('DR-38 report a delay: reason and minutes for the current stop are queued, then driving mode', async () => {
     await signInAs(driver('u-dr38'));
+    await saveRunOnPhone();
     const Screen = require('@/live/dr-38-report-a-delay').default;
     await render(<Screen />);
     expect(await screen.findByText('On the way to stop 1 ·')).toBeTruthy();
@@ -153,6 +174,7 @@ describe('Driver reports carry the trip, the stop\'s order and outlet, and a hum
 
   it('DR-17 on screen: the queued report names the stop\'s outlet', async () => {
     await signInAs(driver('u-dr17b'));
+    await saveRunOnPhone();
     params.stop = 'S-1';
     const Screen = require('@/live/dr-17-report-a-problem').default;
     await render(<Screen />);
@@ -167,28 +189,31 @@ describe('Driver reports carry the trip, the stop\'s order and outlet, and a hum
 describe('Trip status from the driver: started (ENROUTE) and finished (COMPLETE) through the outbox', () => {
   const statusWrites = (sub: string) => queue.list().filter(i => i.sub === sub && i.kind === 'TRIP_STATUS').map(i => i.payload);
 
+  // Start trip is the design's L12 button (lk-L12)
   it('DR-01 Start trip sets a trip that is still loading ENROUTE, once', async () => {
     routes.set('Trips', [{ ...trip, status: 'LOADING' }]);
     await signInAs(driver('u-start'));
+    await saveRunOnPhone();
     const Screen = require('@/live/dr-01-today-s-run').default;
     await render(<Screen />);
     expect(await screen.findByText('Hill Store')).toBeTruthy();
     expect(screen.getByText('Start trip')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('start-trip'));
+    await fireEvent.press(screen.getByTestId('lk-L12'));
     await waitFor(() => expect(push).toHaveBeenCalledWith(opened('dr-36-en-route-driving-mode')));
     expect(statusWrites('u-start')).toEqual([{ tripId: 'T-1', status: 'ENROUTE' }]);
     // the phone now knows the trip is en route: the button says so and a second tap queues nothing
     expect(await screen.findByText('Continue trip')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('start-trip'));
+    await fireEvent.press(screen.getByTestId('lk-L12'));
     expect(statusWrites('u-start')).toHaveLength(1);
   });
 
   it('DR-01 Start trip on a trip the dock already released (ENROUTE) queues nothing', async () => {
     await signInAs(driver('u-start2'));
+    await saveRunOnPhone();
     const Screen = require('@/live/dr-01-today-s-run').default;
     await render(<Screen />);
     expect(await screen.findByText('Continue trip')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('start-trip'));
+    await fireEvent.press(screen.getByTestId('lk-L12'));
     await waitFor(() => expect(push).toHaveBeenCalledWith(opened('dr-36-en-route-driving-mode')));
     expect(statusWrites('u-start2')).toEqual([]);
   });
@@ -197,6 +222,7 @@ describe('Trip status from the driver: started (ENROUTE) and finished (COMPLETE)
     const pod = (id: string, units: number) => ({ id: `P-${id}`, tripStopId: id, unitsDelivered: units, unitsOrdered: units, savedAt: `${RUN}T01:30:00.000Z` });
     routes.set('TripStops', stops.map(s => ({ ...s, status: 'DELIVERED', arrivalActual: `${RUN}T01:00:00.000Z`, leaveActual: `${RUN}T01:20:00.000Z`, pod: pod(s.id, s.order.units) })));
     await signInAs(driver('u-done'));
+    await saveRunOnPhone();
     const Screen = require('@/live/dr-04-run-complete').default;
     const view = await render(<Screen />);
     expect(await screen.findByText('Trip 1 done')).toBeTruthy();
@@ -226,10 +252,11 @@ describe('Trip status from the driver: started (ENROUTE) and finished (COMPLETE)
   it('DR-28 Close shift completes finished trips, then signs out to DR-06', async () => {
     routes.set('TripStops', stops.map(s => ({ ...s, status: 'DELIVERED', pod: { id: `P-${s.id}`, tripStopId: s.id, unitsDelivered: s.order.units, unitsOrdered: s.order.units, savedAt: `${RUN}T01:30:00.000Z` } })));
     await signInAs(driver('u-close'));
+    await saveRunOnPhone();
     const Screen = require('@/live/dr-28-end-of-shift-summary').default;
     await render(<Screen />);
     expect(await screen.findByText('Shift done')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('close-shift'));
+    await fireEvent.press(screen.getByTestId('lk-L22'));
     await waitFor(() => expect(router.replace as jest.Mock).toHaveBeenCalledWith(opened('dr-06-sign-in')));
     expect(statusWrites('u-close')).toEqual([{ tripId: 'T-1', status: 'COMPLETE' }]);
     const { session } = require('./fake-platform');
