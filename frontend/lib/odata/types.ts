@@ -140,6 +140,7 @@ export interface Trip {
   vehicle?: Vehicle;
   driver?: { id: string; name: string } | null;
   stops?: TripStop[];
+  loadRecord?: { loadedAt?: string | null; releasedAt?: string | null; bay?: string | null } | null;
 }
 
 export interface PlanSummary {

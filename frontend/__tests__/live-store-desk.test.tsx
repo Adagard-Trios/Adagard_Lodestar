@@ -77,7 +77,7 @@ describe('SM-01 Place order', () => {
   it('first order: empty tables, nothing to submit until a valid item is added', async () => {
     renderLive(<PlaceOrder />, { session: SESSIONS.store, handler: req => storeBase(req) ?? page([]) });
     const dry = await screen.findByTestId('lines-ambient');
-    await screen.findByText(/Delivered in your window 05:30–08:00/);
+    await screen.findByText(/Delivered before your 8:00 opening · window 05:30–08:00/);
     expect(screen.getByText(/first order/)).toBeInTheDocument();
     expect(within(dry).getByText('No lines yet')).toBeInTheDocument();
     expect(within(screen.getByTestId('lines-chilled')).getByText('No lines yet')).toBeInTheDocument();
@@ -202,7 +202,7 @@ describe('SM-01 Place order', () => {
       handler: req => storeBase(req) ?? (req.method === 'POST' ? { status: 201, body: { ...(req.body as object), id: 'ORDNEW', runDate: '2026-04-08T00:00:00Z', notes: note } } : req.path === 'Orders' ? page(last) : page([])),
     });
     expect(await screen.findByText('Order for Wed 8 Apr')).toBeInTheDocument();
-    await screen.findByText(/Delivered in your window/);
+    await screen.findByText(/Delivered before your/);
     fireEvent.change(screen.getByLabelText('Delivery date'), { target: { value: '2026-04-07' } });
     expect(await screen.findByText('Closed')).toBeInTheDocument();
     expect(screen.getByText(/This run is closed/)).toHaveTextContent('Submit now and the order goes to the next open run, Wed 8 Apr or the next operating day after it.');

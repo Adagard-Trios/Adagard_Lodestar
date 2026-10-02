@@ -5,15 +5,17 @@
 // Lodestar.MarkRead ("Mark handled"; on a loader's shortfall flag, "Acknowledge": the loader is told) and
 // Notifications/Lodestar.Send to the outlet's store manager ("Message store").
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useScreenNav } from '@/components/ScreenShell';
 import Btn from '@/components/live/Btn';
 import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
-import { usePlanScope, useExceptions, type ExceptionItem } from '@/components/live/plan-data';
+import { p5Link, usePlanScope, useExceptions, type ExceptionItem } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { DEPOT_NAME, fmtClock, fmtRunDate, fmtTime } from '@/lib/format';
 import { useAction, useEntity, useQuery } from '@/lib/odata/hooks';
 import type { Notification, Outlet, Trip, User } from '@/lib/odata/types';
+import { useFocusId } from '@/lib/workday';
 
 type Tab = 'open' | 'resolved' | 'all';
 const LEAD: Record<ExceptionItem['tone'], [string, 'store' | 'clock' | 'wifi-off', string, string]> = {
@@ -21,10 +23,13 @@ const LEAD: Record<ExceptionItem['tone'], [string, 'store' | 'clock' | 'wifi-off
   warn: ['dx-lead--warn', 'clock', 'm-pill--warn', 'Watch'],
   off: ['dx-lead--off', 'wifi-off', 'm-pill--offline', 'Expected'],
 };
-const SOURCE: Record<ExceptionItem['source'], string> = { order: 'Order exception', stop: 'Late risk', notification: 'Alert' };
+const SOURCE: Record<ExceptionItem['source'], string> = { order: 'Order exception', stop: 'Late risk', notification: 'Alert', sync: 'Sync conflict' };
 
 export default function LiveDsp13ExceptionsInbox() {
   const nav = useScreenNav();
+  const router = useRouter();
+  const [, setFocusTrip] = useFocusId('trip');
+  const [, setFocusVehicle] = useFocusId('vehicle');
   const { runDate, ordersFilter, active } = usePlanScope();
   const open = useExceptions(runDate, ordersFilter, active);
   const resolved = useQuery<Notification[]>('resolved-today', async c => {
@@ -199,6 +204,20 @@ export default function LiveDsp13ExceptionsInbox() {
                     <span>Assigned to <b>you</b></span>
                     <span className="spacer" />
                     <span className="d-btn" data-lk="L164"><Ic n="navigate" />{"Live operations"}</span>
+                    {(() => {
+                      // signal loss, vehicle fault and sync conflicts are handled on their P5 screens (DSP-A1, DSP-B1, DSP-A2)
+                      const to = p5Link(sel);
+                      if (!to) return null;
+                      return (
+                        <Btn className="d-btn" testId="open-p5" onClick={() => {
+                          if (to.focus?.[0] === 'trip') setFocusTrip(to.focus[1]);
+                          if (to.focus?.[0] === 'vehicle') setFocusVehicle(to.focus[1]);
+                          router.push(to.href);
+                        }}>
+                          <Ic n="arrow-right" />{to.label}
+                        </Btn>
+                      );
+                    })()}
                     <Btn
                       className="d-btn d-btn--primary"
                       testId="message-store"

@@ -2,11 +2,14 @@
 // DSP-04 Live operations, live. Markup and classes from the generated design (frontend/screens/dsp-04-live-operations.tsx).
 // Data: Trips of the run date with their TripStops (ETA, late risk, status), Orders for the order thread, the
 // exceptions list, and realtime: the screen joins the trip:<id> rooms, so eta_update, signal_lost/back and
-// notifications refresh it as they happen (plus a 30 s safety poll).
+// notifications refresh it as they happen (plus a 30 s safety poll). A signal loss, vehicle fault or sync conflict
+// opens its P5 screen (DSP-A1, DSP-B1, DSP-A2). The legend does not link to DSP-15 (the late-risk explainer is not built).
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useFocusId } from '@/lib/workday';
 import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
-import { usePlanScope, useExceptions, type ExceptionItem } from '@/components/live/plan-data';
+import { p5Link, usePlanScope, useExceptions, type ExceptionItem } from '@/components/live/plan-data';
 import Btn from '@/components/live/Btn';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { BRAND_LETTER, DEPOT_NAME, fmtClock, fmtDay, fmtRunDate, fmtTime, pct } from '@/lib/format';
@@ -99,6 +102,14 @@ function Thread({ order, stop, trip }: { order?: Order; stop?: TripStop; trip: T
 }
 
 export default function LiveDsp04LiveOperations() {
+  const router = useRouter();
+  const [, setFocusTrip] = useFocusId('trip');
+  const [, setFocusVehicle] = useFocusId('vehicle');
+  const openP5 = (to: NonNullable<ReturnType<typeof p5Link>>) => {
+    if (to.focus?.[0] === 'trip') setFocusTrip(to.focus[1]);
+    if (to.focus?.[0] === 'vehicle') setFocusVehicle(to.focus[1]);
+    router.push(to.href);
+  };
   const scope = usePlanScope();
   const { runDate, tripsFilter, ordersFilter, active } = scope;
   const live = useRealtimeStatus();
@@ -175,7 +186,7 @@ export default function LiveDsp04LiveOperations() {
                   {x.notificationId && (
                     <Btn className="d-btn" busy={markRead.pending} onClick={() => void markRead.run(x.notificationId!)}><Ic n="check" />{"Mark handled"}</Btn>
                   )}
-                  <span className="d-btn d-btn--ghost" data-lk="L163">{"Exceptions inbox"}</span>
+                  {p5Link(x) ? <Btn className="d-btn" onClick={() => openP5(p5Link(x)!)}><Ic n="arrow-right" />{p5Link(x)!.label}</Btn> : <span className="d-btn d-btn--ghost" data-lk="L163">{"Exceptions inbox"}</span>}
                 </div>
               </div>
             ))}
@@ -201,7 +212,7 @@ export default function LiveDsp04LiveOperations() {
               ))}
             </div>
             <div className="x-map">
-              <div className="x-maplegend" style={{ top: '14px', bottom: 'auto' }} data-lk="L162">
+              <div className="x-maplegend" style={{ top: '14px', bottom: 'auto' }}>
                 <span><i />{"Live position"}</span>
                 <span><i className="amber" />{"Late risk 30% or more"}</span>
                 <span><i className="dash" />{"Predicted, no signal"}</span>

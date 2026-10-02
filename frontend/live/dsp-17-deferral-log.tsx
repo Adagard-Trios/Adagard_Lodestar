@@ -115,7 +115,7 @@ export default function LiveDsp17DeferralLog() {
               <span className="dx-td" style={{ width: '204px' }}>{"Outlet"}</span>
               <span className="dx-td" style={{ width: '118px' }}>{"Reason"}</span>
               <span className="dx-td" style={{ width: '50px' }}>{"Score"}</span>
-              <span className="dx-td" style={{ width: '232px' }}>{"Proposed · decided"}</span>
+              <span className="dx-td" style={{ width: '232px' }}>{"Proposed · approved"}</span>
               <span className="dx-td" style={{ flex: '1' }}>{"What happened next"}</span>
             </div>
             {!log.data && !log.error && <Skeleton rows={5} />}
@@ -141,7 +141,7 @@ export default function LiveDsp17DeferralLog() {
                     </span>
                   </span>
                   <span className="dx-td" style={{ width: '118px' }}><span className={`dx-code${d.isProvisional ? ' dx-code--soft' : ''}`}>{d.isProvisional ? 'PROVISIONAL' : code(d.reason)}</span></span>
-                  <span className="dx-td" style={{ width: '50px' }}><b style={{ fontFamily: 'var(--font-display)', fontSize: '16px' }}>{d.score}</b></span>
+                  <span className="dx-td" style={{ width: '50px' }}><b style={{ fontFamily: 'var(--font-display)', fontSize: '16px' }}>{d.isProvisional ? <span className="t-3" style={{ fontSize: '14px' }}>{"n/a"}</span> : d.score}</b></span>
                   <span className="dx-td" style={{ width: '232px' }}>
                     <span className="dx-td2">
                       <b>{d.status === 'SUGGESTED' ? 'Suggested by the planner' : d.status === 'CONFIRMED' ? 'Confirmed' : d.status === 'REVERSED' ? 'Reversed' : 'Dismissed'}</b>

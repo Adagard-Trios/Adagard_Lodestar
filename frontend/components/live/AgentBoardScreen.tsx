@@ -4,12 +4,12 @@
 import { useRouter } from 'next/navigation';
 import Btn from './Btn';
 import AskAgent from './AskAgent';
-import { Lane, useBoardCards } from './board';
+import { idleSummary, Lane, useBoardCards } from './board';
 import { PlanSide } from './chrome';
 import { Ic } from './icons';
 import { useAgentRun, usePlanScope, useStartAgentRun } from './plan-data';
 import { Empty, ErrorBanner, Skeleton } from './states';
-import { DEPOT_NAME, fmtNum, fmtRunDate } from '@/lib/format';
+import { DEPOT_NAME, fmtNum, fmtRunDate, fmtTime } from '@/lib/format';
 import { useAgentRunId } from '@/lib/workday';
 
 export default function AgentBoardScreen({ name, mode }: { name: string; mode: 'ask' | 'proposal' }) {
@@ -24,6 +24,7 @@ export default function AgentBoardScreen({ name, mode }: { name: string; mode: '
   const version = detail?.plan?.version ?? detail?.version;
   const depot = run.data?.depot ?? scope.depot ?? scope.active[0];
   const waiting = run.data?.status === 'NEEDS_APPROVAL';
+  const firstDepart = board.cards.map(c => c.departs).filter(Boolean).sort()[0];
 
   return (
     <div className="frame frame--desktop mode-dispatcher" data-name={name}>
@@ -54,7 +55,7 @@ export default function AgentBoardScreen({ name, mode }: { name: string; mode: '
           {runId && (
             <div className="ag-split">
               <div className="ag-board">
-                <div className="x-lanehead"><span style={{ width: '128px' }}>{"Vehicle · min"}</span><span style={{ flex: '1' }}>{"Trip 1"}</span><span style={{ flex: '1' }}>{"Trip 2 · max 2 trips a day"}</span></div>
+                <div className="x-lanehead"><span style={{ width: '128px' }}>{"Vehicle · min"}</span><span style={{ flex: '1' }}>Trip 1{firstDepart ? ` · departs ${fmtTime(firstDepart)}` : ''}</span><span style={{ flex: '1' }}>{"Trip 2 · max 2 trips a day"}</span></div>
                 {board.loading && <Skeleton rows={3} />}
                 {board.lanes.slice(0, 5).map(([id, cs]) => <Lane key={id} vehicleId={id} cards={cs} v={board.vehicles.get(id)} />)}
                 {deferrals.length > 0 && (
@@ -71,8 +72,25 @@ export default function AgentBoardScreen({ name, mode }: { name: string; mode: '
                     ))}
                   </div>
                 )}
+                {board.down.map(v => (
+                  <div key={v.id} className="x-lane">
+                    <div className="x-veh" style={{ padding: '0 2px', justifyContent: 'center' }}>
+                      <div className="x-veh__id" style={{ color: 'var(--text-3)' }}>
+                        <span className="x-veh__ic" style={{ opacity: '.55' }}><Ic n="truck" /></span>
+                        <span className="id" style={{ textDecoration: 'line-through' }}>{v.id}</span>
+                      </div>
+                    </div>
+                    <div className="x-down">
+                      <Ic n="alert" className="ic ic--sm" />
+                      <b>In workshop {scope.runDate ? fmtRunDate(scope.runDate) : ''}</b>
+                      <span className="t-3">{v.tempClass === 'CHILLED' ? 'Reefer' : 'Dry'} {v.type === 'VAN' ? 'van' : 'truck'} · 0 trips</span>
+                      <span className="spacer" />
+                      <span className="x-code">{"VEH-DOWN"}</span>
+                    </div>
+                  </div>
+                ))}
                 <div className="spacer" />
-                <div className="x-boardfoot"><Ic n="chevron-down" className="ic ic--sm" /><span>{board.lanes.length} vehicles in the draft</span></div>
+                <div className="x-boardfoot"><Ic n="chevron-down" className="ic ic--sm" /><span>{idleSummary(board.idle)}</span></div>
               </div>
               {run.data ? (
                 <AskAgent run={run.data} mode={mode} subtitle={`Draft v${version ?? ''} · ${DEPOT_NAME[run.data.depot] ?? run.data.depot} · ${scope.runDate ? fmtRunDate(scope.runDate) : ''}`} />

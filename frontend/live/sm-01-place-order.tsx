@@ -13,7 +13,7 @@ import { StoreTop, useMyOutlet } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { useAuth } from '@/lib/auth/AuthProvider';
-import { addDays, fmtNum, fmtRunDate, isoDay } from '@/lib/format';
+import { addDays, DEPOT_NAME, fmtNum, fmtRunDate, isoDay } from '@/lib/format';
 import { useAction, useQuery } from '@/lib/odata/hooks';
 import type { Order, OrderLineItem, TempClass } from '@/lib/odata/types';
 
@@ -44,13 +44,18 @@ function toLines(order: Order | undefined): Line[] {
   }));
 }
 
+/** "Tuesday" for a run date (stored as UTC midnight). */
+const weekday = (v: string) => new Date(v).toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' });
+/** "08:00" as the boards write an opening time: "8:00". */
+const clock = (hhmm: string) => hhmm.replace(/^0(?=\d:)/, '');
+
 function cutoffFor(runDate: string): Date {
   // Orders close at 4:00 PM (Sri Lanka time, UTC+05:30) the day before the run.
   return new Date(`${addDays(runDate, -1)}T16:00:00+05:30`);
 }
 
-function LineTable({ title, cls, lines, setLines, note, tempClass }: {
-  title: string; cls: string; lines: Line[]; setLines: (l: Line[]) => void; note: string; tempClass: TempClass;
+function LineTable({ title, cls, lines, setLines, note, tempClass, lastLabel }: {
+  title: string; cls: string; lines: Line[]; setLines: (l: Line[]) => void; note: string; tempClass: TempClass; lastLabel: string;
 }) {
   const [name, setName] = useState('');
   const [kg, setKg] = useState('');
@@ -74,7 +79,7 @@ function LineTable({ title, cls, lines, setLines, note, tempClass }: {
       </div>
       <div className="ot-row ot-row--head">
         <span className="ot-item">{"Item"}</span>
-        <span className="ot-last">{"Last order"}</span>
+        <span className="ot-last">{lastLabel}</span>
         <span className="ot-sug">{"kg / unit"}</span>
         <span className="ot-qty">{"Qty"}</span>
         <span className="ot-kg">{"kg"}</span>
@@ -127,6 +132,9 @@ export default function LiveSm01PlaceOrder() {
   const [chilled, setChilled] = useState<Line[] | null>(null);
   const dryLines = dry ?? toLines(lastDry);
   const chilledLines = chilled ?? toLines(lastChilled);
+  // the order the lines start from: "Last Tue" column, "started from last Tuesday"
+  const startFrom = lastDry ?? lastChilled;
+  const lastLabel = startFrom ? `Last ${fmtRunDate(startFrom.runDate).split(' ')[0]}` : 'Last order';
   const calendar = useQuery<{ festivalName?: string | null; festivalRamp?: number; isOperating?: boolean } | null>(`calendar:${runDate}`, async c =>
     (await c.list<{ festivalName?: string; festivalRamp?: number; isOperating?: boolean }>('Calendar', { filter: `date eq ${runDate}T00:00:00Z`, top: 1 })).value[0] ?? null);
 
@@ -189,10 +197,14 @@ export default function LiveSm01PlaceOrder() {
         <div className="d-main" style={{ paddingBottom: '20px' }}>
           <div className="d-head">
             <div className="d-head__txt">
-              <div className="d-eyebrow">{"New order "}<span className="m-sep" />{lastDry || lastChilled ? ' started from your last order' : ' first order'}</div>
+              <div className="d-eyebrow">
+                {"New order "}
+                {o && <><span className="m-sep" />{` ${DEPOT_NAME[o.depot] ?? o.depot} run `}</>}
+                <span className="m-sep" />{startFrom ? ` started from last ${weekday(startFrom.runDate)}` : ' first order'}
+              </div>
               <div className="d-h1">Order for {fmtRunDate(runDate)}</div>
               <div className="d-sub">
-                {o ? `Delivered in your window ${o.windowOpen}–${o.windowClose} · ${o.dockType.toLowerCase().replace('_', ' ')}, ${o.parking.toLowerCase().replace('_', ' ')} access · ` : ''}
+                {o ? `Delivered before your ${clock(o.windowClose)} opening · window ${o.windowOpen}–${o.windowClose} · ${o.dockType.toLowerCase().replace('_', ' ')}, ${o.parking.toLowerCase().replace('_', ' ')} access · ` : ''}
                 {"delivery date "}
                 <input className="lv-input" type="date" aria-label="Delivery date" value={runDate} min={tomorrow()} onChange={e => setRunDate(e.target.value || nextOpenRun())}
                   style={{ width: 'auto', display: 'inline-block', font: 'inherit', color: 'var(--brand-600)', fontWeight: 700 }} />
@@ -229,7 +241,7 @@ export default function LiveSm01PlaceOrder() {
             <div className="d-kpi">
               <span className="d-kpi__l"><span className="m-tag"><span className="dot" />{"Dry order"}</span><span className="m-sep" />{dryLines.length} lines</span>
               <span className="d-kpi__v">{d.units}<small>{"units"}</small></span>
-              <span className="d-kpi__s">{fmtNum(d.kg)} kg · {fmtNum(d.kg * ratio, 1)} m³</span>
+              <span className="d-kpi__s">{fmtNum(d.kg)} kg · {fmtNum(d.kg * ratio, 1)} m³ · every operating day</span>
             </div>
             <div className="d-kpi">
               <span className="d-kpi__l"><span className="m-tag m-tag--cold"><Ic n="snow" />{"Chilled order"}</span><span className="m-sep" />{chilledLines.length} lines</span>
@@ -248,8 +260,8 @@ export default function LiveSm01PlaceOrder() {
           </div>
           {!history.data && !history.error ? <Skeleton rows={4} /> : (
             <div className="hstack" style={{ gap: '16px', alignItems: 'stretch', flex: '1', minHeight: '0' }}>
-              <LineTable title="Dry order" cls="" lines={dryLines} setLines={setDry} note="every operating day" tempClass="AMBIENT" />
-              <LineTable title="Chilled order" cls="m-tag--cold" lines={chilledLines} setLines={setChilled} note="needs a reefer" tempClass="CHILLED" />
+              <LineTable title="Dry order" cls="" lines={dryLines} setLines={setDry} note="every operating day" tempClass="AMBIENT" lastLabel={lastLabel} />
+              <LineTable title="Chilled order" cls="m-tag--cold" lines={chilledLines} setLines={setChilled} note="needs a reefer" tempClass="CHILLED" lastLabel={lastLabel} />
             </div>
           )}
           {lastDry && <span className="t-3" style={{ fontSize: '12.5px' }}>Started from {lastDry.id}{lastChilled ? ` and ${lastChilled.id}` : ''} ({fmtRunDate(isoDay(lastDry.runDate))}).</span>}

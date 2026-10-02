@@ -82,6 +82,17 @@ export function Lane({ vehicleId, cards, v }: { vehicleId: string; cards: Card[]
   );
 }
 
+/** The board foot: "30 more: 4 reefer trucks · 1 reefer van · 23 dry trucks · 2 ambient vans". */
+export function idleSummary(idle: Vehicle[]): string {
+  const kinds: Array<[string, (v: Vehicle) => boolean]> = [
+    ['reefer truck', v => v.tempClass === 'CHILLED' && v.type !== 'VAN'],
+    ['reefer van', v => v.tempClass === 'CHILLED' && v.type === 'VAN'],
+    ['dry truck', v => v.tempClass !== 'CHILLED' && v.type !== 'VAN'],
+    ['ambient van', v => v.tempClass !== 'CHILLED' && v.type === 'VAN'],
+  ];
+  const parts = kinds.map(([label, is]) => [label, idle.filter(is).length] as const).filter(([, n]) => n > 0).map(([label, n]) => `${n} ${label}${n === 1 ? '' : 's'}`);
+  return `${idle.length} more${parts.length ? `: ${parts.join(' · ')}` : ''}`;
+}
 
 /** Cards for the board: the agent draft's trips when `draft` is given, else the run date's real trips. */
 export function useBoardCards(opts: { draft: AgentRunDetail | null; tripsFilter?: string; ordersFilter?: string; active: readonly string[] }) {

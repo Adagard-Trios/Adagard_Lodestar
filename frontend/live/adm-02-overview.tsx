@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/auth/AuthProvider';
 import { AdminSide, useCount } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
-import { DEPOT_NAME, daysAgo, fmtDay, fmtDayTime, fmtRunDate, fmtTime } from '@/lib/format';
+import { DEPOT_NAME, daysAgo, fmtDay, fmtDayTime, fmtRunDate, fmtTime, TIME_ZONE } from '@/lib/format';
 import { useQuery } from '@/lib/odata/hooks';
 import type { AuditEntry, ChainCheck, Device, Plan } from '@/lib/odata/types';
 
@@ -29,6 +29,10 @@ export default function LiveAdm02Overview() {
 
   const needs = (pending.data?.length ?? 0) + (denied.data?.length ?? 0);
   const first = (session?.name ?? '').split(' ')[0];
+  const now = new Date();
+  const hour = Number(new Intl.DateTimeFormat('en-GB', { hour: 'numeric', hourCycle: 'h23', timeZone: TIME_ZONE }).format(now));
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const year = new Intl.DateTimeFormat('en-GB', { year: 'numeric', timeZone: TIME_ZONE }).format(now);
 
   return (
     <div className="frame frame--desktop mode-dispatcher" data-name="ADM-02 Overview · desktop">
@@ -37,9 +41,9 @@ export default function LiveAdm02Overview() {
         <div className="dx-main">
           <div className="d-head">
             <div className="d-head__txt">
-              <div className="d-eyebrow">{fmtDay(new Date())} <span className="m-sep" /> {fmtTime(new Date())} <span className="m-sep" />{" Both depots"}</div>
-              <div className="d-h1">Hello{first ? `, ${first}` : ''}</div>
-              <div className="d-sub">{!(pending.data && denied.data) ? ' ' : needs ? `${needs} thing${needs === 1 ? ' is' : 's are'} waiting for you.` : 'Nothing is waiting for you. Everything is quiet.'}</div>
+              <div className="d-eyebrow">{fmtDay(now)} {year} <span className="m-sep" /> {fmtTime(now)} <span className="m-sep" />{" Both depots"}</div>
+              <div className="d-h1">{greeting}{first ? `, ${first}` : ''}</div>
+              <div className="d-sub">{!(pending.data && denied.data) ? ' ' : needs ? `${needs} thing${needs === 1 ? ' is' : 's are'} waiting for you. Everything else is quiet.` : 'Nothing is waiting for you. Everything is quiet.'}</div>
             </div>
             <span className="d-btn d-btn--ghost" data-lk="L287"><Ic n="history" />{"Open audit log"}</span>
           </div>
@@ -58,7 +62,6 @@ export default function LiveAdm02Overview() {
                 {!pending.data && <Skeleton rows={2} />}
                 {pending.data?.map(d => (
                   <div key={d.id} className="x-hrow" style={{ padding: '12px 0' }} data-device={d.id}>
-                    <span className="adm-hlead"><Ic n="phone" /></span>
                     <div className="x-hrow__main">
                       <div className="x-hrow__t">{d.label ?? d.model ?? 'Device'} waiting<span className="id">{d.id}</span></div>
                       <div className="x-hrow__m">{d.user?.name ?? d.userId} · {d.platform ?? ''} · registered {fmtDayTime(d.registeredAt)}</div>
@@ -78,7 +81,7 @@ export default function LiveAdm02Overview() {
                 ))}
               </div>
               <div className="dx-card" style={{ flex: '1', minHeight: '0' }}>
-                <div className="dx-card__head"><span className="dx-card__title">{"Your actions today"}</span><span className="spacer" /><span className="x-link" data-lk="L287">{"Audit log"}<Ic n="chevron-right" /></span></div>
+                <div className="dx-card__head"><span className="dx-card__title">{"Resolved today"}</span><span className="spacer" /><span className="x-link" data-lk="L287">{"Audit log"}<Ic n="chevron-right" /></span></div>
                 <div className="dx-card__body" style={{ gap: '0' }}>
                   {mine.data?.length === 0 && <span className="dx-t13">No changes by you today.</span>}
                   {mine.data?.map(a => (

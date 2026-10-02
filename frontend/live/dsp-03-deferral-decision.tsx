@@ -19,6 +19,8 @@ const REASONS: Record<string, string> = {
   CAP_REEFER: 'Reefer capacity', CAP_TIME: 'Time window', ACCESS: 'Access', WINDOW: 'Delivery window', FUEL: 'Fuel quota', VEH_DOWN: 'Vehicle down',
 };
 const code = (r: string) => r.replace('_', '-');
+/** "Wed" for a run date. */
+const weekday = (day: string) => fmtRunDate(day).split(' ')[0];
 
 interface Row extends Deferral { outlet?: Outlet }
 
@@ -128,13 +130,16 @@ export default function LiveDsp03DeferralDecision() {
                       <div className="x-score"><b>{r.score}</b><span>{"score"}</span></div>
                     </div>
                     <div className="x-meta">
-                      <span className="m-tag m-tag--cold"><Ic n="snow-heavy" />{o?.tempClass === 'CHILLED' ? 'Chilled' : 'Ambient'} {fmtNum(o?.m3, 1)} m³</span>
+                      {o?.tempClass === 'CHILLED'
+                        ? <span className="m-tag m-tag--cold"><Ic n="snow-heavy" />Chilled {fmtNum(o?.m3, 1)} m³</span>
+                        : <span className="m-tag"><span className="dot" />Ambient {fmtNum(o?.m3, 1)} m³</span>}
+                      {prot && <><span className="m-sep" />{"deferred yesterday"}</>}
                       <span className="m-sep" />
-                      {prot ? 'deferred yesterday' : `days since ${o?.daysSince ?? 0}`}
+                      {`days since ${o?.daysSince ?? 0}`}
                     </div>
                     <div className="x-sbar"><div style={{ width: `${Math.min(100, r.score)}%`, background: r.score >= 91 ? 'var(--st-exception-fg)' : 'var(--star-500)' }} /></div>
                     <div className="hstack" style={{ gap: '8px' }}>
-                      <span className="m-pill m-pill--warn"><span className="dot" />{"Suggested: defer"}</span>
+                      <span className="m-pill m-pill--warn"><span className="dot" />Suggested: defer to {nextDay ? weekday(nextDay) : 'the next run'}</span>
                       <span className="x-code">{code(r.reason)}</span>
                     </div>
                   </div>
@@ -183,7 +188,7 @@ export default function LiveDsp03DeferralDecision() {
                         <div className="thread__bar is-warn" />
                         <div className="thread__step is-warn"><div className="thread__node"><Ic n="exclaim" /></div><div className="thread__label">{"Deferred"}</div><div className="thread__time">{"now"}</div></div>
                         <div className="thread__bar" />
-                        <div className="thread__step "><div className="thread__node" /><div className="thread__label">{"Next run"}</div><div className="thread__time">{fmtRunDate(dates[sel.id] || nextDay)}</div></div>
+                        <div className="thread__step "><div className="thread__node" /><div className="thread__label">{weekday(dates[sel.id] || nextDay)} run</div><div className="thread__time">{fmtRunDate(dates[sel.id] || nextDay).split(' ').slice(1).join(' ')}</div></div>
                         <div className="thread__bar" />
                         <div className="thread__step "><div className="thread__node" /><div className="thread__label">{"Delivered"}</div><div className="thread__time">{"·"}</div></div>
                       </div>
@@ -208,7 +213,7 @@ export default function LiveDsp03DeferralDecision() {
                         <div className="x-conseq__h" data-lk="L158"><Ic n="info" className="ic ic--sm" />{"What happens if you approve"}</div>
                         <div className="x-conseq__r"><Ic n="calendar" className="ic ic--sm" /><span>Served <b>{fmtRunDate(dates[sel.id] || nextDay)}</b>. {fmtNum(sel.order?.m3, 1)} m³ is reserved on that run.</span></div>
                         <div className="x-conseq__r"><Ic n="message" className="ic ic--sm" /><span>Store manager told <b>when the plan goes live</b>, with the reason and new date.</span></div>
-                        <div className="x-conseq__r"><Ic n="shield-check" className="ic ic--sm" /><span>Next run, {sel.order?.outletId} becomes <b>protected</b> (deferred yesterday).</span></div>
+                        <div className="x-conseq__r"><Ic n="shield-check" className="ic ic--sm" /><span>On {weekday(dates[sel.id] || nextDay)}, {sel.order?.outletId} becomes <b>protected</b> (deferred yesterday).</span></div>
                       </div>
                     </div>
                     <div className="hstack" style={{ gap: '10px' }}>

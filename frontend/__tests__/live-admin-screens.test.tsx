@@ -89,10 +89,10 @@ describe('ADM-02 Overview', () => {
 
   it('greets the admin and shows what waits, system health and plans waiting on dispatch', async () => {
     const view = renderLive(<Overview />, { ...admin, handler: handler() });
-    expect(screen.getByText('Hello, Ada')).toBeInTheDocument();
+    expect(screen.getByText(/^Good (morning|afternoon|evening), Ada$/)).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('needs-you')).toHaveTextContent('2'));
     expect(screen.getByText('1 device request, 1 refused access')).toBeInTheDocument();
-    expect(screen.getByText('2 things are waiting for you.')).toBeInTheDocument();
+    expect(screen.getByText('2 things are waiting for you. Everything else is quiet.')).toBeInTheDocument();
     expect(screen.getByText(/Bay tablet 3 waiting/)).toBeInTheDocument();
     expect(screen.getByText('Refused: Plans.Approve')).toBeInTheDocument();
     expect(await screen.findByText('No changes by you today.')).toBeInTheDocument();

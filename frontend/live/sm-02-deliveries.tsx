@@ -13,12 +13,12 @@ import { StoreTop, useMyOutlet } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { useAuth } from '@/lib/auth/AuthProvider';
-import { daysAgo, fmtClock, fmtDay, fmtRunDate, fmtTime, title } from '@/lib/format';
+import { addDays, daysAgo, DEPOT_NAME, fmtClock, fmtDay, fmtRunDate, fmtTime, title } from '@/lib/format';
 import { useAction, useQuery } from '@/lib/odata/hooks';
 import type { Notification, Order, Trip, TripStop } from '@/lib/odata/types';
 
 const PILL: Record<string, [string, string]> = {
-  RECEIVED: ['m-pill--brand', 'Received'], PLANNED: ['m-pill--brand', 'Planned'], LOADED: ['m-pill--loaded', 'Loaded'],
+  RECEIVED: ['m-pill--brand', 'Received'], PLANNED: ['m-pill--brand', 'Planned'], LOADED: ['m-pill--loaded', 'Loading'],
   ENROUTE: ['m-pill--info', 'On the way'], DELIVERED: ['m-pill--ok', 'Delivered'], DEFERRED: ['m-pill--warn', 'Deferred'],
   EXCEPTION: ['m-pill--bad', 'Exception'], CANCELLED: ['', 'Cancelled'],
 };
@@ -41,7 +41,7 @@ export function receiptNote(order: Pick<Order, 'id' | 'units'>, counted: number,
 }
 
 /** The delivery is in: count each order, report an issue, confirm (SM-03 and SM-18 on the desk). */
-function ReceiptCard({ stops, onDone }: { stops: TripStop[]; onDone: () => void }) {
+function ReceiptCard({ stops, onDone, hub }: { stops: TripStop[]; onDone: () => void; hub: string }) {
   const orders = stops.map(s => s.order).filter((o): o is Order => !!o && o.status !== 'CANCELLED');
   const open = orders.filter(o => o.unitsReceived == null && RECEIVABLE.includes(o.status));
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -106,7 +106,7 @@ function ReceiptCard({ stops, onDone }: { stops: TripStop[]; onDone: () => void 
                   onClick={e => { e.stopPropagation(); pick(k); }} onKeyDown={e => { if (e.key === 'Enter') pick(k); }}>{k}</span>
               ))}
             </div>
-            <textarea className="lv-input lv-field" aria-label="Note for Kandy Hub" placeholder="Note for Kandy Hub · optional" maxLength={400} value={issue.note} onChange={e => setIssue({ ...issue, note: e.target.value })} onClick={e => e.stopPropagation()} />
+            <textarea className="lv-input lv-field" aria-label={`Note for ${hub}`} placeholder={`Note for ${hub} · optional`} maxLength={400} value={issue.note} onChange={e => setIssue({ ...issue, note: e.target.value })} onClick={e => e.stopPropagation()} />
           </div>
         ) : (
           <Btn className="lv-link" testId="report-issue" onClick={() => setIssue({ orderId: open[0].id, kind: short ? 'Short' : 'Damaged', note: '' })}>{"Report an issue"}</Btn>
@@ -174,22 +174,30 @@ export default function LiveSm02Deliveries() {
   const risk = current?.lateRiskPct ?? null;
   const o = outlet.data;
   const units = sameRun.reduce((s, x) => s + (x.order?.units ?? 0), 0);
+  const depot = o?.depot ?? trip?.depot;
+  const hub = depot ? DEPOT_NAME[depot] ?? depot : 'the hub';
+  const vans = new Set(sameRun.map(s => s.tripId)).size;
+  // the next run still open for orders: tomorrow's until its 4:00 PM cutoff today (Sri Lanka time), then the day after
+  const [colombo] = useState(() => new Date(Date.now() + 330 * 60_000));
+  const afterCutoff = colombo.getUTCHours() >= 16;
+  const nextRun = addDays(colombo.toISOString().slice(0, 10), afterCutoff ? 2 : 1);
 
   return (
     <div className="frame frame--desktop mode-store" data-name="SM-02 Deliveries · desktop">
       <div className="s-shell">
-        <StoreTop active="deliveries" avatarLk="L128" />
+        <StoreTop active="deliveries" />
         <div className="d-main">
           <div className="d-head">
             <div className="d-head__txt">
               <div className="d-eyebrow">
                 {current ? fmtRunDate(trip?.runDate ?? current.etaPlan) : 'No delivery yet'}
                 <span className="m-sep" />{` ${sameRun.length} order${sameRun.length === 1 ? '' : 's'} `}
-                {trip && <><span className="m-sep" />{` ${trip.vehicleId} `}</>}
+                {trip && <><span className="m-sep" />{` ${vans} van${vans === 1 ? '' : 's'} `}</>}
+                {current && <><span className="m-sep" />{` live from ${hub}`}</>}
               </div>
               <div className="d-h1">{current?.status === 'DELIVERED' ? 'Latest delivery' : "Today's delivery"}</div>
             </div>
-            {trip && <span className={`m-pill ${PILL[trip.status === 'ENROUTE' ? 'ENROUTE' : trip.status === 'COMPLETE' ? 'DELIVERED' : 'LOADED'][0]}`}><span className="dot" />{title(trip.status)}{trip.bay ? ` · Bay ${trip.bay}` : ''}</span>}
+            {trip && <span className={`m-pill ${PILL[trip.status === 'ENROUTE' ? 'ENROUTE' : trip.status === 'COMPLETE' ? 'DELIVERED' : 'LOADED'][0]}`}><span className="dot" />{trip.status === 'LOADING' ? `Loading at ${hub}` : title(trip.status)}{trip.bay ? ` · Bay ${trip.bay}` : ''}</span>}
           </div>
           <ErrorBanner error={stops.error ?? orders.error ?? notes.error ?? markRead.error} onRetry={() => { void stops.refresh(); void orders.refresh(); }} />
           <div className="hstack" style={{ gap: '18px', alignItems: 'stretch' }}>
@@ -243,7 +251,7 @@ export default function LiveSm02Deliveries() {
               )}
             </div>
             <div className="d-panel">
-              {receiptRun.length > 0 && <ReceiptCard stops={receiptRun} onDone={() => { void stops.refresh(); void orders.refresh(); }} />}
+              {receiptRun.length > 0 && <ReceiptCard stops={receiptRun} hub={hub} onDone={() => { void stops.refresh(); void orders.refresh(); }} />}
               {notes.data?.length === 0 && (
                 <div className="d-card"><div className="ncard" style={{ gap: '6px' }}><span className="ncard__meta"><Ic n="check" className="ic ic--sm" />{"Nothing needs your attention"}</span></div></div>
               )}
@@ -261,8 +269,8 @@ export default function LiveSm02Deliveries() {
               ))}
               <div className="d-card" data-lk="L124">
                 <div className="ncard" style={{ gap: '6px' }}>
-                  <span className="ncard__meta" style={{ color: 'var(--brand-600)' }}><Ic n="clock" className="ic ic--sm" />{"Next orders close at 4:00 PM"}</span>
-                  <span className="ncard__p">Start from your last order. <b style={{ color: 'var(--brand-600)' }}>{"Start the next order"}</b></span>
+                  <span className="ncard__meta" style={{ color: 'var(--brand-600)' }}><Ic n="clock" className="ic ic--sm" />{fmtRunDate(nextRun)} orders close 4:00 PM {afterCutoff ? 'tomorrow' : 'today'}</span>
+                  <span className="ncard__p">Start from your last order. <b style={{ color: 'var(--brand-600)' }}>Start {fmtRunDate(nextRun).split(' ')[0]} order</b></span>
                 </div>
               </div>
             </div>
@@ -295,14 +303,15 @@ export default function LiveSm02Deliveries() {
             {orders.data?.map(x => {
               const [cls, label] = PILL[x.status] ?? ['', x.status];
               const st = x.tripStop;
+              const sel = Boolean(st && st.id === current?.id);
               return (
-                <div key={x.id} className={`wk-row${st && st.id === current?.id ? ' wk-row--sel' : ''}`} data-order={x.id}>
-                  <span className="c" style={{ width: '120px' }}>{fmtRunDate(x.runDate)}</span>
+                <div key={x.id} className={`wk-row${sel ? ' wk-row--sel' : ''}`} data-order={x.id}>
+                  <span className={`c${sel ? ' fw7' : ''}`} style={{ width: '120px' }}>{fmtRunDate(x.runDate)}</span>
                   <span className="c id" style={{ width: '130px' }}>{x.id}</span>
                   <span className="c" style={{ width: '120px' }}>{x.tempClass === 'CHILLED' ? <span className="m-tag m-tag--cold"><span className="dot" />{"Chilled"}</span> : <span className="m-tag"><span className="dot" />{"Ambient"}</span>}</span>
                   <span className="c" style={{ width: '110px' }}>{x.units}</span>
                   <span className="c" style={{ width: '150px' }}><span className={`m-pill ${cls}`}><span className="dot" />{label}</span></span>
-                  <span className="c" style={{ width: '150px' }}>{st?.arrivalActual ? fmtClock(st.arrivalActual) : st?.etaModelBandEarly ? `${fmtClock(st.etaModelBandEarly)}–${fmtClock(st.etaModelBandLate)}` : '—'}</span>
+                  <span className={`c${sel ? ' fw7' : ''}`} style={{ width: '150px' }}>{st?.arrivalActual ? fmtClock(st.arrivalActual) : st?.etaModelBandEarly ? `${fmtClock(st.etaModelBandEarly)}–${fmtClock(st.etaModelBandLate)}` : '—'}</span>
                   <span className="c" style={{ flex: '1', color: x.status === 'DELIVERED' ? 'var(--st-delivered-fg)' : 'var(--text-3)', fontWeight: x.status === 'DELIVERED' ? '700' : undefined }}>
                     {x.status === 'DELIVERED' ? 'Delivered · see receipts' : 'after delivery'}
                   </span>

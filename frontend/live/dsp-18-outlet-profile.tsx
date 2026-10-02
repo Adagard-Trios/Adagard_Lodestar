@@ -19,6 +19,7 @@ const code = (r: string) => r.replace('_', '-');
 export default function LiveDsp18OutletProfile() {
   const { runDate, active } = usePlanScope();
   const [focus, setFocus] = useFocusId('outlet');
+  const [, setOrder] = useFocusId('order');
   const choices = useQuery<Outlet[]>(`outlet-choices:${active.join(',')}`, c => c.all<Outlet>('Outlets', { filter: depotFilter('depot', active), select: 'id,name', orderby: 'id' }));
   const id = focus ?? choices.data?.[0]?.id ?? null;
   const outlet = useEntity<Outlet>('Outlets', id);
@@ -87,7 +88,7 @@ export default function LiveDsp18OutletProfile() {
                     {upcoming && (
                       <>
                         <div className="dx-kv"><span>{"Run"}</span><b>{fmtRunDate(upcoming.runDate)}</b></div>
-                        <div className="dx-kv" data-lk="L169"><span>{"Order"}</span><b><span className="id">{upcoming.id}</span> · {upcoming.units} units</b></div>
+                        <div className="dx-kv" data-lk="L169" onClickCapture={() => setOrder(upcoming.id)}><span>{"Order"}</span><b><span className="id">{upcoming.id}</span> · {upcoming.units} units</b></div>
                         <div className="dx-kv"><span>{"Load"}</span><b>{title(upcoming.tempClass)} {fmtNum(upcoming.m3, 1)} m³ · {fmtNum(upcoming.kg)} kg</b></div>
                         <div className="dx-kv"><span>{"Stop"}</span><b>{upcoming.tripStop ? `${upcoming.tripStop.tripId} · stop ${upcoming.tripStop.stopSeq}` : 'not on a trip yet'}</b></div>
                         <div className="dx-kv"><span>{"Ordered"}</span><b>{fmtDay(upcoming.orderedAt)}</b></div>

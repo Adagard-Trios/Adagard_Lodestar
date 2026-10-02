@@ -87,7 +87,7 @@ export function useAgentRunId() {
  * The record a detail screen shows (outlet profile, vehicle, person, device, audit entry). List screens set it
  * before following the design's link; ?id= in the URL wins, so detail screens can be linked directly.
  */
-export function useFocusId(kind: 'outlet' | 'vehicle' | 'user' | 'device' | 'audit' | 'order') {
+export function useFocusId(kind: 'outlet' | 'vehicle' | 'user' | 'device' | 'audit' | 'order' | 'trip') {
   const key = `lodestar.focus.${kind}`;
   const id = useSyncExternalStore(subscribe, () => new URLSearchParams(window.location.search).get('id') ?? read(key), () => null);
   const setId = useCallback((v: string | null) => write(key, v), [key]);

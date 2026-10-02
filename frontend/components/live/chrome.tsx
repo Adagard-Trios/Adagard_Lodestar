@@ -70,7 +70,7 @@ function SideFoot({ role, avatarStyle }: { role: string; avatarStyle?: React.CSS
   );
 }
 
-/** Lodestar Plan sidebar (DSP boards). `active` is the item's code: N0 Today … N9 Settings. */
+/** Lodestar Plan sidebar (DSP boards). `active` is the item's code: N0 Today … N7 Fleet & outlets. */
 export function PlanSide({ active, bellLk }: { active: string; bellLk?: string }) {
   const { depot, depots, setDepot, active: inView } = useDepot();
   const { runDate } = useRunDate('Plans');
@@ -87,8 +87,7 @@ export function PlanSide({ active, bellLk }: { active: string; bellLk?: string }
     { code: 'N6', icon: 'chart', label: 'Capacity outlook' },
     { sect: 'Records' },
     { code: 'N7', icon: 'truck', label: 'Fleet & outlets' },
-    { code: 'N8', icon: 'sparkle-plus', label: 'Intelligence' },
-    { code: 'N9', icon: 'cog', label: 'Settings' },
+    // N8 Intelligence (DSP-16) and N9 Settings (DSP-20) are not built (no model registry or settings API): left out.
   ];
   return (
     <aside className="d-side">
@@ -138,9 +137,8 @@ export function AdminSide({ active }: { active: string }) {
     { code: 'N6', icon: 'sliders', label: 'Operating rules' },
     { code: 'N7', icon: 'calendar', label: 'Calendar' },
     { sect: 'Data and trust' },
-    { code: 'N8', icon: 'upload', label: 'Data imports' },
+    // N8 Data imports (ADM-14) and N10 Planning agent guardrails (ADM-17) are not built (no import or guardrail API): left out.
     { code: 'N9', icon: 'history', label: 'Audit log' },
-    { code: 'N10', icon: 'sparkle-plus', label: 'Planning agent' },
     { code: 'N11', icon: 'message', label: 'Notifications' },
   ];
   return (

@@ -52,7 +52,7 @@ export default function LiveAdm20ChainCheckResult() {
               <div className="d-h1">{"Chain check result"}</div>
               <div className="d-sub">{"Lodestar re-read every entry and checked its hash and the link to the entry before it."}</div>
             </div>
-            <span className="d-btn" data-lk="L306"><Ic n="arrow-left" />{"Back to audit log"}</span>
+            <span className="d-btn" data-lk="L306"><Ic n="arrow-left" data-lk="B" />{"Back to audit log"}</span>
             <Btn className="d-btn" testId="verify-again" busy={check.pending} onClick={() => void check.run()}><Ic n="refresh" />{"Run again"}</Btn>
             <Btn className="d-btn d-btn--primary" disabled={!r} onClick={save}><Ic n="download" />{"Export verification report"}</Btn>
           </div>

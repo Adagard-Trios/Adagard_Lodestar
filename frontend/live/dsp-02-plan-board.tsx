@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import Btn from '@/components/live/Btn';
 import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
-import { Lane, useBoardCards } from '@/components/live/board';
+import { idleSummary, Lane, useBoardCards } from '@/components/live/board';
 import { useAgentRun, usePlanScope } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { fmtNum, fmtRunDate, fmtTime, title } from '@/lib/format';
@@ -111,7 +111,7 @@ export default function LiveDsp02PlanBoard() {
               <div className="spacer" />
               <div className="x-boardfoot">
                 <Ic n="chevron-down" className="ic ic--sm" />
-                <span>{idle.length} more vehicles ready without trips</span>
+                <span>{idleSummary(idle)}</span>
                 <span className="spacer" />
                 <span><i className="x-sw" style={{ background: 'var(--st-delivered-fg)' }} />{"under 85%"}</span>
                 <span><i className="x-sw" style={{ background: 'var(--star-500)' }} />{"85% or more"}</span>

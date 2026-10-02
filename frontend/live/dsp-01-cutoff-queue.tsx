@@ -12,7 +12,7 @@ import { Empty, ErrorBanner, Skeleton, Spinner } from '@/components/live/states'
 import { BRAND_LETTER, DEPOT_NAME, fmtNum, fmtRunDate, title } from '@/lib/format';
 import { useEntitySet, useQuery } from '@/lib/odata/hooks';
 import type { Order, Vehicle } from '@/lib/odata/types';
-import { depotFilter, useAgentRunId } from '@/lib/workday';
+import { depotFilter, useAgentRunId, useFocusId } from '@/lib/workday';
 
 type Chip = 'all' | 'chilled' | 'van' | 'mall' | 'flagged';
 const CHIP_FILTER: Record<Chip, string | undefined> = {
@@ -46,6 +46,7 @@ export default function LiveDsp01CutoffQueue() {
   const [chip, setChip] = useState<Chip>('all');
   const [search, setSearch] = useState('');
   const [, setRunId] = useAgentRunId();
+  const [, setOrder] = useFocusId('order');
 
   const base = ordersFilter ? `${ordersFilter} and ${LIVE_STATUSES}` : null;
   const queue = useEntitySet<Order>(
@@ -143,7 +144,7 @@ export default function LiveDsp01CutoffQueue() {
             <div className="d-kpi" style={{ justifyContent: 'space-between' }}>
               <span className="d-kpi__l">{"Access limits"}</span>
               <span className="d-kpi__v">{counts.van}<small>{"van_only"}</small> {counts.mall}<small>{"mall"}</small></span>
-              <span className="d-kpi__s">{vans.length} vans ready, {vans.filter(v => v.tempClass === 'CHILLED').length} reefer</span>
+              <span className="d-kpi__s">{vans.length} vans at {active.map(d => (DEPOT_NAME[d] ?? d).split(' ')[0]).join(' + ')}, {vans.filter(v => v.tempClass === 'CHILLED').length} reefer</span>
             </div>
           </div>
           <div className="d-card" style={{ flex: '1', minHeight: '0' }}>
@@ -186,7 +187,7 @@ export default function LiveDsp01CutoffQueue() {
                   <span className="d-td" style={{ width: '96px' }}>{"Status"}</span>
                 </div>
                 {queue.data.map(o => (
-                  <div key={o.id} className={`d-tr x-tr2${isProtected(o) ? ' d-tr--warn' : ''}`} data-lk="L150" data-order={o.id}>
+                  <div key={o.id} className={`d-tr x-tr2${isProtected(o) ? ' d-tr--warn' : ''}`} data-lk="L150" data-order={o.id} onClickCapture={() => setOrder(o.id)}>
                     <span className="d-td id" style={{ width: '108px' }}>{o.id}</span>
                     <span className="d-td x-outlet" style={{ width: '214px' }}>
                       <span className={`bb bb--${o.brand.toLowerCase()} x-bb`}>{BRAND_LETTER[o.brand]}</span>

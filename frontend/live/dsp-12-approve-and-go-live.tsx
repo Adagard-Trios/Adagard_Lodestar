@@ -17,7 +17,7 @@ import { Ic } from '@/components/live/icons';
 import { useAgentRun, usePlanScope } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { useAuth } from '@/lib/auth/AuthProvider';
-import { DEPOT_NAME, dayFilter, fmtDayTime, fmtRunDate, isoDay, title } from '@/lib/format';
+import { DEPOT_NAME, dayFilter, fmtClock, fmtDayTime, fmtRunDate, fmtTime, isoDay, title } from '@/lib/format';
 import { useAction, useQuery } from '@/lib/odata/hooks';
 import type { AgentRun, Plan } from '@/lib/odata/types';
 import { depotFilter, useAgentRunId } from '@/lib/workday';
@@ -101,6 +101,7 @@ export default function LiveDsp12ApproveAndGoLive() {
   const failing = rules.filter(r => !r.passed);
   const review = draft?.detail?.needsReview ?? [];
   const vehicles = board.lanes.length;
+  const firstDepart = board.cards.map(c => c.departs).filter(Boolean).sort()[0];
   const depotLine = active.map(d => DEPOT_NAME[d] ?? d).join(' + ');
   const busy = approveDraft.pending || approvePlan.pending;
   const error = approveDraft.error ?? approvePlan.error;
@@ -125,7 +126,7 @@ export default function LiveDsp12ApproveAndGoLive() {
             <div className="x-board">
               <div className="x-lanehead">
                 <span style={{ width: '168px' }}>{"Vehicle · minutes"}</span>
-                <span style={{ flex: '1' }}>{"Trip 1"}</span>
+                <span style={{ flex: '1' }}>Trip 1{firstDepart ? ` · departs ${fmtTime(firstDepart)}` : ''}</span>
                 <span style={{ flex: '1' }}>{"Trip 2 · max 2 trips a day"}</span>
               </div>
               {board.loading && <Skeleton rows={3} />}
@@ -159,7 +160,7 @@ export default function LiveDsp12ApproveAndGoLive() {
           {(target || done) && (
             <>
               <div className="hstack" style={{ gap: '14px', alignItems: 'stretch' }}>
-                <Who icon="box" title="Docks" sub="Loaders, Lodestar Dock" items={[`Load sheets for ${vehicles} vehicles`, 'Loading order by departure', 'Chilled lines marked for reefers only']} />
+                <Who icon="box" title="Docks" sub="Loaders, Lodestar Dock" items={[`Load sheets for ${vehicles} vehicles`, `Loading order by departure${firstDepart ? `, first at ${fmtClock(firstDepart)}` : ''}`, 'Chilled lines marked for reefers only']} />
                 <Who icon="truck" title="Drivers" sub="Lodestar Run" items={[`${board.cards.length} trips download and work offline`, 'Stops in sequence with windows and access notes', 'Seal and reefer checks before departure']} />
                 <Who icon="store" title="Stores" sub="Lodestar Store" items={['Arrival window for every order', `${deferred ?? 0} deferred outlets told why and the new date`]} />
               </div>
@@ -191,7 +192,7 @@ export default function LiveDsp12ApproveAndGoLive() {
                   <div className="hstack" style={{ gap: '8px', fontSize: '14px', fontWeight: '800', color: 'var(--st-enroute-fg)' }}><Ic n="info" className="ic ic--sm" />{"After you approve"}</div>
                   <span className="dx-t14">
                     <b style={{ color: 'var(--text)' }}>{"The agent cannot publish on its own."}</b>
-                    {" Any later change, yours or the agent's, is a new draft that needs your approval, and only the people it touches are told."}
+                    {` Any later change, yours or the agent's, is a ${version ? `v${version + 1}` : 'new'} draft that needs your approval, and only the people it touches are told.`}
                   </span>
                 </div>
               </div>

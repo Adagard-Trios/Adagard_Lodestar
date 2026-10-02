@@ -55,9 +55,8 @@ export default function LiveAdm05AccessRequests() {
               {!open.data && !open.error && <Skeleton rows={3} />}
               {(tab === 'open' ? open.data : resolved.data)?.length === 0 && <Empty title={tab === 'open' ? 'No open requests' : 'Nothing resolved today'} text={tab === 'open' ? 'Every registered device has been decided.' : undefined} />}
               {rows.map(d => (
-                <div key={d.id} className={`dx-lrow lv-click${sel?.id === d.id ? ' dx-lrow--sel' : ''}`} style={{ minHeight: '74px', ...(tab === 'resolved' ? { opacity: '.75' } : {}) }} data-device={d.id}
+                <div key={d.id} className={`dx-lrow lv-click${sel?.id === d.id ? ' dx-lrow--sel' : ''}`} style={tab === 'resolved' ? { minHeight: '62px', opacity: '.75' } : { minHeight: '74px' }} data-device={d.id}
                   role="button" tabIndex={0} onClick={e => { e.stopPropagation(); setSelId(d.id); }} onKeyDown={e => { if (e.key === 'Enter') setSelId(d.id); }}>
-                  <span className="dx-lead"><Ic n={d.platform === 'web' ? 'tablet' : 'phone'} /></span>
                   <div className="dx-lrow__main"><span className="dx-lrow__t">{d.label ?? d.model ?? 'New device'}</span><span className="dx-lrow__m">{d.user?.name ?? d.userId} · {d.id}</span></div>
                   <div className="dx-lrow__tr">
                     <span>{fmtTime(d.registeredAt)}</span>
@@ -74,7 +73,6 @@ export default function LiveAdm05AccessRequests() {
               {!sel ? <Empty title="Nothing selected" icon="key" /> : (
                 <>
                   <div className="dx-card__head" style={{ minHeight: '74px' }}>
-                    <span className="dx-lead"><Ic n="phone" /></span>
                     <div className="vstack" style={{ gap: '2px', flex: '1', minWidth: '0' }}>
                       <span className="dx-card__title" style={{ fontSize: '19px' }}>{sel.label ?? sel.model ?? sel.id} for {sel.user?.name ?? sel.userId}</span>
                       <span className="dx-t13">
@@ -85,7 +83,6 @@ export default function LiveAdm05AccessRequests() {
                   <div className="dx-card__body" style={{ gap: '14px' }}>
                     <div className="hstack" style={{ gap: '12px' }}>
                       <div className="adm-diff"><span className="adm-diff__l">{"Device"}</span><span className="adm-diff__v">{sel.model ?? '—'}</span></div>
-                      <Ic n="arrow-right" />
                       <div className="adm-diff adm-diff--new"><span className="adm-diff__l">{"Bound to"}</span><span className="adm-diff__v">{sel.user?.email ?? sel.userId}</span></div>
                     </div>
                     <div className="dx-inset" style={{ gap: '0', padding: '6px 16px' }}>
