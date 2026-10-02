@@ -59,7 +59,7 @@ jobs:
     if: needs.changes.outputs.matrix != '[]'
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: true
+      fail-fast: false   # one flaky runner must not cancel the other images
       max-parallel: 6
       matrix:
         image: ${{ fromJson(needs.changes.outputs.matrix) }}
