@@ -28,7 +28,8 @@ for s in auth orders planning fleet outlets trips sync notifications audit; do
   want "$shared|^backend/apps/$s/" && add "$s" backend "backend/apps/$s/Dockerfile"
 done
 want '^backend/apps/agent/' && add agent backend/apps/agent backend/apps/agent/Dockerfile
-want '^backend/apps/gateway/' && add gateway backend/apps/gateway backend/apps/gateway/Dockerfile
+# the gateway is rebuilt on every deploy (small image): its /version must name the commit that is live
+add gateway backend/apps/gateway backend/apps/gateway/Dockerfile
 want '^frontend/' && add frontend frontend frontend/Dockerfile
 want '^mobile/' && add mobile-web mobile mobile/Dockerfile
 
