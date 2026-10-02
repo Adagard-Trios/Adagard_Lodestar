@@ -1,5 +1,6 @@
 // Field writes. Each one is saved in the outbox first (client UUID + time saved on the phone) and sent by
 // the sync engine as soon as there is signal, so it works the same with and without coverage.
+import { network } from '@/offline/network';
 import { queue, session } from './platform';
 import type { NewOrderLine } from './api';
 import { orderBody } from './api';
@@ -29,7 +30,8 @@ export type PodInput = { unitsDelivered: number; unitsOrdered: number; receiverN
 
 /**
  * TripStops CompleteStop with the POD, as POD_SAVE + LEAVE events (plus ARRIVAL when not recorded yet).
- * For a stop that is already delivered this is a POD correction: only POD_SAVE is sent.
+ * For a stop that is already delivered this is a POD correction: only POD_SAVE is sent. A POD saved with no
+ * signal says so (`offline`), so the store is told it was recorded offline when it syncs (SM-A1).
  */
 export async function completeStop(stop: TripStop, pod: PodInput, at: Date = new Date()) {
   const s = sub();
@@ -47,6 +49,7 @@ export async function completeStop(stop: TripStop, pod: PodInput, at: Date = new
       unitsOrdered: pod.unitsOrdered,
       ...(pod.receiverName ? { receiverName: pod.receiverName } : {}),
       ...(pod.exceptions?.length ? { exceptions: pod.exceptions } : {}),
+      ...(network.get().online ? {} : { offline: true }),
       savedAt: time,
       stopId: stop.id,
     },

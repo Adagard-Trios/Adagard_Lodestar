@@ -26,10 +26,15 @@ export class NotificationsSet extends ODataEntitySet {
     super(prisma);
   }
 
-  /** POST Notifications('…')/Lodestar.MarkRead */
+  /** POST Notifications('…')/Lodestar.MarkRead — a dispatcher marking a dock flag handled acknowledges it. */
   @ODataAction({ name: 'MarkRead', binding: 'entity', roles: HUMAN_ROLES, returns: 'Lodestar.Notification' })
-  markRead(ctx: OperationContext) {
-    return ctx.entity.readAt ? ctx.entity : this.notifications.markRead(ctx.entity.id);
+  async markRead(ctx: OperationContext) {
+    if (ctx.entity.readAt) return ctx.entity;
+    const read = await this.notifications.markRead(ctx.entity.id);
+    if (read.type === 'SHORTFALL_FLAGGED' && ctx.principal.roles.includes(Roles.Dispatcher)) {
+      await this.notifications.acknowledgeShortfall(read, { sub: ctx.principal.sub, name: ctx.principal.name });
+    }
+    return read;
   }
 
   /** POST Notifications/Lodestar.Send {recipientId, type, payload, …} — stored and pushed over WebSocket. */

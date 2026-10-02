@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { ODataError } from '@lodestar/odata';
-import { isPrivileged, Principal } from '@lodestar/security';
+import { announceStopIssue, isPrivileged, NOTIFY, NotifyClient, podOutcome, Principal, storeManagers } from '@lodestar/security';
 import { DeferralStatus, OrderStatus, Prisma } from '@prisma/client';
 
 export const EVENT_TYPES = ['ARRIVAL', 'LEAVE', 'POD_SAVE', 'PHOTO', 'STATUS_CHANGE'] as const;
@@ -92,7 +92,10 @@ export function normalisePodExceptions(raw: unknown): PodException[] | null {
  */
 @Injectable()
 export class SyncService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(NOTIFY) private notify: NotifyClient,
+  ) {}
 
   validate(raw: unknown[]): OfflineEventInput[] {
     if (raw.length > MAX_BATCH) throw ODataError.badRequest(`A batch holds at most ${MAX_BATCH} events`, 'events');
@@ -164,6 +167,7 @@ export class SyncService {
           ...(outcome ? { conflictResolved: outcome.resolved, conflictNote: outcome.note } : {}),
         },
       });
+      await this.announce(evt, outcome);
       results.push({
         id: saved.id,
         eventType: evt.eventType,
@@ -181,6 +185,54 @@ export class SyncService {
       needsReview: results.filter((r) => r.needsReview).length,
       results,
     };
+  }
+
+  /**
+   * Once an event is applied and recorded: a stop left without a POD (STOP_FAILED) or a POD with a failed
+   * delivery or an exception (STOP_FAILED / POD_EXCEPTION) reaches the depot's dispatchers and the store; a POD
+   * the phone saved with no signal tells the store it was recorded offline (SM-A1).
+   */
+  private async announce(evt: OfflineEventInput, outcome: ApplyOutcome | null) {
+    const leftWithoutPod = evt.eventType === 'LEAVE' && outcome?.note === LEAVE_WITHOUT_POD;
+    const isPod = evt.eventType === 'POD_SAVE';
+    const units: number = evt.payload.units;
+    const unitsOrdered: number = evt.payload.unitsOrdered ?? units;
+    const exceptions = isPod ? (normalisePodExceptions(evt.payload.exceptions ?? []) ?? []) : [];
+    const type = isPod ? podOutcome({ unitsDelivered: units, unitsOrdered, exceptions }) : null;
+    const recordedOffline = isPod && evt.payload.offline === true;
+    if (!leftWithoutPod && !type && !recordedOffline) return;
+
+    const [stop, trip] = await Promise.all([
+      this.prisma.tripStop.findFirst({
+        where: isPod ? { tripId: evt.tripId, orderId: evt.payload.orderId } : { tripId: evt.tripId, stopSeq: evt.payload.stopSeq },
+        select: { id: true, tripId: true, stopSeq: true, orderId: true, outletId: true },
+      }),
+      this.prisma.trip.findUnique({ where: { id: evt.tripId }, select: { depot: true, vehicleId: true } }),
+    ]);
+    if (!stop || !trip) return;
+    const ref = { tripId: stop.tripId, stopId: stop.id, stopSeq: stop.stopSeq, orderId: stop.orderId, outletId: stop.outletId, depot: trip.depot, vehicleId: trip.vehicleId };
+    if (leftWithoutPod) {
+      await announceStopIssue(this.prisma, this.notify, 'STOP_FAILED', ref, { title: `${stop.outletId}: left without a proof of delivery`, note: LEAVE_WITHOUT_POD });
+      return;
+    }
+    if (type) {
+      await announceStopIssue(this.prisma, this.notify, type, ref, {
+        title: type === 'STOP_FAILED' ? `${stop.outletId}: nothing delivered` : `${stop.orderId}: ${units} of ${unitsOrdered} delivered`,
+        unitsDelivered: units,
+        unitsOrdered,
+        short: unitsOrdered - units,
+        exceptions,
+      });
+    }
+    if (recordedOffline) {
+      const savedAt = String(evt.payload.savedAt ?? evt.savedAt);
+      for (const m of await storeManagers(this.prisma, [stop.outletId])) {
+        await this.notify.notice({
+          recipientId: m.id, type: 'POD_RECORDED_OFFLINE', tripId: stop.tripId, outletId: m.outletId,
+          payload: { ...ref, unitsDelivered: units, unitsOrdered, savedAt, syncedAt: new Date().toISOString(), title: `${stop.orderId} delivered, recorded offline` },
+        });
+      }
+    }
   }
 
   /** A driver may only report events for trips of the vehicle in their token. */

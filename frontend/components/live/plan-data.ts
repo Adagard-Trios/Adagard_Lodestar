@@ -1,6 +1,7 @@
 'use client';
 // Shared data for the Lodestar Plan screens: the run date and depots in view, and the exceptions list (DSP-08,
-// DSP-13) built from real records: orders in EXCEPTION, stops with a high late risk, and alert notifications.
+// DSP-13) built from real records: orders in EXCEPTION, stops with a high late risk, and alert notifications
+// (vehicle and signal alerts, dock flags, POD exceptions and failed stops, store receipt issues).
 import { dayFilter, fmtClock, fmtTime } from '@/lib/format';
 import { useEffect, useRef } from 'react';
 import { useAction, useEntity, useQuery } from '@/lib/odata/hooks';
@@ -46,20 +47,25 @@ export interface ExceptionItem {
   tripId?: string;
   source: 'order' | 'stop' | 'notification';
   notificationId?: string;
+  /** The notification type, for notification items. */
+  type?: string;
 }
 
 /** Late risk at or above this is an exception the dispatcher should look at. */
 export const LATE_RISK_ALERT = 40;
-const ALERT_TYPES = ['BLACKOUT_DETECTED', 'REEFER_FAIL', 'SHORTFALL_ACK', 'DEFERRAL_SUGGESTED', 'SIGNAL_LOST', 'DOCK_BLOCKED', 'LATE_RISK'];
+const ALERT_TYPES = [
+  'BLACKOUT_DETECTED', 'REEFER_FAIL', 'SHORTFALL_ACK', 'DEFERRAL_SUGGESTED', 'SIGNAL_LOST', 'DOCK_BLOCKED', 'LATE_RISK',
+  'SHORTFALL_FLAGGED', 'POD_EXCEPTION', 'STOP_FAILED', 'RECEIPT_ISSUE',
+];
 
-function describeNotification(n: Notification): Pick<ExceptionItem, 'title' | 'meta' | 'tone'> {
+function describeNotification(n: Notification): Pick<ExceptionItem, 'title' | 'meta' | 'tone' | 'outletId' | 'orderId'> {
   const p = (n.payload ?? {}) as Record<string, unknown>;
   const text = (k: string) => (typeof p[k] === 'string' ? (p[k] as string) : undefined);
   const nice = n.type.toLowerCase().replace(/_/g, ' ');
   const title = text('title') ?? text('message') ?? nice.charAt(0).toUpperCase() + nice.slice(1);
-  const meta = [text('vehicleId'), text('outletId'), text('location'), text('note'), fmtTime(n.sentAt)].filter(Boolean).join(' · ');
-  const tone: ExceptionTone = /BLACKOUT|SIGNAL/.test(n.type) ? 'off' : /FAIL|BLOCK/.test(n.type) ? 'bad' : 'warn';
-  return { title, meta, tone };
+  const meta = [text('orderId'), text('vehicleId'), text('outletId'), text('location'), text('note'), fmtTime(n.sentAt)].filter(Boolean).join(' · ');
+  const tone: ExceptionTone = /BLACKOUT|SIGNAL/.test(n.type) ? 'off' : /FAIL|BLOCK|ISSUE/.test(n.type) ? 'bad' : 'warn';
+  return { title, meta, tone, outletId: text('outletId'), orderId: text('orderId') };
 }
 
 /** Everything that needs the dispatcher for the run date, most urgent first. */
@@ -112,6 +118,7 @@ export function useExceptions(runDate: string | undefined, ordersFilter: string 
           id: `note:${n.id}`,
           source: 'notification' as const,
           notificationId: n.id,
+          type: n.type,
           tripId: n.tripId ?? undefined,
           at: n.sentAt,
           ...describeNotification(n),

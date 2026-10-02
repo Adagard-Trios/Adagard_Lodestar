@@ -130,13 +130,18 @@ export class NotificationsGateway implements OnGatewayInit, OnGatewayConnection,
     this.emit(`store:${outletId}`, 'eta_update', payload);
   }
 
-  /** Blackout signal lost/back to dispatcher */
-  blackout(depot: string, payload: any) {
-    this.dispatcherAlert(depot, 'signal_lost', payload);
+  /** Blackout: signal lost/back to the depot's dispatchers and to the stores still waiting on the trip. */
+  blackout(depot: string | undefined, payload: any, outlets: string[] = []) {
+    this.signal('signal_lost', depot, payload, outlets);
   }
 
-  blackoutResolved(depot: string, payload: any) {
-    this.dispatcherAlert(depot, 'signal_back', payload);
+  blackoutResolved(depot: string | undefined, payload: any, outlets: string[] = []) {
+    this.signal('signal_back', depot, payload, outlets);
+  }
+
+  private signal(event: 'signal_lost' | 'signal_back', depot: string | undefined, payload: any, outlets: string[]) {
+    if (depot) this.dispatcherAlert(depot, event, payload);
+    for (const o of outlets) this.emit(`store:${o}`, event, payload);
   }
 
   /** Credit note issued — notify store manager */

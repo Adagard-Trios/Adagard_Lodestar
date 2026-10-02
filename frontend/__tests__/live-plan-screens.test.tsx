@@ -273,6 +273,29 @@ describe('DSP-13 Exceptions inbox', () => {
     expect(inbox.querySelectorAll('[data-exception]')).toHaveLength(0);
   });
 
+  it('shows the dock flags, POD exceptions, failed stops and store reports sent to dispatch, and acknowledges a flag', async () => {
+    const issue = { id: 'N5', recipientId: 'u-d', tripId: 'TRPT1', type: 'RECEIPT_ISSUE', channel: 'WEBSOCKET', sentAt: '2026-04-07T01:10:00.000Z', readAt: null, payload: { orderId: 'ORDT7', outletId: 'OUTT01', title: 'Outlet T01: issue reported on ORDT7', note: 'Damaged: tray torn' } };
+    const flag = { id: 'N6', recipientId: 'u-d', tripId: 'TRPT1', type: 'SHORTFALL_FLAGGED', channel: 'WEBSOCKET', sentAt: '2026-04-07T02:00:00.000Z', readAt: null, payload: { orderId: 'ORDT2', outletId: 'OUTT02', vehicleId: 'VEHT1', title: 'Shortfall: Milk 1L 4 of 6' } };
+    const view = renderLive(shell(<Inbox />), {
+      handler: handler(req => (req.path === 'Notifications' && !req.query.$filter?.startsWith('readAt ne null') ? page([issue, flag]) : req.path === 'Orders' || req.path === 'TripStops' ? page([]) : undefined)),
+    });
+    const inbox = await screen.findByTestId('inbox');
+    await waitFor(() => expect(inbox.querySelectorAll('[data-exception]')).toHaveLength(2));
+    const types = view.calls.find(c => c.path === 'Notifications' && c.query.$filter?.startsWith('readAt eq null'))!.query.$filter;
+    for (const t of ['SHORTFALL_FLAGGED', 'POD_EXCEPTION', 'STOP_FAILED', 'RECEIPT_ISSUE']) expect(types).toContain(`'${t}'`);
+    // the store's report needs the dispatcher first (before the newer dock flag), with its order and store
+    expect([...inbox.querySelectorAll('[data-exception]')].map(e => e.getAttribute('data-exception'))).toEqual(['note:N5', 'note:N6']);
+    expect(inbox).toHaveTextContent('Outlet T01: issue reported on ORDT7');
+    expect(within(inbox.querySelector('[data-exception="note:N5"]') as HTMLElement).getByText(/ORDT7 · OUTT01 · Damaged: tray torn/)).toBeInTheDocument();
+    expect(await within(screen.getByTestId('exception-detail')).findByText(/Outlet T01 ·/)).toBeInTheDocument();
+    expect(screen.getByTestId('mark-handled')).toHaveTextContent('Mark handled');
+
+    fireEvent.click(inbox.querySelector('[data-exception="note:N6"]')!);
+    expect(screen.getByTestId('mark-handled')).toHaveTextContent('Acknowledge');
+    fireEvent.click(screen.getByTestId('mark-handled'));
+    await waitFor(() => expect(posts(view.calls)).toEqual([expect.objectContaining({ path: "Notifications('N6')/Lodestar.MarkRead" })]));
+  });
+
   it('inbox zero', async () => {
     renderLive(shell(<Inbox />), { handler: req => base(req) ?? page([]) });
     expect(await screen.findByText('Inbox zero')).toBeInTheDocument();

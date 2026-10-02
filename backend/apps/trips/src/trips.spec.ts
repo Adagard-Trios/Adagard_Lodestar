@@ -2,7 +2,7 @@ import { anything, capture, deepEqual, instance, mock, verify, when } from 'ts-m
 import { NotifyClient } from '@lodestar/security';
 import { personas } from '../../../libs/security/test/principals';
 import { FleetClient } from './fleet.client';
-import { TripsService, tripLitres } from './trips.service';
+import { newShortfalls, TripsService, tripLitres } from './trips.service';
 import { LoadRecordsSet, TripsSet, TripStopsSet } from './trips.sets';
 
 interface TravelDelegate {
@@ -19,6 +19,12 @@ interface LoadRecordDelegate {
 }
 interface PodDelegate {
   upsert(args: any): Promise<any>;
+}
+interface FindManyDelegate {
+  findMany(args: any): Promise<any[]>;
+}
+interface StopDelegate {
+  findUnique(args: any): Promise<any>;
 }
 interface UpdateDelegate {
   update(args: any): Promise<any>;
@@ -148,11 +154,19 @@ describe('LoadRecordsSet', () => {
     await expect(set.beforeCreate({ tripId: 'T9' }, { principal: personas.kasun, headers: {} })).rejects.toMatchObject({ status: 400 });
   });
 
-  it('RecordShortfalls delegates with the trip id', async () => {
+  it('RecordShortfalls delegates with the trip id and the flagging loader', async () => {
     const shortfalls = [{ item: 'milk', qtyOrdered: 4, qtyLoaded: 3, reason: 'stock' }];
-    when(trips.updateShortfalls(anything(), anything())).thenResolve({} as any);
+    when(trips.updateShortfalls(anything(), anything(), anything())).thenResolve({} as any);
     await set.recordShortfalls({ principal: personas.kasun, params: { shortfalls }, entity: { id: 'LR1', tripId: 'T1' }, headers: {} });
-    expect(capture(trips.updateShortfalls).last()).toEqual(['T1', shortfalls]);
+    expect(capture(trips.updateShortfalls).last()).toEqual(['T1', shortfalls, 'kasun']);
+  });
+
+  it('a load record created with flags announces them', async () => {
+    const shortfalls = [{ item: 'milk', qtyOrdered: 4, qtyLoaded: 3, reason: 'stock' }];
+    const loadRecord = { create: jest.fn(async (a: any) => ({ id: 'LR1', ...a.data })) };
+    set = new LoadRecordsSet({ trip: instance(trip), loadRecord } as any, instance(trips));
+    await set.create({ tripId: 'T1', bay: 'K2', loaderId: 'kasun', shortfalls }, { principal: personas.kasun, headers: {} });
+    verify(trips.announceShortfalls('T1', deepEqual([]), shortfalls, 'kasun')).once();
   });
 });
 
@@ -167,6 +181,9 @@ describe('TripsService', () => {
   let notify: NotifyClient;
   let fleet: FleetClient;
   let travel: TravelDelegate;
+  let loadRecord: LoadRecordDelegate;
+  let tripStop: StopDelegate;
+  let user: FindManyDelegate;
 
   beforeEach(() => {
     trip = mock<TripDelegate>();
@@ -177,7 +194,16 @@ describe('TripsService', () => {
     txStop = mock<UpdateDelegate>();
     const tx = { trip: instance(txTrip), loadRecord: instance(txLoad), pOD: instance(txPod), order: instance(txOrder), tripStop: instance(txStop) };
     travel = mock<TravelDelegate>();
-    const prisma = { trip: instance(trip), districtTravel: instance(travel), $transaction: async (cb: (t: any) => any) => cb(tx) };
+    loadRecord = mock<LoadRecordDelegate>();
+    tripStop = mock<StopDelegate>();
+    user = mock<FindManyDelegate>();
+    const prisma = {
+      trip: instance(trip), districtTravel: instance(travel), loadRecord: instance(loadRecord), tripStop: instance(tripStop), user: instance(user),
+      $transaction: async (cb: (t: any) => any) => cb(tx),
+    };
+    // the directory: Nilanthi (based at Peliyagoda, covers Kandy) and Fathima, manager of OUT106
+    when(user.findMany(anything())).thenCall(async (a: any) =>
+      a.where.role === 'DISPATCHER' ? [{ id: 'nilanthi', depot: 'PELIYAGODA' }] : [{ id: 'fathima', outletId: 'OUT106' }].filter((u) => a.where.outletId.in.includes(u.outletId)));
     notify = mock(NotifyClient);
     when(notify.notice(anything())).thenResolve(true);
     when(notify.publish(anything(), anything(), anything())).thenResolve(true);
@@ -319,6 +345,53 @@ describe('TripsService', () => {
     });
   });
 
+  describe('updateShortfalls (LD-03 flag to dispatch, store and driver)', () => {
+    const milk = { item: 'Milk 1L', qtyOrdered: 6, qtyLoaded: 4, reason: 'Out of stock', orderId: 'O1' };
+    beforeEach(() => {
+      when(loadRecord.update(anything())).thenCall(async (a: any) => ({ id: 'LR1', tripId: 'T1', loaderId: 'kasun', ...a.data }));
+      when(trip.findUnique(anything())).thenResolve({
+        depot: 'KANDY', vehicleId: 'VEH057', bay: 'K2', driverId: 'ruwan',
+        stops: [{ orderId: 'O1', outletId: 'OUT106' }, { orderId: 'O2', outletId: 'OUT108' }],
+      });
+    });
+
+    it('saves the list and sends SHORTFALL_FLAGGED to the dispatchers, the store of the short order and the driver', async () => {
+      when(loadRecord.findUnique(anything())).thenResolve({ shortfalls: [] });
+      await service.updateShortfalls('T1', [milk], 'kasun');
+      expect(capture(loadRecord.update).last()[0]).toEqual({ where: { tripId: 'T1' }, data: { shortfalls: [milk] } });
+      verify(notify.notice(anything())).thrice();
+      const notices = [0, 1, 2].map((i) => capture(notify.notice).byCallIndex(i)[0]);
+      expect(notices.map((n) => n.recipientId)).toEqual(['nilanthi', 'fathima', 'ruwan']);
+      for (const n of notices) {
+        expect(n).toMatchObject({ type: 'SHORTFALL_FLAGGED', tripId: 'T1' });
+        expect(n.payload).toMatchObject({
+          tripId: 'T1', orderId: 'O1', outletId: 'OUT106', item: 'Milk 1L', qtyOrdered: 6, qtyLoaded: 4, short: 2, loaderId: 'kasun', depot: 'KANDY', vehicleId: 'VEH057',
+        });
+      }
+      expect(notices[1].outletId).toBe('OUT106');
+    });
+
+    it('announces only new or changed flags (the whole list is sent each time)', async () => {
+      when(loadRecord.findUnique(anything())).thenResolve({ shortfalls: [milk] });
+      await service.updateShortfalls('T1', [milk], 'kasun');
+      verify(notify.notice(anything())).never();
+      await service.updateShortfalls('T1', [{ ...milk, qtyLoaded: 3 }], 'kasun');
+      verify(notify.notice(anything())).thrice();
+      expect(capture(notify.notice).last()[0].payload).toMatchObject({ qtyLoaded: 3, short: 3 });
+    });
+
+    it('a flag without an order reaches dispatch and the driver only', async () => {
+      when(loadRecord.findUnique(anything())).thenResolve(null);
+      await service.updateShortfalls('T1', [{ item: 'Crates', qtyOrdered: 2, qtyLoaded: 0 }]);
+      verify(notify.notice(anything())).twice();
+      expect(capture(notify.notice).first()[0]).toMatchObject({ recipientId: 'nilanthi', payload: { loaderId: 'kasun', outletId: null } });
+    });
+
+    it('newShortfalls ignores malformed and fully loaded lines', () => {
+      expect(newShortfalls(null, [milk, { item: 'x' }, { ...milk, item: 'Eggs', qtyLoaded: 6 }, 'junk'])).toEqual([milk]);
+    });
+  });
+
   describe('completeStop', () => {
     it('rejects unitsDelivered > unitsOrdered with 400', async () => {
       await expect(service.completeStop('S1', 'ORD1', { unitsDelivered: 11, unitsOrdered: 10 })).rejects.toMatchObject({
@@ -341,6 +414,40 @@ describe('TripsService', () => {
       const stop = capture(txStop.update).last()[0];
       expect(stop.data).toMatchObject({ status: 'DELIVERED', arrivalActual });
       expect(stop.data.leaveActual).toBeInstanceOf(Date);
+    });
+
+    describe('a POD exception or a failed stop reaches the dispatchers and the store', () => {
+      beforeEach(() => {
+        when(tripStop.findUnique(anything())).thenResolve({ id: 'S1', tripId: 'T1', stopSeq: 2, orderId: 'ORD1', outletId: 'OUT106', trip: { depot: 'KANDY', vehicleId: 'VEH057' } });
+      });
+
+      it('a short count is a POD_EXCEPTION', async () => {
+        await service.completeStop('S1', 'ORD1', { unitsDelivered: 8, unitsOrdered: 10 });
+        verify(notify.notice(anything())).twice();
+        const [toDispatch] = capture(notify.notice).first();
+        const [toStore] = capture(notify.notice).last();
+        expect(toDispatch).toMatchObject({ recipientId: 'nilanthi', type: 'POD_EXCEPTION', tripId: 'T1' });
+        expect(toStore).toMatchObject({ recipientId: 'fathima', type: 'POD_EXCEPTION', tripId: 'T1', outletId: 'OUT106' });
+        expect(toDispatch.payload).toMatchObject({
+          tripId: 'T1', stopId: 'S1', stopSeq: 2, orderId: 'ORD1', outletId: 'OUT106', vehicleId: 'VEH057', unitsDelivered: 8, unitsOrdered: 10, short: 2,
+        });
+      });
+
+      it('a full count with a recorded exception is a POD_EXCEPTION', async () => {
+        const exceptions = [{ type: 'DAMAGED', description: 'tray torn' }];
+        await service.completeStop('S1', 'ORD1', { unitsDelivered: 10, unitsOrdered: 10, exceptions });
+        expect(capture(notify.notice).last()[0]).toMatchObject({ type: 'POD_EXCEPTION', payload: { short: 0, exceptions } });
+      });
+
+      it('nothing delivered is a STOP_FAILED', async () => {
+        await service.completeStop('S1', 'ORD1', { unitsDelivered: 0, unitsOrdered: 10 });
+        expect(capture(notify.notice).last()[0]).toMatchObject({ type: 'STOP_FAILED', payload: { unitsDelivered: 0 } });
+      });
+
+      it('a full, clean delivery tells nobody', async () => {
+        await service.completeStop('S1', 'ORD1', { unitsDelivered: 10, unitsOrdered: 10, exceptions: [] });
+        verify(notify.notice(anything())).never();
+      });
     });
   });
 

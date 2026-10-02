@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { ODataError } from '@lodestar/odata';
 import { Prisma, OrderStatus, TempClass } from '@prisma/client';
 import { addBusinessDays, businessDate, runDateRange } from '@lodestar/platform';
+import { depotDispatchers, NOTIFY, NotifyClient } from '@lodestar/security';
 
 /** Stored window [start, end) of a run date (YYYY-MM-DD, or a Date read in Sri Lanka time). */
 export function dayRange(runDate: string | Date) {
@@ -57,7 +58,10 @@ export function creditNoteSequence(id: string | null | undefined, prefix: string
 
 @Injectable()
 export class OrdersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(NOTIFY) private notify: NotifyClient,
+  ) {}
 
   /** Summary stats for the plan board (DSP-01), limited to what the caller may see. */
   async getSummary(runDate: string, scope?: Prisma.OrderWhereInput) {
@@ -126,7 +130,8 @@ export class OrdersService {
    * Orders('…')/Lodestar.ConfirmReceipt: records the store's count on the order
    * and marks it DELIVERED. A short count gets a credit note: the POD's own
    * credit note when the driver already raised one, else a new CN-YYMM-NNNN,
-   * and the shortfall is added to the POD's exceptions.
+   * and the shortfall is added to the POD's exceptions. A short count or a reported issue (the note,
+   * SM-18) reaches the depot's dispatchers as RECEIPT_ISSUE (DSP-13).
    */
   async confirmReceipt(orderId: string, receivedBy: string, input: ReceiptInput) {
     const { unitsReceived, unitsExpected } = input;
@@ -138,9 +143,15 @@ export class OrdersService {
     const note = typeof input.note === 'string' && input.note.trim() ? input.note.trim() : null;
     if (note && note.length > MAX_NOTE) throw ODataError.badRequest(`note is limited to ${MAX_NOTE} characters`, 'note');
 
+    const order = await this.receiptWithCreditNote(orderId, receivedBy, { ...input, note });
+    await this.announceReceiptIssue(order);
+    return order;
+  }
+
+  private async receiptWithCreditNote(orderId: string, receivedBy: string, input: ReceiptInput) {
     for (let attempt = 1; ; attempt++) {
       try {
-        return await this.prisma.$transaction((tx) => this.recordReceipt(tx, orderId, receivedBy, { ...input, note }));
+        return await this.prisma.$transaction((tx) => this.recordReceipt(tx, orderId, receivedBy, input));
       } catch (err) {
         // Two short receipts drew the same credit note number: draw again.
         const target = (err as any)?.meta?.target;
@@ -205,6 +216,26 @@ export class OrdersService {
         creditNoteId,
       },
     });
+  }
+
+  /** The store counted short or reported an issue: the depot's dispatchers are told (DSP-13 exceptions inbox). */
+  private async announceReceiptIssue(order: { id: string; unitsReceived: number | null; unitsExpected: number | null; receiptNote: string | null; creditNoteId: string | null }) {
+    const short = (order.unitsExpected ?? 0) - (order.unitsReceived ?? 0);
+    if (short <= 0 && !order.receiptNote) return;
+    const where = await this.prisma.order.findUnique({
+      where: { id: order.id },
+      select: { outletId: true, outlet: { select: { depot: true, name: true } }, tripStop: { select: { tripId: true } } },
+    });
+    if (!where?.outlet) return;
+    const tripId = where.tripStop?.tripId;
+    const payload = {
+      orderId: order.id, outletId: where.outletId, tripId: tripId ?? null,
+      unitsReceived: order.unitsReceived, unitsExpected: order.unitsExpected, short, note: order.receiptNote, creditNoteId: order.creditNoteId,
+      title: `${where.outlet.name}: ${short > 0 ? `${short} short` : 'issue reported'} on ${order.id}`,
+    };
+    for (const recipientId of await depotDispatchers(this.prisma, where.outlet.depot)) {
+      await this.notify.notice({ recipientId, type: 'RECEIPT_ISSUE', ...(tripId ? { tripId } : {}), outletId: where.outletId, payload });
+    }
   }
 
   /** Next free credit note number of the month the count was saved in (orders and PODs share the series). */

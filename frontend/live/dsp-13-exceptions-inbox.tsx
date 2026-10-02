@@ -2,7 +2,8 @@
 // DSP-13 Exceptions inbox, live. Markup and classes from the generated design (frontend/screens/dsp-13-exceptions-inbox.tsx).
 // Data: the open exceptions (Orders in EXCEPTION, TripStops at late risk, unread alert Notifications), the alerts
 // handled today (read Notifications), the selected item's Trip with its stops. Actions: Notifications('…')/
-// Lodestar.MarkRead ("Mark handled") and Notifications/Lodestar.Send to the outlet's store manager ("Message store").
+// Lodestar.MarkRead ("Mark handled"; on a loader's shortfall flag, "Acknowledge": the loader is told) and
+// Notifications/Lodestar.Send to the outlet's store manager ("Message store").
 import { useMemo, useState } from 'react';
 import { useScreenNav } from '@/components/ScreenShell';
 import Btn from '@/components/live/Btn';
@@ -189,7 +190,7 @@ export default function LiveDsp13ExceptionsInbox() {
                           <textarea className="lv-input dx-t13" aria-label="Message to the store" placeholder="What the store should know or do" value={message} onChange={e => setMessage(e.target.value)} />
                         </div>
                         {sel.notificationId && (
-                          <Btn className="d-btn" busy={markRead.pending} testId="mark-handled" onClick={() => void markRead.run(sel.notificationId!)}><Ic n="check" />{"Mark handled"}</Btn>
+                          <Btn className="d-btn" busy={markRead.pending} testId="mark-handled" onClick={() => void markRead.run(sel.notificationId!)}><Ic n="check" />{sel.type === 'SHORTFALL_FLAGGED' ? 'Acknowledge' : 'Mark handled'}</Btn>
                         )}
                       </div>
                     </div>

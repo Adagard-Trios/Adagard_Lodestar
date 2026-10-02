@@ -1,4 +1,5 @@
 import { anything, capture, instance, mock, verify, when } from 'ts-mockito';
+import { NotifyClient } from '@lodestar/security';
 import { personas } from '../../../libs/security/test/principals';
 import { OfflineEventsSet } from './offline-events.set';
 import { LEAVE_WITHOUT_POD, normalisePodExceptions, OfflineEventInput, SyncService } from './sync.service';
@@ -28,6 +29,9 @@ interface PodDelegate {
 interface UpdateDelegate {
   update(a: any): Promise<any>;
 }
+interface FindManyDelegate {
+  findMany(a: any): Promise<any[]>;
+}
 
 describe('SyncService', () => {
   let offlineEvent: OfflineEventDelegate;
@@ -36,6 +40,8 @@ describe('SyncService', () => {
   let deferralLog: DeferralDelegate;
   let pod: PodDelegate;
   let order: UpdateDelegate;
+  let user: FindManyDelegate;
+  let notify: NotifyClient;
   let service: SyncService;
 
   beforeEach(() => {
@@ -45,6 +51,12 @@ describe('SyncService', () => {
     deferralLog = mock<DeferralDelegate>();
     pod = mock<PodDelegate>();
     order = mock<UpdateDelegate>();
+    user = mock<FindManyDelegate>();
+    notify = mock(NotifyClient);
+    when(notify.notice(anything())).thenResolve(true);
+    // the directory: Nilanthi (based at Peliyagoda, covers Kandy) and Fathima, manager of OUT106
+    when(user.findMany(anything())).thenCall(async (a: any) =>
+      a.where.role === 'DISPATCHER' ? [{ id: 'nilanthi', depot: 'PELIYAGODA' }] : [{ id: 'fathima', outletId: 'OUT106' }].filter((u) => a.where.outletId.in.includes(u.outletId)));
     service = new SyncService({
       offlineEvent: instance(offlineEvent),
       trip: instance(trip),
@@ -52,14 +64,15 @@ describe('SyncService', () => {
       deferralLog: instance(deferralLog),
       pOD: instance(pod),
       order: instance(order),
-    } as any);
+      user: instance(user),
+    } as any, instance(notify));
 
     let n = 0;
     when(offlineEvent.findUnique(anything())).thenResolve(null);
     when(offlineEvent.create(anything())).thenCall(async (a: any) => ({ id: a.data.id ?? `gen-${++n}`, ...a.data }));
     when(offlineEvent.update(anything())).thenResolve({});
-    when(trip.findUnique(anything())).thenResolve({ vehicleId: 'VEH057' });
-    when(tripStop.findFirst(anything())).thenResolve({ id: 'S1', leaveActual: null });
+    when(trip.findUnique(anything())).thenResolve({ vehicleId: 'VEH057', depot: 'KANDY' });
+    when(tripStop.findFirst(anything())).thenResolve({ id: 'S1', tripId: 'T1', stopSeq: 1, orderId: 'ORD1', outletId: 'OUT106', leaveActual: null });
     when(tripStop.update(anything())).thenResolve({});
     when(deferralLog.findUnique(anything())).thenResolve(null);
     when(deferralLog.update(anything())).thenResolve({});
@@ -404,6 +417,51 @@ describe('SyncService', () => {
         expect(blank.update.exceptions).toEqual([]); // an explicit empty list clears them
       });
 
+      describe('what dispatch and the store are told', () => {
+        const podOf = (payload: any, id = 'evt-pod-0300') => evt({ id, eventType: 'POD_SAVE', payload: { orderId: 'ORD1', ...payload }, savedAt: '2026-04-07T01:28:00.000Z' });
+
+        it('a short POD is a POD_EXCEPTION to the depot dispatchers and the store', async () => {
+          await service.pushBatch(personas.ruwan, [podOf({ units: 8, unitsOrdered: 10, exceptions: ['SHORT:2 trays'] })]);
+          verify(notify.notice(anything())).twice();
+          const [toDispatch] = capture(notify.notice).first();
+          const [toStore] = capture(notify.notice).last();
+          expect(toDispatch).toMatchObject({ recipientId: 'nilanthi', type: 'POD_EXCEPTION', tripId: 'T1' });
+          expect(toStore).toMatchObject({ recipientId: 'fathima', type: 'POD_EXCEPTION', tripId: 'T1', outletId: 'OUT106' });
+          expect(toDispatch.payload).toMatchObject({
+            tripId: 'T1', stopId: 'S1', orderId: 'ORD1', outletId: 'OUT106', vehicleId: 'VEH057', unitsDelivered: 8, unitsOrdered: 10, short: 2,
+            exceptions: [{ type: 'SHORT', description: '2 trays', photoUrl: null }],
+          });
+        });
+
+        it('nothing delivered is a STOP_FAILED', async () => {
+          await service.pushBatch(personas.ruwan, [podOf({ units: 0, unitsOrdered: 10 })]);
+          expect(capture(notify.notice).last()[0]).toMatchObject({ type: 'STOP_FAILED', payload: { unitsDelivered: 0 } });
+        });
+
+        it('leaving a stop without any POD is a STOP_FAILED', async () => {
+          when(tripStop.findFirst(anything())).thenResolve({ id: 'S2', tripId: 'T1', stopSeq: 2, orderId: 'ORD2', outletId: 'OUT106', status: 'ENROUTE', pod: null });
+          await service.pushBatch(personas.ruwan, [evt({ id: 'evt-leave-0300', eventType: 'LEAVE', payload: { stopSeq: 2 }, savedAt: '2026-04-07T03:20:00.000Z' })]);
+          verify(notify.notice(anything())).twice();
+          expect(capture(notify.notice).first()[0]).toMatchObject({ recipientId: 'nilanthi', type: 'STOP_FAILED', payload: { stopId: 'S2', note: LEAVE_WITHOUT_POD } });
+        });
+
+        it('a POD the phone saved with no signal tells the store it was recorded offline (SM-A1)', async () => {
+          await service.pushBatch(personas.ruwan, [podOf({ units: 10, unitsOrdered: 10, offline: true, savedAt: '2026-04-07T01:28:00.000Z' })]);
+          verify(notify.notice(anything())).once();
+          expect(capture(notify.notice).last()[0]).toMatchObject({
+            recipientId: 'fathima', type: 'POD_RECORDED_OFFLINE', tripId: 'T1', outletId: 'OUT106',
+            payload: { tripId: 'T1', orderId: 'ORD1', savedAt: '2026-04-07T01:28:00.000Z' },
+          });
+        });
+
+        it('a full, clean POD saved online, and a replayed one, tell nobody', async () => {
+          await service.pushBatch(personas.ruwan, [podOf({ units: 10, unitsOrdered: 10 })]);
+          when(offlineEvent.findUnique(anything())).thenResolve({ id: 'evt-pod-0301' });
+          await service.pushBatch(personas.ruwan, [podOf({ units: 0, unitsOrdered: 10, offline: true }, 'evt-pod-0301')]);
+          verify(notify.notice(anything())).never();
+        });
+      });
+
       it('ignores a POD for an order that is not on the event trip', async () => {
         when(tripStop.findFirst(anything())).thenResolve(null);
         const res = await service.pushBatch(personas.ruwan, [podEvt]);
@@ -475,7 +533,7 @@ describe('OfflineEventsSet', () => {
   });
 
   it('PushBatch surfaces validation errors without pushing', () => {
-    const real = new SyncService({} as any);
+    const real = new SyncService({} as any, {} as any);
     const s = new OfflineEventsSet({} as any, real);
     expect(() => s.pushBatch({ principal: personas.ruwan, params: { events: [{ eventType: 'NOPE', savedAt: 'x' }] }, headers: {} })).toThrow(
       expect.objectContaining({ status: 400 }),

@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { anything, capture, instance, mock, verify, when } from 'ts-mockito';
 import { operationsOf } from '@lodestar/odata';
-import { rowFilter } from '@lodestar/security';
+import { NotifyClient, rowFilter } from '@lodestar/security';
 import { personas } from '../../../libs/security/test/principals';
 import { creditNotePrefix, creditNoteSequence, OrdersService, ReceiptException } from './orders.service';
 import { OrdersSet } from './orders.sets';
@@ -14,6 +14,9 @@ interface OrderDelegate {
 interface PodDelegate {
   findFirst(a: any): Promise<any>;
   update(a: any): Promise<any>;
+}
+interface FindManyDelegate {
+  findMany(a: any): Promise<any[]>;
 }
 
 const SAVED = new Date('2026-04-07T07:05:00+05:30');
@@ -64,6 +67,9 @@ describe('Orders ConfirmReceipt (SM-03)', () => {
     let pod: PodDelegate;
     let service: OrdersService;
     let tx: any;
+    let notify: NotifyClient;
+    let outerOrder: OrderDelegate;
+    let user: FindManyDelegate;
 
     const delivered = (podRow: any = null, extra: any = {}) => ({ id: 'ORD0104217', status: 'DELIVERED', unitsReceived: null, tripStop: podRow === undefined ? null : { pod: podRow }, ...extra });
 
@@ -71,8 +77,15 @@ describe('Orders ConfirmReceipt (SM-03)', () => {
       order = mock<OrderDelegate>();
       pod = mock<PodDelegate>();
       tx = { order: instance(order), pOD: instance(pod) };
-      const prisma = { $transaction: jest.fn(async (fn: (t: any) => Promise<unknown>) => fn(tx)) };
-      service = new OrdersService(prisma as any);
+      outerOrder = mock<OrderDelegate>();
+      user = mock<FindManyDelegate>();
+      const prisma = { $transaction: jest.fn(async (fn: (t: any) => Promise<unknown>) => fn(tx)), order: instance(outerOrder), user: instance(user) };
+      notify = mock(NotifyClient);
+      when(notify.notice(anything())).thenResolve(true);
+      // the receipt's outlet (Kandy) and trip, and the dispatchers: one based at Kandy, one at Peliyagoda
+      when(outerOrder.findUnique(anything())).thenResolve({ outletId: 'OUT106', outlet: { depot: 'KANDY', name: 'Waypoint Fresh Kandy' }, tripStop: { tripId: 'T1' } });
+      when(user.findMany(anything())).thenResolve([{ id: 'kandy-dispatcher', depot: 'KANDY' }, { id: 'nilanthi', depot: 'PELIYAGODA' }]);
+      service = new OrdersService(prisma as any, instance(notify));
       when(order.update(anything())).thenCall(async (a: any) => ({ id: a.where.id, ...a.data }));
       when(pod.update(anything())).thenResolve({});
       when(order.findFirst(anything())).thenResolve(null);
@@ -127,6 +140,45 @@ describe('Orders ConfirmReceipt (SM-03)', () => {
       const res = await service.confirmReceipt('ORD0104217', 'fathima', { unitsReceived: 2, unitsExpected: 3, savedAt: SAVED });
       expect(res).toMatchObject({ status: 'DELIVERED', creditNoteId: 'CN-2604-0001' });
       verify(pod.update(anything())).never();
+    });
+
+    describe("the store's issue reaches dispatch (RECEIPT_ISSUE, DSP-13)", () => {
+      it("a short count tells the depot's dispatchers, with the shortfall, note and credit note", async () => {
+        when(order.findUnique(anything())).thenResolve(delivered({ id: 'POD1', creditNoteId: 'CN-2604-0441', exceptions: [] }));
+        await service.confirmReceipt('ORD0104217', 'fathima', { unitsReceived: 31, unitsExpected: 34, note: 'Damaged: tray torn', savedAt: SAVED });
+        verify(notify.notice(anything())).once();
+        const [n] = capture(notify.notice).last();
+        expect(n).toMatchObject({ recipientId: 'kandy-dispatcher', type: 'RECEIPT_ISSUE', tripId: 'T1', outletId: 'OUT106' });
+        expect(n.payload).toMatchObject({ orderId: 'ORD0104217', outletId: 'OUT106', tripId: 'T1', short: 3, note: 'Damaged: tray torn', creditNoteId: 'CN-2604-0441' });
+        expect(capture(user.findMany).last()[0]).toEqual({ where: { role: 'DISPATCHER', isActive: true }, select: { id: true, depot: true } });
+      });
+
+      it('a full count with an issue reported is sent too', async () => {
+        when(order.findUnique(anything())).thenResolve(delivered(null));
+        await service.confirmReceipt('ORD0104217', 'fathima', { unitsReceived: 34, unitsExpected: 34, note: 'Damaged: one tray torn', savedAt: SAVED });
+        const [n] = capture(notify.notice).last();
+        expect(n).toMatchObject({ type: 'RECEIPT_ISSUE', payload: { short: 0, note: 'Damaged: one tray torn' } });
+      });
+
+      it('with no dispatcher based at the depot, every dispatcher covers it', async () => {
+        when(user.findMany(anything())).thenResolve([{ id: 'nilanthi', depot: 'PELIYAGODA' }]);
+        when(order.findUnique(anything())).thenResolve(delivered(null));
+        await service.confirmReceipt('ORD0104217', 'fathima', { unitsReceived: 1, unitsExpected: 3, savedAt: SAVED });
+        verify(notify.notice(anything())).once();
+        expect(capture(notify.notice).last()[0]).toMatchObject({ recipientId: 'nilanthi', type: 'RECEIPT_ISSUE' });
+      });
+
+      it('a full, clean count tells nobody', async () => {
+        when(order.findUnique(anything())).thenResolve(delivered(null));
+        await service.confirmReceipt('ORD0104217', 'fathima', { unitsReceived: 34, unitsExpected: 34, savedAt: SAVED });
+        verify(notify.notice(anything())).never();
+      });
+
+      it('a refused receipt tells nobody', async () => {
+        when(order.findUnique(anything())).thenResolve(delivered(null, { unitsReceived: 34 }));
+        await expect(service.confirmReceipt('ORD0104217', 'fathima', { unitsReceived: 1, unitsExpected: 3, savedAt: SAVED })).rejects.toMatchObject({ status: 409 });
+        verify(notify.notice(anything())).never();
+      });
     });
 
     it('draws again when two receipts raced for the same credit note number', async () => {

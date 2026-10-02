@@ -102,8 +102,18 @@ describe('DR-03 proof of delivery', () => {
     // no arrival was recorded for S-1 yet, so it is saved first; all three wait for signal
     expect(mine.map(i => i.kind)).toEqual(['ARRIVAL', 'POD_SAVE', 'LEAVE']);
     expect(mine.every(i => i.status === 'pending')).toBe(true);
-    expect(mine[1].payload).toMatchObject({ orderId: 'O-1', units: 33, unitsOrdered: 34, receiverName: 'R. Receiver' });
+    // saved with no signal: the store is told it was recorded offline when it syncs (SM-A1)
+    expect(mine[1].payload).toMatchObject({ orderId: 'O-1', units: 33, unitsOrdered: 34, receiverName: 'R. Receiver', offline: true });
     expect(client.action).not.toHaveBeenCalled();
+  });
+
+  it('a POD saved with signal is not marked offline', async () => {
+    await signInAs(driver('u-dr03b'));
+    const { completeStop } = require('@/model/actions');
+    await completeStop({ ...stops[0], arrivalActual: '2026-04-07T01:00:00.000Z' }, { unitsDelivered: 34, unitsOrdered: 34 });
+    const pod = queue.list().find(i => i.sub === 'u-dr03b' && i.kind === 'POD_SAVE')!;
+    expect(pod.payload).toMatchObject({ orderId: 'O-1', units: 34 });
+    expect(pod.payload).not.toHaveProperty('offline');
   });
 });
 

@@ -87,6 +87,52 @@ describe('SM-03 confirm receipt', () => {
   });
 });
 
+describe('SM-17 deferral notice', () => {
+  const moved = {
+    id: 'O-7', outletId: 'OUT-T1', runDate: '2026-04-08T00:00:00.000Z', orderedAt: '2026-04-06T03:00:00.000Z', brand: 'FRESH', tempClass: 'CHILLED', units: 6, kg: 6, m3: 1.6, status: 'DEFERRED', tripStop: null, outlet,
+    deferralLog: { id: 'D-7', orderId: 'O-7', reason: 'CAP_REEFER', score: 22, status: 'CONFIRMED', isProvisional: false, rescheduledDate: '2026-04-08T00:00:00.000Z', notes: 'First slot on Wed', createdAt: '2026-04-06T13:10:00.000Z' },
+  };
+  const notice = { id: 'N-7', recipientId: 'u-sm17', type: 'ORDER_DEFERRED', channel: 'WEBSOCKET', sentAt: '2026-04-06T13:10:00.000Z', readAt: null, payload: { orderId: 'O-7', reason: 'CAP_REEFER', from: '2026-04-07', rescheduledDate: '2026-04-08' } };
+  beforeEach(async () => {
+    await signInAs({ sub: 'u-sm17', name: 'Test Manager', realm_access: { roles: ['store_manager'] }, outlet_id: 'OUT-T1' });
+    routes.set('Orders', [{ ...moved, id: 'O-8', status: 'PLANNED', deferralLog: null }, moved]);
+    routes.set("Orders('O-7')", moved);
+    routes.set("Outlets('OUT-T1')", outlet);
+    routes.set('Notifications', [notice]);
+  });
+
+  it('shows the store\'s moved order with its reason, new date and dispatch\'s note, and acknowledges the notice', async () => {
+    const Screen = require('@/live/sm-17-deferral-notice-out027').default;
+    await render(<Screen />);
+    await waitFor(() => expect(screen.getByTestId('deferral-date').props.children).toBe('Wed 8 Apr'));
+    expect(screen.getByTestId('deferral-title').props.children).toBe('Chilled order moved');
+    expect(screen.getByText(/Reefer space full on Tue 7 Apr/)).toBeTruthy();
+    expect(screen.getByText('CAP-REEFER')).toBeTruthy();
+    expect(screen.getByText('"First slot on Wed" · dispatch')).toBeTruthy();
+    expect(screen.getByText(/1.6 m³ · window 05:30–08:00/)).toBeTruthy();
+    expect(client.get).toHaveBeenCalledWith('Orders', 'O-7', { expand: 'lineItems,tripStop,deferralLog,outlet' });
+    await fireEvent.press(screen.getByTestId('lk-L92'));
+    await waitFor(() => expect(client.action).toHaveBeenCalledWith("Notifications('N-7')/Lodestar.MarkRead", {}));
+    await waitFor(() => expect(push).toHaveBeenCalledWith({ pathname: '/s/[key]', params: { key: 'sm-21-messages' } }));
+  });
+
+  it('a provisional deferral is "at risk", not moved', async () => {
+    routes.set("Orders('O-7')", { ...moved, deferralLog: { ...moved.deferralLog, status: 'SUGGESTED', isProvisional: true } });
+    const Screen = require('@/live/sm-17-deferral-notice-out027').default;
+    await render(<Screen />);
+    await waitFor(() => expect(screen.getByTestId('deferral-title').props.children).toBe('Chilled order at risk'));
+    expect(screen.getByText('At risk, not cancelled: dispatch will confirm the new day.')).toBeTruthy();
+  });
+
+  it('SM-21 opens the deferral notice for the order', async () => {
+    const Messages = require('@/live/sm-21-messages').default;
+    await render(<Messages />);
+    await waitFor(() => expect(screen.getAllByText(/Order O-7/).length).toBeGreaterThan(0));
+    await fireEvent.press(screen.getAllByText(/Order O-7/)[0]);
+    await waitFor(() => expect(push).toHaveBeenCalledWith({ pathname: '/s/[key]', params: { key: 'sm-17-deferral-notice-out027', order: 'O-7' } }));
+  });
+});
+
 describe('SM-18 report issue', () => {
   it('saves the issue on the phone; SM-03 credits it and sends it as the receipt note', async () => {
     const { receiptIssues } = require('@/model/store-face');

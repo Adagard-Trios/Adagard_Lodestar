@@ -12,6 +12,9 @@ interface NotificationDelegate {
   create(a: any): Promise<any>;
   update(a: any): Promise<any>;
 }
+interface FindManyDelegate {
+  findMany(a: any): Promise<any[]>;
+}
 
 describe('NotificationsSet', () => {
   let service: NotificationsService;
@@ -96,6 +99,32 @@ describe('NotificationsSet', () => {
       verify(service.markRead(anything())).never();
     });
 
+    describe('a dispatcher marking a dock flag handled acknowledges it (LD-03, DSP-13)', () => {
+      const flag = { id: 'N7', type: 'SHORTFALL_FLAGGED', tripId: 'T1', readAt: null, payload: { loaderId: 'kasun', item: 'Milk 1L', depot: 'KANDY' } };
+      beforeEach(() => {
+        when(service.markRead('N7')).thenResolve({ ...flag, readAt: new Date() } as any);
+        when(service.acknowledgeShortfall(anything(), anything())).thenResolve();
+      });
+
+      it('acknowledges as the dispatcher', async () => {
+        await set.markRead({ principal: personas.nilanthi, params: {}, entity: flag, headers: {} });
+        const [read, by] = capture(service.acknowledgeShortfall).last();
+        expect(read).toMatchObject({ id: 'N7', type: 'SHORTFALL_FLAGGED' });
+        expect(by).toEqual({ sub: 'nilanthi', name: personas.nilanthi.name });
+      });
+
+      it('a store manager reading their copy acknowledges nothing', async () => {
+        await set.markRead({ principal: personas.fathima, params: {}, entity: flag, headers: {} });
+        verify(service.acknowledgeShortfall(anything(), anything())).never();
+      });
+
+      it('other notices acknowledge nothing', async () => {
+        when(service.markRead('N8')).thenResolve({ id: 'N8', type: 'POD_EXCEPTION', readAt: new Date() } as any);
+        await set.markRead({ principal: personas.nilanthi, params: {}, entity: { id: 'N8', readAt: null }, headers: {} });
+        verify(service.acknowledgeShortfall(anything(), anything())).never();
+      });
+    });
+
     it('marks an unread notification', async () => {
       when(service.markRead('N1')).thenResolve({ id: 'N1', readAt: new Date() } as any);
       await set.markRead({ principal: personas.fathima, params: {}, entity: { id: 'N1', readAt: null }, headers: {} });
@@ -167,10 +196,57 @@ describe('NotificationsService', () => {
     const payload = { vehicleId: 'VEH057' };
     await service.send({ recipientId: 'nilanthi', type: 'BLACKOUT_DETECTED', depot: 'KANDY', payload });
     await service.send({ recipientId: 'nilanthi', type: 'SIGNAL_BACK', depot: 'KANDY', payload });
-    verify(gateway.blackout('KANDY', payload)).once();
-    verify(gateway.blackoutResolved('KANDY', payload)).once();
+    verify(gateway.blackout('KANDY', payload, deepEqual([]))).once();
+    verify(gateway.blackoutResolved('KANDY', payload, deepEqual([]))).once();
     await service.send({ recipientId: 'nilanthi', type: 'BLACKOUT_DETECTED', payload });
-    verify(gateway.blackout(anything(), anything())).once();
+    verify(gateway.blackout(anything(), anything(), anything())).once();
+  });
+
+  describe('signal lost / back also reaches the stores still waiting on the trip (SM-A1)', () => {
+    let tripStop: FindManyDelegate;
+    beforeEach(() => {
+      tripStop = mock<FindManyDelegate>();
+      when(tripStop.findMany(anything())).thenResolve([{ outletId: 'OUT106' }, { outletId: 'OUT108' }, { outletId: 'OUT106' }]);
+      service = new NotificationsService({ notification: instance(notification), tripStop: instance(tripStop) } as any, instance(gateway));
+    });
+
+    it("passes the trip's undelivered stores to the gateway", async () => {
+      const payload = { vehicleId: 'VEH057', tripId: 'T1' };
+      await service.send({ recipientId: 'nilanthi', type: 'BLACKOUT_DETECTED', depot: 'KANDY', tripId: 'T1', payload });
+      await service.send({ recipientId: 'nilanthi', type: 'SIGNAL_BACK', depot: 'KANDY', tripId: 'T1', payload });
+      verify(gateway.blackout('KANDY', payload, deepEqual(['OUT106', 'OUT108']))).once();
+      verify(gateway.blackoutResolved('KANDY', payload, deepEqual(['OUT106', 'OUT108']))).once();
+      expect(capture(tripStop.findMany).last()[0]).toEqual({
+        where: { tripId: 'T1', status: { notIn: ['DELIVERED', 'CANCELLED'] } },
+        select: { outletId: true },
+      });
+    });
+
+    it('tells the stores even without a depot', async () => {
+      await service.send({ recipientId: 'fathima', type: 'BLACKOUT_DETECTED', tripId: 'T1', payload: {} });
+      verify(gateway.blackout(undefined, anything(), deepEqual(['OUT106', 'OUT108']))).once();
+    });
+  });
+
+  describe('acknowledgeShortfall', () => {
+    const flag = { id: 'N7', type: 'SHORTFALL_FLAGGED', tripId: 'T1', payload: { loaderId: 'kasun', item: 'Milk 1L', orderId: 'O1', depot: 'KANDY', vehicleId: 'VEH057' } } as any;
+
+    it("sends SHORTFALL_ACK to the loader who flagged it and shortfall_ack to the depot's loaders and the trip", async () => {
+      await service.acknowledgeShortfall(flag, { sub: 'nilanthi', name: 'Nilanthi Perera' });
+      const created = capture(notification.create).last()[0].data;
+      expect(created).toMatchObject({ recipientId: 'kasun', type: 'SHORTFALL_ACK', tripId: 'T1' });
+      expect(created.payload).toMatchObject({ tripId: 'T1', item: 'Milk 1L', orderId: 'O1', by: 'Nilanthi Perera', byId: 'nilanthi' });
+      verify(gateway.emit('user:kasun', 'notification', anything())).once();
+      verify(gateway.emit('loader:KANDY', 'shortfall_ack', anything())).once();
+      verify(gateway.emit('trip:T1', 'shortfall_ack', anything())).once();
+      expect(capture(gateway.emit).last()[2]).toMatchObject({ item: 'Milk 1L', by: 'Nilanthi Perera' });
+    });
+
+    it('without a loader on record it still tells the dock', async () => {
+      await service.acknowledgeShortfall({ ...flag, payload: { ...flag.payload, loaderId: undefined } }, { sub: 'nilanthi' });
+      verify(notification.create(anything())).never();
+      verify(gateway.emit('loader:KANDY', 'shortfall_ack', anything())).once();
+    });
   });
 
   it('routes CREDIT_NOTE_ISSUED to the store only with outlet and credit note', async () => {
@@ -378,11 +454,17 @@ describe('NotificationsGateway', () => {
       gateway.etaUpdate('T1', 'OUT106', { eta: 1 });
       gateway.blackout('KANDY', { v: 1 });
       gateway.creditNoteIssued('OUT106', 'CN1', { amount: 5, creditNoteId: 'SPOOFED' });
+      gateway.blackout('KANDY', { v: 2 }, ['OUT106']);
+      gateway.blackoutResolved(undefined, { v: 3 }, ['OUT106', 'OUT108']);
       expect(emitted).toEqual([
         ['trip:T1', 'eta_update', { eta: 1 }],
         ['store:OUT106', 'eta_update', { eta: 1 }],
         ['dispatcher:KANDY', 'signal_lost', { v: 1 }],
         ['store:OUT106', 'credit_note_issued', { creditNoteId: 'CN1', amount: 5 }],
+        ['dispatcher:KANDY', 'signal_lost', { v: 2 }],
+        ['store:OUT106', 'signal_lost', { v: 2 }],
+        ['store:OUT106', 'signal_back', { v: 3 }],
+        ['store:OUT108', 'signal_back', { v: 3 }],
       ]);
     });
   });

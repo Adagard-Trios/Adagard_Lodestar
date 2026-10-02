@@ -3,7 +3,7 @@ import { PrismaService } from '@lodestar/prisma';
 import { ODataError } from '@lodestar/odata';
 import { Depot, OrderStatus, Prisma, TripStatus } from '@prisma/client';
 import { runDateRange } from '@lodestar/platform';
-import { NOTIFY, NotifyClient } from '@lodestar/security';
+import { announceStopIssue, depotDispatchers, NOTIFY, NotifyClient, podOutcome, storeManagers } from '@lodestar/security';
 import { FleetClient } from './fleet.client';
 
 /** Stored window [start, end) of a run date (YYYY-MM-DD, or a Date read in Sri Lanka time). */
@@ -22,6 +22,25 @@ export interface PodInput {
   savedOffline?: boolean;
   arrivalActual?: Date;
   leaveActual?: Date;
+}
+
+/** One dock flag on a load record (LD-03): a line loaded short. */
+export interface Shortfall {
+  item: string;
+  qtyOrdered: number;
+  qtyLoaded: number;
+  reason?: string;
+  orderId?: string;
+}
+
+const isShortfall = (x: unknown): x is Shortfall =>
+  !!x && typeof x === 'object' && typeof (x as Shortfall).item === 'string' && Number.isFinite((x as Shortfall).qtyOrdered) && Number.isFinite((x as Shortfall).qtyLoaded);
+
+/** Flags in `current` that are new or changed since `previous` (the loader sends the trip's whole list each time). */
+export function newShortfalls(previous: unknown, current: unknown): Shortfall[] {
+  const key = (s: Shortfall) => `${s.item}|${s.orderId ?? ''}|${s.qtyLoaded}|${s.reason ?? ''}`;
+  const seen = new Set((Array.isArray(previous) ? previous : []).filter(isShortfall).map(key));
+  return (Array.isArray(current) ? current : []).filter(isShortfall).filter((s) => s.qtyLoaded < s.qtyOrdered && !seen.has(key(s)));
 }
 
 /** Used when the travel table has no distance (same constants as the planning agent's trip_km). */
@@ -156,7 +175,7 @@ export class TripsService {
       throw ODataError.badRequest('unitsDelivered must be between 0 and unitsOrdered', 'unitsDelivered');
     }
     const data = { ...podData, exceptions: (podData.exceptions ?? undefined) as Prisma.InputJsonValue };
-    return this.prisma.$transaction(async (tx) => {
+    const stop = await this.prisma.$transaction(async (tx) => {
       await tx.pOD.upsert({
         where: { tripStopId: stopId },
         update: { ...data, syncedAt: podData.savedOffline ? undefined : new Date() },
@@ -172,6 +191,30 @@ export class TripsService {
         },
       });
     });
+    await this.announcePod(stopId, podData);
+    return stop;
+  }
+
+  /** A failed stop or a POD exception reaches the depot's dispatchers and the store (DSP-13, DSP-04, SM-21). */
+  private async announcePod(stopId: string, pod: Omit<PodInput, 'arrivalActual' | 'leaveActual'>) {
+    const type = podOutcome(pod);
+    if (!type) return;
+    const stop = await this.prisma.tripStop.findUnique({
+      where: { id: stopId },
+      select: { id: true, tripId: true, stopSeq: true, orderId: true, outletId: true, trip: { select: { depot: true, vehicleId: true } } },
+    });
+    if (!stop) return;
+    const short = pod.unitsOrdered - pod.unitsDelivered;
+    await announceStopIssue(this.prisma, this.notify, type, {
+      tripId: stop.tripId, stopId: stop.id, stopSeq: stop.stopSeq, orderId: stop.orderId, outletId: stop.outletId, depot: stop.trip.depot, vehicleId: stop.trip.vehicleId,
+    }, {
+      title: type === 'STOP_FAILED' ? `${stop.outletId}: nothing delivered` : `${stop.orderId}: ${pod.unitsDelivered} of ${pod.unitsOrdered} delivered`,
+      unitsDelivered: pod.unitsDelivered,
+      unitsOrdered: pod.unitsOrdered,
+      short,
+      exceptions: Array.isArray(pod.exceptions) ? pod.exceptions : [],
+      ...(pod.creditNoteId ? { creditNoteId: pod.creditNoteId } : {}),
+    });
   }
 
   /** Blackout: update late risk for a stop (DSP-A1) */
@@ -179,7 +222,41 @@ export class TripsService {
     return this.prisma.tripStop.update({ where: { id: stopId }, data: { lateRiskPct } });
   }
 
-  async updateShortfalls(tripId: string, shortfalls: unknown[]) {
-    return this.prisma.loadRecord.update({ where: { tripId }, data: { shortfalls: shortfalls as Prisma.InputJsonValue } });
+  async updateShortfalls(tripId: string, shortfalls: unknown[], flaggedBy?: string) {
+    const before = await this.prisma.loadRecord.findUnique({ where: { tripId }, select: { shortfalls: true } });
+    const record = await this.prisma.loadRecord.update({ where: { tripId }, data: { shortfalls: shortfalls as Prisma.InputJsonValue } });
+    await this.announceShortfalls(tripId, before?.shortfalls, shortfalls, flaggedBy ?? record.loaderId);
+    return record;
+  }
+
+  /**
+   * New or changed dock flags (LD-03 "Flag sent to dispatch, store and driver"): a SHORTFALL_FLAGGED notice to
+   * the depot's dispatchers (DSP-13, where marking it handled acknowledges it), to the managers of the store
+   * whose order is short, and to the trip's driver.
+   */
+  async announceShortfalls(tripId: string, previous: unknown, current: unknown, loaderId?: string | null) {
+    const fresh = newShortfalls(previous, current);
+    if (!fresh.length) return;
+    const trip = await this.prisma.trip.findUnique({
+      where: { id: tripId },
+      select: { depot: true, vehicleId: true, bay: true, driverId: true, stops: { select: { orderId: true, outletId: true } } },
+    });
+    if (!trip) return;
+    const outletOf = new Map(trip.stops.map((st) => [st.orderId, st.outletId]));
+    const dispatchers = await depotDispatchers(this.prisma, trip.depot);
+    const managers = await storeManagers(this.prisma, fresh.flatMap((f) => (f.orderId && outletOf.get(f.orderId)) || []));
+    for (const f of fresh) {
+      const outletId = f.orderId ? outletOf.get(f.orderId) : undefined;
+      const payload = {
+        tripId, vehicleId: trip.vehicleId, depot: trip.depot, bay: trip.bay, loaderId: loaderId ?? null,
+        item: f.item, orderId: f.orderId ?? null, outletId: outletId ?? null,
+        qtyOrdered: f.qtyOrdered, qtyLoaded: f.qtyLoaded, short: f.qtyOrdered - f.qtyLoaded, reason: f.reason ?? null,
+        title: `Shortfall: ${f.item} ${f.qtyLoaded} of ${f.qtyOrdered}`,
+      };
+      const notice = { type: 'SHORTFALL_FLAGGED', tripId, payload };
+      for (const recipientId of dispatchers) await this.notify.notice({ ...notice, recipientId });
+      for (const m of managers.filter((x) => x.outletId === outletId)) await this.notify.notice({ ...notice, recipientId: m.id, outletId: m.outletId });
+      if (trip.driverId) await this.notify.notice({ ...notice, recipientId: trip.driverId });
+    }
   }
 }

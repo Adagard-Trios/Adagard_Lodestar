@@ -37,6 +37,7 @@ function kind(m: Message): { tile: 'ok' | 'info' | 'warn' | 'note'; to: Target |
   const t = m.type;
   const order = str(m.payload.orderId);
   const pod = str(m.payload.podId);
+  if (/DEFER/.test(t)) return { tile: 'warn', to: { to: 'sm-17-deferral-notice-out027', params: order ? { order } : undefined } };
   if (/CREDIT|POD|MATCH|RECEIPT/.test(t)) return { tile: 'ok', to: pod ? { to: 'sm-20-credit-note-detail', params: { pod } } : { to: 'sm-19-receipts-and-credit-notes' } };
   if (/SHORT|DEFER|LATE|EXCEPTION|REEFER/.test(t)) return { tile: 'warn', to: order ? { to: 'sm-02-order-status-and-eta', params: { order } } : { to: 'sm-02-order-status-and-eta' } };
   if (/ETA|ARRIV|WINDOW|TRIP|SIGNAL|DELIVER/.test(t)) return { tile: 'info', to: { to: 'sm-16-why-this-window-sheet', params: order ? { order } : undefined } };

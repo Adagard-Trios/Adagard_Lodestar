@@ -207,6 +207,13 @@ export class LoadRecordsSet extends ODataEntitySet {
     return { ...data, vehicleId: trip.vehicleId, loaderId: ctx.principal.sub, loadedAt: new Date() };
   }
 
+  /** A load record created with flags (the field app's first flag of a trip) tells dispatch, store and driver too. */
+  async create(data: Record<string, any>, ctx: WriteContext) {
+    const created = await super.create(data, ctx);
+    await this.trips.announceShortfalls(created.tripId, [], created.shortfalls, created.loaderId);
+    return created;
+  }
+
   /** POST LoadRecords('…')/Lodestar.RecordShortfalls {shortfalls: [{item, qtyOrdered, qtyLoaded, reason}]} */
   @ODataAction({
     name: 'RecordShortfalls',
@@ -217,6 +224,6 @@ export class LoadRecordsSet extends ODataEntitySet {
     idempotent: true,
   })
   recordShortfalls(ctx: OperationContext) {
-    return this.trips.updateShortfalls(ctx.entity.tripId, ctx.params.shortfalls);
+    return this.trips.updateShortfalls(ctx.entity.tripId, ctx.params.shortfalls, ctx.principal.sub);
   }
 }
