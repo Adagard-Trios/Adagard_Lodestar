@@ -366,14 +366,23 @@ jobs:
       - checkout
       - run:
           name: kustomize edit set image → overlays/demo, commit [skip ci]
+          # overlays/demo builds on overlays/local, which has already renamed lodestar/<svc> to lodestar-<svc>,
+          # so the image names to override are lodestar-<svc> (the same names compose.images.yml pushes).
           command: |
             curl -fsSL "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash -s 5.4.3 /tmp
             cd deploy/k8s/overlays/demo
             for s in auth orders planning fleet outlets trips sync notifications audit agent gateway frontend mobile-web migrate; do
-              /tmp/kustomize edit set image "lodestar/$s=<< pipeline.parameters.registry >>/lodestar-$s:$CIRCLE_SHA1"
+              /tmp/kustomize edit set image "lodestar-$s=<< pipeline.parameters.registry >>/lodestar-$s:$CIRCLE_SHA1"
             done
+            # guard: the overlay must still render, and every one of the 14 images must carry this commit's tag
+            /tmp/kustomize build --load-restrictor LoadRestrictionsNone . > /tmp/demo.yaml
+            n=$(grep -c "image: << pipeline.parameters.registry >>/lodestar-[a-z-]*:$CIRCLE_SHA1" /tmp/demo.yaml || true)
+            grep "image: << pipeline.parameters.registry >>/" /tmp/demo.yaml | grep -v ":$CIRCLE_SHA1" && { echo "an image kept an old tag"; exit 1; }
+            [ "$n" -ge 14 ] || { echo "expected the 14 images at $CIRCLE_SHA1, found $n references"; exit 1; }
             git config user.name "circleci" && git config user.email "ci@users.noreply.github.com"
-            git commit -am "deploy: demo → ${CIRCLE_SHA1:0:7} [skip ci]" && git push origin HEAD:main
+            git commit -am "deploy: demo → ${CIRCLE_SHA1:0:7} [skip ci]"
+            # main may have moved on while the images built: replay the bump on top of it
+            git pull --rebase origin main && git push origin HEAD:main
 
   smoke-public:
     executor: node

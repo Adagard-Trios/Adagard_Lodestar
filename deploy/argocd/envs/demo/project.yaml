@@ -1,0 +1,34 @@
+# AppProject for the single-VM demo on k3s: one repo, one namespace, an explicit list of kinds.
+# No Secrets (they are created on the VM: deploy/azure-demo/k3s-secrets.sh), no RBAC, no CRDs;
+# cluster-scoped: the namespace and the PriorityClasses only. cert-manager's HTTP-01 solver pods and the
+# certificate Secret are created by cert-manager, not by Argo CD.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: lodestar-demo
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Waypoint Lodestar - public demo (one VM, k3s)
+  sourceRepos:
+    - REPO_URL   # set in deploy/argocd/repo (one place)
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: lodestar
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace }
+    - { group: scheduling.k8s.io, kind: PriorityClass }
+  namespaceResourceWhitelist:
+    - { group: "", kind: ConfigMap }
+    - { group: "", kind: Service }
+    - { group: "", kind: ServiceAccount }
+    - { group: "", kind: ResourceQuota }
+    - { group: "", kind: LimitRange }
+    - { group: apps, kind: Deployment }
+    - { group: apps, kind: StatefulSet }
+    - { group: batch, kind: Job }
+    - { group: policy, kind: PodDisruptionBudget }
+    - { group: networking.k8s.io, kind: Ingress }
+  orphanedResources:
+    warn: true

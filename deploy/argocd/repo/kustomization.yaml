@@ -1,0 +1,28 @@
+# The one place the Git repository URL is written. Every Application (spec.source.repoURL) and every
+# AppProject (spec.sourceRepos[0]) under deploy/argocd says REPO_URL and gets this value at build time;
+# bootstrap/ and each envs/<env>/ include this component. Terraform's git_repo_url variables
+# (infra/terraform/envs/dev|prod, target architecture) carry the same value for the AKS path.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+configMapGenerator:
+- name: argocd-repo
+  literals:
+  - url=https://github.com/Adagard-Trios/Lodestar.git
+  options:
+    disableNameSuffixHash: true
+    annotations:
+      config.kubernetes.io/local-config: 'true'
+replacements:
+- source:
+    kind: ConfigMap
+    name: argocd-repo
+    fieldPath: data.url
+  targets:
+  - select:
+      kind: Application
+    fieldPaths:
+    - spec.source.repoURL
+  - select:
+      kind: AppProject
+    fieldPaths:
+    - spec.sourceRepos.0

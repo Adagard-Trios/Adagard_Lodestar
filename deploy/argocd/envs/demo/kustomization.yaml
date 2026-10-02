@@ -1,0 +1,9 @@
+# The demo VM's Argo CD (k3s): applied once by hand, `kubectl apply -k deploy/argocd/envs/demo`
+# (deploy/argocd/README.md, "Demo on k3s"). The repo URL comes from deploy/argocd/repo.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- project.yaml
+- lodestar.yaml
+components:
+- ../../repo

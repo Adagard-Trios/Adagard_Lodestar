@@ -1,0 +1,58 @@
+# Demo overlay: the whole platform on the demo VM's k3s, synced by Argo CD (deploy/argocd/envs/demo).
+# Setup and the compose <-> k3s switch: deploy/argocd/README.md, "Demo on k3s".
+#
+# This file holds only the image tags. CI (.circleci/config.yml, gitops-bump) rewrites it on every main
+# build with `kustomize edit set image lodestar-<svc>=ghcr.io/adagard-trios/lodestar-<svc>:<commit sha>`
+# and commits it with [skip ci]; `kustomize edit` reformats this file, so keep the rest in platform/.
+# The names on the left are lodestar-<svc> because overlays/local has already renamed lodestar/<svc>.
+#
+# Build (the realm and the Postgres init script live outside this folder; Argo CD gets the same flag
+# through kustomize.buildOptions in argocd-cm):
+#   kubectl kustomize --load-restrictor LoadRestrictionsNone deploy/k8s/overlays/demo
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- platform
+images:
+- name: lodestar-agent
+  newName: ghcr.io/adagard-trios/lodestar-agent
+  newTag: pending-first-ci-run
+- name: lodestar-audit
+  newName: ghcr.io/adagard-trios/lodestar-audit
+  newTag: pending-first-ci-run
+- name: lodestar-auth
+  newName: ghcr.io/adagard-trios/lodestar-auth
+  newTag: pending-first-ci-run
+- name: lodestar-fleet
+  newName: ghcr.io/adagard-trios/lodestar-fleet
+  newTag: pending-first-ci-run
+- name: lodestar-frontend
+  newName: ghcr.io/adagard-trios/lodestar-frontend
+  newTag: pending-first-ci-run
+- name: lodestar-gateway
+  newName: ghcr.io/adagard-trios/lodestar-gateway
+  newTag: pending-first-ci-run
+- name: lodestar-migrate
+  newName: ghcr.io/adagard-trios/lodestar-migrate
+  newTag: pending-first-ci-run
+- name: lodestar-mobile-web
+  newName: ghcr.io/adagard-trios/lodestar-mobile-web
+  newTag: pending-first-ci-run
+- name: lodestar-notifications
+  newName: ghcr.io/adagard-trios/lodestar-notifications
+  newTag: pending-first-ci-run
+- name: lodestar-orders
+  newName: ghcr.io/adagard-trios/lodestar-orders
+  newTag: pending-first-ci-run
+- name: lodestar-outlets
+  newName: ghcr.io/adagard-trios/lodestar-outlets
+  newTag: pending-first-ci-run
+- name: lodestar-planning
+  newName: ghcr.io/adagard-trios/lodestar-planning
+  newTag: pending-first-ci-run
+- name: lodestar-sync
+  newName: ghcr.io/adagard-trios/lodestar-sync
+  newTag: pending-first-ci-run
+- name: lodestar-trips
+  newName: ghcr.io/adagard-trios/lodestar-trips
+  newTag: pending-first-ci-run

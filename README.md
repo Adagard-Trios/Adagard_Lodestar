@@ -103,6 +103,7 @@ Open the start page in a desktop browser. For the driver and the loader, use a p
 - **Planning.** A deterministic planner and rule checker (capacity by weight and volume, temperature, van-only access, home depot, every outlet's delivery window, the mall delivery window, the weekly fuel quota and two trips a day; closed days are refused) inside a LangGraph agent with a human approval step; approving a plan that bends a rule needs a stated reason. Fuel used is recorded when a trip completes and resets every Monday. Approving a plan creates the trips and stops, plans the orders, records each deferral with its reason and rolls it to the next operating day, and tells the stores.
 - **Offline first.** The field app keeps an outbox; the sync service applies batches idempotently, in the order they were saved, and resolves conflicts (field evidence wins).
 - **Quality gate.** Lint, typecheck, unit suites with coverage, integration tests on a real Postgres, Sonar, and the full stack with Playwright (API, both apps, cross-role flows, design conformance). One command: `tools/qa/gate.sh`. CI: CircleCI. See [docs/QA.md](docs/QA.md).
+- **Delivery.** On `main`, CircleCI pushes the 14 images to GHCR (tagged with the commit SHA) and commits the new tags to `deploy/k8s/overlays/demo`. Argo CD on the demo VM's k3s syncs them ([deploy/argocd](deploy/argocd/README.md)). Until the cut-over described there, the public URL is served by the compose stack. The `Jenkinsfile` is not on this path; it is kept for reference only.
 
 ## Departures from the Designathon design
 

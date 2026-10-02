@@ -13,7 +13,7 @@ metadata:
 spec:
   project: lodestar-prod
   source:
-    repoURL: https://github.com/Adagard-Trios/Tech-Triathlon.git
+    repoURL: REPO_URL   # set in deploy/argocd/repo (one place)
     targetRevision: main
     path: deploy/k8s/overlays/prod
   destination:

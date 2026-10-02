@@ -10,7 +10,7 @@ metadata:
 spec:
   description: Waypoint Lodestar - dev
   sourceRepos:
-    - https://github.com/Adagard-Trios/Tech-Triathlon.git
+    - REPO_URL   # set in deploy/argocd/repo (one place)
   destinations:
     - server: https://kubernetes.default.svc
       namespace: lodestar

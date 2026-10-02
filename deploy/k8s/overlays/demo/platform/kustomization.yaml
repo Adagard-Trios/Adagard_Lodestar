@@ -1,0 +1,399 @@
+# The platform part of the demo overlay (everything except the image tags, which live one level up in
+# ../kustomization.yaml so CI's `kustomize edit set image` only ever rewrites that small file).
+#
+# Built from overlays/local (same Deployments, in-cluster Postgres, Redis and Keycloak, the NGINX gateway),
+# then, for plain k3s on one 2 vCPU / 8 GiB VM:
+#   - no Azure workload identity, no Key Vault CSI, no Istio sidecars (already removed by overlays/local)
+#   - no KEDA: the agent and sync ScaledObjects/TriggerAuthentications are dropped; one replica each,
+#     no HPAs (one node: scaling out only competes for the same 2 vCPUs)
+#   - NO Secret in git: every Secret overlays/local generates with dev-only values is deleted here; the
+#     real ones are created on the VM from its .env (deploy/azure-demo/k3s-secrets.sh), same names
+#   - the competition CSVs come from the ConfigMap `lodestar-data`, created on the VM by the same script
+#     (optional: without it the seed uses its synthetic data, as compose does without ./data)
+#   - Keycloak in production mode (`start`), as deploy/azure-demo/compose.prod.yml
+#   - ingress-nginx + cert-manager (Let's Encrypt) in front of the gateway (ingress.yaml)
+#   - the public host name lives in host.env only
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: lodestar
+labels:
+- pairs:
+    lodestar.io/environment: demo
+  includeSelectors: false
+resources:
+- ../../local
+- ingress.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true
+configMapGenerator:
+# The one place for the public host name (never applied: local-config).
+- name: demo-host
+  envs:
+  - host.env
+  options:
+    annotations:
+      config.kubernetes.io/local-config: 'true'
+# PUBLIC_HOST below is filled from host.env by the replacements further down.
+- name: lodestar-common
+  behavior: merge
+  literals:
+  - OIDC_ISSUER=https://PUBLIC_HOST/auth/realms/lodestar
+  - PUBLIC_WEB_URL=https://PUBLIC_HOST
+  - PUBLIC_BASE_URL=https://PUBLIC_HOST
+  - LOG_LEVEL=info
+- name: notifications-config
+  behavior: merge
+  literals:
+  - WS_CORS_ORIGINS=https://PUBLIC_HOST
+- name: frontend-config
+  behavior: merge
+  literals:
+  - NEXT_PUBLIC_API_URL=https://PUBLIC_HOST/odata/v4
+  - NEXT_PUBLIC_WS_URL=wss://PUBLIC_HOST/ws/
+
+replacements:
+- source:
+    kind: ConfigMap
+    name: demo-host
+    fieldPath: data.PUBLIC_HOST
+  targets:
+  - select:
+      kind: Ingress
+      name: lodestar
+    fieldPaths:
+    - spec.rules.0.host
+    - spec.tls.0.hosts.0
+  - select:
+      kind: ConfigMap
+      name: lodestar-common
+    fieldPaths:
+    - data.OIDC_ISSUER
+    - data.PUBLIC_WEB_URL
+    - data.PUBLIC_BASE_URL
+    options:
+      delimiter: /
+      index: 2
+  - select:
+      kind: ConfigMap
+      name: notifications-config
+    fieldPaths:
+    - data.WS_CORS_ORIGINS
+    options:
+      delimiter: /
+      index: 2
+  - select:
+      kind: ConfigMap
+      name: frontend-config
+    fieldPaths:
+    - data.NEXT_PUBLIC_API_URL
+    - data.NEXT_PUBLIC_WS_URL
+    options:
+      delimiter: /
+      index: 2
+  - select:
+      kind: Deployment
+      name: identity
+    fieldPaths:
+    - spec.template.spec.containers.[name=identity].env.[name=KC_HOSTNAME].value
+    - spec.template.spec.containers.[name=identity].env.[name=PUBLIC_ORIGIN].value
+    options:
+      delimiter: /
+      index: 2
+
+patches:
+# --- no Secret from git: overlays/local's dev-only Secrets go; make-secrets.sh creates the real ones
+- target:
+    kind: Secret
+  patch: |-
+    $patch: delete
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: any
+# --- no KEDA on k3s
+- target:
+    kind: ScaledObject
+  patch: |-
+    $patch: delete
+    apiVersion: keda.sh/v1alpha1
+    kind: ScaledObject
+    metadata:
+      name: any
+- target:
+    kind: TriggerAuthentication
+  patch: |-
+    $patch: delete
+    apiVersion: keda.sh/v1alpha1
+    kind: TriggerAuthentication
+    metadata:
+      name: any
+# --- one node: fixed single replicas (set by overlays/local), no HPAs
+- target:
+    kind: HorizontalPodAutoscaler
+  patch: |-
+    $patch: delete
+    apiVersion: autoscaling/v2
+    kind: HorizontalPodAutoscaler
+    metadata:
+      name: any
+# --- nothing is published on a NodePort: the Ingress is the only way in
+- target:
+    kind: Service
+    name: identity-admin
+  patch: |-
+    $patch: delete
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: identity-admin
+- target:
+    kind: Service
+    name: mobile-web-nodeport
+  patch: |-
+    $patch: delete
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: mobile-web-nodeport
+- target:
+    kind: Service
+    name: gateway
+  patch: |-
+    - op: replace
+      path: /spec/type
+      value: ClusterIP
+    - op: remove
+      path: /spec/ports/1/nodePort
+    - op: remove
+      path: /spec/ports/0/nodePort
+- target:
+    kind: ResourceQuota
+    name: lodestar
+  patch: |-
+    - op: replace
+      path: /spec/hard
+      value:
+        requests.cpu: '4'
+        requests.memory: 7Gi
+        limits.memory: 20Gi
+        pods: '40'
+        services.loadbalancers: '0'
+        services.nodeports: '0'
+        persistentvolumeclaims: '1'
+
+# --- one unlabelled k3s node: no node pools, no zones
+- target:
+    kind: Deployment
+    labelSelector: app in (auth,orders,planning,fleet,outlets,trips,sync,notifications,audit,frontend,mobile-web)
+  patch: |-
+    - op: remove
+      path: /spec/template/spec/nodeSelector
+    - op: remove
+      path: /spec/template/spec/topologySpreadConstraints
+- target:
+    kind: Deployment
+    name: agent
+  patch: |-
+    - op: remove
+      path: /spec/template/spec/affinity/nodeAffinity
+    - op: remove
+      path: /spec/template/spec/topologySpreadConstraints
+- target:
+    kind: Deployment
+    name: gateway
+  patch: |-
+    - op: remove
+      path: /spec/template/spec/nodeSelector
+    - op: remove
+      path: /spec/template/spec/topologySpreadConstraints
+- target:
+    kind: Deployment
+    labelSelector: app in (identity,redis)
+  patch: |-
+    - op: remove
+      path: /spec/template/spec/nodeSelector
+- target:
+    kind: StatefulSet
+    name: postgres
+  patch: |-
+    - op: remove
+      path: /spec/template/spec/nodeSelector
+
+# --- requests sized so everything (plus k3s, Argo CD, cert-manager, ingress-nginx) fits 2 vCPU / 8 GiB
+- target:
+    kind: Deployment
+    labelSelector: app in (auth,orders,planning,fleet,outlets,trips,sync,notifications,audit,frontend)
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources
+      value:
+        requests:
+          cpu: 25m
+          memory: 160Mi
+        limits:
+          cpu: '1'
+          memory: 512Mi
+- target:
+    kind: Deployment
+    name: agent
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources
+      value:
+        requests:
+          cpu: 25m
+          memory: 256Mi
+        limits:
+          cpu: '1'
+          memory: 768Mi
+- target:
+    kind: Deployment
+    name: mobile-web
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/cpu
+      value: 10m
+- target:
+    kind: Deployment
+    name: gateway
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests
+      value:
+        cpu: 25m
+        memory: 64Mi
+- target:
+    kind: Deployment
+    name: redis
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests
+      value:
+        cpu: 10m
+        memory: 32Mi
+- target:
+    kind: StatefulSet
+    name: postgres
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests
+      value:
+        cpu: 50m
+        memory: 256Mi
+
+# --- gateway: the init container adapts the compose nginx.conf to Kubernetes DNS (as overlays/local),
+# adds the field app's upstream (Service port 80) and trusts X-Forwarded-For from the in-cluster
+# ingress, so the per-IP rate limits apply per visitor instead of to the ingress pod.
+- target:
+    kind: Deployment
+    name: gateway
+  patch: |-
+    - op: test
+      path: /spec/template/spec/initContainers/0/name
+      value: k8s-config
+    - op: replace
+      path: /spec/template/spec/initContainers/0/command
+      value:
+      - /bin/sh
+      - -ec
+      - |
+        cp -R /etc/nginx/. /work/
+        sed -i -E \
+          -e 's/resolver 127\.0\.0\.11/resolver kube-dns.kube-system.svc.cluster.local/' \
+          -e 's/([[:space:]])(auth|orders|planning|fleet|outlets|trips|sync|notifications|audit|frontend|identity):([0-9]+)/\1\2.lodestar.svc.cluster.local:\3/g' \
+          -e 's/([[:space:]])mobile-web:8080/\1mobile-web.lodestar.svc.cluster.local:80/' \
+          -e 's#resolver_timeout 5s;#resolver_timeout 5s; set_real_ip_from 10.0.0.0/8; set_real_ip_from 172.16.0.0/12; set_real_ip_from 192.168.0.0/16; real_ip_header X-Forwarded-For; real_ip_recursive on;#' \
+          /work/nginx.conf /work/conf.d/identity-proxy.conf
+        grep -n 'resolver \|set_real_ip_from\|lodestar.svc' /work/nginx.conf /work/conf.d/identity-proxy.conf
+    - op: remove
+      path: /spec/template/spec/initContainers/0/env
+
+# --- Keycloak in production mode behind the proxy (as compose.prod.yml); the realm import fills redirect
+# URIs and web origins from PUBLIC_ORIGIN. Secrets (DB, admin, personas, service clients): identity-secrets.
+- target:
+    kind: Deployment
+    name: identity
+  patch: |-
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: identity
+    spec:
+      template:
+        spec:
+          containers:
+          - name: identity
+            args: [start, --import-realm]
+            env:
+            - name: KC_HOSTNAME_ADMIN
+              $patch: delete
+            - name: KC_HOSTNAME
+              value: https://PUBLIC_HOST/auth
+            - name: PUBLIC_ORIGIN
+              value: https://PUBLIC_HOST
+            - name: KC_CACHE
+              value: local
+            - name: JAVA_OPTS_KC_HEAP
+              value: -XX:MaxRAMPercentage=50 -XX:InitialRAMPercentage=25
+            resources:
+              requests:
+                cpu: 250m
+                memory: 640Mi
+              limits:
+                cpu: '2'
+                memory: 1Gi
+
+# --- migrate + seed: an Argo CD Sync hook (re-created on every sync, so a new migrate image runs; the seed
+# is idempotent), in the same wave as Postgres, before any service starts. CSVs from the VM's ConfigMap.
+- target:
+    kind: Job
+    name: migrate
+  patch: |-
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      name: migrate
+      annotations:
+        argocd.argoproj.io/hook: Sync
+        argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+        argocd.argoproj.io/sync-wave: '-1'
+    spec:
+      template:
+        spec:
+          nodeSelector: null
+          containers:
+          - name: migrate
+            env:
+            # demo day (YYYY-MM-DD); empty = today in Sri Lanka (backend/prisma/DATA.md)
+            - name: DEMO_DATE
+              value: ''
+            volumeMounts:
+            - name: data
+              mountPath: /data
+              readOnly: true
+          volumes:
+          - name: data
+            configMap:
+              name: lodestar-data
+              optional: true
+- target:
+    kind: (StatefulSet|Service)
+    name: postgres
+  patch: |-
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: postgres
+      annotations:
+        argocd.argoproj.io/sync-wave: '-1'
+# Namespace, policies, config and accounts first (wave -2): Postgres needs postgres-init and lodestar-api.
+- target:
+    kind: (Namespace|PriorityClass|ResourceQuota|LimitRange|ConfigMap|ServiceAccount)
+  patch: |-
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: any
+      annotations:
+        argocd.argoproj.io/sync-wave: '-2'

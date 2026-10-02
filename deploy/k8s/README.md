@@ -1,4 +1,6 @@
-# deploy/k8s: Kustomize for AKS (dev, prod) and kind (local)
+# deploy/k8s: Kustomize for the demo (k3s), kind (local) and AKS (dev, prod)
+
+> **Applied vs. target.** `overlays/demo` is the GitOps path for the demo VM: Argo CD syncs it on the VM's k3s, and it serves the public URL once the cut-over from compose is done (setup and cut-over in [`deploy/argocd/README.md`](../argocd/README.md)). `overlays/local` runs on kind. `overlays/dev`, `overlays/prod`, `components/azure-wiring` and the AKS-only parts of `base/` (`istio/`, `ingress/`, `network-policies/`, `jobs/`, the Key Vault SecretProviderClasses and workload identity) are **target architecture that was not applied**, like `infra/terraform/envs/dev|prod` (see [`infra/README.md`](../../infra/README.md)).
 
 ```
 base/                      one copy of every manifest, prod-sized (PLATFORM.md section 9)
@@ -12,9 +14,12 @@ components/azure-wiring/   fills TENANT_ID, CLIENT_ID_*, hosts, POSTGRES_HOST, .
 overlays/dev/              AKS dev: HPAs 1-3, small requests, best-effort zone spread
 overlays/prod/             AKS prod: base bounds (min >= 2), ACR images
 overlays/local/            kind: no Azure; in-cluster Postgres, Keycloak, Redis, NGINX gateway
+overlays/demo/             the demo VM's k3s: overlays/local + no KEDA/HPAs, Secrets and CSVs created on the VM,
+                           Keycloak in production mode, Ingress + Let's Encrypt; image tags (CI-bumped) in
+                           kustomization.yaml, everything else in platform/
 ```
 
-Argo CD syncs `overlays/dev` and `overlays/prod` (see `deploy/argocd/README.md`). `overlays/local` is only for kind and is applied by `deploy/local/kind/up.sh`.
+Argo CD syncs `overlays/demo` on the demo VM, and would sync `overlays/dev` and `overlays/prod` on AKS (target architecture). See `deploy/argocd/README.md`. `overlays/local` is only for kind and is applied by `deploy/local/kind/up.sh`.
 
 ## Scaling, in short
 
@@ -70,3 +75,16 @@ Notes:
   - Tune it with `VUS`, `RAMP`, `HOLD` and `SCALE_IN_WAIT`.
 - **Rebuilt images.** Re-running `up.sh` reloads the images and restarts the Deployments, because the `:latest` tags don't change. Use `SKIP_LOAD=1` to skip that.
 - **Resource use.** Expect about 3–4 GB of Docker memory at rest. Stop the compose stack first.
+
+## Demo on k3s (`overlays/demo`)
+
+```bash
+kubectl kustomize --load-restrictor LoadRestrictionsNone deploy/k8s/overlays/demo   # render, no cluster needed
+```
+
+- **Builds on `overlays/local`**, so images arrive renamed to `lodestar-<svc>`. `overlays/demo/kustomization.yaml` maps them to `ghcr.io/adagard-trios/lodestar-<svc>:<commit sha>`. CI's `gitops-bump` job rewrites only that file, with `kustomize edit set image lodestar-<svc>=...`.
+- **No Secret in git.** The dev-only Secrets of `overlays/local` are deleted. `deploy/azure-demo/k3s-secrets.sh` creates the real ones on the VM, with the same names, from the VM's `.env`, plus the optional `lodestar-data` ConfigMap with the competition CSVs.
+- **One node, 2 vCPU.** No KEDA ScaledObjects and no HPAs; one replica each; small requests; no node-pool selectors or zone spread. PDBs, PriorityClasses, quota and LimitRange stay.
+- **Order of a sync.** Config and accounts (wave -2), then Postgres and the migrate Job (a Sync hook, re-run on every sync; the seed is idempotent), then everything else.
+- **Edge.** An Ingress (ingress-nginx, cert-manager `letsencrypt` ClusterIssuer) sends everything to the gateway's TLS port. The gateway init container also maps `/field/` to the `mobile-web` Service and trusts `X-Forwarded-For` from in-cluster addresses, so the per-IP rate limits apply to each visitor rather than to the ingress pod.
+- **Host name.** Set only in `overlays/demo/platform/host.env`.
