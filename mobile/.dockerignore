@@ -2,3 +2,7 @@ node_modules
 .expo
 dist
 web-build
+# never ship local secrets in an image (the repo and its images are public)
+**/.env
+**/.env.*
+.git

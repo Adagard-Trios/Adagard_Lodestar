@@ -99,10 +99,10 @@ resource "azurerm_linux_virtual_machine" "vm" {
   name                  = "${var.name}-vm"
   location              = azurerm_resource_group.demo.location
   resource_group_name   = azurerm_resource_group.demo.name
-  size                  = "Standard_B2ms" # 2 vCPU, 8 GiB: the compose stack plus k3s, with 4 GiB swap
+  size                  = var.vm_size
   admin_username        = var.admin_username
   network_interface_ids = [azurerm_network_interface.vm.id]
-  custom_data           = base64encode(file("${path.module}/cloud-init.yaml"))
+  custom_data           = base64encode(templatefile("${path.module}/cloud-init.yaml", { install_k3s = var.install_k3s, admin_username = var.admin_username }))
   tags                  = var.tags
 
   admin_ssh_key {
@@ -114,7 +114,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
     name                 = "${var.name}-osdisk"
     caching              = "ReadWrite"
     storage_account_type = "StandardSSD_LRS"
-    disk_size_gb         = 64
+    disk_size_gb         = var.os_disk_size_gb
   }
 
   source_image_reference {

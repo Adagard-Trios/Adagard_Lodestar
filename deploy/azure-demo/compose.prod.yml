@@ -4,6 +4,13 @@
 # - Caddy owns 80/443 and gets a Let's Encrypt certificate for PUBLIC_HOST (the Azure DNS name).
 # - Nothing else is published: no 8443/8080 (gateway), no 8180 (Keycloak admin), no 9000 (SonarQube).
 # - Keycloak runs in production mode behind the proxy; every secret comes from the VM's .env (no dev defaults).
+# - Memory ceilings sized for a 4 GiB VM (the stack idles at about 1.5 GB): one leaking container is restarted
+#   instead of taking the VM down. They are limits, not reservations, so their sum may exceed the VM.
+x-node-small: &node-small
+  mem_limit: 320m
+  environment:
+    NODE_OPTIONS: --max-old-space-size=192
+
 services:
   caddy:
     image: caddy:2.8-alpine
@@ -20,11 +27,13 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     networks: [edge]
+    mem_limit: 128m
     depends_on:
       gateway: { condition: service_healthy }
 
   gateway:
     ports: !reset []
+    mem_limit: 128m
 
   identity:
     command: ["start", "--import-realm"]   # production mode (start-dev locally)
@@ -33,10 +42,36 @@ services:
       KC_HOSTNAME_ADMIN: !reset null
       KC_HTTP_ENABLED: "true"           # TLS ends at Caddy; identity is only reachable on the internal network
       KC_PROXY_HEADERS: xforwarded
+      KC_CACHE: local                   # one node: no Infinispan cluster
+      # heap at half the container limit (the default 70% leaves too little for metaspace under a 1 GiB ceiling)
+      JAVA_OPTS_KC_HEAP: -XX:MaxRAMPercentage=50 -XX:InitialRAMPercentage=25
+    mem_limit: 1g
 
   migrate:
     environment:
       DEMO_DATE: ${DEMO_DATE:-}
+
+  postgres:
+    mem_limit: 512m
+  redis:
+    mem_limit: 64m
+  auth: *node-small
+  orders: *node-small
+  planning: *node-small
+  fleet: *node-small
+  outlets: *node-small
+  trips: *node-small
+  sync: *node-small
+  notifications: *node-small
+  audit: *node-small
+  agent:
+    mem_limit: 320m
+  frontend:
+    mem_limit: 384m
+    environment:
+      NODE_OPTIONS: --max-old-space-size=256
+  mobile-web:
+    mem_limit: 64m
 
 volumes:
   caddy_data:

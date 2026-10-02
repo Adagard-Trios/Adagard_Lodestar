@@ -24,6 +24,24 @@ variable "ssh_source_cidr" {
   type        = string
 }
 
+variable "vm_size" {
+  description = "VM size. The compose stack idles at about 1.5 GB, so 2 vCPU / 4 GiB (plus 4 GiB swap) is enough; use Standard_B2ms (8 GiB) with install_k3s."
+  type        = string
+  default     = "Standard_B2als_v2"
+}
+
+variable "os_disk_size_gb" {
+  description = "OS disk size. 32 GB holds the pulled images; 64 GB if the VM builds them itself."
+  type        = number
+  default     = 32
+}
+
+variable "install_k3s" {
+  description = "Also install k3s for the GitOps path (deploy/argocd). Off by default: it costs about 500 MB of RAM the compose stack can use."
+  type        = bool
+  default     = false
+}
+
 variable "admin_username" {
   type    = string
   default = "lodestar"

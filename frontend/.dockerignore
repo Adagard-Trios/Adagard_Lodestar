@@ -3,3 +3,7 @@ node_modules
 coverage
 cypress/videos
 cypress/screenshots
+# never ship local secrets in an image (the repo and its images are public)
+**/.env
+**/.env.*
+.git
