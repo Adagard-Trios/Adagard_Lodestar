@@ -1,0 +1,37 @@
+# Optional: run the stack's application data on a hosted Postgres (e.g. Prisma Postgres) instead of the
+# local `postgres` container. Keycloak keeps its own database in the local container.
+#
+#   1. put the connection string in .env (gitignored, never commit it):
+#        EXTERNAL_DATABASE_URL=postgres://<user>:<password>@<host>:5432/postgres?sslmode=require
+#   2. docker compose -f docker-compose.yml -f docker-compose.prisma.yml up -d --force-recreate
+#
+# The default stack keeps the app and data networks internal (no route out). Here the services that use
+# the database also join an `egress` network so they can reach the hosted database: a deliberate local
+# trade-off, not the zero-trust default.
+# Each Node service keeps at most 3 connections, so ten services stay within a hosted plan's connection limit.
+x-external-db: &external-db
+  environment:
+    DATABASE_URL: ${EXTERNAL_DATABASE_URL:?set EXTERNAL_DATABASE_URL in .env}&connection_limit=3
+  networks: [app, data, egress]
+
+services:
+  migrate:
+    environment:
+      DATABASE_URL: ${EXTERNAL_DATABASE_URL:?set EXTERNAL_DATABASE_URL in .env}
+      # a pooled connection can't hold Prisma Migrate's advisory lock; only one migrate job ever runs here
+      PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK: "1"
+    networks: [data, egress]
+  auth: *external-db
+  orders: *external-db
+  planning: *external-db
+  fleet: *external-db
+  outlets: *external-db
+  trips: *external-db
+  sync: *external-db
+  notifications: *external-db
+  audit: *external-db
+  # The planning agent stays on the local container: it stores only its LangGraph checkpoints there (schema
+  # agent) and reads every business record through the OData services, i.e. from the hosted database.
+
+networks:
+  egress: {}

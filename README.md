@@ -49,6 +49,7 @@ docker compose up --build     # first build takes a while; then open https://loc
 - **Data:** with the competition CSVs in `./data/` the seed uses them (120 outlets, 60 vehicles, the calendar); add `task2b_peak_day_scenarios.csv` and `task2b_peak_day_fleet.csv` and the demo day comes from the peak-day scenario. Without them a generated network of the same size is used. The CSVs are never committed. Details: [backend/prisma/DATA.md](backend/prisma/DATA.md).
 - **The demo day:** every fresh install has one over-capacity delivery day: 100+ open orders across the three brands and both depots, vehicles in the workshop, outlets skipped yesterday, and no trips yet. It is **today in Sri Lanka** unless `DEMO_DATE=YYYY-MM-DD` is set in `.env`. To start the day again: `docker compose down -v && docker compose up`.
 - **Phones:** every phone is bound to its user (zero trust). The four personas' phones are shared demo devices, so they sign in from any browser with no setup; anyone else's phone asks for access and an admin approves it (ADM-05).
+- **Hosted database (optional):** put `EXTERNAL_DATABASE_URL=postgres://…?sslmode=require` (e.g. Prisma Postgres) in `.env` and start with `docker compose -f docker-compose.yml -f docker-compose.prisma.yml up -d`; the application data then lives there, Keycloak and the agent's checkpoints stay local.
 - **Public address:** `PUBLIC_ORIGIN` in `.env` is the one setting for the URL people open (Keycloak hostname, issuer, redirect URIs, API).
 
 ## Judge walkthrough
