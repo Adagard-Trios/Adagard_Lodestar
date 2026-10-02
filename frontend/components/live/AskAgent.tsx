@@ -90,7 +90,7 @@ function Answer({ t }: { t: ChatTurn }) {
         </div>
       ))}
       {t.a.toolCalls?.length ? (
-        <div className="ag-srcs">{t.a.toolCalls.map((c, i) => <span key={i} className="ag-src">{c.name.replace(/_/g, ' ')}</span>)}</div>
+        <div className="ag-srcs">{t.a.toolCalls.map((c, i) => <span key={i} className="ag-src">{(typeof c === 'string' ? c : c.name).replace(/_/g, ' ')}</span>)}</div>
       ) : null}
     </div>
   );

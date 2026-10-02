@@ -164,10 +164,10 @@ export default function LiveSm02Deliveries() {
   const current = open[0] ?? sorted[sorted.length - 1];
   const sameRun = current ? sorted.filter(s => s.tripId === current.tripId && s.outletId === current.outletId) : [];
   // The receipt to count: the latest delivery that is in and not counted yet (a later run may already be planned),
-  // else the confirmed receipt of the delivery shown above.
+  // else the receipt of the latest delivery that is in (confirmed).
   const arrived = sorted.filter(s => s.status === 'DELIVERED' || !!s.arrivalActual);
   const uncounted = arrived.filter(s => s.order && s.order.unitsReceived == null && RECEIVABLE.includes(s.order.status));
-  const receiptTrip = uncounted.length ? uncounted[uncounted.length - 1].tripId : current && arrived.includes(current) ? current.tripId : null;
+  const receiptTrip = uncounted.length ? uncounted[uncounted.length - 1].tripId : arrived.length ? arrived[arrived.length - 1].tripId : null;
   const receiptRun = receiptTrip ? arrived.filter(s => s.tripId === receiptTrip) : [];
   const trip = current?.trip;
   const order = current?.order;

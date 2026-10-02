@@ -148,6 +148,8 @@ export interface PlanSummary {
   trips?: number;
   vehiclesInWorkshop?: number;
   suggestions?: Array<{ orderId: string; reason: string; score: number; notes?: string }>;
+  /** Hard-rule violations left in the plan; approving it then needs an override reason. */
+  violations?: unknown[];
   [k: string]: unknown;
 }
 
@@ -319,6 +321,7 @@ export interface AgentRun {
 
 export interface AgentAnswer {
   answer: string;
-  toolCalls?: Array<{ name: string; args?: Record<string, unknown> }>;
+  /** The tools the agent used: names (the agent's answer) or {name, args}. */
+  toolCalls?: Array<string | { name: string; args?: Record<string, unknown> }>;
   proposal?: { edits: Array<Record<string, unknown>>; draftVersion?: number; ruleChecks?: AgentRunDetail['ruleChecks']; violations?: unknown[] } | null;
 }

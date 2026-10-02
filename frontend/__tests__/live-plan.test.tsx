@@ -137,6 +137,40 @@ describe('DSP-12 Approve and go live', () => {
     await waitFor(() => expect(view.calls.some(c => c.method === 'POST' && c.path === "Plans('PLT-v5')/Lodestar.Approve")).toBe(true));
   });
 
+  it('a plan with rule violations needs an override reason, sent as overrideReason with the note', async () => {
+    const violation = { rule: 'weight', tripId: 'VEHT1-T1', vehicleId: 'VEHT1', orderIds: ['ORDT1'], reason: 'Over weight', detail: '1050 kg of 1000 kg' };
+    const view = renderLive(<ApproveAndGoLive />, {
+      handler: req => base(req) ?? (req.path === 'Plans' ? page([{ id: 'PLT-v5', depot: 'KANDY', runDate: DAY, version: 5, status: 'NEEDS_APPROVAL', source: 'MANUAL', summary: { violations: [violation] } }])
+        : req.method === 'POST' ? { id: 'PLT-v5', status: 'PUBLISHED' } : page([])),
+    });
+    await screen.findByText(/Approve \d+ orders and go live/);
+    expect(screen.getByText('1 rule violation(s) in the plan')).toBeInTheDocument();
+    expect(screen.getByText('Reason to override the rule violations (required)')).toBeInTheDocument();
+    expect(screen.getByTestId('approve')).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.change(screen.getByLabelText('Override reason'), { target: { value: '   ' } });
+    expect(screen.getByTestId('approve')).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(screen.getByTestId('approve'));
+    expect(view.calls.filter(c => c.method === 'POST')).toHaveLength(0);
+    fireEvent.change(screen.getByLabelText('Override reason'), { target: { value: 'Scale reads 40 kg high' } });
+    expect(screen.getByTestId('approve')).not.toHaveAttribute('aria-disabled');
+    fireEvent.click(screen.getByTestId('approve'));
+    expect(await screen.findByText('Plan PLT-v5 is live')).toBeInTheDocument();
+    expect(view.calls.find(c => c.method === 'POST')).toMatchObject({ path: "Plans('PLT-v5')/Lodestar.Approve", body: { note: 'Scale reads 40 kg high', overrideReason: 'Scale reads 40 kg high' } });
+  });
+
+  it('an agent draft with rule violations is approved with Resume {overrideReason}; rejecting needs no reason', async () => {
+    window.sessionStorage.setItem('lodestar.agentRun', 'run-9');
+    const bad = { ...run, detail: { ...run.detail, violations: [{ rule: 'weight', tripId: 'VEHT1-T1', vehicleId: 'VEHT1', orderIds: ['ORDT1'], reason: 'Over weight', detail: '1050 kg of 1000 kg' }] } };
+    const view = renderLive(<ApproveAndGoLive />, { handler: req => base(req) ?? (req.path === "AgentRuns('run-9')" ? bad : req.method === 'POST' ? { ...bad, status: 'APPROVED', planId: 'PLT-v4' } : page([])) });
+    await screen.findByText(/Approve \d+ orders and go live/);
+    expect(screen.getByTestId('approve')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByTestId('reject-draft')).not.toHaveAttribute('aria-disabled');
+    fireEvent.change(screen.getByLabelText('Override reason'), { target: { value: 'Checked on the scale' } });
+    fireEvent.click(screen.getByTestId('approve'));
+    expect(await screen.findByText('Plan PLT-v4 is live')).toBeInTheDocument();
+    expect(view.calls.find(c => c.method === 'POST')).toMatchObject({ path: "AgentRuns('run-9')/Lodestar.Resume", body: { decision: 'approve', comment: 'Checked on the scale', overrideReason: 'Checked on the scale' } });
+  });
+
   it('with nothing waiting it cannot approve', async () => {
     renderLive(<ApproveAndGoLive />, { handler: req => base(req) ?? page([]) });
     expect(await screen.findByText('Nothing to approve')).toBeInTheDocument();
@@ -157,6 +191,19 @@ describe('DSP-39 Ask the planning agent', () => {
     expect(await screen.findByText('Reefer space is short.')).toBeInTheDocument();
     expect(screen.getByText('The lowest score waits.')).toBeInTheDocument();
     expect(view.calls.find(c => c.method === 'POST')).toMatchObject({ path: "AgentRuns('run-9')/Lodestar.Ask", body: { question: 'Why defer this order?' } });
+  });
+
+  it('shows the tools the agent used as the API names them (plain strings)', async () => {
+    window.sessionStorage.setItem('lodestar.agentRun', 'run-9');
+    renderLive(<AskAgent />, {
+      handler: req => base(req) ?? (req.path === "AgentRuns('run-9')" ? { id: 'run-9', depot: 'KANDY', runDate: DAY, status: 'NEEDS_APPROVAL', createdAt: DAY, detail: { plan: { version: 4, trips: [] } } }
+        : req.method === 'POST' ? { value: { answer: 'Moved it.', toolCalls: ['propose_edit'], proposal: null } } : page([])),
+    });
+    await screen.findByTestId('ask-agent');
+    fireEvent.change(screen.getByLabelText('Ask about this plan'), { target: { value: 'Move ORD1 to VEH057' } });
+    fireEvent.click(screen.getByTestId('ask-send'));
+    expect(await screen.findByText('Moved it.')).toBeInTheDocument();
+    expect(screen.getByText('propose edit')).toBeInTheDocument();
   });
 });
 

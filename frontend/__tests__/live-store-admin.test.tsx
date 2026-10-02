@@ -115,6 +115,18 @@ describe('SM-02 Deliveries · confirm receipt and report an issue', () => {
     expect(screen.queryByTestId('receipt-count-ORDT9')).not.toBeInTheDocument();
   });
 
+  it('keeps the confirmed receipt in view when the next run is already planned', async () => {
+    const done = order('ORDT1', { units: 10, unitsReceived: 10 });
+    const next = order('ORDT9', { status: 'PLANNED', unitsReceived: null });
+    renderLive(<Deliveries />, {
+      session: SESSIONS.store,
+      handler: req => storeBase(req) ?? (req.path === 'TripStops'
+        ? page([stop('STT9', next, { tripId: 'TRT9', status: 'PLANNED', arrivalActual: null, etaPlan: '2026-04-08T00:00:00.000Z' }), stop('STT1', done)])
+        : page([])),
+    });
+    expect(await screen.findByTestId('receipt-done')).toHaveTextContent('You counted 10 of 10 units');
+  });
+
   it('asks for no count while the van is on the way', async () => {
     const onWay = order('ORDT1', { status: 'ENROUTE', unitsReceived: null });
     renderLive(<Deliveries />, { session: SESSIONS.store, handler: req => storeBase(req) ?? (req.path === 'TripStops' ? page([stop('STT1', onWay, { status: 'PLANNED', arrivalActual: null })]) : page([])) });
