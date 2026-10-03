@@ -192,6 +192,8 @@ function useAdminCount(set: string, filter: string | undefined) {
 /** ADM-21 Depots: the depot registry (not in the generated link tables, so its sidebar item carries the href). */
 export const ADMIN_DEPOTS = '/admin/adm-21-depots';
 
+const ADMIN_LOGO = <svg aria-hidden width="28" height="28" viewBox="0 0 32 32" style={{ flexShrink: '0' }}><rect width="32" height="32" rx="8" fill="#334155" /><g transform="translate(7.36 7.36) scale(0.72)" fill="none" stroke="#FFFFFF" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="m9 12 2 2 4-4" /></g></svg>;
+
 /** Lodestar Admin sidebar (ADM boards). `active`: N0 Overview … N11 Notifications, D1 Depots. */
 export function AdminSide({ active }: { active: string }) {
   const requests = useAdminCount('Devices', "status eq 'PENDING'");
@@ -217,15 +219,19 @@ export function AdminSide({ active }: { active: string }) {
     { code: 'N10', icon: 'sparkle-plus', label: 'Planning agent' },
     { code: 'N11', icon: 'message', label: 'Notifications' },
   ];
+  const drawer = usePlanDrawer({ navId: 'admin-nav', brand: <>{ADMIN_LOGO}Lodestar Admin</> });
   return (
-    <aside className="d-side">
+    <>
+    {drawer.bar}
+    <aside id="admin-nav" className={`d-side${drawer.open ? ' is-open' : ''}`} aria-label="Lodestar Admin navigation">
       <div className="d-side__brand" style={{ whiteSpace: 'nowrap' }}>
-        <svg width="28" height="28" viewBox="0 0 32 32" style={{ flexShrink: '0' }}><rect width="32" height="32" rx="8" fill="#334155" /><g transform="translate(7.36 7.36) scale(0.72)" fill="none" stroke="#FFFFFF" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="m9 12 2 2 4-4" /></g></svg>
+        {ADMIN_LOGO}
         Lodestar Admin
       </div>
       <SideItems items={items} active={active} />
       <SideFoot role="Systems admin" avatarStyle={{ background: '#334155', color: '#FFFFFF' }} />
     </aside>
+    </>
   );
 }
 
