@@ -15,10 +15,11 @@ const DESK: { who: PersonaKey; role: string; home: RegExp }[] = [
   { who: 'dispatcher', role: 'Dispatcher', home: /\/plan\/dsp-08-today-overview$/ },
   { who: 'admin', role: 'Admin', home: /\/admin\/adm-02-overview$/ },
 ];
+// After the designed sign-in each phone app continues to its first-run screen (DR-08, LD-07, SM-07), as in Designing/.
 const FIELD: { who: PersonaKey; role: string | RegExp; button: string; home: RegExp }[] = [
-  { who: 'driver', role: 'Driver', button: 'lk-L229', home: /\/field\/s\/dr-01-today-s-run/ },
-  { who: 'loader', role: 'Loader', button: 'lk-L187', home: /\/field\/s\/ld-01-dock-queue/ },
-  { who: 'storeManager', role: /Phone app/, button: 'lk-L68', home: /\/field\/s\/sm-11-today-order-day/ },
+  { who: 'driver', role: 'Driver', button: 'lk-L229', home: /\/field\/s\/dr-08-permissions/ },
+  { who: 'loader', role: 'Loader', button: 'lk-L187', home: /\/field\/s\/ld-07-start-shift/ },
+  { who: 'storeManager', role: /Phone app/, button: 'lk-L68', home: /\/field\/s\/sm-07-onboarding-1/ },
 ];
 
 async function pickRole(page: Page, role: string | RegExp) {
