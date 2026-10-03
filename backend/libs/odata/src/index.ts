@@ -1,4 +1,5 @@
 export * from './errors';
+export * from './depots';
 export * from './edm/model';
 export * from './edm/csdl';
 export * from './filter/ast';

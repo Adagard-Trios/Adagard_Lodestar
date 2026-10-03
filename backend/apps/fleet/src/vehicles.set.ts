@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
-import { EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, OperationContext } from '@lodestar/odata';
+import { assertDepotCode, EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, OperationContext } from '@lodestar/odata';
 import { Roles } from '@lodestar/security';
 import { FleetService } from './fleet.service';
 
@@ -28,6 +28,12 @@ export class VehiclesSet extends ODataEntitySet {
     private readonly fleet: FleetService,
   ) {
     super(prisma);
+  }
+
+  /** A new vehicle's home depot must be a registered, active depot (ADM-21). */
+  async beforeCreate(data: Record<string, any>) {
+    data.depot = await assertDepotCode(this.prisma, data.depot);
+    return data;
   }
 
   // Reads see this week's fuel use (the planner checks quotas against it).

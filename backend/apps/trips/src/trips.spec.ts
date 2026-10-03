@@ -1,4 +1,5 @@
 import { anything, capture, deepEqual, instance, mock, verify, when } from 'ts-mockito';
+import { depotDelegate } from '../../../libs/odata/test/depots';
 import { NotifyClient } from '@lodestar/security';
 import { personas } from '../../../libs/security/test/principals';
 import { FleetClient } from './fleet.client';
@@ -38,7 +39,7 @@ describe('TripsSet', () => {
 
   beforeEach(() => {
     trips = mock(TripsService);
-    set = new TripsSet({} as any, instance(trips));
+    set = new TripsSet({ depot: depotDelegate() } as any, instance(trips));
   });
 
   it('SetStatus passes the current status from the bound entity', async () => {
@@ -65,11 +66,17 @@ describe('TripsSet', () => {
   });
 
   describe('BayQueue', () => {
-    it('refuses a foreign depot', () => {
-      expect(() =>
+    it('refuses a foreign depot', async () => {
+      await expect(
         set.bayQueue({ principal: personas.kasun, params: { depot: 'PELIYAGODA', runDate: '2026-04-07' }, rowFilter: {}, headers: {} }),
-      ).toThrow(expect.objectContaining({ status: 403 }));
+      ).rejects.toMatchObject({ status: 403 });
       verify(trips.getBayQueue(anything(), anything(), anything())).never();
+    });
+
+    it('refuses a depot that is not registered (400)', async () => {
+      await expect(
+        set.bayQueue({ principal: personas.admin, params: { depot: 'GALLE', runDate: '2026-04-07' }, rowFilter: {}, headers: {} }),
+      ).rejects.toMatchObject({ status: 400, target: 'depot' });
     });
 
     it('passes depot, run date and row filter for the caller depot', async () => {

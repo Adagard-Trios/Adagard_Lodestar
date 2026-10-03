@@ -8,13 +8,18 @@ describe('OutletsSet', () => {
   let set: OutletsSet;
 
   beforeEach(() => {
-    set = new OutletsSet({} as any, new OutletsService());
+    set = new OutletsSet({ depot: { findUnique: async ({ where }: any) => (['KANDY', 'PELIYAGODA'].includes(where.code) ? { code: where.code, isActive: true } : null) } } as any, new OutletsService());
   });
 
   describe('beforeCreate', () => {
     it('accepts a valid window', async () => {
-      const data = { id: 'OUT200', windowOpen: '05:30', windowClose: '08:00' };
-      await expect(set.beforeCreate(data)).resolves.toBe(data);
+      const data = { id: 'OUT200', depot: 'kandy', windowOpen: '05:30', windowClose: '08:00' };
+      await expect(set.beforeCreate(data)).resolves.toEqual({ ...data, depot: 'KANDY' });
+    });
+
+    it('accepts only a registered depot (ADM-21)', async () => {
+      await expect(set.beforeCreate({ id: 'OUT201', depot: 'GALLE', windowOpen: '05:30', windowClose: '08:00' })).rejects.toMatchObject({ status: 400, target: 'depot' });
+      await expect(set.beforeCreate({ id: 'OUT201', windowOpen: '05:30', windowClose: '08:00' })).rejects.toMatchObject({ status: 400, target: 'depot' });
     });
 
     it.each([
@@ -25,7 +30,7 @@ describe('OutletsSet', () => {
       ['05:60', '08:00'],
       [undefined, '08:00'],
     ])('rejects window %p–%p with 400', async (open, close) => {
-      await expect(set.beforeCreate({ windowOpen: open, windowClose: close })).rejects.toMatchObject({ status: 400 });
+      await expect(set.beforeCreate({ depot: 'KANDY', windowOpen: open, windowClose: close })).rejects.toMatchObject({ status: 400 });
     });
   });
 

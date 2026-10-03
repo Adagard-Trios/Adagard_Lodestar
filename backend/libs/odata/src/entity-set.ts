@@ -37,6 +37,10 @@ export interface EntitySetOptions {
   abac: AbacRules;
   /** Navigation properties that may be expanded / used in filters. */
   navigation?: string[];
+  /** Deeper to-one paths $filter may walk, e.g. 'order/outlet' (see SetQueryPolicy.filterPaths). */
+  filterPaths?: string[];
+  /** Nested $expand paths, e.g. 'stops/outlet' (see SetQueryPolicy.expandPaths). */
+  expandPaths?: string[];
   /** Fields searched by $search. */
   search?: string[];
   /** Fields never exposed (in addition to the global hidden list). */

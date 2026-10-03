@@ -12,10 +12,12 @@ import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { p5Link, useMessageStore, usePlanScope, useExceptions, type ExceptionItem } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
-import { DEPOT_NAME, fmtClock, fmtRunDate, fmtTime, LATE_RISK_PCT } from '@/lib/format';
+import { fmtClock, fmtRunDate, fmtTime } from '@/lib/format';
+import { usePlanningRules } from '@/components/live/planning-rules';
 import { useAction, useEntity, useQuery } from '@/lib/odata/hooks';
 import type { Notification, Outlet, Trip } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
+import { useDepots } from '@/components/live/depots';
 
 type Tab = 'open' | 'resolved' | 'all';
 const LEAD: Record<ExceptionItem['tone'], [string, 'store' | 'clock' | 'wifi-off', string, string]> = {
@@ -26,6 +28,8 @@ const LEAD: Record<ExceptionItem['tone'], [string, 'store' | 'clock' | 'wifi-off
 const SOURCE: Record<ExceptionItem['source'], string> = { order: 'Order exception', stop: 'Late risk', notification: 'Alert', sync: 'Sync conflict' };
 
 export default function LiveDsp13ExceptionsInbox() {
+  const riskPct = usePlanningRules().data?.lateRisk.alertPct;
+  const { name: depotName } = useDepots();
   const nav = useScreenNav();
   const router = useRouter();
   const [, setFocusTrip] = useFocusId('trip');
@@ -70,7 +74,7 @@ export default function LiveDsp13ExceptionsInbox() {
             <div className="d-head__txt">
               <div className="d-eyebrow">
                 {runDate ? fmtRunDate(runDate) : ''} · {fmtTime(new Date())}
-                <span className="m-sep" />{active.length > 1 ? 'Both depots' : DEPOT_NAME[active[0]] ?? active[0]}
+                <span className="m-sep" />{active.length > 1 ? 'Both depots' : depotName(active[0])}
                 <span className="m-sep" />{"Loader flags, store reports, vehicles, late risk"}
               </div>
               <div className="d-h1">{counts.open} open exception{counts.open === 1 ? '' : 's'}</div>
@@ -130,7 +134,7 @@ export default function LiveDsp13ExceptionsInbox() {
                 </div>
               ))}
               <div className="spacer" />
-              <div className="x-tfoot"><span>{`Rules: late risk ${LATE_RISK_PCT}% or more, order exceptions, loader and vehicle alerts`}</span></div>
+              <div className="x-tfoot"><span>{`Rules: late risk ${riskPct ?? '…'}% or more, order exceptions, loader and vehicle alerts`}</span></div>
             </div>
             <div className="dx-col" style={{ flex: '1', gap: '16px' }}>
               {!sel ? (

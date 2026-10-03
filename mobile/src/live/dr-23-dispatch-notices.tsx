@@ -2,16 +2,17 @@
 // DR-23 Dispatch notices · phone (P4, phone)
 import { Text, View, StyleSheet } from 'react-native';
 import { colomboDate, dayLabel, hm } from '@/lib/time';
-import { titleCase } from '@/lodestar/live';
 import { useClaims, useOnline, useRun } from '@/model/hooks';
 import { markNoticeRead, openDialer, useDispatchNotices, type DispatchNotice } from '@/model/run';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L266":{"to":"dr-27-sync-conflict-notice","kind":"go"},"N0":{"to":"dr-01-today-s-run","kind":"nav"},"N1":{"to":"dr-21-records","kind":"nav"}}};
 
 const ALERTS = /REEFER|BLACKOUT|SIGNAL_LOST|DEFERRAL|SHORTFALL|DELAY/;
 
 export default function ScreenDr23DispatchNotices() {
+  const { name: depotName } = useDepots();
   const claims = useClaims();
   const online = useOnline();
   const { view } = useRun();
@@ -59,7 +60,7 @@ export default function ScreenDr23DispatchNotices() {
         <Scroll style={s.v4} contentStyle={s.v30}>
           <View style={s.v10}>
             <View style={s.v8}>
-              <Text style={s.t7}>{depot ? `From dispatch · ${titleCase(depot)}` : 'From dispatch'}</Text>
+              <Text style={s.t7}>{depot ? `From dispatch · ${depotName(depot)}` : 'From dispatch'}</Text>
             </View>
             <View>
               <Text style={s.t9} testID="notices-unread">{!claims ? 'Sign in to see notices' : unread ? `${unread} new ${unread === 1 ? 'notice' : 'notices'}` : 'Nothing needs you now'}</Text>

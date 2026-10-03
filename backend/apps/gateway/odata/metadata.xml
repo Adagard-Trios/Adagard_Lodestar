@@ -9,10 +9,6 @@
         <Member Name="STORE_MANAGER" Value="3"/>
         <Member Name="ADMIN" Value="4"/>
       </EnumType>
-      <EnumType Name="Depot">
-        <Member Name="PELIYAGODA" Value="0"/>
-        <Member Name="KANDY" Value="1"/>
-      </EnumType>
       <EnumType Name="Brand">
         <Member Name="FRESH" Value="0"/>
         <Member Name="STYLE" Value="1"/>
@@ -102,7 +98,7 @@
         <Property Name="email" Type="Edm.String" Nullable="false"/>
         <Property Name="name" Type="Edm.String" Nullable="false"/>
         <Property Name="role" Type="Lodestar.Role" Nullable="false"/>
-        <Property Name="depot" Type="Lodestar.Depot"/>
+        <Property Name="depot" Type="Edm.String"/>
         <Property Name="outletId" Type="Edm.String"/>
         <Property Name="vehicleId" Type="Edm.String"/>
         <Property Name="phone" Type="Edm.String"/>
@@ -116,6 +112,23 @@
         <NavigationProperty Name="offlineEvents" Type="Collection(Lodestar.OfflineEvent)"/>
         <NavigationProperty Name="devices" Type="Collection(Lodestar.Device)"/>
       </EntityType>
+      <EntityType Name="Depot">
+        <Key>
+          <PropertyRef Name="code"/>
+        </Key>
+        <Property Name="code" Type="Edm.String" Nullable="false"/>
+        <Property Name="name" Type="Edm.String" Nullable="false"/>
+        <Property Name="address" Type="Edm.String"/>
+        <Property Name="district" Type="Edm.String" Nullable="false"/>
+        <Property Name="lat" Type="Edm.Double"/>
+        <Property Name="lng" Type="Edm.Double"/>
+        <Property Name="phone" Type="Edm.String"/>
+        <Property Name="isActive" Type="Edm.Boolean" Nullable="false"/>
+        <Property Name="createdAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <NavigationProperty Name="outlets" Type="Collection(Lodestar.Outlet)"/>
+        <NavigationProperty Name="districtTravels" Type="Collection(Lodestar.DistrictTravel)"/>
+      </EntityType>
       <EntityType Name="Outlet">
         <Key>
           <PropertyRef Name="id"/>
@@ -124,7 +137,7 @@
         <Property Name="name" Type="Edm.String" Nullable="false"/>
         <Property Name="brand" Type="Lodestar.Brand" Nullable="false"/>
         <Property Name="district" Type="Edm.String" Nullable="false"/>
-        <Property Name="depot" Type="Lodestar.Depot" Nullable="false"/>
+        <Property Name="depot" Type="Edm.String" Nullable="false"/>
         <Property Name="dockType" Type="Lodestar.DockType" Nullable="false"/>
         <Property Name="parking" Type="Lodestar.ParkingType" Nullable="false"/>
         <Property Name="windowOpen" Type="Edm.String" Nullable="false"/>
@@ -136,6 +149,7 @@
         <Property Name="lng" Type="Edm.Double"/>
         <Property Name="isActive" Type="Edm.Boolean" Nullable="false"/>
         <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <NavigationProperty Name="depotRef" Type="Lodestar.Depot" Nullable="false"/>
         <NavigationProperty Name="users" Type="Collection(Lodestar.User)"/>
         <NavigationProperty Name="orders" Type="Collection(Lodestar.Order)"/>
         <NavigationProperty Name="tripStops" Type="Collection(Lodestar.TripStop)"/>
@@ -145,7 +159,7 @@
           <PropertyRef Name="id"/>
         </Key>
         <Property Name="id" Type="Edm.String" Nullable="false"/>
-        <Property Name="depot" Type="Lodestar.Depot" Nullable="false"/>
+        <Property Name="depot" Type="Edm.String" Nullable="false"/>
         <Property Name="type" Type="Lodestar.VehicleType" Nullable="false"/>
         <Property Name="tempClass" Type="Lodestar.TempClass" Nullable="false"/>
         <Property Name="capacityKg" Type="Edm.Double" Nullable="false"/>
@@ -214,7 +228,7 @@
         <Property Name="id" Type="Edm.String" Nullable="false"/>
         <Property Name="vehicleId" Type="Edm.String" Nullable="false"/>
         <Property Name="driverId" Type="Edm.String"/>
-        <Property Name="depot" Type="Lodestar.Depot" Nullable="false"/>
+        <Property Name="depot" Type="Edm.String" Nullable="false"/>
         <Property Name="runDate" Type="Edm.DateTimeOffset" Nullable="false"/>
         <Property Name="brand" Type="Lodestar.Brand" Nullable="false"/>
         <Property Name="district" Type="Edm.String" Nullable="false"/>
@@ -371,12 +385,13 @@
           <PropertyRef Name="district"/>
         </Key>
         <Property Name="district" Type="Edm.String" Nullable="false"/>
-        <Property Name="depot" Type="Lodestar.Depot" Nullable="false"/>
+        <Property Name="depot" Type="Edm.String" Nullable="false"/>
         <Property Name="roadClass" Type="Edm.String" Nullable="false"/>
         <Property Name="depotToDistMin" Type="Edm.Int32" Nullable="false"/>
         <Property Name="interStopMin" Type="Edm.Int32" Nullable="false"/>
         <Property Name="distKm" Type="Edm.Double"/>
         <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <NavigationProperty Name="depotRef" Type="Lodestar.Depot" Nullable="false"/>
       </EntityType>
       <EntityType Name="DataImport">
         <Key>
@@ -411,7 +426,7 @@
           <PropertyRef Name="id"/>
         </Key>
         <Property Name="id" Type="Edm.String" Nullable="false"/>
-        <Property Name="depot" Type="Lodestar.Depot" Nullable="false"/>
+        <Property Name="depot" Type="Edm.String" Nullable="false"/>
         <Property Name="runDate" Type="Edm.DateTimeOffset" Nullable="false"/>
         <Property Name="version" Type="Edm.Int32" Nullable="false"/>
         <Property Name="status" Type="Lodestar.PlanStatus" Nullable="false"/>
@@ -434,7 +449,7 @@
           <PropertyRef Name="id"/>
         </Key>
         <Property Name="id" Type="Edm.String" Nullable="false"/>
-        <Property Name="depot" Type="Lodestar.Depot" Nullable="false"/>
+        <Property Name="depot" Type="Edm.String" Nullable="false"/>
         <Property Name="runDate" Type="Edm.DateTimeOffset" Nullable="false"/>
         <Property Name="status" Type="Edm.String" Nullable="false"/>
         <Property Name="requestedBy" Type="Edm.String" Nullable="false"/>
@@ -576,19 +591,23 @@
       </Action>
       <Action Name="AutoPlan" IsBound="true">
         <Parameter Name="bindingParameter" Type="Collection(Lodestar.Plan)" Nullable="false"/>
-        <Parameter Name="depot" Type="Lodestar.Depot" Nullable="false"/>
+        <Parameter Name="depot" Type="Edm.String" Nullable="false"/>
         <Parameter Name="runDate" Type="Edm.Date" Nullable="false"/>
         <ReturnType Type="Lodestar.Plan"/>
       </Action>
       <Function Name="Board" IsBound="true">
         <Parameter Name="bindingParameter" Type="Collection(Lodestar.Plan)" Nullable="false"/>
-        <Parameter Name="depot" Type="Lodestar.Depot" Nullable="false"/>
+        <Parameter Name="depot" Type="Edm.String" Nullable="false"/>
         <Parameter Name="runDate" Type="Edm.Date" Nullable="false"/>
         <ReturnType Type="Edm.Untyped"/>
       </Function>
       <Function Name="CapacityOutlook" IsBound="true">
         <Parameter Name="bindingParameter" Type="Collection(Lodestar.Plan)" Nullable="false"/>
-        <Parameter Name="depot" Type="Lodestar.Depot" Nullable="false"/>
+        <Parameter Name="depot" Type="Edm.String" Nullable="false"/>
+        <ReturnType Type="Edm.Untyped"/>
+      </Function>
+      <Function Name="PlanningRules" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.Plan)" Nullable="false"/>
         <ReturnType Type="Edm.Untyped"/>
       </Function>
       <Function Name="LateRiskExplain" IsBound="true">
@@ -675,7 +694,7 @@
       </Action>
       <Function Name="BayQueue" IsBound="true">
         <Parameter Name="bindingParameter" Type="Collection(Lodestar.Trip)" Nullable="false"/>
-        <Parameter Name="depot" Type="Lodestar.Depot" Nullable="false"/>
+        <Parameter Name="depot" Type="Edm.String" Nullable="false"/>
         <Parameter Name="runDate" Type="Edm.Date" Nullable="false"/>
         <ReturnType Type="Edm.Untyped"/>
       </Function>
@@ -728,7 +747,7 @@
         <Parameter Name="type" Type="Edm.String" Nullable="false"/>
         <Parameter Name="payload" Type="Edm.Untyped"/>
         <Parameter Name="tripId" Type="Edm.String"/>
-        <Parameter Name="depot" Type="Lodestar.Depot"/>
+        <Parameter Name="depot" Type="Edm.String"/>
         <Parameter Name="outletId" Type="Edm.String"/>
         <Parameter Name="creditNoteId" Type="Edm.String"/>
         <ReturnType Type="Lodestar.Notification"/>
@@ -778,13 +797,20 @@
           <NavigationPropertyBinding Path="trips" Target="Trips"/>
           <NavigationPropertyBinding Path="loadRecords" Target="LoadRecords"/>
         </EntitySet>
+        <EntitySet Name="Depots" EntityType="Lodestar.Depot">
+          <NavigationPropertyBinding Path="outlets" Target="Outlets"/>
+          <NavigationPropertyBinding Path="districtTravels" Target="DistrictTravel"/>
+        </EntitySet>
         <EntitySet Name="Outlets" EntityType="Lodestar.Outlet">
+          <NavigationPropertyBinding Path="depotRef" Target="Depots"/>
           <NavigationPropertyBinding Path="users" Target="Users"/>
           <NavigationPropertyBinding Path="orders" Target="Orders"/>
           <NavigationPropertyBinding Path="tripStops" Target="TripStops"/>
         </EntitySet>
         <EntitySet Name="Calendar" EntityType="Lodestar.Calendar"/>
-        <EntitySet Name="DistrictTravel" EntityType="Lodestar.DistrictTravel"/>
+        <EntitySet Name="DistrictTravel" EntityType="Lodestar.DistrictTravel">
+          <NavigationPropertyBinding Path="depotRef" Target="Depots"/>
+        </EntitySet>
         <EntitySet Name="ServiceAllowances" EntityType="Lodestar.ServiceAllowance"/>
         <EntitySet Name="DataImports" EntityType="Lodestar.DataImport"/>
         <EntitySet Name="Trips" EntityType="Lodestar.Trip">

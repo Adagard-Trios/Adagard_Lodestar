@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { ODataError } from '@lodestar/odata';
 import { AUDIT_SINK, AuditOutcome, AuditSink, DevicePostureService, Principal } from '@lodestar/security';
-import { Depot, DeviceStatus, Prisma, Role, User } from '@prisma/client';
+import { DeviceStatus, Prisma, Role, User } from '@prisma/client';
 import { KeycloakAdminClient } from './keycloak-admin.client';
 import { mergePreferences, Preferences, validatePreferences } from './preferences';
 
@@ -18,7 +18,7 @@ export const REALM_ROLE: Record<Role, string> = {
 /** The directory fields that decide what a user may do; Keycloak mirrors them into the token. */
 export interface DirectoryAccess {
   role: Role;
-  depot: Depot | null;
+  depot: string | null;
   outletId: string | null;
   vehicleId: string | null;
   isActive: boolean;
@@ -121,8 +121,8 @@ export class AuthService {
    * the caller's depot (a store's depot comes from its outlet when the token carries none), one with a phone first.
    * Only the name and phone are shown; store and field roles cannot list Users. Nulls when nobody is on file.
    */
-  async myDispatcher(p: Principal): Promise<{ depot: Depot | null; name: string | null; phone: string | null }> {
-    let depots = p.depots.filter((d): d is Depot => (Object.values(Depot) as string[]).includes(d));
+  async myDispatcher(p: Principal): Promise<{ depot: string | null; name: string | null; phone: string | null }> {
+    let depots = p.depots.filter((d) => !!d);
     if (!depots.length && p.outletId) {
       const outlet = await this.prisma.outlet.findUnique({ where: { id: p.outletId }, select: { depot: true } });
       if (outlet) depots = [outlet.depot];

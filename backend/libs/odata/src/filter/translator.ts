@@ -9,8 +9,12 @@ export const nothing = (): Where => ({ OR: [] });
 
 /** Policy hooks so a set can restrict what may be traversed or seen. */
 export interface TranslatePolicy {
-  /** May a filter/expand traverse `nav` from `from`? Default: yes. */
-  canNavigate?: (from: EdmEntityType, nav: string) => boolean;
+  /**
+   * May a filter traverse `nav` from `from`? Default: yes. `prefix` is the
+   * navigation path already walked from the query root (`[]` at the root), or
+   * null when the path starts at a lambda variable.
+   */
+  canNavigate?: (from: EdmEntityType, nav: string, prefix: string[] | null) => boolean;
   /** Is `prop` hidden on `type` (never readable, so never filterable)? */
   isHidden?: (type: EdmEntityType, prop: string) => boolean;
 }
@@ -243,7 +247,7 @@ export class FilterTranslator {
   }
 
   /** Follows to-one navigations; returns the related type. */
-  private navigate(type: EdmEntityType, name: string, toMany: boolean): EdmEntityType {
+  private navigate(type: EdmEntityType, name: string, toMany: boolean, prefix: string[] | null): EdmEntityType {
     const p = this.property(type, name);
     if (p.kind !== 'object') throw ODataError.invalidQuery('$filter', `'${name}' is not a navigation property`);
     if (p.isList !== toMany) {
@@ -252,7 +256,7 @@ export class FilterTranslator {
         toMany ? `'${name}' is not a collection` : `'${name}' is a collection; use ${name}/any(...) or ${name}/all(...)`,
       );
     }
-    if (this.policy.canNavigate && !this.policy.canNavigate(type, name)) {
+    if (this.policy.canNavigate && !this.policy.canNavigate(type, name, prefix)) {
       throw ODataError.invalidQuery('$filter', `Navigation '${name}' may not be used in filters`);
     }
     const target = this.model.entityTypes.get(p.type);
@@ -264,9 +268,10 @@ export class FilterTranslator {
     const start = this.start(node.path, scope);
     let type = start.type;
     const segments = start.segments;
+    const rooted = segments === node.path;
     const relPath: string[] = [];
     for (const seg of segments.slice(0, -1)) {
-      type = this.navigate(type, seg, false);
+      type = this.navigate(type, seg, false, rooted ? [...relPath] : null);
       relPath.push(seg);
     }
     const prop = this.property(type, segments[segments.length - 1]);
@@ -280,13 +285,14 @@ export class FilterTranslator {
     const start = this.start(path, scope);
     let type = start.type;
     const segments = start.segments;
+    const rooted = segments === path;
     const relPath: string[] = [];
     for (const seg of segments.slice(0, -1)) {
-      type = this.navigate(type, seg, false);
+      type = this.navigate(type, seg, false, rooted ? [...relPath] : null);
       relPath.push(seg);
     }
     const nav = segments[segments.length - 1];
-    const target = this.navigate(type, nav, true);
+    const target = this.navigate(type, nav, true, rooted ? [...relPath] : null);
     return { relPath, nav, target };
   }
 

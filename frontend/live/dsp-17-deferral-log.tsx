@@ -8,10 +8,11 @@ import { PlanSide, useCount } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { usePlanScope } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton, Spinner } from '@/components/live/states';
-import { BRAND_LETTER, DEPOT_NAME, dayFilter, daysAgo, fmtDayTime, fmtRunDate } from '@/lib/format';
+import { BRAND_LETTER, dayFilter, daysAgo, fmtDayTime, fmtRunDate } from '@/lib/format';
 import { useEntitySet, useQuery } from '@/lib/odata/hooks';
 import type { Deferral, Outlet, User } from '@/lib/odata/types';
 import { depotFilter, useFocusId } from '@/lib/workday';
+import { useDepots } from '@/components/live/depots';
 
 type Chip = 'ALL' | 'CAP_REEFER' | 'CAP_TIME' | 'ACCESS' | 'OTHER';
 const CHIP: Record<Chip, string | undefined> = {
@@ -37,6 +38,7 @@ function Next({ d }: { d: Deferral }) {
 }
 
 export default function LiveDsp17DeferralLog() {
+  const { name: depotName } = useDepots();
   const { runDate, active } = usePlanScope();
   const [, setOutlet] = useFocusId('outlet');
   const [chip, setChip] = useState<Chip>('ALL');
@@ -77,7 +79,7 @@ export default function LiveDsp17DeferralLog() {
         <div className="dx-main">
           <div className="d-head">
             <div className="d-head__txt">
-              <div className="d-eyebrow">{"Records "}<span className="m-sep" />{active.length > 1 ? ' Both depots ' : ` ${DEPOT_NAME[active[0]] ?? active[0]} `}<span className="m-sep" />{" Last 30 days"}</div>
+              <div className="d-eyebrow">{"Records "}<span className="m-sep" />{active.length > 1 ? ' Both depots ' : ` ${depotName(active[0])} `}<span className="m-sep" />{" Last 30 days"}</div>
               <div className="d-h1">{"Deferral log"}</div>
               <div className="d-sub" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Ic n="shield-check" className="ic ic--sm" />

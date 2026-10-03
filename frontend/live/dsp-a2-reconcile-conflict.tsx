@@ -20,10 +20,11 @@ import { usePlanScope } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { initials } from '@/lib/auth/session';
-import { DEPOT_NAME, fmtClock, fmtDay, fmtNum, fmtRunDate } from '@/lib/format';
+import { fmtClock, fmtDay, fmtNum, fmtRunDate } from '@/lib/format';
 import { useAction, useEntity, useQuery } from '@/lib/odata/hooks';
 import type { Deferral, OfflineEvent, Trip, TripStop } from '@/lib/odata/types';
 import { depotFilter, useFocusId } from '@/lib/workday';
+import { useDepots } from '@/components/live/depots';
 
 interface SyncStatus { total: number; synced: number; pending: number; conflicts: number; needsReview: number; lastSyncedAt?: string | null }
 
@@ -58,6 +59,7 @@ const span = (from?: string | null, to?: string | null) => {
 };
 
 export default function LiveDspA2ReconcileConflict() {
+  const { name: depotName } = useDepots();
   const nav = useScreenNav();
   const { session } = useAuth();
   const { active } = usePlanScope();
@@ -119,7 +121,7 @@ export default function LiveDspA2ReconcileConflict() {
   const error = latest.error ?? trip.error ?? events.error ?? status.error ?? deferrals.error;
 
   const timeline: Array<{ at: string; text: ReactNode; dot?: CSSProperties }> = [];
-  if (t?.departTime) timeline.push({ at: t.departTime, text: <>{`Departed ${DEPOT_NAME[t.depot] ?? t.depot} on `}<span className="id">{t.vehicleId}</span></> });
+  if (t?.departTime) timeline.push({ at: t.departTime, text: <>{`Departed ${depotName(t.depot)} on `}<span className="id">{t.vehicleId}</span></> });
   if (lostAt) timeline.push({ at: lostAt.savedAt, text: `Last ping${P(lostAt).location ? ` · ${P(lostAt).location}` : ''}` });
   if (defer) timeline.push({ at: defer.createdAt, dot: { background: 'var(--st-deferred-fg)' }, text: <><b>{defer.isProvisional ? 'Provisional deferral' : 'Deferral'}</b>{' · '}<span className="id">{code(defer.reason)}</span></> });
   if (pod) timeline.push({ at: pod.savedAt, dot: { background: 'var(--st-delivered-fg)' }, text: <><b>{"Delivered"}</b>{` by ${driverName} · POD ${pod.unitsDelivered}/${pod.unitsOrdered} `}{pod.syncedAt ? <span className="t-3">(received {fmtClock(pod.syncedAt)})</span> : null}</> });
@@ -154,7 +156,7 @@ export default function LiveDspA2ReconcileConflict() {
                 <Ic n="wifi" />
                 <span>
                   <b>{`${t?.vehicleId} back online${syncedAt ? ` at ${fmtClock(syncedAt)}` : ''}`}</b>
-                  {`${backAt && P(backAt).location ? ` near ${P(backAt).location}` : ''} · ${status.data?.total ?? all.length} records received · `}
+                  {`${backAt && P(backAt).location ? ` ${/^near/i.test(String(P(backAt).location)) ? String(P(backAt).location).replace(/^Near/, 'near') : `near ${P(backAt).location}`}` : ''} · ${status.data?.total ?? all.length} records received · `}
                   <b>{`${clean.length} applied automatically`}</b>{` · ${needYou} need${needYou === 1 ? 's' : ''} you`}
                 </span>
                 <div className="spacer" />

@@ -14,16 +14,18 @@ import { useAuth } from '@/lib/auth/AuthProvider';
 import { AdminSide, useCount } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
-import { DEPOT_NAME, daysAgo, fmtDay, fmtDayTime, fmtRunDate, fmtTime, TIME_ZONE } from '@/lib/format';
+import { daysAgo, fmtDay, fmtDayTime, fmtRunDate, fmtTime, TIME_ZONE } from '@/lib/format';
 import { useQuery } from '@/lib/odata/hooks';
 import { IMPORT_FILES, type DataImport } from '@/components/live/settings-data';
 import type { AuditEntry, ChainCheck, Device, OfflineEvent, Plan } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
+import { useDepots } from '@/components/live/depots';
 
 const inList = (ids: string[]) => ids.map(i => `'${i.replace(/'/g, "''")}'`).join(',');
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 export default function LiveAdm02Overview() {
+  const { name: depotName } = useDepots();
   const router = useRouter();
   const nav = useScreenNav();
   const [, setDevice] = useFocusId('device');
@@ -208,7 +210,7 @@ export default function LiveAdm02Overview() {
                   {waiting.data?.length === 0 && <Empty title="Nothing waiting" text="No plan is waiting for a dispatcher." />}
                   {waiting.data?.map(p => (
                     <div key={p.id} className="dx-kv" style={{ minHeight: '56px' }}>
-                      <span className="hstack" style={{ gap: '10px' }}><Ic n="grid" className="ic ic--sm" /><span className="dx-td2"><b>{p.id}</b><span>{DEPOT_NAME[p.depot] ?? p.depot} · {fmtRunDate(p.runDate)} · approval by a dispatcher</span></span></span>
+                      <span className="hstack" style={{ gap: '10px' }}><Ic n="grid" className="ic ic--sm" /><span className="dx-td2"><b>{p.id}</b><span>{depotName(p.depot)} · {fmtRunDate(p.runDate)} · approval by a dispatcher</span></span></span>
                       <span className="m-pill m-pill--warn" style={{ height: '26px', fontSize: '12.5px' }}><span className="dot" />{"Waiting"}</span>
                     </div>
                   ))}

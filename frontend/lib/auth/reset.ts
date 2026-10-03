@@ -7,7 +7,6 @@
 //    single sign-on and depot access (ADM-03/ADM-04); NEXT_PUBLIC_SUPPORT_EMAIL / NEXT_PUBLIC_SUPPORT_PHONE add a
 //    mail or call link when set.
 import type { RuntimeConfig } from '../config';
-import { DEPOT_NAME } from '../format';
 
 const clean = (v: string | undefined) => (v && v.trim() ? v.trim() : undefined);
 
@@ -34,8 +33,11 @@ export function adminRequestMail(to: string, face: 'Lodestar Plan' | 'Lodestar S
 /** A tel: link for a configured phone number. */
 export const telHref = (phone: string) => `tel:${phone.replace(/[^\d+]/g, '')}`;
 
-/** The signed-in user's own depot by name, or the generic "your depot" when no depot is known (signed out). */
-export function depotLabel(depots: readonly string[] | undefined): string {
+/**
+ * The signed-in user's own depot by name (`name` resolves a code through the Depots registry, useDepots), or the
+ * generic "your depot" when no depot is known (signed out).
+ */
+export function depotLabel(depots: readonly string[] | undefined, name: (code: string) => string = (c) => c): string {
   const d = depots?.[0];
-  return d ? DEPOT_NAME[d] ?? d : 'your depot';
+  return d ? name(d) : 'your depot';
 }

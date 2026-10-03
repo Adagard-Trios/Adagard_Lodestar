@@ -11,7 +11,7 @@
  * all minutes, distances, windows, capacities and calendar flags are made up.
  */
 
-import { Brand, Depot, DockType, ParkingType, TempClass, VehicleType } from '@prisma/client';
+import { Brand, DockType, ParkingType, TempClass, VehicleType } from '@prisma/client';
 import type { AllowanceRow, CalendarRow, DistrictRow, OutletRow, VehicleRow } from './mappers';
 import { OUTLET_ANCHORS, VEHICLE_ANCHORS } from '../scenario';
 
@@ -43,25 +43,25 @@ const hhmm = (mins: number) =>
   `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
 
 /** Districts served by each depot in synthetic mode (place names only). */
-export const SYNTHETIC_DISTRICTS: ReadonlyArray<{ district: string; depot: Depot }> = [
-  { district: 'Colombo', depot: Depot.PELIYAGODA },
-  { district: 'Gampaha', depot: Depot.PELIYAGODA },
-  { district: 'Kalutara', depot: Depot.PELIYAGODA },
-  { district: 'Galle', depot: Depot.PELIYAGODA },
-  { district: 'Kurunegala', depot: Depot.PELIYAGODA },
-  { district: 'Puttalam', depot: Depot.PELIYAGODA },
-  { district: 'Kandy', depot: Depot.KANDY },
-  { district: 'Matale', depot: Depot.KANDY },
-  { district: 'Nuwara Eliya', depot: Depot.KANDY },
-  { district: 'Badulla', depot: Depot.KANDY },
-  { district: 'Kegalle', depot: Depot.KANDY },
-  { district: 'Ratnapura', depot: Depot.KANDY },
+export const SYNTHETIC_DISTRICTS: ReadonlyArray<{ district: string; depot: string }> = [
+  { district: 'Colombo', depot: 'PELIYAGODA' },
+  { district: 'Gampaha', depot: 'PELIYAGODA' },
+  { district: 'Kalutara', depot: 'PELIYAGODA' },
+  { district: 'Galle', depot: 'PELIYAGODA' },
+  { district: 'Kurunegala', depot: 'PELIYAGODA' },
+  { district: 'Puttalam', depot: 'PELIYAGODA' },
+  { district: 'Kandy', depot: 'KANDY' },
+  { district: 'Matale', depot: 'KANDY' },
+  { district: 'Nuwara Eliya', depot: 'KANDY' },
+  { district: 'Badulla', depot: 'KANDY' },
+  { district: 'Kegalle', depot: 'KANDY' },
+  { district: 'Ratnapura', depot: 'KANDY' },
 ];
 
 const ROAD_CLASSES = ['urban', 'suburban', 'highway', 'hill'] as const;
 
 /** One generated DistrictTravel row (also used to fill gaps in CSV mode). */
-export function syntheticDistrict(r: Rng, district: string, depot: Depot): DistrictRow {
+export function syntheticDistrict(r: Rng, district: string, depot: string): DistrictRow {
   const roadClass = choose(r, ROAD_CLASSES);
   const distKm = int(r, 8, 160);
   // Generated free-flow speed per road class; minutes follow from distance.
@@ -81,7 +81,7 @@ export interface SyntheticOptions {
   outletCount?: number;
   vehicleCount?: number;
   /** Districts to place synthetic outlets in (defaults to SYNTHETIC_DISTRICTS). */
-  districts?: ReadonlyArray<{ district: string; depot: Depot }>;
+  districts?: ReadonlyArray<{ district: string; depot: string }>;
 }
 
 export interface ReferenceData {
@@ -151,7 +151,7 @@ const BRAND_LABEL: Record<Brand, string> = { FRESH: 'Fresh', STYLE: 'Style', TEC
 export function syntheticOutlets(
   seed: number,
   count = 30,
-  districts: ReadonlyArray<{ district: string; depot: Depot }> = SYNTHETIC_DISTRICTS,
+  districts: ReadonlyArray<{ district: string; depot: string }> = SYNTHETIC_DISTRICTS,
 ): OutletRow[] {
   const r = prng(seed ^ 0x4004);
   const reserved = new Set(OUTLET_ANCHORS.map((o) => o.id));
@@ -200,7 +200,7 @@ export function syntheticVehicles(seed: number, count = 16): VehicleRow[] {
     const truck = type === VehicleType.TRUCK;
     rows.push({
       id,
-      depot: rows.length % 3 === 2 ? Depot.KANDY : Depot.PELIYAGODA,
+      depot: rows.length % 3 === 2 ? 'KANDY' : 'PELIYAGODA',
       type,
       tempClass: r() < 0.3 ? TempClass.CHILLED : TempClass.AMBIENT, // about a quarter of the fleet is refrigerated
       capacityKg: truck ? int(r, 35, 70) * 100 : int(r, 9, 13) * 100,

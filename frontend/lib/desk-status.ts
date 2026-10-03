@@ -74,7 +74,7 @@ export function reportResponse(status: number, now = Date.now()) {
 
 /** A depot named in a 403 message ("You do not plan for depot KANDY", "no access to depot KANDY"). */
 export function depotOf(message: string): string | null {
-  const m = /depot\s+([A-Za-z_]+)/i.exec(message);
+  const m = /depot\s+([A-Za-z][A-Za-z0-9_]*)/i.exec(message);
   return m ? m[1].toUpperCase() : null;
 }
 

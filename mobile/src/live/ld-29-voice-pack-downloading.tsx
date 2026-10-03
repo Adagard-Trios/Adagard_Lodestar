@@ -5,10 +5,10 @@
 // the designed fallback "text still works". The design's progress bar maps to checking → done.
 import { Text, View, StyleSheet } from 'react-native';
 import { useSettings, LANGUAGE_NAMES, type AppLanguage } from '@/lib/settings';
-import { titleCase } from '@/lodestar/live';
 import { useClaims } from '@/model/hooks';
 import { useVoiceCheck, type VoiceCheck } from '@/lodestar/voice';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L218":{"to":"ld-08-quick-tips","kind":"go"}}};
 
@@ -16,6 +16,7 @@ const ENGLISH_NAME: Record<AppLanguage, string> = { en: 'English', si: 'Sinhala'
 const status = (v: VoiceCheck) => (v.checking ? 'Checking this phone' : v.available ? 'Ready' : 'Not on this phone');
 
 export default function ScreenLd29VoicePackDownloading() {
+  const { name: depotName } = useDepots();
   const claims = useClaims();
   const { language } = useSettings();
   const checks: Record<AppLanguage, VoiceCheck> = { en: useVoiceCheck('en'), ta: useVoiceCheck('ta'), si: useVoiceCheck('si') };
@@ -62,7 +63,7 @@ export default function ScreenLd29VoicePackDownloading() {
             <Icon xml={X0} width={36} height={36} style={s.v1} />
           </View>
           <View style={s.v4}>
-            <Text style={s.t3}>{depot ? titleCase(depot) : '—'}</Text>
+            <Text style={s.t3}>{depot ? depotName(depot) : '—'}</Text>
           </View>
           <View style={s.v10}>
             <View style={s.v6}>

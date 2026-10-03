@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { ODataError } from '@lodestar/odata';
 import {
-  Depot, OrderStatus, TempClass, DeferralReason, DeferralStatus, PlanSource, PlanStatus, Prisma, Role,
+  OrderStatus, TempClass, DeferralReason, DeferralStatus, PlanSource, PlanStatus, Prisma, Role,
 } from '@prisma/client';
 import { runDateRange, runDateValue } from '@lodestar/platform';
 import { NOTIFY, NotifyClient } from '@lodestar/security';
@@ -11,7 +11,9 @@ import { DeferralScoringService } from './deferral-scoring.service';
 import { CapacityService } from './capacity.service';
 
 /** Plan id prefix per depot: PLG-2026-04-07-v3 (Peliyagoda), PLK-… (Kandy). */
-export const PLAN_PREFIX: Record<Depot, string> = { PELIYAGODA: 'PLG', KANDY: 'PLK' };
+export const PLAN_PREFIX: Record<string, string> = { PELIYAGODA: 'PLG', KANDY: 'PLK' };
+/** Plan id prefix: the two original depots keep PLG/PLK; a depot registered later uses P + its code (PGALLE). */
+export const planPrefix = (depot: string) => PLAN_PREFIX[depot] ?? `P${depot}`;
 
 /** Plans a human may still approve or reject. */
 export const OPEN_PLAN_STATUSES: PlanStatus[] = [PlanStatus.DRAFT, PlanStatus.NEEDS_APPROVAL];
@@ -61,7 +63,7 @@ export class PlanningService {
   ) {}
 
   /** DSP-01: the plan board for a depot and run date. */
-  async getPlan(depot: Depot, runDate: string) {
+  async getPlan(depot: string, runDate: string) {
     const { start: startOf, end: endOf, iso } = dayRange(runDate);
 
     const [trips, orders, reefer, demand, vehiclesInWorkshop] = await Promise.all([
@@ -126,7 +128,7 @@ export class PlanningService {
   }
 
   /** Suggested deferrals for a run: lowest scores first until the chilled shortfall is covered. */
-  async suggestDeferrals(depot: Depot, runDate: string) {
+  async suggestDeferrals(depot: string, runDate: string) {
     const { summary, orders } = await this.getPlan(depot, runDate);
     const suggestions: { orderId: string; reason: DeferralReason; score: number; notes: string }[] = [];
 
@@ -152,7 +154,7 @@ export class PlanningService {
   }
 
   /** Next plan id and version for a depot and run date. */
-  async nextPlanId(depot: Depot, runDate: string | Date) {
+  async nextPlanId(depot: string, runDate: string | Date) {
     const { start, iso } = dayRange(runDate);
     const last = await this.prisma.plan.findFirst({
       where: { depot, runDate: start },
@@ -160,7 +162,7 @@ export class PlanningService {
       select: { version: true },
     });
     const version = (last?.version ?? 0) + 1;
-    return { id: `${PLAN_PREFIX[depot]}-${iso}-v${version}`, version, runDate: start };
+    return { id: `${planPrefix(depot)}-${iso}-v${version}`, version, runDate: start };
   }
 
   /** There is no run to plan on a day the Calendar marks as non-operating (422 NonOperatingDay). */
@@ -176,7 +178,7 @@ export class PlanningService {
    * Auto-plan: computes the capacity picture and deferral suggestions, and
    * stores them as a new plan version awaiting a dispatcher's approval.
    */
-  async runAutoPlan(depot: Depot, runDate: string, requestedBy: string) {
+  async runAutoPlan(depot: string, runDate: string, requestedBy: string) {
     await this.assertOperatingDay(runDate);
     const { summary, suggestions } = await this.suggestDeferrals(depot, runDate);
     const next = await this.nextPlanId(depot, runDate);
@@ -217,7 +219,7 @@ export class PlanningService {
    * Turns an approved planning-agent run into a plan version. The agent only
    * drafts; this row is what a dispatcher's approval then publishes.
    */
-  async createAgentPlan(run: { id: string; depot: Depot; runDate: Date }, snapshot: Record<string, any>, createdBy: string) {
+  async createAgentPlan(run: { id: string; depot: string; runDate: Date }, snapshot: Record<string, any>, createdBy: string) {
     const next = await this.nextPlanId(run.depot, run.runDate);
     const explanation = snapshot.explanation;
     return this.prisma.plan.create({
@@ -401,7 +403,7 @@ export class PlanningService {
     });
   }
 
-  async getCapacityOutlook(depot: Depot) {
+  async getCapacityOutlook(depot: string) {
     return this.capacity.getCapacityOutlook(depot);
   }
 }

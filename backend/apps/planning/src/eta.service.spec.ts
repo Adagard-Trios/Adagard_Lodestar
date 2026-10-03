@@ -41,17 +41,41 @@ describe('EtaService in Asia/Colombo time', () => {
     expect(dayRange(new Date('2026-04-06T19:00:00Z')).iso).toBe('2026-04-07');
   });
 
-  it('capacity outlook weeks are Mondays as calendar dates', async () => {
+  it('capacity outlook weeks are Mondays from the current week, forecast from order history', async () => {
+    const day = (iso: string) => new Date(`${iso}T00:00:00Z`);
+    const history = ['2026-09-28', '2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02'].flatMap((d, i) => [
+      { runDate: day(d), tempClass: 'CHILLED', _sum: { m3: 10 + i } },
+      { runDate: day(d), tempClass: 'AMBIENT', _sum: { m3: 20 } },
+    ]);
     const prisma = {
-      calendar: { findMany: jest.fn().mockResolvedValue([]) },
-      vehicle: { count: jest.fn().mockResolvedValue(0) },
+      order: { groupBy: jest.fn().mockResolvedValue(history) },
+      vehicle: { findMany: jest.fn().mockResolvedValue([{ capacityM3: 26.4 }, { capacityM3: 7 }]) },
+      calendar: {
+        findMany: jest.fn().mockResolvedValue([
+          { date: day('2026-09-28'), isOperating: true, festivalRamp: 0, isPayday: false, festivalName: null },
+          { date: day('2026-09-29'), isOperating: true, festivalRamp: 0.5, isPayday: true, festivalName: 'Vap' },
+          { date: day('2026-10-04'), isOperating: false, festivalRamp: 0, isPayday: false, festivalName: null },
+        ]),
+      },
     };
-    const out = await new CapacityService(prisma as any).getCapacityOutlook('KANDY' as any);
-    expect(out.weeks[0].weekStart).toBe('2026-04-06');
-    expect(out.weeks[9].weekStart).toBe('2026-06-08');
-    const firstWhere = prisma.calendar.findMany.mock.calls[0][0].where.date;
-    expect(firstWhere.gte.toISOString()).toBe('2026-04-06T00:00:00.000Z');
-    expect(firstWhere.lt.toISOString()).toBe('2026-04-13T00:00:00.000Z');
+    // Sat 3 Oct 2026 (Colombo): the outlook starts on Mon 28 Sep (W40)
+    const out = await new CapacityService(prisma as any).getCapacityOutlook('KANDY', new Date('2026-10-03T09:00:00Z'));
+    expect(prisma.order.groupBy.mock.calls[0][0].where.runDate.lt.toISOString()).toBe('2026-10-03T00:00:00.000Z');
+    expect(out.basis).toMatchObject({ historyDays: 5, historyFrom: '2026-09-28', historyTo: '2026-10-02', medianChilledM3PerDay: 12, medianTotalM3PerDay: 32 });
+    expect(out.weeks).toEqual([{
+      week: 'W40', weekStart: '2026-09-28', operatingDays: 2,
+      estimatedChilledDemandM3: 30, estimatedTotalM3: 80, // median × (1 + 1.5)
+      reeferVehiclesAvailable: 2, reeferCapacityM3: 33.4, hasPayday: true, festival: 'Vap',
+    }]);
+    expect(out.uncoveredWeeks).toEqual(['W41', 'W42', 'W43', 'W44', 'W45', 'W46', 'W47', 'W48', 'W49']);
+  });
+
+  it('capacity outlook forecasts nothing without enough history', async () => {
+    const prisma = { order: { groupBy: jest.fn().mockResolvedValue([]) }, vehicle: { findMany: jest.fn() }, calendar: { findMany: jest.fn() } };
+    const out = await new CapacityService(prisma as any).getCapacityOutlook('KANDY', new Date('2026-10-03T09:00:00Z'));
+    expect(out.weeks).toEqual([]);
+    expect(out.reason).toMatch(/Only 0 past run dates/);
+    expect(prisma.calendar.findMany).not.toHaveBeenCalled();
   });
 });
 

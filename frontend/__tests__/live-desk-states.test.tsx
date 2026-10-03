@@ -181,10 +181,11 @@ describe('DSP-35 Session expired', () => {
 });
 
 describe('DSP-36 No access to this depot', () => {
-  it('shows the refused depot and the user’s own depots', () => {
+  it('shows the refused depot and the user’s own depots', async () => {
     reportForbidden({ status: 403, target: 'depot', message: 'You do not plan for depot PELIYAGODA' });
     renderLive(<NoDepot />, { handler: req => base(req) ?? page([]), session: { ...SESSIONS.dispatcher, depots: ['KANDY'] } });
-    expect(screen.getByTestId('denied-title')).toHaveTextContent('No access to Peliyagoda DC');
+    // the depot's code until the registry (Depots) answers, then its name
+    await waitFor(() => expect(screen.getByTestId('denied-title')).toHaveTextContent('No access to Peliyagoda DC'));
     expect(screen.getByTestId('denied-message')).toHaveTextContent('You do not plan for depot PELIYAGODA');
     expect(screen.getByTestId('own-KANDY')).toHaveTextContent('Open the Kandy Hub plan');
     expect(document.querySelector('[data-lk="B"]')).toBeInTheDocument();

@@ -14,6 +14,11 @@ function db(existing: string[] = []) {
   return {
     written,
     prisma: {
+      depot: { findMany: jest.fn(async () => [
+        { code: 'PELIYAGODA', name: 'Peliyagoda DC', isActive: true },
+        { code: 'KANDY', name: 'Kandy Hub', isActive: true },
+        { code: 'OLDTOWN', name: 'Old Town', isActive: false },
+      ]) },
       districtTravel: { findMany: jest.fn(async () => [{ district: 'Nuwara Eliya', depot: 'KANDY' }, { district: 'Colombo', depot: 'PELIYAGODA' }]) },
       dataImport: { create: jest.fn(async ({ data }: any) => ({ id: 'imp-1', ...data })) },
       $transaction: jest.fn(async (fn: any) => fn(tx)),
@@ -64,5 +69,24 @@ describe('DataImportService (ADM-14/15)', () => {
     const set = new DataImportsSet({} as any, imports as any);
     await set.import({ principal: personas.admin, params: { file: 'calendar', csv: 'date\n', fileName: 'cal.csv' }, headers: {} });
     expect(imports.import).toHaveBeenCalledWith('calendar', 'date\n', 'cal.csv', personas.admin);
+  });
+
+  it('accepts a registered depot by code or name and refuses unregistered or deactivated depots', async () => {
+    const { prisma, written } = db();
+    const csv = [
+      OUTLETS_HEADER,
+      'OUT301,fresh,Nuwara Eliya,KANDY,rear_dock,normal,05:30,08:00,',
+      'OUT302,fresh,Colombo,Peliyagoda DC,rear_dock,normal,05:30,08:00,',
+      'OUT303,fresh,Galle,Galle,rear_dock,normal,05:30,08:00,',
+      'OUT304,fresh,Matale,Old Town,rear_dock,normal,05:30,08:00,',
+    ].join('\n');
+    const r = await new DataImportService(prisma as any).import('outlets', csv, 'outlets.csv', personas.admin);
+    expect(r.applied).toBe(false);
+    expect(written).toEqual([]);
+    const byKey = Object.fromEntries((r.problems as any[]).filter((p) => p.column === 'depot').map((p) => [p.key, p.reason]));
+    expect(Object.keys(byKey).sort()).toEqual(['OUT303', 'OUT304']);
+    expect(byKey.OUT303).toMatch(/No depot GALLE is registered/);
+    expect(byKey.OUT304).toMatch(/Old Town is deactivated/);
+    expect((r.checks as any[]).find((c) => /registered, active depot/.test(c.label))).toMatchObject({ passed: false, detail: '2 unknown' });
   });
 });

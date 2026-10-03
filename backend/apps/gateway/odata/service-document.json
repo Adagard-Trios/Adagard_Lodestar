@@ -42,6 +42,11 @@
       "url": "Vehicles"
     },
     {
+      "name": "Depots",
+      "kind": "EntitySet",
+      "url": "Depots"
+    },
+    {
       "name": "Outlets",
       "kind": "EntitySet",
       "url": "Outlets"

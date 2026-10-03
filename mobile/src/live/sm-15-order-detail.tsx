@@ -6,9 +6,9 @@ import { Text, View, StyleSheet } from 'react-native';
 import { dayLabel, hm, isoDay } from '@/lib/time';
 import { plural, titleCase } from '@/lodestar/live';
 import { useClaims, useNotifications, useOrder } from '@/model/hooks';
-import { depotName } from '@/model/plan';
 import { shortfallsFor, timeline, useTrip } from '@/model/store-face';
 import { Frame, Icon, Scroll, Tap, type ScreenNav } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L90":{"to":"sm-02-order-status-and-eta","kind":"go"}}};
 
@@ -17,6 +17,7 @@ type Step = { label: string; time: string; sub: string; state: 'done' | 'warn' |
 const kg = (n: number) => `${Math.round(n * 10) / 10} kg`;
 
 export default function ScreenSm15OrderDetail() {
+  const { name: depotName } = useDepots();
   const claims = useClaims();
   const q = useOrder();
   const order = q.data ?? q.day.data?.orders.find(o => o.id === q.id) ?? null;

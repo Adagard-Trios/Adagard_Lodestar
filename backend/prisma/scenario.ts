@@ -14,7 +14,7 @@
  */
 
 import {
-  Brand, DeferralReason, DeferralStatus, Depot, DeviceStatus, DockType, OrderStatus, ParkingType,
+  Brand, DeferralReason, DeferralStatus, DeviceStatus, DockType, OrderStatus, ParkingType,
   PlanSource, PlanStatus, Prisma, Role, TempClass, TripStatus, VehicleStatus, VehicleType,
 } from '@prisma/client';
 
@@ -50,7 +50,7 @@ export interface Person {
   email: string;
   name: string;
   role: Role;
-  depot: Depot | null;
+  depot: string | null;
   outletId: string | null;
   phone: string | null;
   /** a driver's vehicle: trips for it are assigned to them (vehicle_id claim) */
@@ -58,11 +58,11 @@ export interface Person {
 }
 
 export const PEOPLE: Person[] = [
-  { key: 'fathima', id: USER_IDS.fathima, email: 'fathima@waypoint.lk', name: 'Fathima Rizwan', role: Role.STORE_MANAGER, depot: Depot.KANDY, outletId: 'OUT106', phone: '+94774567890' },
+  { key: 'fathima', id: USER_IDS.fathima, email: 'fathima@waypoint.lk', name: 'Fathima Rizwan', role: Role.STORE_MANAGER, depot: 'KANDY', outletId: 'OUT106', phone: '+94774567890' },
   // Nilanthi covers both depots through her token claim; her home depot is Peliyagoda.
-  { key: 'nilanthi', id: USER_IDS.nilanthi, email: 'nilanthi@waypoint.lk', name: 'Nilanthi Perera', role: Role.DISPATCHER, depot: Depot.PELIYAGODA, outletId: null, phone: '+94771234567' },
-  { key: 'kasun', id: USER_IDS.kasun, email: 'kasun@waypoint.lk', name: 'Kasun Jayawardena', role: Role.LOADER, depot: Depot.KANDY, outletId: null, phone: '+94772345678' },
-  { key: 'ruwan', id: USER_IDS.ruwan, email: 'ruwan@waypoint.lk', name: 'Ruwan Bandara', role: Role.DRIVER, depot: Depot.KANDY, outletId: null, phone: '+94773456789', vehicleId: 'VEH057' },
+  { key: 'nilanthi', id: USER_IDS.nilanthi, email: 'nilanthi@waypoint.lk', name: 'Nilanthi Perera', role: Role.DISPATCHER, depot: 'PELIYAGODA', outletId: null, phone: '+94771234567' },
+  { key: 'kasun', id: USER_IDS.kasun, email: 'kasun@waypoint.lk', name: 'Kasun Jayawardena', role: Role.LOADER, depot: 'KANDY', outletId: null, phone: '+94772345678' },
+  { key: 'ruwan', id: USER_IDS.ruwan, email: 'ruwan@waypoint.lk', name: 'Ruwan Bandara', role: Role.DRIVER, depot: 'KANDY', outletId: null, phone: '+94773456789', vehicleId: 'VEH057' },
   { key: 'admin', id: USER_IDS.admin, email: 'admin@waypoint.lk', name: 'Lodestar Admin', role: Role.ADMIN, depot: null, outletId: null, phone: null },
 ];
 
@@ -86,20 +86,20 @@ export const DEVICES = [
 const ANCHOR_TAG = 'synthetic'; // same tag as synthetic.ts (kept literal to avoid a circular import)
 
 export const OUTLET_ANCHORS: Prisma.OutletCreateManyInput[] = [
-  { id: 'OUT106', name: 'Waypoint Fresh Nuwara Eliya', brand: Brand.FRESH, district: 'Nuwara Eliya', depot: Depot.KANDY, dockType: DockType.REAR_DOCK, parking: ParkingType.NORMAL, windowOpen: '05:30', windowClose: '08:00', address: ANCHOR_TAG },
-  { id: 'OUT108', name: 'Waypoint Fresh Hawa Eliya', brand: Brand.FRESH, district: 'Nuwara Eliya', depot: Depot.KANDY, dockType: DockType.REAR_DOCK, parking: ParkingType.NORMAL, windowOpen: '04:00', windowClose: '07:45', address: ANCHOR_TAG },
-  { id: 'OUT027', name: 'Synthetic Fresh 027', brand: Brand.FRESH, district: 'Gampaha', depot: Depot.PELIYAGODA, dockType: DockType.STREET, parking: ParkingType.NORMAL, windowOpen: '04:30', windowClose: '08:30', address: ANCHOR_TAG },
-  { id: 'OUT043', name: 'Synthetic Fresh 043', brand: Brand.FRESH, district: 'Kalutara', depot: Depot.PELIYAGODA, dockType: DockType.STREET, parking: ParkingType.NORMAL, windowOpen: '04:30', windowClose: '08:30', address: ANCHOR_TAG },
-  { id: 'OUT028', name: 'Synthetic Fresh 028', brand: Brand.FRESH, district: 'Gampaha', depot: Depot.PELIYAGODA, dockType: DockType.STREET, parking: ParkingType.NORMAL, windowOpen: '04:30', windowClose: '08:30', address: ANCHOR_TAG },
-  { id: 'OUT009', name: 'Synthetic Fresh 009', brand: Brand.FRESH, district: 'Colombo', depot: Depot.PELIYAGODA, dockType: DockType.REAR_DOCK, parking: ParkingType.NORMAL, windowOpen: '04:30', windowClose: '08:30', address: ANCHOR_TAG },
+  { id: 'OUT106', name: 'Waypoint Fresh Nuwara Eliya', brand: Brand.FRESH, district: 'Nuwara Eliya', depot: 'KANDY', dockType: DockType.REAR_DOCK, parking: ParkingType.NORMAL, windowOpen: '05:30', windowClose: '08:00', address: ANCHOR_TAG },
+  { id: 'OUT108', name: 'Waypoint Fresh Hawa Eliya', brand: Brand.FRESH, district: 'Nuwara Eliya', depot: 'KANDY', dockType: DockType.REAR_DOCK, parking: ParkingType.NORMAL, windowOpen: '04:00', windowClose: '07:45', address: ANCHOR_TAG },
+  { id: 'OUT027', name: 'Synthetic Fresh 027', brand: Brand.FRESH, district: 'Gampaha', depot: 'PELIYAGODA', dockType: DockType.STREET, parking: ParkingType.NORMAL, windowOpen: '04:30', windowClose: '08:30', address: ANCHOR_TAG },
+  { id: 'OUT043', name: 'Synthetic Fresh 043', brand: Brand.FRESH, district: 'Kalutara', depot: 'PELIYAGODA', dockType: DockType.STREET, parking: ParkingType.NORMAL, windowOpen: '04:30', windowClose: '08:30', address: ANCHOR_TAG },
+  { id: 'OUT028', name: 'Synthetic Fresh 028', brand: Brand.FRESH, district: 'Gampaha', depot: 'PELIYAGODA', dockType: DockType.STREET, parking: ParkingType.NORMAL, windowOpen: '04:30', windowClose: '08:30', address: ANCHOR_TAG },
+  { id: 'OUT009', name: 'Synthetic Fresh 009', brand: Brand.FRESH, district: 'Colombo', depot: 'PELIYAGODA', dockType: DockType.REAR_DOCK, parking: ParkingType.NORMAL, windowOpen: '04:30', windowClose: '08:30', address: ANCHOR_TAG },
 ];
 
 export const VEHICLE_ANCHORS: Prisma.VehicleCreateManyInput[] = [
   // The hero reefer van.
-  { id: 'VEH057', depot: Depot.KANDY, type: VehicleType.VAN, tempClass: TempClass.CHILLED, capacityKg: 1040, capacityM3: 7.0, kmPerLitre: 10.3, weeklyLFuel: 450 },
+  { id: 'VEH057', depot: 'KANDY', type: VehicleType.VAN, tempClass: TempClass.CHILLED, capacityKg: 1040, capacityM3: 7.0, kmPerLitre: 10.3, weeklyLFuel: 450 },
   // Capacities below are synthetic placeholders.
-  { id: 'VEH004', depot: Depot.PELIYAGODA, type: VehicleType.TRUCK, tempClass: TempClass.CHILLED, capacityKg: 5600, capacityM3: 28, kmPerLitre: 5.2, weeklyLFuel: 420 },
-  { id: 'VEH021', depot: Depot.PELIYAGODA, type: VehicleType.TRUCK, tempClass: TempClass.AMBIENT, capacityKg: 4800, capacityM3: 26, kmPerLitre: 6.1, weeklyLFuel: 360 },
+  { id: 'VEH004', depot: 'PELIYAGODA', type: VehicleType.TRUCK, tempClass: TempClass.CHILLED, capacityKg: 5600, capacityM3: 28, kmPerLitre: 5.2, weeklyLFuel: 420 },
+  { id: 'VEH021', depot: 'PELIYAGODA', type: VehicleType.TRUCK, tempClass: TempClass.AMBIENT, capacityKg: 4800, capacityM3: 26, kmPerLitre: 6.1, weeklyLFuel: 360 },
 ];
 
 // ─────────────────────────────────────────────────────────────
@@ -137,26 +137,26 @@ export const PLAN_IDS = {
 
 export const PLANS = [
   {
-    id: PLAN_IDS.plgV1, depot: Depot.PELIYAGODA, version: 1, status: PlanStatus.SUPERSEDED, source: PlanSource.AUTOPLAN,
+    id: PLAN_IDS.plgV1, depot: 'PELIYAGODA', version: 1, status: PlanStatus.SUPERSEDED, source: PlanSource.AUTOPLAN,
     createdBy: 'svc-planning', createdAt: ist('2026-04-06T16:05'),
     summary: { note: 'Drafted at cut-off, before the VEH004 workshop report' },
     explanation: 'Auto-plan at the 4:00 PM cut-off.',
   },
   {
-    id: PLAN_IDS.plgV2, depot: Depot.PELIYAGODA, version: 2, status: PlanStatus.SUPERSEDED, source: PlanSource.MANUAL,
+    id: PLAN_IDS.plgV2, depot: 'PELIYAGODA', version: 2, status: PlanStatus.SUPERSEDED, source: PlanSource.MANUAL,
     createdBy: USER_IDS.nilanthi, createdAt: ist('2026-04-06T17:20'),
     summary: { chilledShortM3: 8.6, note: 'VEH004 reefer compressor failure; VEH021 gearbox' },
     explanation: 'Nilanthi removed VEH004 and VEH021 from the fleet for Tue 7 Apr.',
   },
   {
-    id: PLAN_IDS.plgV3, depot: Depot.PELIYAGODA, version: 3, status: PlanStatus.PUBLISHED, source: PlanSource.AUTOPLAN,
+    id: PLAN_IDS.plgV3, depot: 'PELIYAGODA', version: 3, status: PlanStatus.PUBLISHED, source: PlanSource.AUTOPLAN,
     createdBy: 'svc-planning', createdAt: ist('2026-04-06T18:25'),
     approvedBy: USER_IDS.nilanthi, approvedAt: PLAN_PUBLISHED_AT, publishedAt: PLAN_PUBLISHED_AT,
     summary: { chilledShortM3: 8.6, note: 'VEH004 in workshop', deferred: ['ORD0104188', 'ORD0104195'], protected: ['ORD0104173'] },
     explanation: 'Re-planned without VEH004/VEH021; deferred the two lowest-scoring chilled orders; kept the protected Ja-Ela order.',
   },
   {
-    id: PLAN_IDS.plkV3, depot: Depot.KANDY, version: 3, status: PlanStatus.PUBLISHED, source: PlanSource.AUTOPLAN,
+    id: PLAN_IDS.plkV3, depot: 'KANDY', version: 3, status: PlanStatus.PUBLISHED, source: PlanSource.AUTOPLAN,
     createdBy: 'svc-planning', createdAt: ist('2026-04-06T18:25'),
     approvedBy: USER_IDS.nilanthi, approvedAt: PLAN_PUBLISHED_AT, publishedAt: PLAN_PUBLISHED_AT,
     summary: { heroTrip: 'VEH057', note: 'Nuwara Eliya run: hill fog and rain expected' },
@@ -228,7 +228,7 @@ export const HERO_TRIP_ID = 'TRP-VEH057-20260407';
 export const HERO_LOAD_RECORD_ID = 'LR-TRP-VEH057-20260407';
 
 export const HERO_TRIP = {
-  vehicleId: 'VEH057', depot: Depot.KANDY, runDate: SCENARIO_DAY, brand: Brand.FRESH, district: 'Nuwara Eliya',
+  vehicleId: 'VEH057', depot: 'KANDY', runDate: SCENARIO_DAY, brand: Brand.FRESH, district: 'Nuwara Eliya',
   status: TripStatus.COMPLETE, planVersion: 3, planId: PLAN_IDS.plkV3, tripNumber: 1, bay: 'K2',
   sealNumber: 'KDY-57-10413', reeferTempC: 3.0, planMinutes: 196, actualMinutes: 241,
   departTime: ist('2026-04-07T03:40'), returnTime: ist('2026-04-07T09:32'),

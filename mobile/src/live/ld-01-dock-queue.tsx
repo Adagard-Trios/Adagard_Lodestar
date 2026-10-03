@@ -7,6 +7,7 @@ import { nextToLoad, useMyBay, useRePlanAlert } from '@/model/dock';
 import { useBayQueue, useClaims, useOutbox } from '@/model/hooks';
 import type { Trip } from '@/model/types';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L6":{"to":"ld-02-load-sheet","kind":"go"},"L190":{"to":"ld-09-pre-cool-check","kind":"go"},"N1":{"to":"ld-13-flags-tab","kind":"nav"},"N2":{"to":"ld-16-shift-summary","kind":"nav"}}};
 
@@ -23,6 +24,7 @@ const initials = (name?: string) =>
 const kind = (t: Trip) => `${t.vehicle?.tempClass === 'CHILLED' ? 'Reefer ' : ''}${t.vehicle?.type === 'VAN' ? 'van' : t.vehicle ? 'truck' : ''}`.trim();
 
 export default function ScreenLd01DockQueue() {
+  const { name: depotName } = useDepots();
   const claims = useClaims();
   const { data, loading, error } = useBayQueue();
   const { waiting } = useOutbox();
@@ -42,7 +44,7 @@ export default function ScreenLd01DockQueue() {
             <Icon xml={X0} width={36} height={36} style={s.v1} />
           </View>
           <View style={s.v4}>
-            <Text style={s.t3}>{depot ? `${titleCase(depot)} hub` : 'Lodestar Dock'}</Text>
+            <Text style={s.t3}>{depot ? `${depotName(depot)}` : 'Lodestar Dock'}</Text>
           </View>
           <Tap style={s.v10} to={null} onPress={() => signOutTo('ld-06-sign-in')} testID="switch-user">
             <View style={s.v6}>

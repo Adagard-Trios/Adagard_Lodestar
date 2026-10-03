@@ -1,4 +1,5 @@
 import { anything, capture, deepEqual, instance, mock, verify, when } from 'ts-mockito';
+import { depotDelegate } from '../../../libs/odata/test/depots';
 import { DevicePostureService, JwtVerifier, Principal } from '@lodestar/security';
 import { personas, principal } from '../../../libs/security/test/principals';
 import { canonicalRoom, NotificationsGateway } from './notifications.gateway';
@@ -24,7 +25,7 @@ describe('NotificationsSet', () => {
   beforeEach(() => {
     service = mock(NotificationsService);
     user = mock<FindUniqueDelegate>();
-    set = new NotificationsSet({ user: instance(user) } as any, instance(service));
+    set = new NotificationsSet({ user: instance(user), depot: depotDelegate() } as any, instance(service));
     when(user.findUnique(anything())).thenResolve({ id: 'fathima' });
     when(service.send(anything())).thenResolve({ id: 'N1' } as any);
   });
@@ -138,7 +139,7 @@ describe('NotificationsSet · Publish', () => {
   let set: NotificationsSet;
   beforeEach(() => {
     service = mock(NotificationsService);
-    set = new NotificationsSet({} as any, instance(service));
+    set = new NotificationsSet({ depot: depotDelegate() } as any, instance(service));
     when(service.publish(anything(), anything(), anything())).thenCall((event: string, rooms: string[]) => ({ event, rooms }));
   });
   const call = (params: Record<string, unknown>) => set.publish({ principal: personas.agent, params, headers: {} } as any);

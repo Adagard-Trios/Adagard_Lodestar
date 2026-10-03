@@ -14,13 +14,16 @@ import { Ic } from '@/components/live/icons';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { resetOptions } from '@/lib/auth/reset';
 import { useDeskStatus } from '@/lib/desk-status';
-import { DEPOT_NAME, fmtDayTime } from '@/lib/format';
+import { fmtDayTime } from '@/lib/format';
 import { useDepot } from '@/lib/workday';
+import { useDepots } from '@/components/live/depots';
 
-const name = (d: string | null | undefined) => (d ? DEPOT_NAME[d] ?? d : 'this depot');
+type NameOf = (code: string) => string;
+const nameWith = (nameOf: NameOf) => (d: string | null | undefined) => (d ? nameOf(d) : 'this depot');
 
 /** The access request the admin receives. */
-export function accessRequest(user: { name?: string; email?: string } | null | undefined, depot: string | null, own: string[]): string {
+export function accessRequest(user: { name?: string; email?: string } | null | undefined, depot: string | null, own: string[], nameOf: NameOf = (c) => c): string {
+  const name = nameWith(nameOf);
   return `Please give ${user?.name ?? 'me'}${user?.email ? ` (${user.email})` : ''} edit access to ${name(depot)} in Lodestar Plan. `
     + `I plan for ${own.map(d => name(d)).join(' and ') || 'no depot yet'}.`;
 }
@@ -30,14 +33,16 @@ export default function LiveDsp36NoAccessToThisDepot() {
   const { session } = useAuth();
   const { depots, setDepot } = useDepot();
   const { depotDenied } = useDeskStatus();
+  const { name: depotName } = useDepots();
+  const name = nameWith(depotName);
   const depot = depotDenied?.depot ?? null;
   const own = depots.map(d => name(d)).join(' and ');
   const support = resetOptions().supportEmail;
-  const text = accessRequest(session, depot, depots);
+  const text = accessRequest(session, depot, depots, depotName);
 
   const request = async () => {
     if (support) {
-      window.location.href = `mailto:${encodeURIComponent(support)}?subject=${encodeURIComponent(`Lodestar Plan: edit access to ${name(depot)}`)}&body=${encodeURIComponent(text)}`;
+      window.location.assign(`mailto:${encodeURIComponent(support)}?subject=${encodeURIComponent(`Lodestar Plan: edit access to ${name(depot)}`)}&body=${encodeURIComponent(text)}`);
       return;
     }
     try {

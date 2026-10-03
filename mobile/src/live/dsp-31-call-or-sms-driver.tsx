@@ -10,6 +10,7 @@ import { useSignalLost, minutesOfBudget, useAgentConfig, useDepotDesk } from '@/
 import { useQuery } from '@/model/query';
 import type { Trip } from '@/model/types';
 import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L182":{"to":"dsp-30-vehicle-detail","kind":"go"}}};
 
@@ -34,6 +35,7 @@ async function open(url: string): Promise<boolean> {
 }
 
 export default function ScreenDsp31CallOrSmsDriver() {
+  const { name: depotName } = useDepots();
   const cfg = useAgentConfig().data;
   const claims = useClaims();
   const { data, id, loading, error } = useVehicle();
@@ -148,7 +150,7 @@ export default function ScreenDsp31CallOrSmsDriver() {
                     </View>
                     <View style={s.v24}>
                       <View>
-                        <Text style={s.t22}>{`${t.departTime ? 'Departed' : 'Leaves'} ${titleCase(t.depot)}`}</Text>
+                        <Text style={s.t22}>{`${t.departTime ? 'Departed' : 'Leaves'} ${depotName(t.depot)}`}</Text>
                       </View>
                       <View>
                         <Text style={s.t23}>{`${ts.length} orders · ${STATUS[t.status]}`}</Text>
@@ -233,7 +235,7 @@ export default function ScreenDsp31CallOrSmsDriver() {
             </View>
             <View style={s.v24}>
               <View>
-                <Text style={s.t22}>{`Call ${titleCase(depot) || 'depot'} desk`}</Text>
+                <Text style={s.t22}>{`Call ${depotName(depot) || 'depot'} desk`}</Text>
               </View>
               <View>
                 <Text style={s.t23} testID="desk-line">{deskLine}</Text>

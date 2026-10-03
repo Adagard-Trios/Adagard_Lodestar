@@ -9,7 +9,7 @@
  * - Orders: created once and never overwritten, so re-running the seed (every `compose up`) does not
  *   undo a plan the dispatcher already approved. Trips are NOT seeded: the day starts at planning.
  */
-import { DeferralReason, DeferralStatus, Depot, OrderStatus, Role } from '@prisma/client';
+import { DeferralReason, DeferralStatus, OrderStatus, Role } from '@prisma/client';
 import type { ScenarioDb } from '../scenario';
 import { PEOPLE } from '../scenario';
 import { DemoDay, DemoVehicle, addDays, vehicleStatusFor } from './demo-day';
@@ -52,7 +52,7 @@ export async function writeDemoDay(db: ScenarioDb, demo: DemoDay, vehicles: Demo
     if (driven.has(v.id)) continue;
     const id = `drv-${v.id.toLowerCase()}`;
     const row = {
-      email: `driver.${v.id.toLowerCase()}@waypoint.lk`, name: `Driver ${v.id}`, role: Role.DRIVER, depot: v.depot as Depot,
+      email: `driver.${v.id.toLowerCase()}@waypoint.lk`, name: `Driver ${v.id}`, role: Role.DRIVER, depot: v.depot as string,
       vehicleId: v.id, isActive: true, passwordHash: null,
     };
     await db.user.upsert({ where: { id }, create: { id, ...row }, update: row });

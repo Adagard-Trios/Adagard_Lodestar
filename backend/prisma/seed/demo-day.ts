@@ -10,7 +10,7 @@
  *   operating day when today is closed). See prisma/DATA.md.
  * - Pure: no database access, deterministic for a given seed, so it is unit-tested.
  */
-import { Brand, Depot, TempClass, VehicleStatus, VehicleType } from '@prisma/client';
+import { Brand, TempClass, VehicleStatus, VehicleType } from '@prisma/client';
 import { CsvRecord, pick, readCsvRecords } from './csv';
 import { parseBool, parseIntish, parseNumber, parseTempClass } from './normalize';
 import { prng } from './synthetic';
@@ -20,8 +20,8 @@ export const PEAK_SCENARIO = 'S1';
 /** Vehicles that always run on the demo day (the driver persona's reefer van). */
 export const ALWAYS_AVAILABLE = ['VEH057'];
 
-export interface DemoOutlet { id: string; brand: Brand; depot: Depot; isActive?: boolean }
-export interface DemoVehicle { id: string; depot: Depot; type: VehicleType; tempClass: TempClass; capacityM3?: number }
+export interface DemoOutlet { id: string; brand: Brand; depot: string; isActive?: boolean }
+export interface DemoVehicle { id: string; depot: string; type: VehicleType; tempClass: TempClass; capacityM3?: number }
 
 export interface DemoLine { name: string; qty: number; kg: number; tempClass: TempClass }
 export interface DemoOrder {
@@ -187,7 +187,7 @@ export function buildDemoDay(opts: BuildOptions): DemoDay {
     if (parsed.rows.length) { peli = parsed.rows; peliSource = 'csv'; }
   }
   if (!peli.length) {
-    for (const o of active.filter((x) => x.depot === Depot.PELIYAGODA)) {
+    for (const o of active.filter((x) => x.depot === 'PELIYAGODA')) {
       if (peli.length >= 85) break;
       peli.push(...generatedOrders(r, o, 0.9).slice(0, 85 - peli.length));
     }
@@ -208,7 +208,7 @@ export function buildDemoDay(opts: BuildOptions): DemoDay {
   persona('OUT106', TempClass.CHILLED, 34, 152, 0.8);
   persona('OUT106', TempClass.AMBIENT, 58, 260, 1.1);
   persona('OUT108', TempClass.CHILLED, 22, 96, 0.5, true); // skipped yesterday: protected
-  for (const o of active.filter((x) => x.depot === Depot.KANDY && !['OUT106', 'OUT108'].includes(x.id))) {
+  for (const o of active.filter((x) => x.depot === 'KANDY' && !['OUT106', 'OUT108'].includes(x.id))) {
     if (kandy.length >= 26) break;
     kandy.push(...generatedOrders(r, o, 0.4).slice(0, 26 - kandy.length));
   }
@@ -230,7 +230,7 @@ export function buildDemoDay(opts: BuildOptions): DemoDay {
     if (workshopIds.length) fleetSource = 'csv';
   }
   if (!workshopIds.length) {
-    const peliFleet = opts.vehicles.filter((v) => v.depot === Depot.PELIYAGODA).sort((a, b) => a.id.localeCompare(b.id));
+    const peliFleet = opts.vehicles.filter((v) => v.depot === 'PELIYAGODA').sort((a, b) => a.id.localeCompare(b.id));
     // the big reefers are in the workshop and two small ones run: the chilled orders cannot all go
     const reefers = peliFleet.filter((v) => v.tempClass === TempClass.CHILLED).sort((a, b) => (b.capacityM3 ?? 0) - (a.capacityM3 ?? 0) || a.id.localeCompare(b.id));
     const dry = peliFleet.filter((v) => v.tempClass !== TempClass.CHILLED);

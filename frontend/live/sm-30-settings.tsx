@@ -18,7 +18,8 @@ import { type Channels, type Preferences, type ReceivingStaff, type StoreTopic, 
 import { ErrorBanner, Skeleton } from '@/components/live/states';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { resetOptions, telHref } from '@/lib/auth/reset';
-import { DEPOT_NAME, fmtDayTime, title } from '@/lib/format';
+import { fmtDayTime, title } from '@/lib/format';
+import { useDepots } from '@/components/live/depots';
 
 const TOPICS: Array<{ k: StoreTopic; label: string; sub: string; def: Channels }> = [
   { k: 'arrivalWindow', label: 'Arrival window', sub: 'by 7 PM the evening before', def: { app: true, sms: true } },
@@ -57,6 +58,7 @@ function Tg({ on, locked, label, onChange }: { on: boolean; locked?: boolean; la
 }
 
 export default function LiveSm30Settings() {
+  const { name: depotName } = useDepots();
   const router = useRouter();
   const { session, logout } = useAuth();
   const outlet = useMyOutlet();
@@ -107,7 +109,7 @@ export default function LiveSm30Settings() {
             <div className="d-head__txt">
               <div className="d-eyebrow">
                 {o?.name ?? 'Your outlet'}{" "}<span className="m-sep" />{` ${session?.outletId ?? ''} `}
-                {o && <><span className="m-sep" />{` ${DEPOT_NAME[o.depot] ?? o.depot}`}</>}
+                {o && <><span className="m-sep" />{` ${depotName(o.depot)}`}</>}
               </div>
               <div className="d-h1">{"Settings"}</div>
             </div>
@@ -137,7 +139,7 @@ export default function LiveSm30Settings() {
               <div className="d-card" data-testid="receiving-staff" data-section="receiving">
                 <div className="d-card__head">
                   <span className="d-card__title">{"Receiving staff"}</span>
-                  <span style={{ fontSize: '13px', color: 'var(--text-3)' }}>{`shown to the driver and ${o ? DEPOT_NAME[o.depot] ?? o.depot : 'the depot'}`}</span>
+                  <span style={{ fontSize: '13px', color: 'var(--text-3)' }}>{`shown to the driver and ${o ? depotName(o.depot) : 'the depot'}`}</span>
                   <div className="spacer" />
                   <Btn className="d-btn" style={{ height: '34px' }} disabled={!draft || staff.length >= 20} onClick={() => setAdding({ name: '', phone: '', note: '' })}><Ic n="user-plus" />{"Add staff"}</Btn>
                 </div>

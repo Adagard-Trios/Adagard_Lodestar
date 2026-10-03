@@ -4,15 +4,16 @@ import { Text, View, StyleSheet } from 'react-native';
 import { addDays, dayLabel, hm } from '@/lib/time';
 import { plural } from '@/lodestar/live';
 import { today } from '@/model/hooks';
-import { depotName } from '@/model/plan';
 import { cutoffFor, useDelivery, useNextRun, useNow } from '@/model/store-face';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L105":{"to":"sm-13-new-order","kind":"go"},"L106":{"to":"sm-11-today-order-day","kind":"go"}}};
 
 // Past the 4:00 PM cut-off (Asia/Colombo): the run that just closed, and the next run an order can still make
 // (the next operating day: days the operating Calendar closes are skipped).
 export default function ScreenSm23OrdersClosed() {
+  const { name: depotName } = useDepots();
   const now = useNow();
   const { outlet, groups } = useDelivery();
   const next = useNextRun();

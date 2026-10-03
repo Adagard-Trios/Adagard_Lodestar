@@ -15,8 +15,9 @@ import { tripTwoHead } from '@/components/live/board';
 import { infeasibility, useReviewRun, usePlanScope, useStartAgentRun } from '@/components/live/plan-data';
 import { type AgentConfig, useAgentConfig } from '@/components/live/settings-data';
 import { Empty, ErrorBanner } from '@/components/live/states';
-import { DEPOT_NAME, fmtNum, fmtRunDate, fmtTime, isoDay } from '@/lib/format';
+import { fmtNum, fmtRunDate, fmtTime, isoDay } from '@/lib/format';
 import type { AgentRunDetail } from '@/lib/odata/types';
+import { useDepots } from '@/components/live/depots';
 
 const BOARD = '/plan/dsp-02-plan-board';
 export const INFEASIBLE = '/plan/dsp-23-plan-infeasible';
@@ -46,6 +47,7 @@ const STEPS: Step[] = [
 ];
 
 export default function LiveDsp22PlanningAgentDrafting() {
+  const { name: depotName } = useDepots();
   const router = useRouter();
   const scope = usePlanScope();
   const { runId, run, setRunId } = useReviewRun();
@@ -78,7 +80,7 @@ export default function LiveDsp22PlanningAgentDrafting() {
           <div className="d-head">
             <div className="d-head__txt">
               <div className="d-eyebrow">
-                {DEPOT_NAME[depot ?? ''] ?? depot}
+                {depotName(depot)}
                 <span className="m-sep" />
                 {runDate ? `${fmtRunDate(runDate)} run` : ''}
                 {run.data && <><span className="m-sep" />started {fmtTime(run.data.createdAt)}</>}

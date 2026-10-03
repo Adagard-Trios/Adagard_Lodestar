@@ -7,6 +7,7 @@ import { useClaims, useLiveRoutes } from '@/model/hooks';
 import { depotsLabel, LATE_RISK, LIVE_POLL_MS, tripProgress, useAlertCount, useEvery, useSignalLost } from '@/model/plan';
 import type { Trip } from '@/model/types';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L181":{"to":"dsp-30-vehicle-detail","kind":"go"},"N0":{"to":"dsp-27-alerts","kind":"nav"},"N2":{"to":"dsp-32-plans","kind":"nav"},"N3":{"to":"dsp-33-me-and-alert-rules","kind":"nav"}}};
 
@@ -17,6 +18,7 @@ type Row = { trip: Trip; kind: Kind; title: string; sub: ReactNode; risk: number
 const STATUS: Record<Trip['status'], string> = { PLANNED: 'Planned', LOADING: 'Loading', ENROUTE: 'En route', COMPLETE: 'Complete' };
 
 export default function ScreenDsp29LiveRoutes() {
+  useDepots(); // re-render when the depot names (depotsLabel) arrive
   const claims = useClaims();
   const { data, loading, error, refresh } = useLiveRoutes();
   // realtime notices (eta_update, signal, trip_released, plan_published) re-read at once; this covers a quiet socket

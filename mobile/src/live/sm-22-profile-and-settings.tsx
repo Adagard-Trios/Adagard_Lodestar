@@ -9,6 +9,7 @@ import { useClaims, useStoreDay } from '@/model/hooks';
 import { DEFAULT_TOPICS, savePreferences, usePreferences, type StoreTopic } from '@/model/preferences';
 import { initials } from '@/model/store-face';
 import { Frame, Icon, Scroll, Tap, type ScreenNav } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L102":{"to":"sm-11-today-order-day","kind":"go"},"L104":{"to":"sm-05-sign-in","kind":"go"}}};
 
@@ -19,6 +20,7 @@ const TOPICS: Array<{ k: StoreTopic; label: string; sub: string }> = [
 ];
 
 export default function ScreenSm22ProfileAndSettings() {
+  const { name: depotName } = useDepots();
   const claims = useClaims();
   const device = useDeviceId();
   const outlet = useStoreDay().data?.outlet ?? null;
@@ -82,7 +84,7 @@ export default function ScreenSm22ProfileAndSettings() {
                   <Text style={s.t20}>{outlet?.name ?? '—'}
                     {outlet ? (
                       <View>
-                        <Text style={s.t19}>{`supplied from ${titleCase(outlet.depot)} depot`}</Text>
+                        <Text style={s.t19}>{`supplied from ${depotName(outlet.depot)}`}</Text>
                       </View>
                     ) : null}</Text>
                 </View>

@@ -8,10 +8,10 @@ import { Text, View, StyleSheet } from 'react-native';
 import { dayLabel, isoDay } from '@/lib/time';
 import { plural } from '@/lodestar/live';
 import { useClaims, useOutbox, useParam, useStoreDay } from '@/model/hooks';
-import { depotName } from '@/model/plan';
 import { useNextRun } from '@/model/store-face';
 import type { TempClass } from '@/model/types';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L85":{"to":"sm-12-orders","kind":"go"},"L86":{"to":"sm-13-new-order","kind":"go"}}};
 
@@ -32,6 +32,7 @@ const CLOCK_SLACK_MS = 2 * 60_000;
 const STEPS = ['Received', 'Planned', 'Loaded', 'En route', 'Delivered'];
 
 export default function ScreenSm01Received() {
+  const { name: depotName } = useDepots();
   const claims = useClaims();
   const day = useStoreDay();
   const outlet = day.data?.outlet ?? null;

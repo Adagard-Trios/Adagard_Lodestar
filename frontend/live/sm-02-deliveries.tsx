@@ -16,10 +16,11 @@ import { Ic } from '@/components/live/icons';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { isCounted, leftText, noticeText, orderCredit, STORE_EVENTS, useNextRun } from '@/components/live/store-data';
 import { useAuth } from '@/lib/auth/AuthProvider';
-import { addDays, daysAgo, DEPOT_NAME, fmtClock, fmtDay, fmtRunDate, fmtTime, LATE_RISK_PCT, title } from '@/lib/format';
+import { addDays, daysAgo, fmtClock, fmtDay, fmtRunDate, fmtTime, LATE_RISK_PCT, title } from '@/lib/format';
 import { colomboDay, CUTOFF_LABEL } from '@/lib/workday';
 import { useAction, useQuery } from '@/lib/odata/hooks';
 import type { Notification, Order, Trip, TripStop } from '@/lib/odata/types';
+import { useDepots } from '@/components/live/depots';
 
 const PILL: Record<string, [string, string]> = {
   RECEIVED: ['m-pill--brand', 'Received'], PLANNED: ['m-pill--brand', 'Planned'], LOADED: ['m-pill--loaded', 'Loading'],
@@ -146,6 +147,7 @@ function Thread({ order, stop, trip }: { order: Order; stop?: TripStop; trip?: T
 }
 
 export default function LiveSm02Deliveries() {
+  const { name: depotName } = useDepots();
   const { session } = useAuth();
   const outlet = useMyOutlet();
   const outletId = session?.outletId;
@@ -181,7 +183,7 @@ export default function LiveSm02Deliveries() {
   const o = outlet.data;
   const units = sameRun.reduce((s, x) => s + (x.order?.units ?? 0), 0);
   const depot = o?.depot ?? trip?.depot;
-  const hub = depot ? DEPOT_NAME[depot] ?? depot : 'the hub';
+  const hub = depot ? depotName(depot) : 'the hub';
   const vans = new Set(sameRun.map(s => s.tripId)).size;
   // the next run still open for orders: tomorrow's until its 4:00 PM cut-off today (Colombo), then the next
   // operating day; kept current as the clock passes the cut-off

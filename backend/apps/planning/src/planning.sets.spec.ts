@@ -1,4 +1,5 @@
 import { anything, capture, instance, mock, verify, when } from 'ts-mockito';
+import { depotDelegate } from '../../../libs/odata/test/depots';
 import { ODataError, runWithRequestContext } from '@lodestar/odata';
 import type { AuditSink } from '@lodestar/security';
 import { personas, principal } from '../../../libs/security/test/principals';
@@ -27,7 +28,7 @@ describe('PlansSet', () => {
   beforeEach(() => {
     planning = mock(PlanningService);
     eta = mock(EtaService);
-    set = new PlansSet({} as any, instance(planning), instance(eta));
+    set = new PlansSet({ depot: depotDelegate() } as any, instance(planning), instance(eta));
     when(planning.nextPlanId(anything(), anything())).thenResolve({ id: 'PLK-2026-04-07-v2', version: 2, runDate: RUN_DATE });
   });
 
@@ -107,12 +108,18 @@ describe('PlansSet', () => {
       verify(planning.runAutoPlan('KANDY' as any, '2026-04-07', 'nilanthi')).once();
     });
 
-    it('refuses auto-plan, board and outlook for a foreign depot', () => {
+    it('refuses auto-plan, board and outlook for a foreign depot', async () => {
       const ctx = { principal: personas.kasun, params: { depot: 'PELIYAGODA', runDate: '2026-04-07' }, headers: {} };
-      expect(() => set.autoPlan(ctx)).toThrow(expect.objectContaining({ status: 403 }));
-      expect(() => set.board(ctx)).toThrow(expect.objectContaining({ status: 403 }));
-      expect(() => set.capacityOutlook(ctx)).toThrow(expect.objectContaining({ status: 403 }));
+      await expect(set.autoPlan(ctx)).rejects.toMatchObject({ status: 403 });
+      await expect(set.board(ctx)).rejects.toMatchObject({ status: 403 });
+      await expect(set.capacityOutlook(ctx)).rejects.toMatchObject({ status: 403 });
       verify(planning.runAutoPlan(anything(), anything(), anything())).never();
+    });
+
+    it('accepts a depot code in any case and refuses one the Depots registry does not know (400)', async () => {
+      await set.autoPlan({ principal: personas.nilanthi, params: { depot: 'kandy', runDate: '2026-04-07' }, headers: {} });
+      verify(planning.runAutoPlan('KANDY' as any, '2026-04-07', 'nilanthi')).once();
+      await expect(set.autoPlan({ principal: personas.admin, params: { depot: 'GALLE', runDate: '2026-04-07' }, headers: {} })).rejects.toMatchObject({ status: 400, target: 'depot' });
     });
 
     it('lets an admin plan any depot', async () => {
@@ -224,7 +231,7 @@ describe('AgentRunsSet', () => {
     planning = mock(PlanningService);
     audit = mock<AuditSink>();
     runs = mock<AgentRunDelegate>();
-    set = new AgentRunsSet({ agentRun: instance(runs) } as any, instance(agent), instance(planning), instance(audit));
+    set = new AgentRunsSet({ agentRun: instance(runs), depot: depotDelegate() } as any, instance(agent), instance(planning), instance(audit));
     when(runs.create(anything())).thenCall(async (a: any) => a.data);
     when(runs.update(anything())).thenCall(async (a: any) => ({ id: a.where.id, ...a.data }));
     when(audit.record(anything())).thenResolve();

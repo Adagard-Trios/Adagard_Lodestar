@@ -1,11 +1,80 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
-import { EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, OperationContext } from '@lodestar/odata';
+import { assertDepotCode, DEPOT_CODE, EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, OperationContext } from '@lodestar/odata';
 import { HUMAN_ROLES, Roles } from '@lodestar/security';
 import { DataImportService, ImportFile } from './data-import.service';
 import { OutletsService } from './outlets.service';
 
 const EVERYONE = [...HUMAN_ROLES, Roles.Service];
+
+/**
+ * Depots (ADM-21): the depot registry every app reads its depot names from. Every signed-in caller reads it
+ * (field and store roles see the active depots; admins also the deactivated ones); only admins register, edit
+ * or deactivate a depot (PATCH isActive=false), each write audited. A depot's code is its key and never changes.
+ */
+@Injectable()
+@EntitySet({
+  name: 'Depots',
+  model: 'Depot',
+  read: EVERYONE,
+  create: [Roles.Admin],
+  update: [Roles.Admin],
+  abac: { open: '*', self: () => ({ isActive: true }) },
+  search: ['code', 'name', 'district', 'address'],
+  insertable: ['code', 'name', 'address', 'district', 'lat', 'lng', 'phone'],
+  updatable: ['name', 'address', 'district', 'lat', 'lng', 'phone', 'isActive'],
+  defaultOrderBy: 'name',
+})
+export class DepotsSet extends ODataEntitySet {
+  constructor(prisma: PrismaService) {
+    super(prisma);
+  }
+
+  /** Trims text fields and refuses blanks, bad coordinates and phone numbers that are not a number. */
+  private check(d: Record<string, any>, creating: boolean) {
+    for (const f of ['name', 'district', 'address', 'phone']) {
+      if (typeof d[f] === 'string') d[f] = d[f].trim() || (f === 'address' || f === 'phone' ? null : '');
+    }
+    for (const f of ['name', 'district']) {
+      if ((creating || f in d) && !d[f]) throw ODataError.badRequest(`${f} is required`, f);
+      if (d[f] && d[f].length > 80) throw ODataError.badRequest(`${f} is at most 80 characters`, f);
+    }
+    if (d.lat !== undefined && d.lat !== null && (d.lat < -90 || d.lat > 90)) throw ODataError.badRequest('lat must be between -90 and 90', 'lat');
+    if (d.lng !== undefined && d.lng !== null && (d.lng < -180 || d.lng > 180)) throw ODataError.badRequest('lng must be between -180 and 180', 'lng');
+    if (d.phone && !/^\+?[0-9 ()-]{7,20}$/.test(d.phone)) throw ODataError.badRequest('phone must be a phone number', 'phone');
+  }
+
+  async beforeCreate(data: Record<string, any>) {
+    const code = typeof data.code === 'string' ? data.code.trim().toUpperCase() : '';
+    if (!DEPOT_CODE.test(code)) {
+      throw ODataError.badRequest('code must be 2-32 upper-case letters, digits or _ starting with a letter (e.g. GALLE)', 'code');
+    }
+    if (await this.prisma.depot.findUnique({ where: { code }, select: { code: true } })) {
+      throw ODataError.conflict(`Depot ${code} is already registered`, 'code');
+    }
+    this.check(data, true);
+    return { ...data, code };
+  }
+
+  /** Deactivating a depot that still has active outlets or vehicles would strand them: move them first. */
+  async beforeUpdate(patch: Record<string, any>, current: any) {
+    this.check(patch, false);
+    if (patch.isActive === false && current.isActive) {
+      const [outlets, vehicles] = await Promise.all([
+        this.prisma.outlet.count({ where: { depot: current.code, isActive: true } }),
+        this.prisma.vehicle.count({ where: { depot: current.code } }),
+      ]);
+      if (outlets || vehicles) {
+        throw ODataError.unprocessable(
+          'DepotInUse',
+          `${current.name} still has ${outlets} active outlet${outlets === 1 ? '' : 's'} and ${vehicles} vehicle${vehicles === 1 ? '' : 's'}: move them to another depot first`,
+          'isActive',
+        );
+      }
+    }
+    return patch;
+  }
+}
 
 /**
  * Outlets: dispatch and loaders see their depots, a store manager their own
@@ -50,6 +119,7 @@ export class OutletsSet extends ODataEntitySet {
   }
 
   async beforeCreate(data: Record<string, any>) {
+    data.depot = await assertDepotCode(this.prisma, data.depot);
     this.checkWindow(data.windowOpen, data.windowClose);
     this.checkMallWindow(data.mallWindow);
     return data;
@@ -107,6 +177,11 @@ export class CalendarSet extends ODataEntitySet {
 export class DistrictTravelSet extends ODataEntitySet {
   constructor(prisma: PrismaService) {
     super(prisma);
+  }
+
+  async beforeCreate(data: Record<string, any>) {
+    data.depot = await assertDepotCode(this.prisma, data.depot);
+    return data;
   }
 }
 

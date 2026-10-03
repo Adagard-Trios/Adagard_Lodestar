@@ -7,14 +7,15 @@ import { Text, View, StyleSheet } from 'react-native';
 import { hm } from '@/lib/time';
 import { deferredCount, useRePlan } from '@/model/dock';
 import { useBayQueue, useClaims, useParam } from '@/model/hooks';
-import { depotName } from '@/model/plan';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L33":{"to":"sm-b1-store-later-arrival-notice","kind":"go"},"B":{"to":"ld-01-dock-queue","kind":"back"}}};
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
 
 export default function ScreenLd14RePlanReceived() {
+  const { name: depotName } = useDepots();
   const claims = useClaims();
   const planId = useParam('plan');
   const bay = useBayQueue();

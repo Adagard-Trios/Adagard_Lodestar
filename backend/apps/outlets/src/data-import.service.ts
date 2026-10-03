@@ -74,7 +74,7 @@ export function plainReason(reason: string): string {
   if (/^missing /.test(reason)) return `This value is empty. ${reason.replace(/^missing /, '')} is required.`;
   if (/^unknown parking constraint/.test(reason)) return 'Lodestar reads only normal, van_only or mall_dock (with an underscore).';
   if (/^unknown dock type/.test(reason)) return 'Lodestar reads only rear_dock, street or mall_bay.';
-  if (/^unknown depot/.test(reason)) return 'The depot must be Peliyagoda or Kandy.';
+  if (/^unknown depot/.test(reason)) return 'The depot must be the code or name of a registered depot (Admin, Depots).';
   if (/^unknown brand/.test(reason)) return 'The brand must be Fresh, Style or Tech.';
   if (/^unknown vehicle type/.test(reason)) return 'The type must be truck or van.';
   if (/^unknown temperature class/.test(reason)) return 'The temperature must be reefer (chilled) or dry (ambient).';
@@ -165,6 +165,34 @@ export class DataImportService {
       detail: duplicates ? `${duplicates} repeated` : `${seen.size} distinct`,
     });
 
+    // Depots come from the registry (ADM-21): a row may name a depot by code or by name, never an unregistered one.
+    const depotNames = new Map<string, string>();
+    if (file === 'outlets' || file === 'vehicles' || file === 'district_travel') {
+      const depots = await this.prisma.depot.findMany({ select: { code: true, name: true, isActive: true } });
+      const norm = (x: string) => x.trim().toUpperCase().replace(/[\s-]+/g, '_');
+      const byKey = new Map<string, (typeof depots)[number]>();
+      for (const d of depots) {
+        byKey.set(d.code, d);
+        byKey.set(norm(d.name), d);
+        depotNames.set(d.code, d.name);
+      }
+      let unknown = 0;
+      for (const r of mapped) {
+        const d = byKey.get(r.depot);
+        if (d?.isActive) {
+          r.depot = d.code;
+          continue;
+        }
+        unknown++;
+        bad.add(r.__row);
+        add({
+          row: r.__row, key: rowKey(file, r), column: 'depot', value: r.depot,
+          reason: d ? `${d.name} is deactivated. Reactivate it on the Depots page, or pick another depot.` : `No depot ${r.depot} is registered. Register it on the Depots page first.`,
+        });
+      }
+      checks.push({ label: 'Every depot is a registered, active depot', passed: unknown === 0, detail: unknown ? `${unknown} unknown` : `${new Set(mapped.map((r) => r.depot)).size} depots` });
+    }
+
     if (file === 'outlets') {
       let windows = 0;
       for (const o of mapped) {
@@ -182,7 +210,7 @@ export class DataImportService {
         if (!served.has(`${o.depot}|${String(o.district).toLowerCase()}`)) {
           outside++;
           bad.add(o.__row);
-          add({ row: o.__row, key: o.id, column: 'district', value: o.district, reason: `${o.depot === 'KANDY' ? 'Kandy Hub' : 'Peliyagoda'} has no travel times for ${o.district}. Import district_travel.csv first, or fix the district.` });
+          add({ row: o.__row, key: o.id, column: 'district', value: o.district, reason: `${depotNames.get(o.depot) ?? o.depot} has no travel times for ${o.district}. Import district_travel.csv first, or fix the district.` });
         }
       }
       checks.push({ label: 'Every outlet sits in a district its depot serves', passed: outside === 0, detail: outside ? `${outside} outside` : `${new Set(mapped.map((o) => o.district)).size} districts` });

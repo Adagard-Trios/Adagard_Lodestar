@@ -7,14 +7,15 @@ import { Text, View, StyleSheet } from 'react-native';
 import { dayLabel, hm } from '@/lib/time';
 import { ackFor, loadGroups, shortfallFor, useTicks } from '@/model/dock';
 import { useClaims, useLoadSheet, useNotifications } from '@/model/hooks';
-import { depotName } from '@/model/plan';
 import { useNow } from '@/model/store-face';
 import type { OrderLineItem } from '@/model/types';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L227":{"to":"ld-21-bay-overview","kind":"go"}}};
 
 export default function ScreenLd27TabletLocked() {
+  const { name: depotName } = useDepots();
   const claims = useClaims();
   const now = useNow();
   const sheet = useLoadSheet();

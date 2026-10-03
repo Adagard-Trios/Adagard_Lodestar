@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
-import { EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, OperationContext, WriteContext } from '@lodestar/odata';
+import { assertDepotCode, EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, OperationContext, WriteContext } from '@lodestar/odata';
 import { canAccessDepot, HUMAN_ROLES, isPrivileged, Roles } from '@lodestar/security';
-import { Depot } from '@prisma/client';
 import { TripsService, VEHICLE_FAULTS, type VehicleFault } from './trips.service';
 
 const tripDepot = (depots: string[]) => ({ depot: { in: depots } });
@@ -24,6 +23,7 @@ const tripVehicle = (vehicleId: string) => ({ vehicleId });
     outlet: (outletId) => ({ stops: { some: { outletId } } }),
   },
   navigation: ['vehicle', 'driver', 'stops', 'loadRecord', 'plan'],
+  expandPaths: ['stops/outlet', 'stops/order', 'stops/pod'],
   search: ['id', 'district', 'vehicleId', 'sealNumber'],
   updatable: ['driverId', 'bay', 'departTime', 'planMinutes', 'tripNumber'],
   defaultOrderBy: 'runDate desc,brand,district,tripNumber',
@@ -86,12 +86,13 @@ export class TripsSet extends ODataEntitySet {
     name: 'BayQueue',
     binding: 'collection',
     roles: [Roles.Loader, Roles.Dispatcher, Roles.Admin],
-    params: { depot: { type: 'Lodestar.Depot', required: true }, runDate: { type: 'Edm.Date', required: true } },
+    params: { depot: { type: 'Edm.String', required: true }, runDate: { type: 'Edm.Date', required: true } },
     returns: 'Edm.Untyped',
   })
-  bayQueue(ctx: OperationContext) {
-    if (!canAccessDepot(ctx.principal, ctx.params.depot)) throw ODataError.forbidden(`Not your depot`, 'depot');
-    return this.trips.getBayQueue(ctx.params.depot as Depot, ctx.params.runDate, ctx.rowFilter);
+  async bayQueue(ctx: OperationContext) {
+    const depot = await assertDepotCode(this.prisma, ctx.params.depot, { active: false });
+    if (!canAccessDepot(ctx.principal, depot)) throw ODataError.forbidden(`Not your depot`, 'depot');
+    return this.trips.getBayQueue(depot, ctx.params.runDate, ctx.rowFilter);
   }
 }
 

@@ -11,9 +11,9 @@ import { hm } from '@/lib/time';
 import { faultReport, reportVehicleFault, useRePlanAlert, useVehicleDockLoad, type VehicleFault } from '@/model/dock';
 import { precoolReading } from '@/model/field-reports';
 import { useBayQueue, useClaims, useLoadSheet, useOnline, useOutbox } from '@/model/hooks';
-import { depotName } from '@/model/plan';
 import { useNow } from '@/model/store-face';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L31":{"app":"Lodestar Plan (desktop)","screen":"DSP-B1 Re-plan diff"},"B":{"to":"ld-09-pre-cool-check","kind":"back"}}};
 
@@ -22,6 +22,7 @@ const white = (xml: string) => xml.replace(/#4a5467/g, '#ffffff');
 const grey = (xml: string) => xml.replace(/#ffffff/g, '#4a5467');
 
 export default function ScreenLdB1VehicleCanTDepart() {
+  const { name: depotName } = useDepots();
   const claims = useClaims();
   const online = useOnline();
   const now = useNow();

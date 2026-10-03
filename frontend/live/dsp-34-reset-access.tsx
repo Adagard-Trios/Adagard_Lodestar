@@ -5,11 +5,13 @@
 // one-time link; otherwise (the shipped realm) the screen gives the admin-request path the design shows. "Back to
 // sign in" is the design's link (L175).
 import { Ic } from '@/components/live/icons';
-import { DEPOT_NAME } from '@/lib/format';
 import { runtimeConfig } from '@/lib/config';
 import { adminRequestMail, resetCredentialsUrl, resetOptions } from '@/lib/auth/reset';
+import { useDepots } from '@/components/live/depots';
 
 export default function LiveDsp34ResetAccess() {
+  // Depot names come from the registry once signed in; before sign-in none are shown (never a made-up list).
+  const { active: depotList } = useDepots();
   const opts = resetOptions();
   // live screens render in the browser only (LiveSwitch waits for the client), so the runtime config is there
   const resetUrl = opts.selfService && typeof window !== 'undefined' ? resetCredentialsUrl(runtimeConfig()) : null;
@@ -45,7 +47,7 @@ export default function LiveDsp34ResetAccess() {
             </svg>
           </div>
           <div className="dx-auth__foot">
-            {Object.entries(DEPOT_NAME).map(([k, name]) => <span key={k}><Ic n="depot" />{name}</span>)}
+            {depotList.map(d => <span key={d.code}><Ic n="depot" />{d.name}</span>)}
             <span><Ic n="lock" />{"Waypoint Group staff only"}</span>
           </div>
         </div>

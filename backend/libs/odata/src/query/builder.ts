@@ -10,6 +10,17 @@ export const MAX_TOP = 500;
 export interface SetQueryPolicy {
   /** Navigation properties of the root type that may be expanded or traversed in filters */
   navigation: string[];
+  /**
+   * Deeper to-one navigation paths a $filter may walk, declared explicitly
+   * (e.g. 'order/outlet' lets Deferrals filter on order/outlet/depot). Each
+   * path's first segment must also be in `navigation`. Never used for $expand.
+   */
+  filterPaths?: string[];
+  /**
+   * Nested $expand paths, declared explicitly (e.g. 'stops/outlet' lets Trips expand
+   * stops($expand=outlet)). The first segment must also be in `navigation`.
+   */
+  expandPaths?: string[];
   /** Properties searched by $search (paths like 'outlet/name' allowed) */
   search: string[];
   /** Hidden properties per entity type name (never selected, filtered or sorted) */
@@ -47,7 +58,10 @@ export class QueryBuilder {
   ) {
     this.policy = {
       isHidden: (t, p) => this.isHidden(t, p),
-      canNavigate: (from, nav) => from.name === root.name && setPolicy.navigation.includes(nav),
+      canNavigate: (from, nav, prefix) => {
+        if (!prefix || prefix.length === 0) return from.name === root.name && setPolicy.navigation.includes(nav);
+        return setPolicy.navigation.includes(prefix[0]) && !!setPolicy.filterPaths?.includes([...prefix, nav].join('/'));
+      },
     };
     this.translator = new FilterTranslator(model, this.policy);
   }
@@ -108,13 +122,16 @@ export class QueryBuilder {
     return { select, projection };
   }
 
-  private expand(item: ExpandItem, select: Record<string, any>, projection: Projection, maxTop: number) {
-    const nav = this.root.properties.get(item.navigation);
-    if (!nav || nav.kind !== 'object' || this.isHidden(this.root, item.navigation)) {
-      throw ODataError.invalidQuery('$expand', `'${item.navigation}' is not a navigation property of ${this.root.name}`);
+  private expand(item: ExpandItem, select: Record<string, any>, projection: Projection, maxTop: number, from = this.root, prefix: string[] = []) {
+    const nav = from.properties.get(item.navigation);
+    if (!nav || nav.kind !== 'object' || this.isHidden(from, item.navigation)) {
+      throw ODataError.invalidQuery('$expand', `'${item.navigation}' is not a navigation property of ${from.name}`);
     }
-    if (!this.setPolicy.navigation.includes(item.navigation)) {
-      throw ODataError.invalidQuery('$expand', `Navigation '${item.navigation}' may not be expanded`);
+    const allowed = prefix.length === 0
+      ? this.setPolicy.navigation.includes(item.navigation)
+      : this.setPolicy.navigation.includes(prefix[0]) && !!this.setPolicy.expandPaths?.includes([...prefix, item.navigation].join('/'));
+    if (!allowed) {
+      throw ODataError.invalidQuery('$expand', `Navigation '${[...prefix, item.navigation].join('/')}' may not be expanded`);
     }
     const target = this.model.entityTypes.get(nav.type)!;
     const o = item.options;
@@ -136,6 +153,7 @@ export class QueryBuilder {
       args.take = Math.min(o.top ?? maxTop, maxTop);
       if (o.skip) args.skip = o.skip;
     }
+    for (const sub of o.expand ?? []) this.expand(sub, nested.select, nested.projection, maxTop, target, [...prefix, item.navigation]);
     select[item.navigation] = args;
     projection.expand[item.navigation] = nested.projection;
   }

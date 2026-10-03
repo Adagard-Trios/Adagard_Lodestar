@@ -8,6 +8,7 @@ import { useClaims } from '@/model/hooks';
 import { depotsLabel, useAlertCount } from '@/model/plan';
 import { alertRules, clock12, DEFAULT_ALERTS, LATE_RISK_PCT, onCallNow, savePreferences, usePreferences, type Preferences } from '@/model/preferences';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"N0":{"to":"dsp-27-alerts","kind":"nav"},"N1":{"to":"dsp-29-live-routes","kind":"nav"},"N2":{"to":"dsp-32-plans","kind":"nav"}}};
 
@@ -24,6 +25,7 @@ const initials = (name?: string) =>
 type RuleRow = { key: string; icon: string; tile: StyleProp<ViewStyle>; title: string; sub: string; on: boolean; set: (v: boolean) => Preferences['alerts'] };
 
 export default function ScreenDsp33MeAndAlertRules() {
+  useDepots(); // re-render when the depot names (depotsLabel) arrive
   const claims = useClaims();
   const device = useDeviceId();
   const alertCount = useAlertCount();

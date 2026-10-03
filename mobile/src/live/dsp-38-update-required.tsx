@@ -3,13 +3,15 @@
 import { Text, View, StyleSheet } from 'react-native';
 import { applyUpdate, useVersion } from '@/lib/version';
 import { hm } from '@/lib/time';
-import { openDesktop, titleCase } from '@/lodestar/live';
+import { openDesktop } from '@/lodestar/live';
 import { useReviewPlans } from '@/model/plan';
 import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L185":{"to":"dsp-26-sign-in","kind":"go"}}};
 
 export default function ScreenDsp38UpdateRequired() {
+  const { name: depotName } = useDepots();
   const { current, minimum } = useVersion();
   const plans = useReviewPlans().data ?? [];
   const first = plans[0];
@@ -43,7 +45,7 @@ export default function ScreenDsp38UpdateRequired() {
                   <Text style={s.t7}>{`Approvals waiting: ${plans.length}`}</Text>
                 </View>
                 <View>
-                  <Text style={s.t8}>{first ? `${titleCase(first.depot)} plan v${first.version}, ${hm(first.createdAt)}. Still here after the update; nothing is sent until you approve.` : 'Nothing waiting. Plans stay on the server until you approve.'}</Text>
+                  <Text style={s.t8}>{first ? `${depotName(first.depot)} plan v${first.version}, ${hm(first.createdAt)}. Still here after the update; nothing is sent until you approve.` : 'Nothing waiting. Plans stay on the server until you approve.'}</Text>
                 </View>
               </View>
             </View>

@@ -7,6 +7,7 @@ import { today, useClaims } from '@/model/hooks';
 import { depotsLabel, LIVE_POLL_MS, useAlerts, useEvery, type AlertRow } from '@/model/plan';
 import { clock12, onCallNow, usePreferences } from '@/model/preferences';
 import { Frame, Icon, Scroll, Tap, type ScreenNav, type Target } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L61":{"to":"dsp-28-approve-re-plan","kind":"go"},"N1":{"to":"dsp-29-live-routes","kind":"nav"},"N2":{"to":"dsp-32-plans","kind":"nav"},"N3":{"to":"dsp-33-me-and-alert-rules","kind":"nav"}}};
 
@@ -14,6 +15,7 @@ const targetOf = (r: AlertRow): Target | undefined =>
   r.plan ? { to: 'dsp-28-approve-re-plan', params: { plan: r.plan } } : r.vehicle ? { to: 'dsp-30-vehicle-detail', params: { vehicle: r.vehicle } } : undefined;
 
 export default function ScreenDsp27Alerts() {
+  useDepots(); // re-render when the depot names (depotsLabel) arrive
   const claims = useClaims();
   const { needs, handled, signedIn, loading, hasData, date, refresh } = useAlerts();
   useEvery(LIVE_POLL_MS, refresh);

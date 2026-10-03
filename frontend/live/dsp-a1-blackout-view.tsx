@@ -16,10 +16,11 @@ import {
 import { Ic } from '@/components/live/icons';
 import { usePlanScope } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
-import { DEPOT_NAME, fmtClock, fmtNum, fmtRunDate, fmtTime, title } from '@/lib/format';
+import { fmtClock, fmtNum, fmtRunDate, fmtTime, title } from '@/lib/format';
 import { useAction } from '@/lib/odata/hooks';
 import type { Trip, TripStop } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
+import { useDepots } from '@/components/live/depots';
 
 const vehicleKind = (t: Trip) => (t.vehicle ? `${t.vehicle.tempClass === 'CHILLED' ? 'Reefer' : 'Dry'} ${t.vehicle.type === 'VAN' ? 'van' : 'truck'}` : 'Vehicle');
 const riskColor = (p: number) => (p >= 50 ? '#D92D20' : p >= 30 ? '#F5B83D' : '#10B981');
@@ -28,6 +29,7 @@ const lastActual = (t: Trip) =>
 
 /** The trips table (also drawn, dimmed, behind DSP-A1b). */
 export function TripsTable({ trips, signal, onOpen, compact }: { trips: Trip[]; signal: Map<string, SignalEvent>; onOpen?: (t: Trip) => void; compact?: boolean }) {
+  const { name: depotName } = useDepots();
   return (
     <div className="d-table">
       <div className="d-tr d-tr--head">
@@ -56,7 +58,7 @@ export function TripsTable({ trips, signal, onOpen, compact }: { trips: Trip[]; 
             </span>
             <span className={`d-td${lost ? ' g-muted' : ''}`} style={{ width: compact ? '88px' : '86px' }}>{ping}</span>
             <span className="d-td" style={{ width: '50px' }}>{done}/{stops.length}</span>
-            {!compact && <span className={`d-td${next ? ' id' : ''}`} style={{ width: '90px' }}>{next ? next.outletId : DEPOT_NAME[t.depot] ?? t.depot}</span>}
+            {!compact && <span className={`d-td${next ? ' id' : ''}`} style={{ width: '90px' }}>{next ? next.outletId : depotName(t.depot)}</span>}
             {risk === null || t.status === 'COMPLETE' ? (
               <span className="d-td t-3" style={{ flex: '1' }}>{"·"}</span>
             ) : (
@@ -105,6 +107,7 @@ export function BlackoutHero({ trip, lost, stop, onOpen }: { trip: Trip; lost: S
 }
 
 function Panel({ trip, lost }: { trip: Trip; lost: SignalEvent }) {
+  const { name: depotName } = useDepots();
   const nav = useScreenNav();
   const driver = useDriver(trip.driverId);
   const open = openStops(trip);
@@ -164,7 +167,7 @@ function Panel({ trip, lost }: { trip: Trip; lost: SignalEvent }) {
           {trip.loadRecord?.loadedAt && (
             <div className="g-li"><span className="g-mark g-mark--ok"><Ic n="check" /></span><span><b>{fmtClock(trip.loadRecord.loadedAt)}</b>{` Loaded · ${orders.length} order${orders.length === 1 ? '' : 's'} · ${fmtNum(kg)} kg · ${fmtNum(m3, 1)} m³`}</span></div>
           )}
-          {trip.departTime && <div className="g-li"><span className="g-mark g-mark--ok"><Ic n="check" /></span><span><b>{fmtClock(trip.departTime)}</b>{` Departed ${DEPOT_NAME[trip.depot] ?? trip.depot}`}</span></div>}
+          {trip.departTime && <div className="g-li"><span className="g-mark g-mark--ok"><Ic n="check" /></span><span><b>{fmtClock(trip.departTime)}</b>{` Departed ${depotName(trip.depot)}`}</span></div>}
           {stops.filter(s => s.arrivalActual).map(s => (
             <div key={s.id} className="g-li"><span className="g-mark g-mark--ok"><Ic n="check" /></span><span><b>{fmtClock(s.arrivalActual)}</b>{' At '}<span className="id">{s.outletId}</span>{s.status === 'DELIVERED' ? ' · delivered' : ''}</span></div>
           ))}
@@ -233,6 +236,7 @@ export function useBlackout() {
 }
 
 export default function LiveDspA1BlackoutView() {
+  const { name: depotName } = useDepots();
   const { scope, trips, signal, silent, trip, rows, open } = useBlackout();
   const { runDate, active, depots, depot, setDepot } = scope;
   const all = trips.data ?? [];
@@ -248,7 +252,7 @@ export default function LiveDspA1BlackoutView() {
           <div className="d-head">
             <div className="d-head__txt">
               <div className="d-eyebrow">
-                {active.length > 1 ? 'Both depots ' : `${DEPOT_NAME[active[0]] ?? active[0] ?? ''} `}<span className="m-sep" />
+                {active.length > 1 ? 'Both depots ' : `${depotName(active[0])} `}<span className="m-sep" />
                 {` ${runDate ? fmtRunDate(runDate) : '…'}, ${fmtTime(new Date())} `}<span className="m-sep" />
                 {` ${onRoad.length} on the road · ${onRoad.length - silent.filter(t => t.status === 'ENROUTE').length} reporting live · ${stops.filter(s => s.status === 'DELIVERED').length} of ${stops.length} stops confirmed`}
               </div>
@@ -259,7 +263,7 @@ export default function LiveDspA1BlackoutView() {
                 {[null, ...depots].map(d => (
                   <span key={d ?? 'all'} className={`d-filter lv-click${depot === d ? ' is-on' : ''}`} role="button" tabIndex={0}
                     onClick={e => { e.stopPropagation(); setDepot(d); }} onKeyDown={e => { if (e.key === 'Enter') setDepot(d); }}>
-                    {d ? DEPOT_NAME[d] ?? d : 'All depots'}
+                    {d ? depotName(d) : 'All depots'}
                   </span>
                 ))}
               </div>

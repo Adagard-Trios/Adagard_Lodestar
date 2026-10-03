@@ -12,11 +12,14 @@ import { Ic } from '@/components/live/icons';
 import { p5Link, usePlanScope, useExceptions, type ExceptionItem } from '@/components/live/plan-data';
 import Btn from '@/components/live/Btn';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
-import { BRAND_LETTER, DEPOT_NAME, fmtClock, fmtDay, fmtRunDate, fmtTime, LATE_RISK_PCT, pct } from '@/lib/format';
+import { BRAND_LETTER, fmtClock, fmtDay, fmtRunDate, fmtTime, pct } from '@/lib/format';
+import { usePlanningRules } from '@/components/live/planning-rules';
 import { useAction, useQuery, useRealtimeRooms, useRealtimeStatus } from '@/lib/odata/hooks';
 import type { Order, Trip, TripStop } from '@/lib/odata/types';
+import { useDepots } from '@/components/live/depots';
 
-const RISK = LATE_RISK_PCT;
+/** At or over the planning service's late-risk alert level (PlanningRules.lateRisk.alertPct); unknown level = no. */
+const atRisk = (p: number, risk: number | undefined) => risk !== undefined && p >= risk;
 type Filter = 'all' | 'risk' | 'exc';
 const ATT: Record<ExceptionItem['tone'], { cls: string; bg: string; fg: string; icon: 'alert' | 'clock' | 'wifi-off' }> = {
   bad: { cls: 'x-att--bad', bg: 'var(--tint-bad)', fg: 'var(--st-exception-fg)', icon: 'alert' },
@@ -34,11 +37,11 @@ const remaining = (t: Trip) => (t.stops ?? []).filter(s => !['DELIVERED', 'CANCE
 const maxRisk = (t: Trip) => Math.max(0, ...remaining(t).map(s => s.lateRiskPct ?? 0));
 const hasException = (t: Trip) => (t.stops ?? []).some(s => s.status === 'EXCEPTION');
 
-function riskTag(p: number) {
-  return <span className={`m-tag ${p >= RISK ? 'm-tag--warn' : 'm-tag--ok'}`}><span className="dot" />late {p}%</span>;
+function riskTag(p: number, risk: number | undefined) {
+  return <span className={`m-tag ${atRisk(p, risk) ? 'm-tag--warn' : 'm-tag--ok'}`}><span className="dot" />late {p}%</span>;
 }
 
-function Route({ t, selected, onSelect }: { t: Trip; selected: boolean; onSelect: () => void }) {
+function Route({ t, selected, onSelect, risk }: { t: Trip; selected: boolean; onSelect: () => void; risk: number | undefined }) {
   const stops = [...(t.stops ?? [])].sort((a, b) => a.stopSeq - b.stopSeq);
   const done = stops.filter(s => s.status === 'DELIVERED').length;
   const next = stops.find(s => !['DELIVERED', 'CANCELLED'].includes(s.status));
@@ -69,7 +72,7 @@ function Route({ t, selected, onSelect }: { t: Trip; selected: boolean; onSelect
           {next ? <>Next <span className="id">{next.outletId}</span> {next.etaModel ? `~${fmtClock(next.etaModel)}` : next.etaPlan ? fmtClock(next.etaPlan) : ''}</> : t.returnTime ? `Back ${fmtClock(t.returnTime)}` : 'All stops done'}
         </span>
         <span className="spacer" />
-        {next && riskTag(maxRisk(t))}
+        {next && riskTag(maxRisk(t), risk)}
       </div>
     </div>
   );
@@ -102,6 +105,8 @@ function Thread({ order, stop, trip }: { order?: Order; stop?: TripStop; trip: T
 }
 
 export default function LiveDsp04LiveOperations() {
+  const RISK = usePlanningRules().data?.lateRisk.alertPct;
+  const { name: depotName } = useDepots();
   const router = useRouter();
   const [, setFocusTrip] = useFocusId('trip');
   const [, setFocusVehicle] = useFocusId('vehicle');
@@ -127,7 +132,7 @@ export default function LiveDsp04LiveOperations() {
   const markRead = useAction<string, unknown>((c, id) => c.action('Notifications', id, 'MarkRead'), { onSuccess: () => void exceptions.refresh() });
 
   const all = useMemo(() => trips.data ?? [], [trips.data]);
-  const shown = all.filter(t => (filter === 'risk' ? maxRisk(t) >= RISK : filter === 'exc' ? hasException(t) : true));
+  const shown = all.filter(t => (filter === 'risk' ? atRisk(maxRisk(t), RISK) : filter === 'exc' ? hasException(t) : true));
   const selected = all.find(t => t.id === sel) ?? shown[0];
   const stops = [...(selected?.stops ?? [])].sort((a, b) => a.stopSeq - b.stopSeq);
   const focusStop = stops.find(s => s.status !== 'DELIVERED') ?? stops[0];
@@ -149,7 +154,7 @@ export default function LiveDsp04LiveOperations() {
               <div className="d-eyebrow">
                 {runDate ? fmtRunDate(runDate) : ''}, {fmtTime(new Date())}
                 <span className="m-sep" />
-                {active.length > 1 ? 'Both depots' : DEPOT_NAME[active[0]] ?? active[0]}
+                {active.length > 1 ? 'Both depots' : depotName(active[0])}
                 <span className="m-sep" />
                 <span className={`m-tag ${live === 'connected' ? 'm-tag--ok' : 'm-tag--warn'}`} data-testid="live-status">
                   <span className="dot" />{live === 'connected' ? 'Live' : 'Reconnecting'} · updated {fmtClock(new Date())}
@@ -195,7 +200,7 @@ export default function LiveDsp04LiveOperations() {
             <div className="d-card" style={{ width: '364px', flexShrink: '0' }} data-testid="routes">
               <div className="d-card__head" style={{ minHeight: '50px', gap: '6px' }}>
                 <span className="d-card__title" style={{ marginRight: '4px' }}>{"Routes"}</span>
-                {([['all', 'All', all.length], ['risk', 'At risk', all.filter(t => maxRisk(t) >= RISK).length], ['exc', 'Exceptions', all.filter(hasException).length]] as Array<[Filter, string, number]>).map(([k, l, n]) => (
+                {([['all', 'All', all.length], ['risk', 'At risk', all.filter(t => atRisk(maxRisk(t), RISK)).length], ['exc', 'Exceptions', all.filter(hasException).length]] as Array<[Filter, string, number]>).map(([k, l, n]) => (
                   <span key={k} className={`d-filter lv-click${filter === k ? ' is-on' : ''}`} style={{ height: '30px', padding: '0 11px' }} role="button" tabIndex={0}
                     onClick={e => { e.stopPropagation(); setFilter(k); }} onKeyDown={e => { if (e.key === 'Enter') setFilter(k); }}>
                     {l} <b>{n}</b>
@@ -206,15 +211,15 @@ export default function LiveDsp04LiveOperations() {
               {trips.data && shown.length === 0 && <Empty title="No routes" text={all.length ? 'No route matches this filter.' : 'No trips for this run date.'} icon="navigate" />}
               {groups.map(([d, ts]) => (
                 <div key={d} className="vstack" style={{ gap: '0' }}>
-                  <div className="x-grp"><Ic n="depot" className="ic ic--sm" />{DEPOT_NAME[d] ?? d}<span className="spacer" />{ts.length} routes</div>
-                  {ts.map(t => <Route key={t.id} t={t} selected={selected?.id === t.id} onSelect={() => setSel(t.id)} />)}
+                  <div className="x-grp"><Ic n="depot" className="ic ic--sm" />{depotName(d)}<span className="spacer" />{ts.length} routes</div>
+                  {ts.map(t => <Route key={t.id} t={t} selected={selected?.id === t.id} onSelect={() => setSel(t.id)} risk={RISK} />)}
                 </div>
               ))}
             </div>
             <div className="x-map">
               <div className="x-maplegend" style={{ top: '14px', bottom: 'auto' }} data-lk="L162">
                 <span><i />{"Live position"}</span>
-                <span><i className="amber" />{`Late risk ${LATE_RISK_PCT}% or more`}</span>
+                <span><i className="amber" />{`Late risk ${RISK ?? '…'}% or more`}</span>
                 <span><i className="dash" />{"Predicted, no signal"}</span>
               </div>
               {selected && (
@@ -223,7 +228,7 @@ export default function LiveDsp04LiveOperations() {
                     <span className="x-veh__ic"><Ic n="van" /></span>
                     <span className="id fw8" style={{ fontSize: '15px' }}>{selected.vehicleId}</span>
                     <span className="x-meta t-2">
-                      {selected.driver?.name ? `${selected.driver.name} · ` : ''}{DEPOT_NAME[selected.depot] ?? selected.depot} · Trip {selected.tripNumber} · {selected.brand.charAt(0) + selected.brand.slice(1).toLowerCase()} · {selected.district}
+                      {selected.driver?.name ? `${selected.driver.name} · ` : ''}{depotName(selected.depot)} · Trip {selected.tripNumber} · {selected.brand.charAt(0) + selected.brand.slice(1).toLowerCase()} · {selected.district}
                     </span>
                     <span className="spacer" />
                     <span className="m-pill">{selected.id}</span>
@@ -237,7 +242,7 @@ export default function LiveDsp04LiveOperations() {
                           <span className="t-3">{s.status === 'DELIVERED' ? 'delivered' : s.status.toLowerCase()}</span>
                           <span className="spacer" />
                           <b>{s.arrivalActual ? fmtClock(s.arrivalActual) : s.etaModel ? `~${fmtClock(s.etaModel)}` : s.etaPlan ? fmtClock(s.etaPlan) : '—'}</b>
-                          {s.lateRiskPct !== null && s.lateRiskPct !== undefined && <span className={`m-tag ${s.lateRiskPct >= RISK ? 'm-tag--warn' : 'm-tag--ok'}`}><span className="dot" />{s.lateRiskPct}%</span>}
+                          {s.lateRiskPct !== null && s.lateRiskPct !== undefined && <span className={`m-tag ${atRisk(s.lateRiskPct, RISK) ? 'm-tag--warn' : 'm-tag--ok'}`}><span className="dot" />{s.lateRiskPct}%</span>}
                         </div>
                       ))}
                       {focusStop?.etaPlan && <div className="x-note" style={{ paddingTop: '6px' }}>Plan {fmtClock(focusStop.etaPlan)}{focusStop.etaModel ? ` · model ~${fmtClock(focusStop.etaModel)}` : ''}</div>}

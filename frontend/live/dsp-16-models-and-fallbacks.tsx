@@ -4,13 +4,15 @@
 // AGENT_MODEL mock | azure-openai, whether it is configured, the deployment, max redrafts), the calendar's last
 // day (the forecast horizon), and the reference rows each estimator reads (ServiceAllowances, DistrictTravel road
 // classes, monsoon days). The three estimators run in the planning service (EtaService, CapacityService): the
-// cards say what each is computed from. The validation targets keep the design's "target / illustrative until
-// Datathon" tag: Lodestar has no scored model metrics. Not drawn: "Change log" (no model registry).
+// cards say what each is computed from. Validation: each estimator's target and its measured value come from
+// Plans/Lodestar.PlanningRules (MAE and AUC from stored predictions vs what happened at the stop; a metric
+// without data says "Not measured yet" and why). Not drawn: "Change log" (no model registry).
 import { PlanSide } from '@/components/live/chrome';
 import { Ic, type IconName } from '@/components/live/icons';
 import { useAgentConfig } from '@/components/live/settings-data';
 import { ErrorBanner } from '@/components/live/states';
-import { addDays, fmtNum, fmtRunDate, isoDay, LATE_RISK_PCT } from '@/lib/format';
+import { addDays, fmtNum, fmtRunDate, isoDay } from '@/lib/format';
+import { type Measured, type ModelTarget, usePlanningRules } from '@/components/live/planning-rules';
 import { useQuery } from '@/lib/odata/hooks';
 import { colomboDay } from '@/lib/workday';
 import type { ReactNode } from 'react';
@@ -56,10 +58,32 @@ function Card({ icon, lead, title, sub, live, children, fallback }: { icon: Icon
   );
 }
 
-const Illustrative = () => <span className="m-tag m-tag--warn" style={{ marginLeft: '6px' }}>{"target / illustrative until Datathon"}</span>;
+const CMP: Record<ModelTarget['comparator'], string> = { '<=': '≤', '>=': '≥' };
+/** Decimals a figure is stored with (at most 2): 3.2 → 1, 0.8 → 1, 4 → 0. */
+const places = (v: number) => Math.min(2, (String(v).split('.')[1] ?? '').length);
+const metricText = (t: ModelTarget, v: number) => `${t.metric} ${fmtNum(v, places(v))}${t.unit ? ` ${t.unit}` : ''}`;
+
+/** "MAE 2.3 min a stop over 55 stops · target ≤ 4", or "Not measured yet" with the reason. */
+function Validation({ m }: { m?: { target: ModelTarget; measured: Measured } }) {
+  if (!m) return <>{'…'}</>;
+  const { target: t, measured } = m;
+  const goal = `target ${CMP[t.comparator]} ${fmtNum(t.value, t.metric === 'AUC' ? 2 : places(t.value))}`;
+  if (measured.value === null) {
+    return <span title={measured.reason}>{`Not measured yet · ${goal}`}<span className="dx-t13" style={{ display: 'block', whiteSpace: 'normal' }}>{measured.reason}</span></span>;
+  }
+  const met = t.comparator === '<=' ? measured.value <= t.value : measured.value >= t.value;
+  return (
+    <>
+      {`${metricText(t, measured.value)} over ${fmtNum(measured.n)} stops `}
+      <span className={`m-tag ${met ? 'm-tag--ok' : 'm-tag--warn'}`} style={{ marginLeft: '6px' }}>{goal}</span>
+    </>
+  );
+}
 
 export default function LiveDsp16ModelsAndFallbacks() {
   const config = useAgentConfig();
+  const rules = usePlanningRules();
+  const r = rules.data;
   const today = colomboDay();
   const basis = useQuery<Basis>('dsp16-basis', async c => {
     const [allowances, districts, last, monsoon, days] = await Promise.all([
@@ -87,10 +111,10 @@ export default function LiveDsp16ModelsAndFallbacks() {
           <div className="d-head">
             <div className="d-head__txt">
               <div className="d-eyebrow">{"Intelligence "}<span className="m-sep" />{" Datathon models "}<span className="m-sep" />{" advisory, you decide"}</div>
-              <div className="dx-h1xl">{"3 models + planning agent, each with a fallback"}</div>
+              <div className="dx-h1xl">{`${r ? Object.keys(r.models).length : '…'} models + planning agent, each with a fallback`}</div>
             </div>
           </div>
-          <ErrorBanner error={config.error ?? basis.error} onRetry={() => { void config.refresh(); void basis.refresh(); }} />
+          <ErrorBanner error={config.error ?? basis.error ?? rules.error} onRetry={() => { void config.refresh(); void basis.refresh(); void rules.refresh(); }} />
           {b?.lastDay && (
             <div className={`dx-banner ${horizonNear ? 'dx-banner--warn' : ''}`} data-lk="L167" data-testid="horizon">
               <Ic n="calendar" />
@@ -98,7 +122,6 @@ export default function LiveDsp16ModelsAndFallbacks() {
                 <b>{`Forecast horizon ${horizonPassed ? 'ended' : 'ends'} ${fmtRunDate(b.lastDay)} ${b.lastDay.slice(0, 4)} (W${isoWeek(b.lastDay)}).`}</b>
                 <span>{` Calendar data stops there. Past W${isoWeek(b.lastDay)} the capacity outlook has no operating days to plan from, until the calendar is extended.`}</span>
               </div>
-              <span className="d-btn">{"Add calendar rows"}</span>
             </div>
           )}
           <div className="hstack" style={{ gap: '18px', flexWrap: 'wrap', alignItems: 'stretch' }}>
@@ -106,28 +129,28 @@ export default function LiveDsp16ModelsAndFallbacks() {
               fallback={<>{"Uses "}<b>{"service_allowance.csv"}</b>{`: Fresh rear dock ${fresh('REAR_DOCK') ?? '—'}, street ${fresh('STREET') ?? '—'}, mall bay ${fresh('MALL_BAY') ?? '—'} min.`}</>}>
               <div className="dx-kv"><span>{"Powers"}</span><b style={{ whiteSpace: 'normal', fontWeight: '600' }}>{"Stop minutes on the plan board, store ETA windows"}</b></div>
               <div className="dx-kv"><span>{"Computed from"}</span><b style={{ fontWeight: '600' }}><b>{b ? fmtNum(b.allowances.length) : '…'}</b>{" brand × dock allowances, the stop's predicted minutes"}</b></div>
-              <div className="dx-kv"><span>{"Validation"}</span><b style={{ fontWeight: '600' }}>{"MAE ≤ 4 min a stop "}<Illustrative /></b></div>
+              <div className="dx-kv"><span>{"Validation"}</span><b style={{ fontWeight: '600', whiteSpace: 'normal', textAlign: 'right' }} data-testid="validation-serviceTime"><Validation m={r?.models.serviceTime} /></b></div>
             </Card>
             <Card icon="alert" lead="dx-lead--warn" title="Lateness model" sub={b ? `${b.districts} districts · ${Object.keys(b.roads).length} road classes` : '…'} live={b ? b.districts > 0 : null}
               fallback={<><b>{"Plan-only ETA"}</b>{", no risk %, labelled \"risk unavailable\"."}</>}>
-              <div className="dx-kv"><span>{"Powers"}</span><b style={{ whiteSpace: 'normal', fontWeight: '600' }}>{`ETA and late risk on live board, alerts at ${LATE_RISK_PCT}%+`}</b></div>
+              <div className="dx-kv"><span>{"Powers"}</span><b style={{ whiteSpace: 'normal', fontWeight: '600' }}>{`ETA and late risk on live board, alerts at ${r ? r.lateRisk.alertPct : '…'}%+`}</b></div>
               <div className="dx-kv"><span>{"Computed from"}</span><b style={{ fontWeight: '600', whiteSpace: 'normal', textAlign: 'right' }}>
                 {b ? <>{Object.entries(b.roads).map(([k, n]) => `${n} ${k}`).join(', ')}{" districts · "}<b>{fmtNum(b.monsoonDays)}</b>{" monsoon days"}</> : '…'}
               </b></div>
-              <div className="dx-kv"><span>{"Validation"}</span><b style={{ fontWeight: '600' }}>{"AUC ≥ 0.80 "}<Illustrative /></b></div>
+              <div className="dx-kv"><span>{"Validation"}</span><b style={{ fontWeight: '600', whiteSpace: 'normal', textAlign: 'right' }} data-testid="validation-lateness"><Validation m={r?.models.lateness} /></b></div>
             </Card>
             <Card icon="chart" lead="dx-lead--cold" title="Demand forecast" sub={b?.lastDay ? `horizon to ${fmtRunDate(b.lastDay)}` : '…'} live={b ? !horizonPassed && b.calendarDays > 0 : null}
-              fallback={<>{"Same weeks last year × festival_ramp, marked "}<b>{"fallback"}</b>{"."}</>}>
-              <div className="dx-kv"><span>{"Powers"}</span><b style={{ whiteSpace: 'normal', fontWeight: '600' }}>{"Capacity outlook, 10 ISO weeks, peak warnings"}</b></div>
+              fallback={<>{"No forecast: the capacity outlook shows "}<b>{"no weeks"}</b>{" and says why (too little order history, or no calendar rows)."}</>}>
+              <div className="dx-kv"><span>{"Powers"}</span><b style={{ whiteSpace: 'normal', fontWeight: '600' }}>{`Capacity outlook, ${r ? r.outlookWeeks : '…'} ISO weeks, peak warnings`}</b></div>
               <div className="dx-kv"><span>{"Computed from"}</span><b style={{ fontWeight: '600' }}><b>{b ? fmtNum(b.calendarDays) : '…'}</b>{" calendar days · festival_ramp, payday, order history"}</b></div>
-              <div className="dx-kv"><span>{"Validation"}</span><b style={{ fontWeight: '600' }}>{"WAPE ≤ 12% a week "}<Illustrative /></b></div>
+              <div className="dx-kv"><span>{"Validation"}</span><b style={{ fontWeight: '600', whiteSpace: 'normal', textAlign: 'right' }} data-testid="validation-demand"><Validation m={r?.models.demand} /></b></div>
             </Card>
             <Card icon="sparkle-plus" lead="dx-lead--star" title="Planning agent" live={c ? c.model.configured : config.error ? false : null}
               sub={c ? `${c.model.label}${c.model.deployment ? ` · ${c.model.deployment}` : ''} · drafts, you approve` : '…'}
               fallback={<>{"The "}<b>{"manual plan board"}</b>{` with the same rule checks, from the last approved plan.${c && !c.model.configured && c.model.missing.length ? ` Not configured: ${c.model.missing.join(', ')}.` : ''}`}</>}>
               <div className="dx-kv"><span>{"Can do"}</span><b style={{ whiteSpace: 'normal', fontWeight: '600', textAlign: 'right' }}>{`Read ${c ? c.reads.join(', ').toLowerCase() : 'orders and fleet'}, draft plans and re-plans, rank deferrals, explain each step`}</b></div>
               <div className="dx-kv"><span style={{ whiteSpace: 'nowrap' }}>{"Needs your approval"}</span><b style={{ whiteSpace: 'normal', fontWeight: '600', textAlign: 'right' }}>{`Publish, message stores, override protected outlets${c ? ` · up to ${c.maxRedrafts} redrafts` : ''}`}</b></div>
-              <div className="dx-kv"><span>{"Validation"}</span><b style={{ fontWeight: '600' }}>{`${c ? `${c.rules.length} hard rules checked, ` : ''}100% must pass `}<Illustrative /></b></div>
+              <div className="dx-kv"><span>{"Validation"}</span><b style={{ fontWeight: '600', whiteSpace: 'normal', textAlign: 'right' }}>{c ? `${c.rules.length} hard rules checked on every draft` : '…'}</b></div>
             </Card>
           </div>
         </div>

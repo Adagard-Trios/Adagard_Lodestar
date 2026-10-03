@@ -13,6 +13,7 @@ import { enterApp } from '@/auth/use-sign-in';
 import { session } from '@/model/platform';
 import { signOutTo, useDeviceId, useSignIn } from '@/lodestar/live';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L112":{"to":"sm-05-sign-in","kind":"go"},"C":{"to":"sm-31-can-t-sign-in","kind":"back"}}};
 
@@ -81,7 +82,8 @@ export default function ScreenSm32AccessRequestSent() {
   }, [s.status, s.claims, e.status, width]);
 
   const claims = s.claims;
-  const hub = hubName(claims?.depots);
+  const { name: depotName } = useDepots();
+  const hub = hubName(claims?.depots, depotName);
   const device = e.deviceId ?? installId;
   const signedOut = s.status === 'signed-out';
   const needsSignIn = e.status === 'signin' || signedOut;

@@ -11,10 +11,12 @@ import { useClaims, useOnline } from '@/model/hooks';
 import { approveReview, planSource, readPlan, usePlan } from '@/model/plan';
 import { bumpRevision } from '@/model/platform';
 import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L180":{"to":"dsp-27-alerts","kind":"go"},"B":{"to":"dsp-27-alerts","kind":"back"}}};
 
 export default function ScreenDsp28ApproveRePlan() {
+  const { name: depotName } = useDepots();
   const claims = useClaims();
   const online = useOnline();
   const { plan, loading, plans } = usePlan();
@@ -31,10 +33,10 @@ export default function ScreenDsp28ApproveRePlan() {
       : {
           title:
             v.shortM3 && v.shortM3 > 0
-              ? `Chilled short ${v.shortM3} m³ · ${titleCase(plan.depot)}`
+              ? `Chilled short ${v.shortM3} m³ · ${depotName(plan.depot)}`
               : v.rulesTotal !== undefined && v.rulesPassed !== undefined && v.rulesPassed < v.rulesTotal
                 ? `${plural(v.rulesTotal - v.rulesPassed, 'rule check')} not passing`
-                : `Plan v${plan.version} · ${titleCase(plan.depot)}`,
+                : `Plan v${plan.version} · ${depotName(plan.depot)}`,
           body: [`Run ${dayLabel(plan.runDate)}`, titleCase(plan.status), plan.notes].filter(Boolean).join(' · '),
         };
 

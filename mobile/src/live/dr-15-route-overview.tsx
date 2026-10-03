@@ -7,9 +7,9 @@ import { Linking, Text, View, StyleSheet, type TextStyle, type ViewStyle } from 
 import { hm } from '@/lib/time';
 import { titleCase } from '@/lodestar/live';
 import { useClaims, useRun } from '@/model/hooks';
-import { depotName } from '@/model/plan';
 import type { Outlet, Trip, TripStop } from '@/model/types';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L42":{"to":"dr-01-today-s-run","kind":"go"}}};
 
@@ -105,6 +105,7 @@ function stopTime(st: TripStop, done: boolean): string {
 
 /** The trip card: the depot, every stop in order, and the way back. */
 function RouteCard({ t, trip, stops, nextId }: { t: Dr15Theme; trip: Trip; stops: TripStop[]; nextId: string | undefined }) {
+  const { name: depotName } = useDepots();
   const { s, X2 } = t;
   return (
     <View style={s.v35}>

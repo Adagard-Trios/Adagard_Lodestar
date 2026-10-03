@@ -9,10 +9,10 @@ import { hm } from '@/lib/time';
 import { plural } from '@/lodestar/live';
 import * as api from '@/model/api';
 import { useClaims, useOrder } from '@/model/hooks';
-import { depotName } from '@/model/plan';
 import { useQuery } from '@/model/query';
 import { ISSUE_LABEL, receiptIssues, saveIssue, type IssueKind } from '@/model/store-face';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L95":{"to":"sm-03-confirm-receipt-count","kind":"go"},"C":{"to":"sm-03-confirm-receipt-count","kind":"back"}}};
 
@@ -24,6 +24,7 @@ const KINDS: { kind: IssueKind; icon: string }[] = [
 ];
 
 export default function ScreenSm18ReportIssue() {
+  const { name: depotName } = useDepots();
   const claims = useClaims();
   const q = useOrder();
   const order = q.data ?? q.day.data?.orders.find(o => o.id === q.id) ?? null;

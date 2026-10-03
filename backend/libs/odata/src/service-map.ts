@@ -13,6 +13,7 @@ export const ENTITY_SET_OWNERS: Readonly<Record<string, string>> = {
   Deferrals: 'planning',
   AgentRuns: 'planning',
   Vehicles: 'fleet',
+  Depots: 'outlets',
   Outlets: 'outlets',
   Calendar: 'outlets',
   DistrictTravel: 'outlets',

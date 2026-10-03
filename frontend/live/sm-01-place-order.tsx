@@ -21,10 +21,11 @@ import { clearOrderDraft, isUnreachable, loadOrderDraft, saveOrderDraft, sendOrd
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { nextOpenDay, useNextRun } from '@/components/live/store-data';
 import { useAuth } from '@/lib/auth/AuthProvider';
-import { addDays, DEPOT_NAME, fmtNum, fmtRunDate, isoDay } from '@/lib/format';
+import { addDays, fmtNum, fmtRunDate, isoDay } from '@/lib/format';
 import { colomboDay, CUTOFF_LABEL, cutoffFor } from '@/lib/workday';
 import { useAction, useQuery } from '@/lib/odata/hooks';
 import type { Order, OrderLineItem, TempClass } from '@/lib/odata/types';
+import { useDepots } from '@/components/live/depots';
 
 type Line = DraftLine;
 export const SERVICE_UNAVAILABLE = '/store/sm-36-service-unavailable';
@@ -108,6 +109,7 @@ function LineTable({ title, cls, lines, setLines, note, tempClass, lastLabel }: 
 }
 
 export default function LiveSm01PlaceOrder() {
+  const { name: depotName } = useDepots();
   const router = useRouter();
   const nav = useScreenNav();
   const { session } = useAuth();
@@ -207,7 +209,7 @@ export default function LiveSm01PlaceOrder() {
             <div className="d-head__txt">
               <div className="d-eyebrow">
                 {"New order "}
-                {o && <><span className="m-sep" />{` ${DEPOT_NAME[o.depot] ?? o.depot} run `}</>}
+                {o && <><span className="m-sep" />{` ${depotName(o.depot)} run `}</>}
                 <span className="m-sep" />{startFrom ? ` started from last ${weekday(startFrom.runDate)}` : ' first order'}
               </div>
               <div className="d-h1">Order for {fmtRunDate(runDate)}</div>

@@ -11,8 +11,9 @@ import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { infeasibility, useReviewRun, usePlanScope, type Infeasibility } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
-import { DEPOT_NAME, fmtDayTime, fmtNum, fmtRunDate, isoDay, pct } from '@/lib/format';
+import { fmtDayTime, fmtNum, fmtRunDate, isoDay, pct } from '@/lib/format';
 import type { AgentRunDetail } from '@/lib/odata/types';
+import { useDepots } from '@/components/live/depots';
 
 export interface WhyRow {
   code: string;
@@ -65,6 +66,7 @@ function draftSeconds(d: AgentRunDetail): number | null {
 }
 
 export default function LiveDsp23PlanInfeasible() {
+  const { name: depotName } = useDepots();
   const nav = useScreenNav();
   const scope = usePlanScope();
   const { runId, run } = useReviewRun();
@@ -88,7 +90,7 @@ export default function LiveDsp23PlanInfeasible() {
           <div className="d-head">
             <div className="d-head__txt">
               <div className="d-eyebrow">
-                {`${DEPOT_NAME[depot ?? ''] ?? depot ?? ''} `}<span className="m-sep" />
+                {`${depotName(depot)} `}<span className="m-sep" />
                 {` ${runDate ? `${fmtRunDate(runDate)} run` : 'Planning agent draft'} `}<span className="m-sep" />
                 {` ${run.data ? fmtDayTime(run.data.updatedAt ?? run.data.createdAt) : ''}`}
               </div>

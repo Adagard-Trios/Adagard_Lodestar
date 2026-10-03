@@ -88,7 +88,7 @@ describe('Onboarding', () => {
     const Screen = require('@/live/ld-07-start-shift').default;
     await render(<Screen />);
     expect(await screen.findByText('Start shift at Bay B2')).toBeTruthy();
-    expect(screen.getByText('Kandy hub')).toBeTruthy();
+    expect(await screen.findByText('Kandy Hub')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('lk-L188'));
     expect(push).toHaveBeenCalledWith(opened('ld-08-quick-tips'));
   });

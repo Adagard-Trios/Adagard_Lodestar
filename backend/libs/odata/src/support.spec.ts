@@ -182,7 +182,8 @@ describe('EDM model and CSDL', () => {
     const real = buildEdmModel(Prisma.dmmf.datamodel as unknown as DmmfDatamodel);
     expect(real.entityTypes.get('ServiceAllowance')!.keys).toEqual(['brand', 'dockType']);
     expect(real.entityTypes.get('AuditEntry')!.keys).toEqual(['seq']);
-    expect(real.enums.get('Depot')).toEqual(['PELIYAGODA', 'KANDY']);
+    expect(real.enums.has('Depot')).toBe(false); // depots are rows of outlets.Depot (ADM-21), keyed by code
+    expect(real.entityTypes.get('Depot')!.keys).toEqual(['code']);
     expect(etagProperty(real.entityTypes.get('Vehicle')!)).toBe('updatedAt');
   });
 

@@ -21,12 +21,16 @@ export interface OrderByItem {
 
 export interface ExpandItem {
   navigation: string;
-  options: Omit<QueryOptions, 'aliases' | 'expand' | 'count' | 'search'>;
+  /** `expand` holds the nested level (at most MAX_EXPAND_DEPTH levels in all). */
+  options: Omit<QueryOptions, 'aliases' | 'count' | 'search'>;
 }
+
+/** Levels of $expand a request may nest: Trips?$expand=stops($expand=outlet) is two. */
+export const MAX_EXPAND_DEPTH = 2;
 
 const TOP_LEVEL = new Set(['$filter', '$select', '$orderby', '$top', '$skip', '$count', '$expand', '$search', '$format', '$skiptoken']);
 const UNSUPPORTED = new Set(['$apply', '$compute', '$levels', '$index', '$schemaversion', '$deltatoken', '$id']);
-const EXPAND_ALLOWED = new Set(['$select', '$filter', '$orderby', '$top', '$skip']);
+const EXPAND_ALLOWED = new Set(['$select', '$filter', '$orderby', '$top', '$skip', '$expand']);
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 /**
@@ -119,13 +123,13 @@ function parseOrderBy(value: string): OrderByItem[] {
   });
 }
 
-function parseExpand(value: string): ExpandItem[] {
+function parseExpand(value: string, depth = 1): ExpandItem[] {
   return splitTopLevel(value, ',').map((raw) => {
     const item = raw.trim();
     const open = item.indexOf('(');
     const navigation = open < 0 ? item : item.slice(0, open).trim();
     if (navigation === '*') throw ODataError.notImplemented('$expand=* is not supported; name the navigation properties', '$expand');
-    if (navigation.includes('/')) throw ODataError.notImplemented('Only one level of $expand is supported', '$expand');
+    if (navigation.includes('/')) throw ODataError.notImplemented('Expand paths are not supported; nest $expand inside the navigation', '$expand');
     if (!IDENT.test(navigation)) throw ODataError.invalidQuery('$expand', `Invalid navigation '${navigation}'`);
 
     const options: ExpandItem['options'] = {};
@@ -138,7 +142,9 @@ function parseExpand(value: string): ExpandItem[] {
         const eq = p.indexOf('=');
         const key = (eq < 0 ? p : p.slice(0, eq)).trim();
         const v = eq < 0 ? '' : p.slice(eq + 1);
-        if (key === '$expand') throw ODataError.notImplemented('Only one level of $expand is supported', '$expand');
+        if (key === '$expand' && depth >= MAX_EXPAND_DEPTH) {
+          throw ODataError.notImplemented(`At most ${MAX_EXPAND_DEPTH} levels of $expand are supported`, '$expand');
+        }
         if (!EXPAND_ALLOWED.has(key)) throw ODataError.invalidQuery('$expand', `Option ${key} is not supported inside $expand`);
         switch (key) {
           case '$select': options.select = parseSelect(v); break;
@@ -146,6 +152,7 @@ function parseExpand(value: string): ExpandItem[] {
           case '$orderby': options.orderby = parseOrderBy(v); break;
           case '$top': options.top = parseNonNegativeInt('$top', v); break;
           case '$skip': options.skip = parseNonNegativeInt('$skip', v); break;
+          case '$expand': options.expand = parseExpand(v, depth + 1); break;
         }
       }
     }

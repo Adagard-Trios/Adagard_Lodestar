@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { ODataError } from '@lodestar/odata';
-import { Depot, OrderStatus, Prisma, TripStatus } from '@prisma/client';
+import { OrderStatus, Prisma, TripStatus } from '@prisma/client';
 import { runDateRange } from '@lodestar/platform';
 import {
   announceStopIssue, CLOSED_STOP_STATUSES, depotDispatchers, NOTIFY, NotifyClient, podExceptionsWithStoreCount, podOutcome, recordArrival, recordDeparture,
@@ -87,7 +87,7 @@ export class TripsService {
   ) {}
 
   /** Loader: trips of a depot and run date in bay order (bay queue). */
-  async getBayQueue(depot: Depot, runDate: string, scope?: Prisma.TripWhereInput) {
+  async getBayQueue(depot: string, runDate: string, scope?: Prisma.TripWhereInput) {
     const { start, end } = dayRange(runDate);
     return this.prisma.trip.findMany({
       where: { AND: [{ depot, runDate: { gte: start, lt: end } }, scope ?? {}] },

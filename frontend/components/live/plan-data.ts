@@ -3,7 +3,8 @@
 // DSP-13) built from real records: orders in EXCEPTION, stops with a high late risk, and alert notifications
 // (vehicle and signal alerts, dock flags and vehicle faults, POD exceptions and failed stops, store receipt issues), and
 // the run's synced offline records with a conflict note (DSP-A2). p5Link() names the P5 screen that handles an item.
-import { addDays, dayFilter, fmtClock, fmtTime, isoDay, LATE_RISK_HIGH_PCT, LATE_RISK_PCT } from '@/lib/format';
+import { addDays, dayFilter, fmtClock, fmtTime, isoDay } from '@/lib/format';
+import { loadPlanningRules } from './planning-rules';
 import { useEffect, useRef } from 'react';
 import { useAction, useEntity, useQuery } from '@/lib/odata/hooks';
 import type { AgentRun, AgentRunDetail, Notification, OfflineEvent, Order, TripStop } from '@/lib/odata/types';
@@ -82,9 +83,11 @@ export function useExceptions(runDate: string | undefined, ordersFilter: string 
   return useQuery<ExceptionItem[]>(
     runDate ? `exceptions:${runDate}:${active.join(',')}` : null,
     async c => {
+      // late-risk levels from the planning service (PlanningRules), not a copy on the desk
+      const { lateRisk } = await loadPlanningRules(c);
       const stopsFilter = [
         dayFilter('trip/runDate', runDate!),
-        `lateRiskPct ge ${LATE_RISK_PCT}`,
+        `lateRiskPct ge ${lateRisk.alertPct}`,
         "status ne 'DELIVERED'",
         depotFilter('trip/depot', active),
       ].filter(Boolean).join(' and ');
@@ -116,7 +119,7 @@ export function useExceptions(runDate: string | undefined, ordersFilter: string 
         ...stops.value.map(s => ({
           id: `stop:${s.id}`,
           source: 'stop' as const,
-          tone: ((s.lateRiskPct ?? 0) >= LATE_RISK_HIGH_PCT ? 'bad' : 'warn') as ExceptionTone,
+          tone: ((s.lateRiskPct ?? 0) >= lateRisk.highPct ? 'bad' : 'warn') as ExceptionTone,
           title: `${s.trip?.vehicleId ?? 'Trip'} late risk rising`,
           meta: [s.outlet?.name ?? s.outletId, `stop ${s.stopSeq}`, s.outlet?.windowClose ? `closes ${s.outlet.windowClose}` : undefined, s.etaModel ? `ETA ~${fmtClock(s.etaModel)}` : undefined]
             .filter(Boolean)

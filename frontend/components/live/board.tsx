@@ -9,6 +9,7 @@ import { useQuery } from '@/lib/odata/hooks';
 import type { AgentRunDetail, AgentTrip, Order, Trip, Vehicle } from '@/lib/odata/types';
 import { depotFilter } from '@/lib/workday';
 import { PLAN_EVENTS } from './plan-data';
+import { loadTone, usePlanningRules } from './planning-rules';
 
 export /** One card on the board, from a real trip or from the agent's draft. */
 interface Card {
@@ -37,14 +38,16 @@ export const budget = (brand: string, limits: PlanLimits): number | undefined =>
 /** The board's second-trip column head: "Trip 2 · max N trips a day" with N from the agent's limits. */
 export const tripTwoHead = (limits: PlanLimits) => `Trip 2 · max ${limits?.maxTripsPerVehicle ?? '—'} trips a day`;
 
-function capClass(used: number, cap: number) {
-  const p = cap ? used / cap : 0;
-  return p > 1 ? 'bad' : p >= 0.85 ? 'warn' : '';
+/** Load class by the planning service's level (PlanningRules.load.warnPct). */
+function capClass(used: number, cap: number, warnPct: number | undefined) {
+  const t = loadTone(used, cap, warnPct);
+  return t === 'ok' ? '' : t;
 }
 
 export function TripCard({ c, v, limits }: { c: Card; v?: Vehicle; limits?: PlanLimits }) {
-  const kgCls = capClass(c.kg, v?.capacityKg ?? 0);
-  const m3Cls = capClass(c.m3, v?.capacityM3 ?? 0);
+  const warnPct = usePlanningRules().data?.load.warnPct;
+  const kgCls = capClass(c.kg, v?.capacityKg ?? 0, warnPct);
+  const m3Cls = capClass(c.m3, v?.capacityM3 ?? 0, warnPct);
   return (
     <div className={`x-trip x-trip--${c.brand.toLowerCase()}`} data-trip={c.id}>
       <div className="x-trip__head">

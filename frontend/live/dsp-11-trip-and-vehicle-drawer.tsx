@@ -16,33 +16,34 @@ import { Ic } from '@/components/live/icons';
 import { usePlanScope } from '@/components/live/plan-data';
 import { useAgentConfig } from '@/components/live/settings-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
-import { BRAND_LETTER, DEPOT_NAME, dayFilter, fmtClock, fmtNum, isoDay, pct, title } from '@/lib/format';
+import { BRAND_LETTER, dayFilter, fmtClock, fmtNum, isoDay, pct, title } from '@/lib/format';
 import { useEntity, useQuery } from '@/lib/odata/hooks';
 import type { Plan, Trip } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
+import { useDepots } from '@/components/live/depots';
+import { loadTone, usePlanningRules } from '@/components/live/planning-rules';
 
 /** Where a stop move or a vehicle swap is asked for and applied to the draft. */
 export const ASK_AGENT = '/plan/dsp-39-ask-the-planning-agent';
-const SHORT: Record<string, string> = { PELIYAGODA: 'Peliyagoda', KANDY: 'Kandy Hub' };
 const DOCK: Record<string, string> = { REAR_DOCK: 'rear dock', STREET: 'street', MALL_BAY: 'mall bay' };
-const gauge = (used: number, cap: number) => {
-  const p = cap ? used / cap : 0;
-  return p > 1 ? 'dx-g-bad' : p >= 0.85 ? 'dx-g-warn' : 'dx-g-ok';
-};
+/** Gauge class by the planning service's load level (PlanningRules.load.warnPct). */
+const gauge = (used: number, cap: number, warnPct: number | undefined) => `dx-g-${loadTone(used, cap, warnPct)}`;
 
 type TripX = Trip & { plan?: Pick<Plan, 'status' | 'version'> | null };
 
 function Meter({ label, used, cap, unit, digits = 0 }: { label: string; used: number; cap: number; unit: string; digits?: number }) {
+  const warnPct = usePlanningRules().data?.load.warnPct;
   return (
     <div className="vstack" style={{ gap: '5px', flex: '1', minWidth: '0' }}>
       <span className="t-3" style={{ fontSize: '13px', fontWeight: '600', whiteSpace: 'nowrap' }}>{label}</span>
       <b style={{ fontSize: '15px', whiteSpace: 'nowrap' }}>{fmtNum(used, digits)} / {fmtNum(cap, digits)} {unit}</b>
-      <div className="dx-bar"><div className={gauge(used, cap)} style={{ width: `${pct(used, cap)}%` }} /></div>
+      <div className="dx-bar"><div className={gauge(used, cap, warnPct)} style={{ width: `${pct(used, cap)}%` }} /></div>
     </div>
   );
 }
 
 export default function LiveDsp11TripAndVehicleDrawer() {
+  const { name: depotName, short: depotShort } = useDepots();
   const router = useRouter();
   const { tripsFilter, loadingDate } = usePlanScope();
   const [focus, setFocus] = useFocusId('trip');
@@ -91,7 +92,7 @@ export default function LiveDsp11TripAndVehicleDrawer() {
               <span className="x-meta">
                 {reefer ? 'Reefer' : 'Dry'} {v?.type === 'VAN' ? 'van' : 'truck'}<span className="m-sep" />
                 {title(t.brand)} · {t.district}<span className="m-sep" />
-                {DEPOT_NAME[t.depot] ?? t.depot}<span className="m-sep" />{planText}
+                {depotName(t.depot)}<span className="m-sep" />{planText}
               </span>
             )}
           </div>
@@ -147,7 +148,7 @@ export default function LiveDsp11TripAndVehicleDrawer() {
                 <div className="dx-stop">
                   <div className="dx-stop__rail"><span className="dx-stop__n dx-stop__n--dark"><Ic n="depot" /></span><span className="dx-stop__line" /></div>
                   <div className="dx-stop__main">
-                    <div className="dx-stop__t">{DEPOT_NAME[t.depot] ?? t.depot}{t.bay ? ` · bay ${t.bay}` : ''}<span className="dx-stop__tm">{t.departTime ? fmtClock(t.departTime) : ''}</span></div>
+                    <div className="dx-stop__t">{depotName(t.depot)}{t.bay ? ` · bay ${t.bay}` : ''}<span className="dx-stop__tm">{t.departTime ? fmtClock(t.departTime) : ''}</span></div>
                     <div className="dx-stop__m">Depart{tr ? ` · ${tr.depotToDistMin} min to ${t.district}` : ''}</div>
                   </div>
                 </div>
@@ -175,7 +176,7 @@ export default function LiveDsp11TripAndVehicleDrawer() {
                   <div className="dx-stop__rail"><span className="dx-stop__n dx-stop__n--dark"><Ic n="refresh" /></span></div>
                   <div className="dx-stop__main" style={{ paddingBottom: '0' }}>
                     <div className="dx-stop__t">
-                      Back at {SHORT[t.depot] ?? t.depot}{next ? `, reload for Trip ${next.tripNumber}` : ''}
+                      Back at {depotShort(t.depot)}{next ? `, reload for Trip ${next.tripNumber}` : ''}
                       <span className="dx-stop__tm">{t.returnTime ? `~${fmtClock(t.returnTime)}` : ''}</span>
                     </div>
                     <div className="dx-stop__m">

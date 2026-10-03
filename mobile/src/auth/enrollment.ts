@@ -227,8 +227,11 @@ export class DeviceEnrollment {
   }
 }
 
-/** The depot hub that approves phones, for the copy ("waiting for Kandy Hub"). */
-export function hubName(depots: readonly string[] | undefined): string {
-  if (depots?.length === 1 && depots[0] === 'PELIYAGODA') return 'Peliyagoda DC';
-  return 'Kandy Hub';
+/**
+ * The depot hub that approves phones, for the copy ("waiting for Kandy Hub"): the account's one depot by its
+ * registry name (`name`, from useDepots), else the generic "your depot" (never a guessed depot).
+ */
+export function hubName(depots: readonly string[] | undefined, name: (code: string) => string = (c) => c): string {
+  if (depots?.length === 1) return name(depots[0]);
+  return 'your depot';
 }

@@ -12,10 +12,12 @@ import { idleSummary, Lane, tripTwoHead, useBoardCards } from '@/components/live
 import { infeasibility, PLAN_EVENTS, useReviewRun, usePlanScope } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { fmtNum, fmtRunDate, fmtTime, title } from '@/lib/format';
+import { usePlanningRules } from '@/components/live/planning-rules';
 import { useQuery } from '@/lib/odata/hooks';
 import type { AgentRunDetail, Plan } from '@/lib/odata/types';
 
 export default function LiveDsp02PlanBoard() {
+  const warnPct = usePlanningRules().data?.load.warnPct;
   const router = useRouter();
   const scope = usePlanScope();
   const { runDate, tripsFilter, plansFilter, ordersFilter, active } = scope;
@@ -129,8 +131,8 @@ export default function LiveDsp02PlanBoard() {
                 <Ic n="chevron-down" className="ic ic--sm" />
                 <span>{idleSummary(idle)}</span>
                 <span className="spacer" />
-                <span><i className="x-sw" style={{ background: 'var(--st-delivered-fg)' }} />{"under 85%"}</span>
-                <span><i className="x-sw" style={{ background: 'var(--star-500)' }} />{"85% or more"}</span>
+                <span><i className="x-sw" style={{ background: 'var(--st-delivered-fg)' }} />{`under ${warnPct ?? '…'}%`}</span>
+                <span><i className="x-sw" style={{ background: 'var(--star-500)' }} />{`${warnPct ?? '…'}% or more`}</span>
                 <span><i className="x-sw" style={{ background: 'var(--st-exception-fg)' }} />{"over"}</span>
               </div>
             </div>

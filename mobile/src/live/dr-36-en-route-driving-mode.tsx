@@ -8,10 +8,12 @@ import { useOutbox, useRun } from '@/model/hooks';
 import { openMaps, useNet } from '@/model/run';
 import { LATE_RISK_PCT } from '@/model/preferences';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L13":{"to":"dr-02-stop-arrival","kind":"go"},"L245":{"to":"dr-38-report-a-delay","kind":"go"},"L246":{"to":"dr-37-reefer-temperature-alert","kind":"go"}}};
 
 export default function ScreenDr36EnRouteDrivingMode() {
+  const { name: depotName } = useDepots();
   const { view, updatedAt } = useRun();
   const { waiting } = useOutbox();
   const net = useNet();
@@ -96,7 +98,7 @@ export default function ScreenDr36EnRouteDrivingMode() {
             <View style={s.v35}>
               <View style={s.v28}>
                 <View>
-                  <Text style={s.t26}>{trip ? `${titleCase(trip.depot)} depot` : 'Depot'}</Text>
+                  <Text style={s.t26}>{trip ? `${depotName(trip.depot)}` : 'Depot'}</Text>
                 </View>
                 <Text style={s.t27}>{trip?.departTime ? `left ${hm(trip.departTime)}` : '—'}</Text>
               </View>

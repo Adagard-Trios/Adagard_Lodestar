@@ -22,6 +22,7 @@ import "@fontsource/noto-sans-tamil/600.css";
 import "@fontsource/noto-sans-tamil/700.css";
 import "./globals.css";
 import "./styles/live.css";
+import "./styles/plan-desk.css";
 import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {

@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { Ic } from '@/components/live/icons';
 import { CUTOFF_LABEL } from '@/lib/workday';
 import { runtimeConfig } from '@/lib/config';
+import { useDepots } from '@/components/live/depots';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { adminRequestMail, depotLabel, resetCredentialsUrl, resetOptions, telHref } from '@/lib/auth/reset';
 
@@ -21,7 +22,8 @@ type Tab = 'email' | 'admin';
 export default function LiveSm35ResetAccess() {
   const opts = resetOptions();
   const { session } = useAuth();
-  const depot = depotLabel(session?.depots);
+  const { name: depotName } = useDepots();
+  const depot = depotLabel(session?.depots, depotName);
   const [tab, setTab] = useState<Tab>(opts.selfService ? 'email' : 'admin');
   // live screens render in the browser only (LiveSwitch waits for the client), so the runtime config is there
   const resetUrl = opts.selfService && typeof window !== 'undefined' ? resetCredentialsUrl(runtimeConfig()) : null;

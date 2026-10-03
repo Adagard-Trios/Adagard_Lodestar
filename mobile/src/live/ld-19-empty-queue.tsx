@@ -8,8 +8,8 @@ import { dayLabel, hm } from '@/lib/time';
 import { signOutTo, titleCase } from '@/lodestar/live';
 import { isReleased, onTime, useLatestPlan, useRePlanAlert } from '@/model/dock';
 import { useBayQueue, useClaims, useOutbox } from '@/model/hooks';
-import { depotName } from '@/model/plan';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L211":{"to":"ld-18-plan-locked","kind":"go"},"N0":{"to":"ld-01-dock-queue","kind":"nav"},"N1":{"to":"ld-13-flags-tab","kind":"nav"},"N2":{"to":"ld-16-shift-summary","kind":"nav"}}};
 
@@ -22,6 +22,7 @@ const initials = (name?: string) =>
     .join('');
 
 export default function ScreenLd19EmptyQueue() {
+  const { name: depotName } = useDepots();
   const claims = useClaims();
   const bay = useBayQueue();
   const { items } = useOutbox();

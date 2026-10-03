@@ -1,4 +1,5 @@
 import { anything, capture, deepEqual, instance, mock, verify, when } from 'ts-mockito';
+import { depotDelegate } from '../../../libs/odata/test/depots';
 import { ODataError } from '@lodestar/odata';
 import { AuditEvent, AuditSink, DevicePostureService, Principal, rowFilter, ServiceTokenClient } from '@lodestar/security';
 import { personas, principal } from '../../../libs/security/test/principals';
@@ -24,7 +25,7 @@ describe('UsersSet', () => {
     auth = mock(AuthService);
     vehicle = mock<FindUniqueDelegate>();
     when(vehicle.findUnique(anything())).thenCall(async (a: any) => (a.where.id === 'VEH057' ? { id: 'VEH057' } : null));
-    set = new UsersSet({ vehicle: instance(vehicle) } as any, instance(auth));
+    set = new UsersSet({ vehicle: instance(vehicle), depot: depotDelegate() } as any, instance(auth));
     when(auth.createIdentity(anything())).thenResolve('kc-123');
   });
 

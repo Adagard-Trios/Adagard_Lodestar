@@ -34,13 +34,6 @@ enum Role {
   @@schema("auth")
 }
 
-enum Depot {
-  PELIYAGODA
-  KANDY
-
-  @@schema("outlets")
-}
-
 enum Brand {
   FRESH
   STYLE
@@ -175,7 +168,7 @@ model User {
   name         String
   passwordHash String? // legacy; credentials live in Keycloak
   role         Role
-  depot        Depot?
+  depot        String? // Depot.code
   outletId     String?
   outlet       Outlet?  @relation(fields: [outletId], references: [id])
   vehicleId    String? // driver's vehicle (fleet.Vehicle id); mirrored to the vehicle_id token claim
@@ -198,12 +191,33 @@ model User {
   @@schema("auth")
 }
 
+/// A depot (distribution centre), registered from the Admin desk (ADM-21). Every other `depot` column holds its
+/// code; Outlet and DistrictTravel reference it by foreign key, other schemas by value (checked on write).
+model Depot {
+  code      String   @id // PELIYAGODA, KANDY: upper-case letters, digits and _
+  name      String // "Peliyagoda DC"
+  address   String?
+  district  String
+  lat       Float?
+  lng       Float?
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  outlets         Outlet[]
+  districtTravels DistrictTravel[]
+
+  @@schema("outlets")
+}
+
 model Outlet {
   id          String      @id // OUT001..OUT120
   name        String
   brand       Brand
   district    String
-  depot       Depot
+  depot       String // Depot.code
+  depotRef    Depot       @relation(fields: [depot], references: [code])
   dockType    DockType
   parking     ParkingType
   windowOpen  String // "05:30" HH:mm
@@ -226,7 +240,7 @@ model Outlet {
 
 model Vehicle {
   id            String        @id // VEH001..VEH060
-  depot         Depot
+  depot         String // Depot.code (outlets schema)
   type          VehicleType
   tempClass     TempClass
   capacityKg    Float
@@ -303,7 +317,7 @@ model Trip {
   vehicle       Vehicle    @relation(fields: [vehicleId], references: [id])
   driverId      String?
   driver        User?      @relation("DriverTrips", fields: [driverId], references: [id])
-  depot         Depot
+  depot         String // Depot.code (outlets schema)
   runDate       DateTime
   brand         Brand
   district      String
@@ -481,7 +495,8 @@ model Calendar {
 
 model DistrictTravel {
   district       String   @id
-  depot          Depot
+  depot          String // Depot.code
+  depotRef       Depot    @relation(fields: [depot], references: [code])
   roadClass      String // urban | suburban | highway | hill
   depotToDistMin Int
   interStopMin   Int
@@ -531,7 +546,7 @@ model ServiceAllowance {
 /// only a human dispatcher can approve (publish) one.
 model Plan {
   id          String     @id // PLG-2026-04-07-v3
-  depot       Depot
+  depot       String // Depot.code (outlets schema)
   runDate     DateTime
   version     Int
   status      PlanStatus @default(DRAFT)
@@ -558,7 +573,7 @@ model Plan {
 /// service (LangGraph checkpoints); this row makes runs listable and scoped.
 model AgentRun {
   id           String    @id // run id issued by the agent service
-  depot        Depot
+  depot        String // Depot.code (outlets schema)
   runDate      DateTime
   status       String // RUNNING | NEEDS_APPROVAL | APPROVED | REJECTED | FAILED ...
   requestedBy  String

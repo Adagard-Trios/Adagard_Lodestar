@@ -1,7 +1,20 @@
 // Entity shapes as the OData API returns them (backend/prisma/schema.prisma, backend/apps/*/src/*.sets.ts).
 // Dates come back as ISO strings.
 
-export type Depot = 'PELIYAGODA' | 'KANDY';
+/** A depot code (PELIYAGODA, KANDY, …): depots are rows of the Depots registry (ADM-21), not a fixed list. */
+export type Depot = string;
+
+/** A depot as the registry (OData Depots) holds it; names shown on the phone come from here. */
+export interface DepotRow {
+  code: string;
+  name: string;
+  district: string;
+  address?: string | null;
+  phone?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  isActive: boolean;
+}
 export type Brand = 'FRESH' | 'STYLE' | 'TECH';
 export type TempClass = 'CHILLED' | 'AMBIENT';
 export type OrderStatus = 'RECEIVED' | 'PLANNED' | 'LOADED' | 'ENROUTE' | 'DELIVERED' | 'DEFERRED' | 'EXCEPTION' | 'CANCELLED';

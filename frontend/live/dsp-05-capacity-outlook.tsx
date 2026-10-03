@@ -1,7 +1,9 @@
 'use client';
 // DSP-05 Capacity outlook, live. Markup and classes from the generated design (frontend/screens/dsp-05-capacity-outlook.tsx).
-// Data: Plans/Lodestar.CapacityOutlook(depot=…) for each depot in view (10 ISO weeks: operating days, festival,
-// payday, forecast total and chilled m³, reefers available and their m³ per trip) and the reefers in the workshop.
+// Data: Plans/Lodestar.CapacityOutlook(depot=…) for each depot in view (the ISO weeks from this one that the
+// Calendar covers: operating days, festival, payday, forecast total and chilled m³ from the median of the depot's
+// past run dates × festival_ramp, reefers available and their m³; the weeks without calendar rows; the history the
+// forecast rests on, or why there is none) and the reefers in the workshop.
 // Reefer trips: needed = chilled m³ ÷ m³ per reefer trip; available = reefers × trips a day × operating days
 // (the planning agent's maxTripsPerVehicle from AgentRuns/Lodestar.AgentConfig, as on the plan board). Advisory only: nothing is booked or deferred here.
 // Not shown, because the service has no data for them: the brand split (Fresh/Style/Tech columns), the 80% band,
@@ -16,6 +18,7 @@ import { fmtDay, fmtNum, fmtRunDate, fmtTime } from '@/lib/format';
 import { useQuery } from '@/lib/odata/hooks';
 import type { Depot, Vehicle } from '@/lib/odata/types';
 import { depotFilter } from '@/lib/workday';
+import { useDepots } from '@/components/live/depots';
 
 /** One week of the outlook, as planning's CapacityService returns it. */
 export interface OutlookWeek {
@@ -30,7 +33,24 @@ export interface OutlookWeek {
   festival: string | null;
 }
 
-const SHORT: Record<string, string> = { PELIYAGODA: 'Peliyagoda', KANDY: 'Kandy Hub' };
+/** What the forecast rests on (CapacityService.getCapacityOutlook). */
+export interface OutlookBasis {
+  historyDays: number;
+  historyFrom: string | null;
+  historyTo: string | null;
+  minHistoryDays: number;
+  medianTotalM3PerDay: number | null;
+  medianChilledM3PerDay: number | null;
+}
+
+interface DepotOutlook {
+  depot: Depot;
+  weeks: OutlookWeek[];
+  uncoveredWeeks: string[];
+  basis: OutlookBasis | null;
+  reason: string | null;
+}
+
 const MINUS = '−';
 const signed = (n: number) => (n < 0 ? `${MINUS}${Math.abs(n)}` : `+${n}`);
 const dayMonth = (iso: string) => fmtRunDate(iso).split(' ').slice(1).join(' ');
@@ -81,6 +101,7 @@ function Signal({ w, usual }: { w: OutlookWeek; usual: number }) {
 }
 
 function Chart({ weeks, peakWeek, peakBad, strip }: { weeks: OutlookWeek[]; peakWeek?: string; peakBad: boolean; strip: { depot: string; rows: Row[] } | null }) {
+  const { short: depotShort } = useDepots();
   const usual = usualDays(weeks);
   const step = tickStep(Math.max(...weeks.map(w => w.estimatedTotalM3), 0));
   const ticks = Math.max(1, Math.ceil(Math.max(...weeks.map(w => w.estimatedTotalM3), 0) / step));
@@ -123,7 +144,7 @@ function Chart({ weeks, peakWeek, peakBad, strip }: { weeks: OutlookWeek[]; peak
       ))}
       {strip && (
         <>
-          <text x="50" y="198" fontSize="12.5" fontWeight="700" fill="#4A5467">{SHORT[strip.depot] ?? strip.depot} reefer trip headroom (available minus needed)</text>
+          <text x="50" y="198" fontSize="12.5" fontWeight="700" fill="#4A5467">{depotShort(strip.depot)} reefer trip headroom (available minus needed)</text>
           <line x1="50" y1="236" x2="776" y2="236" stroke="#4A5467" strokeWidth="1" />
           <text x="42" y="240" textAnchor="end" fontSize="12.5" fill="#7A8395" fontFamily="JetBrains Mono, monospace">{"0"}</text>
           {strip.rows.map((r, i) => {
@@ -148,12 +169,13 @@ function Chart({ weeks, peakWeek, peakBad, strip }: { weeks: OutlookWeek[]; peak
 }
 
 export default function LiveDsp05CapacityOutlook() {
+  const { short: depotShort } = useDepots();
   const { depot, depots, active, setDepot } = usePlanScope();
   const key = active.join(',');
-  const outlook = useQuery<Array<{ depot: Depot; weeks: OutlookWeek[] }>>(key ? `capacity-outlook:${key}` : null, c =>
+  const outlook = useQuery<DepotOutlook[]>(key ? `capacity-outlook:${key}` : null, c =>
     Promise.all(active.map(async d => {
-      const r = valueOf<{ depot?: Depot; weeks?: OutlookWeek[] }>(await c.fn('Plans', null, 'CapacityOutlook', { depot: d }));
-      return { depot: d, weeks: r?.weeks ?? [] };
+      const r = valueOf<Partial<DepotOutlook>>(await c.fn('Plans', null, 'CapacityOutlook', { depot: d }));
+      return { depot: d, weeks: r?.weeks ?? [], uncoveredWeeks: r?.uncoveredWeeks ?? [], basis: r?.basis ?? null, reason: r?.reason ?? null };
     })),
   );
   const workshop = useQuery<Vehicle[]>(key ? `reefers-out:${key}` : null, c =>
@@ -210,7 +232,7 @@ export default function LiveDsp05CapacityOutlook() {
                     onClick={e => { e.stopPropagation(); setDepot(d); }}
                     onKeyDown={e => { if (e.key === 'Enter') setDepot(d); }}
                   >
-                    {d ? SHORT[d] ?? d : depots.length === 2 ? 'Both depots' : 'All depots'}
+                    {d ? depotShort(d) : depots.length === 2 ? 'Both depots' : 'All depots'}
                   </span>
                 ))}
               </div>
@@ -220,7 +242,7 @@ export default function LiveDsp05CapacityOutlook() {
           {peak && (
             <div className="d-kpis" style={{ gap: '16px' }}>
               <div className={`d-kpi${peakBad ? ' d-kpi--alert' : ''} x-kpi-xl`} style={{ flex: '1', justifyContent: 'center', gap: '8px' }} data-testid="peak-week">
-                <span className="d-kpi__l" style={peakBad ? { color: 'var(--st-exception-fg)' } : undefined}>Peak week · {peak.week} · {SHORT[peak.depot] ?? peak.depot}</span>
+                <span className="d-kpi__l" style={peakBad ? { color: 'var(--st-exception-fg)' } : undefined}>Peak week · {peak.week} · {depotShort(peak.depot)}</span>
                 <div className="hstack" style={{ gap: '16px', alignItems: 'center' }}>
                   <span className="d-kpi__v" style={{ ...(peakBad ? { color: 'var(--st-exception-fg)' } : {}), whiteSpace: 'nowrap' }}>{signed(peak.headroom!)}<small>{"trips"}</small></span>
                   <span className="d-kpi__s" style={{ lineHeight: '1.45' }}>
@@ -246,7 +268,9 @@ export default function LiveDsp05CapacityOutlook() {
                 </div>
                 <div style={{ padding: '0 18px 8px' }}>
                   {!outlook.data && !outlook.error && <Skeleton rows={3} label="Loading the outlook…" />}
-                  {outlook.data && weeks.length === 0 && <Empty title="No forecast" text="The planning service returned no weeks for the depots in view." icon="chart" />}
+                  {outlook.data && weeks.length === 0 && (
+                    <Empty title="No forecast" icon="chart" text={data.map(o => `${depotShort(o.depot)}: ${o.reason ?? (o.uncoveredWeeks.length ? `no calendar rows for ${o.uncoveredWeeks[0]} to ${o.uncoveredWeeks[o.uncoveredWeeks.length - 1]}` : 'no weeks returned')}`).join(' · ')} />
+                  )}
                   {weeks.length > 0 && <Chart weeks={weeks} peakWeek={peak?.week} peakBad={peakBad} strip={strip} />}
                 </div>
               </div>
@@ -266,7 +290,7 @@ export default function LiveDsp05CapacityOutlook() {
                     return (
                       <div key={`${r.week}:${r.depot}`} className={`d-tr x-otr${bad ? ' is-bad' : ''}`} data-week={r.week} data-depot={r.depot}>
                         <span className="d-td id" style={{ width: '48px', ...(bad ? { color: 'var(--st-exception-fg)', fontWeight: '800' } : {}) }}>{r.week}</span>
-                        <span className={`d-td${bad ? ' fw7' : ''}`} style={{ width: '92px' }}>{SHORT[r.depot] ?? r.depot}</span>
+                        <span className={`d-td${bad ? ' fw7' : ''}`} style={{ width: '92px' }}>{depotShort(r.depot)}</span>
                         <span className={`d-td x-num${bad ? ' fw7' : ''}`} style={{ width: '60px' }}>{fmtNum(r.estimatedChilledDemandM3)}</span>
                         <span className={`d-td x-num${bad ? ' fw7' : ''}`} style={{ width: '96px' }}>{r.needed ?? '—'} / {r.available ?? '—'}</span>
                         <span className="d-td" style={{ width: '96px' }}><Headroom r={r} /></span>
@@ -280,7 +304,21 @@ export default function LiveDsp05CapacityOutlook() {
             <div className="x-col" style={{ width: '316px', flexShrink: '0', gap: '14px' }}>
               <div className="x-handled" style={{ background: 'transparent', padding: '4px 6px', flexDirection: 'column', gap: '4px' }}>
                 <span className="x-sect" data-lk="L165"><Ic n="chart" className="ic ic--sm" />{"Forecast model"}</span>
-                <span>{"Weekly demand by depot from 2024 to 2026 history (Datathon Task 2A), with festival_ramp, payday and operating days. "}<b className="t-2">{"Advisory:"}</b>{" Lodestar never books vehicles or defers orders on its own."}</span>
+                <span data-testid="forecast-basis">
+                  {"Each operating day in the calendar gets the depot's median daily volume from its past run dates, × (1 + festival_ramp). "}
+                  {data.map(o => (
+                    <span key={o.depot} style={{ display: 'block' }}>
+                      <b className="t-2">{depotShort(o.depot)}</b>
+                      {o.basis && o.basis.historyDays > 0 && o.basis.historyFrom && o.basis.historyTo
+                        ? `: ${fmtNum(o.basis.historyDays)} run dates, ${dayMonth(o.basis.historyFrom)} to ${dayMonth(o.basis.historyTo)} · median ${fmtNum(o.basis.medianTotalM3PerDay ?? 0, 1)} m³ a day, ${fmtNum(o.basis.medianChilledM3PerDay ?? 0, 1)} chilled.`
+                        : ': no past run dates yet.'}
+                      {o.reason ? ` ${o.reason}` : ''}
+                      {o.uncoveredWeeks.length > 0 ? ` No calendar rows yet for ${o.uncoveredWeeks[0]}${o.uncoveredWeeks.length > 1 ? ` to ${o.uncoveredWeeks[o.uncoveredWeeks.length - 1]}` : ''}, so no forecast there.` : ''}
+                    </span>
+                  ))}
+                  {!outlook.data && '…'}
+                  <b className="t-2">{"Advisory:"}</b>{" Lodestar never books vehicles or defers orders on its own."}
+                </span>
               </div>
             </div>
           </div>

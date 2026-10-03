@@ -7,10 +7,12 @@ import { appVersion } from '@/lib/version';
 import { plural, signOutTo, titleCase, useDeviceId } from '@/lodestar/live';
 import { useClaims, useOutbox, useRun } from '@/model/hooks';
 import { Frame, Icon, Scroll, Tap, type ScreenNav } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L35":{"to":"dr-01-today-s-run-daylight","kind":"go"},"L37":{"to":"dr-31-update-required","kind":"go"},"L268":{"to":"dr-33-voice-and-language","kind":"go"},"L269":{"to":"dr-06-sign-in","kind":"go"},"B":{"to":"dr-01-today-s-run","kind":"back"}}};
 
 export default function ScreenDr24SettingsMe() {
+  const { name: depotName } = useDepots();
   const claims = useClaims();
   const device = useDeviceId();
   const { view, updatedAt } = useRun();
@@ -50,7 +52,7 @@ export default function ScreenDr24SettingsMe() {
                 <Text style={s.t9} testID="me-name">{name || 'Not signed in'}</Text>
               </View>
               <View style={s.v11}>
-                <Text style={s.t10}>{claims ? ['Driver', depot ? `${titleCase(depot)} depot` : ''].filter(Boolean).join(' · ') : 'Sign in to see your details'}</Text>
+                <Text style={s.t10}>{claims ? ['Driver', depot ? `${depotName(depot)}` : ''].filter(Boolean).join(' · ') : 'Sign in to see your details'}</Text>
               </View>
             </View>
           </View>

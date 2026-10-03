@@ -13,17 +13,17 @@ import Btn from '@/components/live/Btn';
 import { AdminSide, useCount } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
-import { DEPOT_NAME, fmtNum } from '@/lib/format';
+import { fmtNum } from '@/lib/format';
 import { useAction, useEntity, useQuery } from '@/lib/odata/hooks';
 import type { Vehicle } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
+import { useDepots } from '@/components/live/depots';
 
 type Target = 'AVAILABLE' | 'WORKSHOP';
 
 const kindOf = (v: Vehicle) => `${v.tempClass === 'CHILLED' ? 'reefer' : 'dry'} ${v.type === 'VAN' ? 'van' : 'truck'}`;
-const depotShort = (d: string) => (DEPOT_NAME[d] ?? d).split(' ')[0];
-
 function StatusForm({ v }: { v: Vehicle }) {
+  const { short: depotShort } = useDepots();
   const nav = useScreenNav();
   const [target, setTarget] = useState<Target>(v.status === 'WORKSHOP' ? 'WORKSHOP' : 'AVAILABLE');
   const [note, setNote] = useState(v.workshopNote ?? '');

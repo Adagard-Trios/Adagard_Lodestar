@@ -1,7 +1,8 @@
 // Entity shapes of the Lodestar OData service (backend/prisma/schema.prisma, exposed by backend/apps/*/src/*.set(s).ts).
 // Dates arrive as ISO strings. Only the fields the desk screens read are typed; responses may carry more.
 
-export type Depot = 'PELIYAGODA' | 'KANDY';
+/** A depot code (PELIYAGODA, KANDY, …): depots are rows of the Depots registry (ADM-21), not a fixed list. */
+export type Depot = string;
 export type Brand = 'FRESH' | 'STYLE' | 'TECH';
 export type TempClass = 'CHILLED' | 'AMBIENT';
 export type OrderStatus = 'RECEIVED' | 'PLANNED' | 'LOADED' | 'ENROUTE' | 'DELIVERED' | 'DEFERRED' | 'EXCEPTION' | 'CANCELLED';
@@ -12,6 +13,20 @@ export type DeferralReason = 'CAP_REEFER' | 'CAP_TIME' | 'ACCESS' | 'WINDOW' | '
 export type VehicleStatus = 'AVAILABLE' | 'WORKSHOP' | 'ENROUTE';
 export type DeviceStatus = 'PENDING' | 'ACTIVE' | 'REVOKED';
 export type UserRole = 'DISPATCHER' | 'LOADER' | 'DRIVER' | 'STORE_MANAGER' | 'ADMIN';
+
+/** A depot as the registry (OData Depots, ADM-21) holds it. Names shown anywhere come from here. */
+export interface DepotRow {
+  code: string;
+  name: string;
+  address?: string | null;
+  district: string;
+  lat?: number | null;
+  lng?: number | null;
+  phone?: string | null;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 export interface Outlet {
   id: string;

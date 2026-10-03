@@ -6,7 +6,7 @@
  * ValueError into a skipped row with a reason (see mappers.ts).
  */
 
-import { Brand, Depot, DockType, ParkingType, TempClass, VehicleType } from '@prisma/client';
+import { Brand, DockType, ParkingType, TempClass, VehicleType } from '@prisma/client';
 
 export class ValueError extends Error {}
 
@@ -86,12 +86,15 @@ export function parseText(v: string | undefined): string | null {
 
 // ── Enums ─────────────────────────────────────────────────────────────────
 
-export function parseDepot(v: string | undefined): Depot | null {
+export function parseDepot(v: string | undefined): string | null {
   if (isBlank(v)) return null;
   const t = token(v);
   // Accept "Peliyagoda", "PELIYAGODA", "Peliyagoda DC", "Kandy Hub" ...
-  if (t.includes('peliyagoda')) return Depot.PELIYAGODA;
-  if (t.includes('kandy')) return Depot.KANDY;
+  if (t.includes('peliyagoda')) return 'PELIYAGODA';
+  if (t.includes('kandy')) return 'KANDY';
+  // Any other depot by its code (GALLE, "Galle"): the import checks it against the Depots registry (ADM-21).
+  const code = String(v).trim().toUpperCase().replace(/[\s-]+/g, '_');
+  if (/^[A-Z][A-Z0-9_]{1,31}$/.test(code)) return code;
   throw new ValueError(`unknown depot: "${v}"`);
 }
 

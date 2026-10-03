@@ -10,12 +10,14 @@ import { AdminSide, adminChanged } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { ROLE_INFO } from '@/components/live/admin-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
-import { DEPOT_NAME, fmtClock, fmtDayTime } from '@/lib/format';
+import { fmtClock, fmtDayTime } from '@/lib/format';
 import { useAction, useEntity, useQuery } from '@/lib/odata/hooks';
 import type { Device, OfflineEvent } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
+import { useDepots } from '@/components/live/depots';
 
 export default function LiveAdm07LostPhone() {
+  const { name: depotName } = useDepots();
   const nav = useScreenNav();
   const [focus, setFocus] = useFocusId('device');
   const choices = useQuery<Device[]>('lost-choices', async c => (await c.list<Device>('Devices', { filter: "status eq 'ACTIVE'", expand: 'user($select=name)', orderby: 'lastSeenAt desc', top: 50 })).value);
@@ -46,7 +48,7 @@ export default function LiveAdm07LostPhone() {
             <span className="d-eyebrow">{d ? `${d.label ?? d.model ?? 'Device'} · ${d.id}${d.platform ? ` · ${d.platform}` : ''}` : 'Device'}</span>
             <span className="dx-card__title" style={{ fontSize: '20px' }} id="lost-title">{d?.status === 'REVOKED' ? 'Device already revoked' : 'Phone reported lost'}</span>
             <span className="dx-t13">
-              {d?.user ? `${d.user.name} · ${ROLE_INFO[d.user.role]?.label ?? d.user.role}${d.user.depot ? ` · ${DEPOT_NAME[d.user.depot] ?? d.user.depot}` : ''}` : ''}
+              {d?.user ? `${d.user.name} · ${ROLE_INFO[d.user.role]?.label ?? d.user.role}${d.user.depot ? ` · ${depotName(d.user.depot)}` : ''}` : ''}
               {d?.lastSeenAt ? ` · last seen ${fmtDayTime(d.lastSeenAt)}` : ''}
             </span>
           </div>

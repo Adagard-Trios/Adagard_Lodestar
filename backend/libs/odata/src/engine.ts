@@ -225,6 +225,8 @@ export class ODataEngine {
     if (!b) {
       b = new QueryBuilder(this.model, set.type, {
         navigation: set.options.navigation ?? [],
+        filterPaths: set.options.filterPaths ?? [],
+        expandPaths: set.options.expandPaths ?? [],
         search: set.options.search ?? [],
         hidden: this.registry.hiddenFields(),
         defaultOrderBy: set.defaultOrderBy,

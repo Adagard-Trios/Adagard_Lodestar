@@ -12,14 +12,16 @@ import { AdminSide, adminChanged } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { ROLE_INFO } from '@/components/live/admin-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
-import { DEPOT_NAME, daysAgo, fmtDay, fmtDayTime, fmtTime } from '@/lib/format';
+import { daysAgo, fmtDay, fmtDayTime, fmtTime } from '@/lib/format';
 import { useAction, useQuery } from '@/lib/odata/hooks';
 import type { Device } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
+import { useDepots } from '@/components/live/depots';
 
 type Tab = 'open' | 'resolved';
 
 export default function LiveAdm05AccessRequests() {
+  const { name: depotName } = useDepots();
   const nav = useScreenNav();
   const [focus, setFocus] = useFocusId('device');
   const [tab, setTab] = useState<Tab>('open');
@@ -83,7 +85,7 @@ export default function LiveAdm05AccessRequests() {
                     <div className="vstack" style={{ gap: '2px', flex: '1', minWidth: '0' }}>
                       <span className="dx-card__title" style={{ fontSize: '19px' }}>{sel.label ?? sel.model ?? sel.id} for {sel.user?.name ?? sel.userId}</span>
                       <span className="dx-t13">
-                        {sel.user ? `${ROLE_INFO[sel.user.role]?.label ?? sel.user.role} · ${sel.user.outletId ?? DEPOT_NAME[sel.user.depot ?? ''] ?? ''} · ` : ''}device {sel.id} · {sel.platform ?? 'unknown platform'} · {fmtDayTime(sel.registeredAt)}
+                        {sel.user ? `${ROLE_INFO[sel.user.role]?.label ?? sel.user.role} · ${sel.user.outletId ?? depotName(sel.user.depot)} · ` : ''}device {sel.id} · {sel.platform ?? 'unknown platform'} · {fmtDayTime(sel.registeredAt)}
                       </span>
                     </div>
                   </div>

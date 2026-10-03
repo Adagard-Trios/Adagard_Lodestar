@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { TempClass, Brand } from '@prisma/client';
+import { DEFERRAL_CANDIDATE_BELOW, DEFERRAL_WEIGHTS as W, PROTECTED_SCORE } from './planning-rules';
 
 /**
  * Deferral Scoring Service
- * Score formula (from STORY.md):
+ * Score formula (from STORY.md; the weights live in planning-rules.ts and are served by PlanningRules):
  *   deferred_yesterday: +40
  *   days_since:          ×12 per day
  *   chilled:            +15
@@ -28,29 +29,29 @@ export class DeferralScoringService {
   }): number {
     let score = 0;
 
-    if (params.deferredYesterday)   score += 40;
-    score += params.daysSince * 12;
-    if (params.tempClass === TempClass.CHILLED) score += 15;
+    if (params.deferredYesterday) score += W.deferredYesterday;
+    score += params.daysSince * W.perDaySince;
+    if (params.tempClass === TempClass.CHILLED) score += W.chilled;
 
-    // Fresh before-opening bonus (window opens before 08:00 = Fresh morning run)
+    // Fresh before-opening bonus (window opens before freshBeforeHour = Fresh morning run)
     const [wh] = params.windowOpen.split(':').map(Number);
-    if (params.brand === Brand.FRESH && wh < 8) score += 10;
+    if (params.brand === Brand.FRESH && wh < W.freshBeforeHour) score += W.freshBeforeOpening;
 
-    if (params.nextRunWithin24h) score -= 10;
+    if (params.nextRunWithin24h) score += W.nextRunWithin24h;
 
     // Stock cover heuristic: more cover = lower urgency
     if (params.stockCoverDays !== undefined) {
-      score -= Math.min(params.stockCoverDays * 5, 20);
+      score += Math.max(params.stockCoverDays * W.stockCoverPerDay, -W.stockCoverCap);
     }
 
     return Math.max(0, score);
   }
 
   isProtected(score: number): boolean {
-    return score >= 91;
+    return score >= PROTECTED_SCORE;
   }
 
   isDeferralCandidate(score: number): boolean {
-    return score < 30 && !this.isProtected(score);
+    return score < DEFERRAL_CANDIDATE_BELOW && !this.isProtected(score);
   }
 }

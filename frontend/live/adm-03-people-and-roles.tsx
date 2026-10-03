@@ -11,10 +11,11 @@ import { Ic } from '@/components/live/icons';
 import { ROLE_INFO, ROLES } from '@/components/live/admin-data';
 import { Empty, ErrorBanner, Skeleton, Spinner } from '@/components/live/states';
 import { initials } from '@/lib/auth/session';
-import { DEPOT_NAME, fmtDayTime } from '@/lib/format';
+import { fmtDayTime } from '@/lib/format';
 import { useEntitySet } from '@/lib/odata/hooks';
 import type { User, UserRole } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
+import { useDepots } from '@/components/live/depots';
 
 const SIGN_IN: Record<UserRole, string> = {
   DISPATCHER: 'Work email + 2-step', ADMIN: 'Work email + 2-step', LOADER: 'Staff ID on a registered device',
@@ -35,6 +36,7 @@ function ChipCount({ role }: { role: UserRole }) {
 }
 
 export default function LiveAdm03PeopleAndRoles() {
+  const { name: depotName } = useDepots();
   const router = useRouter();
   const [, setFocus] = useFocusId('user');
   const [, setDevice] = useFocusId('device');
@@ -106,7 +108,7 @@ export default function LiveAdm03PeopleAndRoles() {
                     </span>
                   </span>
                   <span className="dx-td" style={{ width: '190px' }}><span className="hstack" style={{ gap: '8px' }}><Ic n={info?.icon ?? 'user'} className="ic ic--sm" /><span className="dx-td2"><b>{info?.label ?? u.role}</b><span>{info?.face}</span></span></span></span>
-                  <span className="dx-td" style={{ width: '190px' }}>{u.outletId ?? (u.depot ? DEPOT_NAME[u.depot] ?? u.depot : 'All depots')}</span>
+                  <span className="dx-td" style={{ width: '190px' }}>{u.outletId ?? (u.depot ? depotName(u.depot) : 'All depots')}</span>
                   <span className="dx-td" style={{ width: '180px' }}><span className="t-2" style={{ color: 'var(--text-2)' }}>{SIGN_IN[u.role]}</span></span>
                   <span className="dx-td" style={{ width: '130px' }}><span className={`m-tag ${cls}`}><span className="dot" />{label}</span></span>
                   <span className="dx-td" style={{ flex: '1', minWidth: '0' }}><span className="dx-mono">{u.updatedAt ? fmtDayTime(u.updatedAt) : '—'}</span></span>

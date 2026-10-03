@@ -3,13 +3,16 @@
 // It runs inside the approval transaction, so a plan is either fully in effect or not at all.
 import { ODataError } from '@lodestar/odata';
 import { addBusinessDays, businessDateTime, minutesOfHhmm, runDateValue, toBusinessDate } from '@lodestar/platform';
-import { DeferralReason, DeferralStatus, Depot, OrderStatus, Plan, Prisma, Role, TripStatus } from '@prisma/client';
+import { DeferralReason, DeferralStatus, OrderStatus, Plan, Prisma, Role, TripStatus } from '@prisma/client';
 
 /** Loading bays per depot, handed out in departure order (DSP-02, LD-01). */
-export const BAYS: Record<Depot, string[]> = {
+export const BAYS: Record<string, string[]> = {
   PELIYAGODA: ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8'],
   KANDY: ['K1', 'K2', 'K3', 'K4'],
 };
+
+/** A depot registered later (ADM-21) gets four bays named after its code's first letter until it has its own. */
+export const baysOf = (depot: string): string[] => BAYS[depot] ?? [1, 2, 3, 4].map((n) => `${depot.charAt(0).toUpperCase()}${n}`);
 
 /** A trip as the planning agent drafts it (backend/apps/agent/lodestar_agent/domain/planner.py). */
 interface DraftStop {
@@ -46,7 +49,7 @@ interface DraftDeferral {
 
 export interface ExecutionResult {
   planId: string;
-  depot: Depot;
+  depot: string;
   runDate: string;
   trips: { id: string; vehicleId: string; driverId: string | null; bay: string; outletIds: string[] }[];
   planned: { orderId: string; outletId: string; tripId: string; etaModel: string | null }[];
@@ -131,7 +134,7 @@ export async function executePlan(tx: Prisma.TransactionClient, plan: Plan): Pro
   // 3. Trips and stops, in departure order so bays are handed out the way the dock loads them.
   const ymd = runDate.replace(/-/g, '');
   const ordered = [...drafted].sort((a, b) => (a.departs ?? '').localeCompare(b.departs ?? '') || a.vehicleId.localeCompare(b.vehicleId) || a.tripNo - b.tripNo);
-  const bays = BAYS[plan.depot];
+  const bays = baysOf(plan.depot);
   const result: ExecutionResult = { planId: plan.id, depot: plan.depot, runDate, trips: [], planned: [], deferred: [], atRisk: [], locked: [...locked], supersededTrips: replaced.length };
   let bayIndex = 0;
   const taken = new Set(started.map(t => t.id));

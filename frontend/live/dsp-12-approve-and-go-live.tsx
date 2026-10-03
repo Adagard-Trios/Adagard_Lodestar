@@ -17,10 +17,11 @@ import { Ic } from '@/components/live/icons';
 import { PLAN_EVENTS, useReviewRun, usePlanScope } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { useAuth } from '@/lib/auth/AuthProvider';
-import { DEPOT_NAME, dayFilter, fmtClock, fmtDayTime, fmtRunDate, fmtTime, isoDay, title } from '@/lib/format';
+import { dayFilter, fmtClock, fmtDayTime, fmtRunDate, fmtTime, isoDay, title } from '@/lib/format';
 import { useAction, useQuery } from '@/lib/odata/hooks';
 import type { AgentRun, Plan } from '@/lib/odata/types';
 import { depotFilter } from '@/lib/workday';
+import { useDepots } from '@/components/live/depots';
 
 function Check({ label, value, ok = true }: { label: string; value: string; ok?: boolean }) {
   return (
@@ -50,6 +51,7 @@ function Who({ icon, title: t, sub, items }: { icon: 'box' | 'truck' | 'store'; 
 }
 
 export default function LiveDsp12ApproveAndGoLive() {
+  const { name: depotName } = useDepots();
   const nav = useScreenNav();
   const { session } = useAuth();
   const scope = usePlanScope();
@@ -103,7 +105,7 @@ export default function LiveDsp12ApproveAndGoLive() {
   const review = draft?.detail?.needsReview ?? [];
   const vehicles = board.lanes.length;
   const firstDepart = board.cards.map(c => c.departs).filter(Boolean).sort((a, b) => String(a).localeCompare(String(b)))[0];
-  const depotLine = active.map(d => DEPOT_NAME[d] ?? d).join(' + ');
+  const depotLine = active.map(d => depotName(d)).join(' + ');
   const busy = approveDraft.pending || approvePlan.pending;
   const error = approveDraft.error ?? approvePlan.error;
   const approve = () => (draft ? void approveDraft.run({ decision: 'approve' }) : pending ? void approvePlan.run(pending) : undefined);
@@ -148,7 +150,7 @@ export default function LiveDsp12ApproveAndGoLive() {
             </span>
             <span className="dx-t14">
               Approver <b style={{ color: 'var(--text)' }}>{session?.name}</b> · {fmtDayTime(new Date())}
-              {draft ? ` · ${DEPOT_NAME[draft.depot] ?? draft.depot} ${isoDay(draft.runDate)}` : ''} · {vehicles} vehicles.
+              {draft ? ` · ${depotName(draft.depot)} ${isoDay(draft.runDate)}` : ''} · {vehicles} vehicles.
             </span>
           </div>
           <span className="dx-close" data-lk="C"><Ic n="x" /></span>

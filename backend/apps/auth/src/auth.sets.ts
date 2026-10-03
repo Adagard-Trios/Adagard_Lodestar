@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
-import { EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, OperationContext, WriteContext } from '@lodestar/odata';
+import { assertDepotCode, EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, OperationContext, WriteContext } from '@lodestar/odata';
 import { ALL_ROLES, DEVICE_ID_PATTERN, HUMAN_ROLES, isPrivileged, Roles } from '@lodestar/security';
 import { DeviceStatus } from '@prisma/client';
 import { AuthService, REALM_ROLE } from './auth.service';
@@ -37,6 +37,7 @@ export class UsersSet extends ODataEntitySet {
     if (!REALM_ROLE[data.role as keyof typeof REALM_ROLE]) throw ODataError.badRequest('Unknown role', 'role');
     if (data.role === 'STORE_MANAGER' && !data.outletId) throw ODataError.badRequest('A store manager needs an outletId', 'outletId');
     await this.checkVehicle(data.vehicleId);
+    if (data.depot) data.depot = await assertDepotCode(this.prisma, data.depot);
     return data;
   }
 
@@ -50,6 +51,7 @@ export class UsersSet extends ODataEntitySet {
     const outletId = 'outletId' in patch ? patch.outletId : current.outletId;
     if (role === 'STORE_MANAGER' && !outletId) throw ODataError.badRequest('A store manager needs an outletId', 'outletId');
     if ('vehicleId' in patch) await this.checkVehicle(patch.vehicleId);
+    if (patch.depot) patch.depot = await assertDepotCode(this.prisma, patch.depot);
     return patch;
   }
 

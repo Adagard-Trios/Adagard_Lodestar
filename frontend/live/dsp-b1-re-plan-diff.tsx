@@ -22,10 +22,11 @@ import { Ic } from '@/components/live/icons';
 import { useAgentRun, usePlanScope, useStartAgentRun } from '@/components/live/plan-data';
 import { useAgentConfig } from '@/components/live/settings-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
-import { DEPOT_NAME, fmtClock, fmtNum, title } from '@/lib/format';
+import { fmtClock, fmtNum, title } from '@/lib/format';
 import { useAction, useQuery } from '@/lib/odata/hooks';
 import type { AgentRun, AgentTrip, Notification, Trip, TripStop, Vehicle } from '@/lib/odata/types';
 import { depotFilter, useAgentRunId, useFocusId } from '@/lib/workday';
+import { useDepots } from '@/components/live/depots';
 
 type DraftTrip = AgentTrip & { stops?: Array<{ orderId: string; arrive?: string | null; lateRiskPct?: number | null }> };
 type Change =
@@ -48,8 +49,9 @@ function Cap({ label, used, cap, unit, digits = 0 }: { label: string; used: numb
 }
 
 export default function LiveDspB1RePlanDiff() {
+  const { name: depotName } = useDepots();
   const nav = useScreenNav();
-  const { runDate, active, tripsFilter } = usePlanScope();
+  const { runDate, active, tripsFilter, loadingDate } = usePlanScope();
   const [focus] = useFocusId('vehicle');
   const [runId, setRunId] = useAgentRunId();
   const run = useAgentRun(runId);
@@ -141,7 +143,7 @@ export default function LiveDspB1RePlanDiff() {
     { onSuccess: (_r, d) => { void run.refresh(); void trips.refresh(); void faults.refresh(); if (d === 'approve') nav.go('L32'); else setRunId(null); } },
   );
 
-  const loading = (!down.data && !down.error) || (Boolean(tripsFilter) && !trips.data && !trips.error);
+  const loading = loadingDate || (!down.data && !down.error) || (Boolean(tripsFilter) && !trips.data && !trips.error);
   const drafting = start.pending || draftIt.pending || run.drafting;
   const changeNo = (c: Change) => changes.indexOf(c) + 1;
 
@@ -162,7 +164,7 @@ export default function LiveDspB1RePlanDiff() {
                   <div className="d-eyebrow">
                     {ready ? <span className="m-tag m-tag--brand"><Ic n="sparkle" />Planning agent drafted this re-plan at {fmtClock(ready.updatedAt ?? ready.createdAt)}</span>
                       : <span className="m-tag m-tag--warn"><Ic n="sparkle" />{drafting ? 'Planning agent drafting the re-plan…' : 'No re-plan drafted yet'}</span>}
-                    <span className="m-sep" />{" approve to send "}<span className="m-sep" />{` ${DEPOT_NAME[vehicle.depot] ?? vehicle.depot}`}
+                    <span className="m-sep" />{" approve to send "}<span className="m-sep" />{` ${depotName(vehicle.depot)}`}
                   </div>
                   <div className="d-h1" data-testid="b1-title">
                     Re-plan for {vehicle.id}{ready ? `: ${changes.length} change${changes.length === 1 ? '' : 's'}, ${moved.length} order${moved.length === 1 ? '' : 's'}` : ''}

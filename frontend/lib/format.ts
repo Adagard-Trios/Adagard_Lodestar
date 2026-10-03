@@ -109,7 +109,6 @@ export function title(v: string | null | undefined): string {
 }
 
 export const BRAND_LETTER: Record<string, string> = { FRESH: 'F', STYLE: 'S', TECH: 'T' };
-export const DEPOT_NAME: Record<string, string> = { PELIYAGODA: 'Peliyagoda DC', KANDY: 'Kandy Hub' };
 
 /** ISO day (YYYY-MM-DD) `n` days before today's business date in Colombo (not the UTC date). */
 export function daysAgo(n: number, now: Date = new Date()): string {

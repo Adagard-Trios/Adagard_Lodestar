@@ -445,7 +445,8 @@ describe('ADM-08 Outlets', () => {
     expect(r2).toHaveTextContent('Waypoint Style');
     expect(r2).toHaveTextContent('mall bay');
     expect(r2).toHaveTextContent('Inactive');
-    expect(await screen.findByText(/Showing/)).toHaveTextContent('Showing 2 of 2 · Peliyagoda DC 90 · Kandy Hub 60');
+    const foot = await screen.findByText(/Showing/);
+    await waitFor(() => expect(foot).toHaveTextContent('Showing 2 of 2 · Kandy Hub 60 · Peliyagoda DC 90'));
     fireEvent.click(within(r2).getByText('Style Mall'));
     expect(window.sessionStorage.getItem('lodestar.focus.outlet')).toBe('OUT102');
     expect(router.push).toHaveBeenCalledWith('/admin/adm-09-edit-outlet');

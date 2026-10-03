@@ -5,7 +5,7 @@
 // Offline (DSP-24): when the desk loses the API, the offline banner shows under the header, the numbers freeze at
 // what was last loaded and are marked "Not live". DSP-24 renders this screen with `offlineView`.
 import { useAuth } from '@/lib/auth/AuthProvider';
-import { DEPOT_NAME, dayFilter, fmtClock, fmtNum, fmtRunDate, fmtTime, pct } from '@/lib/format';
+import { dayFilter, fmtClock, fmtNum, fmtRunDate, fmtTime, pct } from '@/lib/format';
 import { useQuery } from '@/lib/odata/hooks';
 import type { Notification, Plan, Trip, Vehicle } from '@/lib/odata/types';
 import { PlanSide, useCount } from '@/components/live/chrome';
@@ -14,6 +14,8 @@ import { OfflineBanner, useOffline } from '@/components/live/offline';
 import { usePlanScope, useExceptions, type ExceptionItem } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { useRealtimeStatus } from '@/lib/odata/hooks';
+import { useDepots } from '@/components/live/depots';
+import { useRouter } from 'next/navigation';
 
 const LEAD: Record<ExceptionItem['tone'], { cls: string; icon: 'store' | 'clock' | 'wifi-off' }> = {
   bad: { cls: 'dx-lead--bad', icon: 'store' },
@@ -30,6 +32,7 @@ const PLAN_PILL: Record<string, string> = {
 };
 
 function DepotCard({ depot, runDate }: { depot: string; runDate: string }) {
+  const { name: depotName } = useDepots();
   const day = dayFilter('runDate', runDate);
   const scope = `${day} and outlet/depot eq '${depot}'`;
   const total = useCount('Orders', `${scope} and status ne 'CANCELLED'`, ['notification']);
@@ -54,7 +57,7 @@ function DepotCard({ depot, runDate }: { depot: string; runDate: string }) {
       <div className="dx-card__head">
         <span className="dx-lead"><Ic n="depot" /></span>
         <div className="vstack" style={{ gap: '0' }}>
-          <span className="dx-card__title">{DEPOT_NAME[depot] ?? depot}</span>
+          <span className="dx-card__title">{depotName(depot)}</span>
           <span className="dx-t13">{trips ?? '…'} vehicles out</span>
         </div>
         <span className="spacer" />
@@ -87,6 +90,12 @@ const DOT: Record<string, string> = {
 };
 
 export default function LiveDsp08TodayOverview({ offlineView = false }: { offlineView?: boolean } = {}) {
+  const { name: depotName } = useDepots();
+  const router = useRouter();
+  // DSP-24 shows this screen inside its own design, which has no L147/L149 links: those go by the router there
+  const link = (lk: 'L147' | 'L149') => (offlineView
+    ? { role: 'button', tabIndex: 0, onClick: () => router.push(lk === 'L147' ? '/plan/dsp-13-exceptions-inbox' : '/plan/dsp-04-live-operations') }
+    : { 'data-lk': lk });
   const { session } = useAuth();
   const conn = useOffline();
   const frozen = conn.offline;
@@ -131,14 +140,14 @@ export default function LiveDsp08TodayOverview({ offlineView = false }: { offlin
               <div className="d-eyebrow">
                 {runDate ? fmtRunDate(runDate) : '…'} · {fmtTime(new Date())}
                 <span className="m-sep" />
-                {active.length > 1 ? 'Both depots' : DEPOT_NAME[active[0]] ?? active[0]}
+                {active.length > 1 ? 'Both depots' : depotName(active[0])}
               </div>
               <div className="d-h1">{greeting}{firstName ? `, ${firstName}` : ''}</div>
             </div>
             {frozen
               ? <span className="d-btn d-btn--disabled" aria-disabled="true"><Ic n="navigate" />Open live operations</span>
-              : <span className="d-btn" data-lk="L149"><Ic n="navigate" />Open live operations</span>}
-            <span className="d-btn d-btn--primary" data-lk="L147"><Ic n="alert" />{open ? `Triage ${open} exception${open === 1 ? '' : 's'}` : 'Exceptions inbox'}</span>
+              : <span className="d-btn" {...link('L149')}><Ic n="navigate" />Open live operations</span>}
+            <span className="d-btn d-btn--primary" {...link('L147')}><Ic n="alert" />{open ? `Triage ${open} exception${open === 1 ? '' : 's'}` : 'Exceptions inbox'}</span>
           </div>
           <OfflineBanner lk={offlineView ? 'L174' : undefined} always={offlineView} />
           {scope.dateError && !frozen && <ErrorBanner error={scope.dateError} />}
@@ -151,7 +160,7 @@ export default function LiveDsp08TodayOverview({ offlineView = false }: { offlin
                 {frozen ? (
                   <span className="m-pill m-pill--offline"><Ic n="wifi-off" />{"Not live"}</span>
                 ) : (
-                  <span className="m-tag" style={{ color: live === 'connected' ? '#6EE7B7' : '#B9C0E6' }} data-lk="L149">
+                  <span className="m-tag" style={{ color: live === 'connected' ? '#6EE7B7' : '#B9C0E6' }} {...link('L149')}>
                     <span className="dot" />{live === 'connected' ? 'Live' : 'Reconnecting'} · {fmtClock(new Date())}
                   </span>
                 )}
@@ -178,7 +187,7 @@ export default function LiveDsp08TodayOverview({ offlineView = false }: { offlin
                 <span className="dx-card__title">Needs you</span>
                 <span className={`m-pill ${open ? 'm-pill--bad' : 'm-pill--ok'}`}>{open} open</span>
                 <span className="spacer" />
-                <span className="x-link" data-lk="L147">Exceptions inbox<Ic n="chevron-right" /></span>
+                <span className="x-link" {...link('L147')}>Exceptions inbox<Ic n="chevron-right" /></span>
               </div>
               {exceptions.error && <ErrorBanner compact error={exceptions.error} onRetry={exceptions.refresh} />}
               {!exceptions.data && !exceptions.error && <Skeleton rows={3} />}

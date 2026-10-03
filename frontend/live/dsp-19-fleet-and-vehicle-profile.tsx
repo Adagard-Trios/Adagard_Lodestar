@@ -11,10 +11,12 @@ import { Ic } from '@/components/live/icons';
 import { usePlanScope } from '@/components/live/plan-data';
 import { useAgentConfig } from '@/components/live/settings-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
-import { DEPOT_NAME, dayFilter, fmtNum, fmtRunDate, pct } from '@/lib/format';
+import { dayFilter, fmtNum, fmtRunDate, pct } from '@/lib/format';
+import { usePlanningRules } from '@/components/live/planning-rules';
 import { useAction, useQuery } from '@/lib/odata/hooks';
 import type { Trip, Vehicle, VehicleStatus } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
+import { useDepots } from '@/components/live/depots';
 
 type Filter = 'all' | 'reefer' | 'dry' | 'vans' | 'workshop';
 const FILTERS: Array<[Filter, string, (v: Vehicle) => boolean]> = [
@@ -27,16 +29,19 @@ const FILTERS: Array<[Filter, string, (v: Vehicle) => boolean]> = [
 const kind = (v: Vehicle) => `${v.tempClass === 'CHILLED' ? 'Reefer' : 'Dry'} ${v.type === 'VAN' ? 'van' : 'truck'}`;
 
 function DepotTab({ depot, on, onPick }: { depot: string; on: boolean; onPick: () => void }) {
+  const { name: depotName } = useDepots();
   const n = useCount('Vehicles', `depot eq '${depot}'`);
   return (
     <span className={`dx-tab lv-click${on ? ' is-on' : ''}`} role="tab" aria-selected={on} tabIndex={0}
       onClick={e => { e.stopPropagation(); onPick(); }} onKeyDown={e => { if (e.key === 'Enter') onPick(); }}>
-      {DEPOT_NAME[depot] ?? depot} <b>{n ?? '…'}</b>
+      {depotName(depot)} <b>{n ?? '…'}</b>
     </span>
   );
 }
 
 export default function LiveDsp19FleetAndVehicleProfile() {
+  const warnPct = usePlanningRules().data?.load.warnPct;
+  const { name: depotName } = useDepots();
   const router = useRouter();
   const { runDate, depots, depot: pinned } = usePlanScope();
   const maxTrips = useAgentConfig().data?.limits?.maxTripsPerVehicle;
@@ -77,7 +82,7 @@ export default function LiveDsp19FleetAndVehicleProfile() {
           <div className="d-head">
             <div className="d-head__txt">
               <div className="d-eyebrow">{"Fleet & outlets "}<span className="m-sep" />{" Vehicles "}<span className="m-sep" />{runDate ? ` ${fmtRunDate(runDate)} run` : ''}</div>
-              <div className="d-h1">Fleet · {DEPOT_NAME[depot ?? ''] ?? depot}</div>
+              <div className="d-h1">Fleet · {depotName(depot)}</div>
             </div>
             <div className="dx-tabs" role="tablist">
               {depots.map(d => <DepotTab key={d} depot={d} on={d === depot} onPick={() => setTab(d)} />)}
@@ -131,9 +136,9 @@ export default function LiveDsp19FleetAndVehicleProfile() {
                     <span className="dx-td" style={{ width: '140px' }}>{fmtNum(v.capacityKg)} kg · {fmtNum(v.capacityM3, 1)} m³</span>
                     <span className="dx-td" style={{ width: '124px' }}>
                       <span className="vstack" style={{ gap: '4px', width: '112px' }}>
-                        <span style={{ fontSize: '13px' }}><b style={fuel >= 85 ? { color: 'var(--st-deferred-fg)' } : undefined}>{v.usedLThisWeek}</b> / {v.weeklyLFuel} L</span>
+                        <span style={{ fontSize: '13px' }}><b style={warnPct !== undefined && fuel >= warnPct ? { color: 'var(--st-deferred-fg)' } : undefined}>{v.usedLThisWeek}</b> / {v.weeklyLFuel} L</span>
                         <span className="dx-bar" style={{ height: '5px' }}>
-                          <span style={{ display: 'block', width: `${fuel}%`, borderRadius: '999px', background: down ? '#A8A29E' : fuel >= 85 ? 'var(--star-500)' : 'var(--st-delivered-fg)' }} />
+                          <span style={{ display: 'block', width: `${fuel}%`, borderRadius: '999px', background: down ? '#A8A29E' : warnPct !== undefined && fuel >= warnPct ? 'var(--star-500)' : 'var(--st-delivered-fg)' }} />
                         </span>
                       </span>
                     </span>
@@ -150,7 +155,7 @@ export default function LiveDsp19FleetAndVehicleProfile() {
               <div className="dx-card" style={{ width: '372px', flexShrink: '0' }} data-testid="vehicle-profile">
                 <div className="dx-card__head" style={{ minHeight: '64px' }}>
                   <span className={`dx-lead${sel.tempClass === 'CHILLED' ? ' dx-lead--cold' : ''}`}><Ic n={sel.type === 'VAN' ? 'van' : 'truck'} /></span>
-                  <div className="vstack" style={{ gap: '0' }}><span className="dx-card__title">{sel.id}</span><span className="dx-t13">{kind(sel)} · {DEPOT_NAME[sel.depot] ?? sel.depot}</span></div>
+                  <div className="vstack" style={{ gap: '0' }}><span className="dx-card__title">{sel.id}</span><span className="dx-t13">{kind(sel)} · {depotName(sel.depot)}</span></div>
                   <span className="spacer" />
                   <span className="dx-close" data-lk="C"><Ic n="x" /></span>
                 </div>
@@ -165,11 +170,11 @@ export default function LiveDsp19FleetAndVehicleProfile() {
                     <div className="dx-kv"><span>{"Temperature"}</span><b>{sel.tempClass === 'CHILLED' ? 'Reefer, chilled' : 'Dry, ambient'}</b></div>
                     <div className="dx-kv"><span>{"Fuel"}</span><b>{fmtNum(sel.kmPerLitre, 1)} km/L</b></div>
                     <div className="dx-kv"><span>{"Weekly quota"}</span><b>{sel.usedLThisWeek} of {sel.weeklyLFuel} L used</b></div>
-                    <div className="dx-kv"><span>{"Trips a day"}</span><b>Max {maxTrips ?? '—'} · home {DEPOT_NAME[sel.depot] ?? sel.depot}</b></div>
+                    <div className="dx-kv"><span>{"Trips a day"}</span><b>Max {maxTrips ?? '—'} · home {depotName(sel.depot)}</b></div>
                   </div>
                   {sel.tempClass === 'CHILLED' && (
                     <div className="dx-inset dx-inset--warn" style={{ padding: '12px 14px' }}>
-                      <span className="dx-t14">Without it {DEPOT_NAME[sel.depot] ?? sel.depot} has <b>{reefersLeft} reefers</b> ready.</span>
+                      <span className="dx-t14">Without it {depotName(sel.depot)} has <b>{reefersLeft} reefers</b> ready.</span>
                     </div>
                   )}
                   <div className="dx-field">

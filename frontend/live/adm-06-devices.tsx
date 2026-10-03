@@ -8,14 +8,16 @@ import { AdminSide, useCount } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { ROLE_INFO } from '@/components/live/admin-data';
 import { Empty, ErrorBanner, Skeleton, Spinner } from '@/components/live/states';
-import { DEPOT_NAME, fmtClock, fmtDay, fmtTime } from '@/lib/format';
+import { fmtClock, fmtDay, fmtTime } from '@/lib/format';
 import { useEntitySet, useQuery } from '@/lib/odata/hooks';
 import type { Device, OfflineEvent } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
+import { useDepots } from '@/components/live/depots';
 
 type Filter = 'all' | 'waiting' | 'pending' | 'revoked';
 
 export default function LiveAdm06Devices() {
+  const { name: depotName } = useDepots();
   const [, setFocus] = useFocusId('device');
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
@@ -91,7 +93,7 @@ export default function LiveAdm06Devices() {
                       <span className={`dx-lead${bad ? ' dx-lead--bad' : ''}`} style={{ width: '36px', height: '36px', borderRadius: '11px' }}><Ic n={d.platform === 'web' ? 'tablet' : 'phone'} /></span>
                       <span className="dx-td2">
                         <b>{d.label ?? d.model ?? d.id}</b>
-                        <span>{d.user?.name ?? d.userId}{d.user ? ` · ${ROLE_INFO[d.user.role]?.label ?? d.user.role}${d.user.depot ? ` · ${DEPOT_NAME[d.user.depot] ?? d.user.depot}` : ''}` : ''}</span>
+                        <span>{d.user?.name ?? d.userId}{d.user ? ` · ${ROLE_INFO[d.user.role]?.label ?? d.user.role}${d.user.depot ? ` · ${depotName(d.user.depot)}` : ''}` : ''}</span>
                       </span>
                     </span>
                   </span>

@@ -4,21 +4,23 @@
 // settings of this phone (src/lib/settings), applied by the runtime's Tap and the realtime notices.
 import { Text, View, StyleSheet } from 'react-native';
 import { dayLabel, hm } from '@/lib/time';
-import { plural, titleCase } from '@/lodestar/live';
+import { plural } from '@/lodestar/live';
 import { setSettings, useSettings } from '@/lib/settings';
 import { useBayQueue, useClaims } from '@/model/hooks';
 import { nextToLoad, useMyBay } from '@/model/dock';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L188":{"to":"ld-08-quick-tips","kind":"go"}}};
 
 export default function ScreenLd07StartShift() {
+  const { name: depotName } = useDepots();
   const claims = useClaims();
   const set = useSettings();
   const { data, loading } = useBayQueue();
   const trips = data?.trips ?? [];
   const depot = data?.depot ?? claims?.depots[0];
-  const hub = depot ? `${titleCase(depot)} hub` : '—';
+  const hub = depot ? `${depotName(depot)}` : '—';
   const name = claims?.name ?? claims?.username ?? '';
   const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join('') || '—';
   const [bay, setBay] = useMyBay();

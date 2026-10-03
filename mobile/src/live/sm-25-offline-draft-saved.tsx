@@ -6,10 +6,10 @@
 import { Text, View, StyleSheet } from 'react-native';
 import { dayLabel } from '@/lib/time';
 import { useClaims, useOnline, useOutbox, useParam, useStoreDay } from '@/model/hooks';
-import { depotName } from '@/model/plan';
 import { sendNow } from '@/model/run';
 import { cutoffFor, left, reopenOrders, useNextRun, useNow } from '@/model/store-face';
 import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L108":{"to":"sm-01-received","kind":"go"},"L109":{"to":"sm-13-new-order","kind":"go"},"B":{"to":"sm-11-today-order-day","kind":"back"}}};
 
@@ -25,6 +25,7 @@ function clock12(iso?: string): string {
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
 export default function ScreenSm25OfflineDraftSaved() {
+  const { name: depotName } = useDepots();
   const claims = useClaims();
   const online = useOnline();
   const now = useNow();

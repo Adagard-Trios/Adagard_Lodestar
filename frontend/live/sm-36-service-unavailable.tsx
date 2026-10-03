@@ -12,6 +12,7 @@ import { useScreenNav } from '@/components/ScreenShell';
 import { StoreTop } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { clearOrderDraft, hasUnsent, isUnreachable, lineTotals, loadAnyOrderDraft, loadOrderDraft, saveOrderDraft, sendOrderDraft, type OrderDraft } from '@/components/live/order-draft';
+import { useDepots } from '@/components/live/depots';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { depotLabel, resetOptions, telHref } from '@/lib/auth/reset';
 import { runtimeConfig } from '@/lib/config';
@@ -36,6 +37,7 @@ export default function LiveSm36ServiceUnavailable() {
   const nav = useScreenNav();
   const client = useODataClient();
   const { session } = useAuth();
+  const { name: depotName } = useDepots();
   const status = useDeskStatus();
   const { supportPhone } = resetOptions();
   const down = isServiceDown(status);
@@ -181,7 +183,7 @@ export default function LiveSm36ServiceUnavailable() {
                   <span className="cstate__v" style={{ color: 'var(--st-deferred-fg)' }}>{left ?? (draft ? 'Closed' : '—')}</span>
                 </div>
                 <span className="cstate__s" style={{ fontSize: '14px' }}>
-                  {"Still not connected "}{cutoffAt ? `by ${fmtTime(new Date(cutoffAt.getTime() - 30 * 60_000))}` : 'near the cutoff'}{`? Call ${depotLabel(session?.depots)}`}
+                  {"Still not connected "}{cutoffAt ? `by ${fmtTime(new Date(cutoffAt.getTime() - 30 * 60_000))}` : 'near the cutoff'}{`? Call ${depotLabel(session?.depots, depotName)}`}
                   {supportPhone ? <>{' on '}<a href={telHref(supportPhone)} style={{ whiteSpace: 'nowrap', fontWeight: 700, color: 'inherit' }} onClick={e => e.stopPropagation()}>{supportPhone}</a></> : null}
                   {". The dispatcher logs your order into the same thread."}
                 </span>

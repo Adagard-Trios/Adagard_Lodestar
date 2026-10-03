@@ -10,9 +10,9 @@ import { finishDeliveredTrips } from '@/model/actions';
 import { network } from '@/offline/network';
 import { queue, sync } from '@/model/platform';
 import { useClaims, useOutbox, useRun, type RunView } from '@/model/hooks';
-import { depotName } from '@/model/plan';
 import type { Trip, TripStop, Vehicle } from '@/model/types';
 import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 // Close shift → DR-06 (P4): the finished trips are completed, the outbox is sent while there is signal, then the
 // driver is signed out (anything still unsent stays on the phone and goes after the next sign-in).
@@ -32,6 +32,7 @@ export default function ScreenDr28EndOfShiftSummary() {
 
 /** The one DR-28 body, rendered by the night screen and by the daylight one with their own theme. */
 export function Dr28Body({ t }: { t: Dr28Theme }) {
+  const { name: depotName } = useDepots();
   const { s, X2 } = t;
   const claims = useClaims();
   const run = useRun();
@@ -62,7 +63,7 @@ export function Dr28Body({ t }: { t: Dr28Theme }) {
             </View>
             {lastTrip ? (
               <View>
-                <Text style={s.t12}>{shiftTimes(trips, stops, lastTrip)}</Text>
+                <Text style={s.t12}>{shiftTimes(trips, stops, lastTrip, depotName)}</Text>
               </View>
             ) : null}
           </View>
@@ -88,7 +89,7 @@ function exceptionText(problems: TripStop[]): string {
 }
 
 /** "Back at <depot> <time> · out since <time>", else the depot. */
-function shiftTimes(trips: Trip[], stops: TripStop[], lastTrip: Trip): string {
+function shiftTimes(trips: Trip[], stops: TripStop[], lastTrip: Trip, depotName: (code: string) => string): string {
   const depot = depotName(lastTrip.depot);
   const out = trips.map(x => x.departTime).filter((x): x is string => !!x).sort((a, b) => a.localeCompare(b))[0];
   const back = lastTrip.returnTime ?? stops.map(st => st.leaveActual).filter((x): x is string => !!x).sort((a, b) => a.localeCompare(b)).at(-1);

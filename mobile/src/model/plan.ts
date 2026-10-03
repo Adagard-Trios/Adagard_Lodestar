@@ -12,6 +12,7 @@ import { client } from './platform';
 import { LATE_RISK_PCT } from './preferences';
 import { useQuery } from './query';
 import type { Deferral, Notification, Order, Outlet, Plan, Trip, TripStop } from './types';
+import { depotName } from './depots';
 
 /** How often the dispatcher's live screens re-read when no realtime notice arrives (a dropped socket, a quiet zone). */
 export const LIVE_POLL_MS = 30_000;
@@ -75,10 +76,10 @@ const text = (p: Payload, k: string) => (typeof p[k] === 'string' && p[k] ? (p[k
 const num = (p: Payload, k: string) => (typeof p[k] === 'number' ? (p[k] as number) : undefined);
 const nice = (type: string) => titleCase(type);
 
-/** "Peliyagoda & Kandy" for the dispatcher's depots. */
+/** "Kandy Hub", or "both depots" / "3 depots" for the dispatcher's depots (names from the Depots registry). */
 export function depotsLabel(depots?: string[] | null): string {
   if (!depots?.length) return '';
-  return depots.length > 1 ? 'both depots' : titleCase(depots[0]);
+  return depots.length === 2 ? 'both depots' : depots.length > 2 ? `${depots.length} depots` : depotName(depots[0]);
 }
 
 export function planSource(p: Pick<Plan, 'source'>): string {
@@ -138,7 +139,7 @@ function fromNotice(x: Notice, trips: Trip[]): AlertRow | null {
       return { id: `s:${x.id}`, tone: 'late', title: `${vehicle ?? 'A trip'} late risk ${pct}%`, meta: [text(p, 'outletId'), text(p, 'etaModel') ? `ETA ~${hm(text(p, 'etaModel'))}` : undefined].filter(Boolean).join(' · ') || 'Live notice', at: x.at, needsYou: true, vehicle };
     }
     case 'plan_published':
-      return { id: `s:${x.id}`, tone: 'done', title: 'Plan published', meta: [text(p, 'depot') ? titleCase(text(p, 'depot')) : undefined, text(p, 'planId') ?? text(p, 'id')].filter(Boolean).join(' · ') || 'Live notice', at: x.at, needsYou: false, plan: text(p, 'planId') ?? text(p, 'id') };
+      return { id: `s:${x.id}`, tone: 'done', title: 'Plan published', meta: [text(p, 'depot') ? depotName(text(p, 'depot')) : undefined, text(p, 'planId') ?? text(p, 'id')].filter(Boolean).join(' · ') || 'Live notice', at: x.at, needsYou: false, plan: text(p, 'planId') ?? text(p, 'id') };
     case 'shortfall_ack':
       return { id: `s:${x.id}`, tone: 'done', title: 'Shortfall acknowledged', meta: vehicle ?? 'Live notice', code: text(p, 'orderId'), at: x.at, needsYou: false, vehicle };
     case 'trip_released':
@@ -196,7 +197,7 @@ export function useAlerts() {
         id: `p:${p.id}`,
         tone: 'late',
         title: p.version ? `Plan v${p.version} waits for you` : 'Agent draft waits for you',
-        meta: [planSource(p), titleCase(p.depot), dayLabel(p.runDate)].filter(Boolean).join(' · '),
+        meta: [planSource(p), depotName(p.depot), dayLabel(p.runDate)].filter(Boolean).join(' · '),
         at: p.createdAt,
         needsYou: true,
         plan: p.id,
@@ -451,9 +452,8 @@ export function tripProgress(t: Trip) {
 
 // ---------------------------------------------------------------- DSP-32 plans (read-only on phone)
 
-/** Depot names as the design writes them. */
-export const DEPOT_NAME: Record<string, string> = { PELIYAGODA: 'Peliyagoda DC', KANDY: 'Kandy Hub' };
-export const depotName = (d: string) => DEPOT_NAME[d] ?? titleCase(d);
+/** Depot names come from the Depots registry (model/depots); screens use useDepots() so they update on load. */
+export { depotName } from './depots';
 
 /** CAP_REEFER → CAP-REEFER (the reason code as the design prints it). */
 export const reasonCode = (r: string) => r.replace(/_/g, '-');

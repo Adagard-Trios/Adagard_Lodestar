@@ -1,12 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import {
-  callerAuthorization, currentRequest, EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, OperationContext, WriteContext,
+  assertDepotCode, callerAuthorization, currentRequest, EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, OperationContext, WriteContext,
 } from '@lodestar/odata';
-import { AUDIT_SINK, AuditSink, canAccessDepot, Principal, Roles, serviceName } from '@lodestar/security';
-import { Depot, DeferralStatus, PlanSource, PlanStatus } from '@prisma/client';
+import { AUDIT_SINK, AuditSink, canAccessDepot, isPrivileged, Principal, Roles, serviceName } from '@lodestar/security';
+import { DeferralStatus, PlanSource, PlanStatus } from '@prisma/client';
 import { AgentClient, AgentRunSnapshot } from './agent.client';
 import { EtaService } from './eta.service';
+import { measureModels, planningRules } from './planning-rules';
 import { dayRange, OPEN_PLAN_STATUSES, overrideReasonRequired, PlanningService, planViolations } from './planning.service';
 
 function assertDepot(p: Principal, depot: string) {
@@ -40,6 +41,7 @@ export class PlansSet extends ODataEntitySet {
   /** Drafts only: the id, version and status are assigned here, never by the client. */
   async beforeCreate(data: Record<string, any>, ctx: WriteContext) {
     if (!data.depot || !data.runDate) throw ODataError.badRequest('depot and runDate are required');
+    data.depot = await assertDepotCode(this.prisma, data.depot);
     assertDepot(ctx.principal, data.depot);
     const next = await this.planning.nextPlanId(data.depot, data.runDate.toISOString());
     const fromAgent = serviceName(ctx.principal) === 'agent';
@@ -84,12 +86,13 @@ export class PlansSet extends ODataEntitySet {
     name: 'AutoPlan',
     binding: 'collection',
     roles: [Roles.Dispatcher, Roles.Admin],
-    params: { depot: { type: 'Lodestar.Depot', required: true }, runDate: { type: 'Edm.Date', required: true } },
+    params: { depot: { type: 'Edm.String', required: true }, runDate: { type: 'Edm.Date', required: true } },
     returns: 'Lodestar.Plan',
   })
-  autoPlan(ctx: OperationContext) {
-    assertDepot(ctx.principal, ctx.params.depot);
-    return this.planning.runAutoPlan(ctx.params.depot as Depot, ctx.params.runDate, ctx.principal.sub);
+  async autoPlan(ctx: OperationContext) {
+    const depot = await assertDepotCode(this.prisma, ctx.params.depot);
+    assertDepot(ctx.principal, depot);
+    return this.planning.runAutoPlan(depot, ctx.params.runDate, ctx.principal.sub);
   }
 
   /** GET Plans/Lodestar.Board(depot='KANDY',runDate=2026-04-07) — DSP-01 plan board. */
@@ -97,12 +100,13 @@ export class PlansSet extends ODataEntitySet {
     name: 'Board',
     binding: 'collection',
     roles: [Roles.Dispatcher, Roles.Loader, Roles.Admin, Roles.Service],
-    params: { depot: { type: 'Lodestar.Depot', required: true }, runDate: { type: 'Edm.Date', required: true } },
+    params: { depot: { type: 'Edm.String', required: true }, runDate: { type: 'Edm.Date', required: true } },
     returns: 'Edm.Untyped',
   })
-  board(ctx: OperationContext) {
-    assertDepot(ctx.principal, ctx.params.depot);
-    return this.planning.getPlan(ctx.params.depot as Depot, ctx.params.runDate);
+  async board(ctx: OperationContext) {
+    const depot = await assertDepotCode(this.prisma, ctx.params.depot, { active: false });
+    assertDepot(ctx.principal, depot);
+    return this.planning.getPlan(depot, ctx.params.runDate);
   }
 
   /** GET Plans/Lodestar.CapacityOutlook(depot='PELIYAGODA') — DSP-05 10-week outlook. */
@@ -110,12 +114,24 @@ export class PlansSet extends ODataEntitySet {
     name: 'CapacityOutlook',
     binding: 'collection',
     roles: [Roles.Dispatcher, Roles.Admin, Roles.Service],
-    params: { depot: { type: 'Lodestar.Depot', required: true } },
+    params: { depot: { type: 'Edm.String', required: true } },
     returns: 'Edm.Untyped',
   })
-  capacityOutlook(ctx: OperationContext) {
-    assertDepot(ctx.principal, ctx.params.depot);
-    return this.planning.getCapacityOutlook(ctx.params.depot as Depot);
+  async capacityOutlook(ctx: OperationContext) {
+    const depot = await assertDepotCode(this.prisma, ctx.params.depot, { active: false });
+    assertDepot(ctx.principal, depot);
+    return this.planning.getCapacityOutlook(depot);
+  }
+
+  /**
+   * GET Plans/Lodestar.PlanningRules() — the rules the planning service enforces (deferral score weights and
+   * thresholds, late-risk and load levels, order cut-off, default alert rules, model targets) and the measured
+   * quality of the estimators over the caller's depots (DSP-16, DSP-20 and the plan desk's thresholds).
+   */
+  @ODataFunction({ name: 'PlanningRules', binding: 'collection', roles: [Roles.Dispatcher, Roles.Loader, Roles.Admin, Roles.Service], returns: 'Edm.Untyped' })
+  async planningRulesFn(ctx: OperationContext) {
+    const depots = isPrivileged(ctx.principal) ? null : ctx.principal.depots;
+    return { ...planningRules(), models: await measureModels(this.prisma, depots) };
   }
 
   /** GET Plans/Lodestar.LateRiskExplain(stopId='…') — DSP-15: a stop's late risk as parts that add up. */
@@ -148,6 +164,7 @@ const deferralDepot = (depots: string[]) => ({ order: { is: { outlet: { is: { de
     outlet: (outletId) => ({ order: { is: { outletId } } }),
   },
   navigation: ['order', 'plan'],
+  filterPaths: ['order/outlet'],
   search: ['orderId', 'notes'],
   insertable: ['orderId', 'reason', 'notes', 'rescheduledDate', 'isProvisional', 'planId'],
   defaultOrderBy: 'createdAt desc',
@@ -251,6 +268,7 @@ export class AgentRunsSet extends ODataEntitySet {
 
   async beforeCreate(data: Record<string, any>, ctx: WriteContext) {
     if (!data.depot || !data.runDate) throw ODataError.badRequest('depot and runDate are required');
+    data.depot = await assertDepotCode(this.prisma, data.depot);
     assertDepot(ctx.principal, data.depot);
     await this.planning.assertOperatingDay(data.runDate);
     return data;

@@ -1,21 +1,37 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
-import { Depot, TempClass, VehicleStatus } from '@prisma/client';
-import { addBusinessDays, runDateRange, runDateValue } from '@lodestar/platform';
+import { OrderStatus, TempClass, VehicleStatus } from '@prisma/client';
+import { addBusinessDays, businessDate, businessWeekday, runDateRange, runDateValue, toBusinessDate } from '@lodestar/platform';
+import { OUTLOOK_WEEKS } from './planning-rules';
+
+/** Past run dates of orders the outlook needs before it forecasts anything. */
+export const MIN_HISTORY_DAYS = 5;
+
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
+function median(xs: number[]): number {
+  const s = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+/** ISO 8601 week number of a YYYY-MM-DD date. */
+export function isoWeek(day: string): number {
+  const d = new Date(`${day}T00:00:00Z`);
+  const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 4 - (d.getUTCDay() || 7)));
+  return Math.ceil(((t.getTime() - Date.UTC(t.getUTCFullYear(), 0, 1)) / 86_400_000 + 1) / 7);
+}
 
 /**
  * Capacity Service
  * Computes available reefer capacity for a depot/date and flags shortfalls.
- * From STORY.md (Peliyagoda scenario):
- *   Chilled demand: 118.4 m³
- *   Reefer capacity usable in 3:30–8:00 window: 109.8 m³
- *   Shortfall: 8.6 m³ (VEH004 in workshop)
+ * (chilled demand of a run date vs the m³ of the depot's available reefers).
  */
 @Injectable()
 export class CapacityService {
   constructor(private prisma: PrismaService) {}
 
-  async getReeferCapacity(depot: Depot) {
+  async getReeferCapacity(depot: string) {
     const reeferVehicles = await this.prisma.vehicle.findMany({
       where: { depot, tempClass: TempClass.CHILLED, status: VehicleStatus.AVAILABLE },
     });
@@ -24,7 +40,7 @@ export class CapacityService {
     return { vehicles: reeferVehicles, totalKg, totalM3 };
   }
 
-  async getChilledDemand(depot: Depot, runDate: Date) {
+  async getChilledDemand(depot: string, runDate: Date) {
     // Run dates are stored as UTC midnight of their Sri Lanka calendar date (never server-local).
     const { start: startOf, end: endOf } = runDateRange(runDate);
 
@@ -46,45 +62,75 @@ export class CapacityService {
     };
   }
 
-  async getCapacityOutlook(depot: Depot) {
-    // 10-week outlook W15–W24 (grounded in training data medians)
-    // Peliyagoda: median 183 m³/day total, 58 m³/day chilled
-    // Kandy:      median 100 m³/day total, 30 m³/day chilled
-    const baseChilledM3PerDay = depot === Depot.PELIYAGODA ? 58 : 30;
-    const baseTotalM3PerDay   = depot === Depot.PELIYAGODA ? 183 : 100;
+  /**
+   * DSP-05 capacity outlook: OUTLOOK_WEEKS ISO weeks from the current week. The daily volume is the median
+   * total and chilled m³ of the depot's past run dates (Orders, cancelled ones left out); each operating day in
+   * the Calendar adds that median × (1 + its festival_ramp). Weeks the Calendar does not cover yet are listed in
+   * `uncoveredWeeks`, never guessed. Too little history (under MIN_HISTORY_DAYS run dates) returns no weeks and
+   * says why. Reefer capacity is the m³ of the depot's available chilled vehicles.
+   */
+  async getCapacityOutlook(depot: string, at: Date = new Date()) {
+    const today = businessDate(at);
+    const monday = addBusinessDays(today, -((businessWeekday(today) + 6) % 7));
+    const history = await this.prisma.order.groupBy({
+      by: ['runDate', 'tempClass'],
+      where: { runDate: { lt: runDateValue(today) }, outlet: { depot }, status: { not: OrderStatus.CANCELLED } },
+      _sum: { m3: true },
+    });
+    const days = new Map<string, { total: number; chilled: number }>();
+    for (const h of history) {
+      const iso = toBusinessDate(h.runDate);
+      const d = days.get(iso) ?? { total: 0, chilled: 0 };
+      d.total += h._sum.m3 ?? 0;
+      if (h.tempClass === TempClass.CHILLED) d.chilled += h._sum.m3 ?? 0;
+      days.set(iso, d);
+    }
+    const isos = [...days.keys()].sort();
+    const basis = {
+      historyDays: isos.length,
+      historyFrom: isos[0] ?? null,
+      historyTo: isos[isos.length - 1] ?? null,
+      minHistoryDays: MIN_HISTORY_DAYS,
+      medianTotalM3PerDay: isos.length ? round1(median([...days.values()].map((d) => d.total))) : null,
+      medianChilledM3PerDay: isos.length ? round1(median([...days.values()].map((d) => d.chilled))) : null,
+    };
+    if (isos.length < MIN_HISTORY_DAYS) {
+      return { depot, weeks: [], uncoveredWeeks: [], basis, reason: `Only ${isos.length} past run date${isos.length === 1 ? '' : 's'} of orders; the forecast needs ${MIN_HISTORY_DAYS}.` };
+    }
+
+    const reefers = await this.prisma.vehicle.findMany({
+      where: { depot, tempClass: TempClass.CHILLED, status: VehicleStatus.AVAILABLE },
+      select: { capacityM3: true },
+    });
+    const reeferCapacityM3 = round1(reefers.reduce((s, v) => s + v.capacityM3, 0));
+    const lastWeekEnd = addBusinessDays(monday, OUTLOOK_WEEKS * 7);
+    const calendar = await this.prisma.calendar.findMany({
+      where: { date: { gte: runDateValue(monday), lt: runDateValue(lastWeekEnd) } },
+      select: { date: true, isOperating: true, festivalRamp: true, isPayday: true, festivalName: true },
+    });
 
     const weeks = [];
-    const startWeek = '2026-04-06'; // W15 (Monday)
-    for (let w = 0; w < 10; w++) {
-      // Calendar dates, not server-local midnights: stable whatever the container TZ.
-      const weekStartIso = addBusinessDays(startWeek, w * 7);
-      const weekStart = runDateValue(weekStartIso);
-      const weekEnd = runDateValue(addBusinessDays(weekStartIso, 7));
-
-      const calDays = await this.prisma.calendar.findMany({
-        where: { date: { gte: weekStart, lt: weekEnd }, isOperating: true },
-      });
-
-      const operatingDays = calDays.length || 5;
-      const avgFestivalRamp = calDays.reduce((s, d) => s + d.festivalRamp, 0) / Math.max(calDays.length, 1);
-      const multiplier = 1 + avgFestivalRamp;
-
-      const reeferVehicles = await this.prisma.vehicle.count({
-        where: { depot, tempClass: TempClass.CHILLED, status: VehicleStatus.AVAILABLE },
-      });
-
+    const uncoveredWeeks: string[] = [];
+    for (let w = 0; w < OUTLOOK_WEEKS; w++) {
+      const weekStart = addBusinessDays(monday, w * 7);
+      const weekEnd = addBusinessDays(weekStart, 7);
+      const week = `W${isoWeek(weekStart)}`;
+      const calDays = calendar.filter((d) => { const iso = toBusinessDate(d.date); return iso >= weekStart && iso < weekEnd; });
+      if (!calDays.length) { uncoveredWeeks.push(week); continue; }
+      const open = calDays.filter((d) => d.isOperating);
+      const ramp = open.reduce((s, d) => s + 1 + d.festivalRamp, 0);
       weeks.push({
-        week: `W${15 + w}`,
-        weekStart: weekStartIso,
-        operatingDays,
-        estimatedChilledDemandM3: Math.round(baseChilledM3PerDay * operatingDays * multiplier),
-        estimatedTotalM3: Math.round(baseTotalM3PerDay * operatingDays * multiplier),
-        reeferVehiclesAvailable: reeferVehicles,
-        reeferCapacityM3: reeferVehicles * 25, // ~avg 25 m³ per reefer trip
-        hasPayday: calDays.some(d => d.isPayday),
-        festival: calDays.find(d => d.festivalName)?.festivalName ?? null,
+        week,
+        weekStart,
+        operatingDays: open.length,
+        estimatedChilledDemandM3: Math.round(basis.medianChilledM3PerDay! * ramp),
+        estimatedTotalM3: Math.round(basis.medianTotalM3PerDay! * ramp),
+        reeferVehiclesAvailable: reefers.length,
+        reeferCapacityM3,
+        hasPayday: calDays.some((d) => d.isPayday),
+        festival: calDays.find((d) => d.festivalName)?.festivalName ?? null,
       });
     }
-    return { depot, weeks };
+    return { depot, weeks, uncoveredWeeks, basis, reason: null };
   }
 }

@@ -15,7 +15,7 @@ import PlanSettings from '@/live/dsp-20-settings';
 import StoreSettings from '@/live/sm-30-settings';
 import { freezeDate, unfreeze } from './helpers/clock';
 import type { FakeRequest } from './helpers/live';
-import { page, renderLive, SESSIONS } from './helpers/live';
+import { page, PLANNING_RULES, renderLive, SESSIONS } from './helpers/live';
 
 const router = { push: jest.fn(), replace: jest.fn(), back: jest.fn(), forward: jest.fn(), refresh: jest.fn(), prefetch: jest.fn() };
 jest.mock('next/navigation', () => ({ useRouter: () => router, usePathname: () => '/plan' }));
@@ -172,6 +172,53 @@ describe('DSP-15 Late-risk explainer', () => {
     await waitFor(() => expect(view.calls.some(c => c.path.includes('Lodestar.Send'))).toBe(true));
     const send = view.calls.find(c => c.path.includes('Lodestar.Send'))!;
     expect(send.body).toMatchObject({ recipientId: 'u-fm', type: 'DISPATCH_NOTICE', outletId: 'OUT108' });
+  });
+});
+
+describe('DSP-20 Settings · planning rules', () => {
+  it('shows the cut-off, score weights, protected score and alert choices the planning service serves, not copies', async () => {
+    const rules = {
+      ...PLANNING_RULES,
+      cutoff: '15:30',
+      deferral: { ...PLANNING_RULES.deferral, weights: { ...PLANNING_RULES.deferral.weights, deferredYesterday: 41, perDaySince: 7 }, protectedScore: 88 },
+      lateRisk: { alertPct: 25, highPct: 55, thresholdOptions: [15, 25] },
+      alertDefaults: { ...PLANNING_RULES.alertDefaults, lateRisk: { push: true, threshold: 25, risingOnly: true }, silence: { push: true, call: true, minutes: 9 } },
+    };
+    const view = renderLive(<PlanSettings />, {
+      rules,
+      handler: req => req.path.includes('MyPreferences') ? { value: {} } : req.path.includes('AgentConfig') ? { value: CONFIG } : fallback(req),
+    });
+    expect(await screen.findByText('3:30 PM')).toBeInTheDocument();
+    expect(screen.getByText('15:30')).toBeInTheDocument();
+    expect(screen.getByText('+41')).toBeInTheDocument();
+    expect(screen.getByText('×7 a day')).toBeInTheDocument();
+    expect(screen.getByText(/score 88 or more is never deferred/)).toBeInTheDocument();
+    expect(await screen.findByText('Silent 9 min, unknown place')).toBeInTheDocument();
+    const select = screen.getByLabelText('Late risk threshold') as HTMLSelectElement;
+    expect([...select.options].map(o => o.value)).toEqual(['15', '25']);
+    expect(select.value).toBe('25');
+    expect(screen.queryByText('+40')).not.toBeInTheDocument();
+    expect(view.calls.some(c => c.path.includes('Lodestar.PlanningRules'))).toBe(true);
+  });
+});
+
+describe('DSP-16 Models and fallbacks · validation', () => {
+  it('shows each estimator’s measured value against its target, or "Not measured yet" with the reason', async () => {
+    const rules = {
+      ...PLANNING_RULES,
+      models: {
+        ...PLANNING_RULES.models,
+        serviceTime: { target: PLANNING_RULES.modelTargets.serviceTime, measured: { value: 3.2, n: 55 } },
+        lateness: { target: PLANNING_RULES.modelTargets.lateness, measured: { value: null, n: 4, reason: 'Needs both late and on-time arrivals (0 late, 4 on time so far)' } },
+      },
+    };
+    renderLive(<Models />, { rules, handler: req => req.path.includes('AgentConfig') ? { value: CONFIG } : fallback(req) });
+    expect(await screen.findByTestId('validation-serviceTime')).toHaveTextContent('MAE 3.2 min a stop over 55 stops target ≤ 4');
+    expect(screen.getByTestId('validation-lateness')).toHaveTextContent('Not measured yet · target ≥ 0.80');
+    expect(screen.getByTestId('validation-lateness')).toHaveTextContent('0 late, 4 on time so far');
+    expect(screen.getByTestId('validation-demand')).toHaveTextContent('Not measured yet · target ≤ 12');
+    expect(screen.queryByText(/illustrative/)).not.toBeInTheDocument();
+    expect(screen.getByText('3 models + planning agent, each with a fallback')).toBeInTheDocument();
   });
 });
 

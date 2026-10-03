@@ -1,15 +1,17 @@
 'use client';
 // DSP-06 Sign in · desktop, live. Markup and classes from the generated design (frontend/screens/dsp-06-sign-in.tsx).
 import { Ic } from '@/components/live/icons';
-import { DEPOT_NAME } from '@/lib/format';
 import { useSignInEntry } from '@/components/live/SignInEntry';
 import Btn from '@/components/live/Btn';
+import { useDepots } from '@/components/live/depots';
 
 /**
  * Keycloak hosts the sign-in form; this screen is the entry point to it. "Continue" (the design's L144 to DSP-07)
  * opens Keycloak, which asks for the 2-step code itself when the account has an authenticator; DSP-07 shows the status.
  */
 export default function LiveDsp06SignIn() {
+  // Depot names come from the registry once signed in; before sign-in none are shown (never a made-up list).
+  const { active: depotList } = useDepots();
   const entry = useSignInEntry('plan');
   return (
     <div className="frame frame--desktop mode-dispatcher" data-name="DSP-06 Sign in · desktop">
@@ -59,7 +61,7 @@ export default function LiveDsp06SignIn() {
             </svg>
           </div>
           <div className="dx-auth__foot">
-            {Object.entries(DEPOT_NAME).map(([k, name]) => <span key={k}><Ic n="depot" />{name}</span>)}
+            {depotList.map(d => <span key={d.code}><Ic n="depot" />{d.name}</span>)}
             <span><Ic n="lock" />{"Waypoint Group staff only"}</span>
           </div>
         </div>

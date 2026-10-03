@@ -7,10 +7,11 @@ import Btn from '@/components/live/Btn';
 import { AdminSide, useCount } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { Empty, ErrorBanner, Skeleton, Spinner } from '@/components/live/states';
-import { BRAND_LETTER, DEPOT_NAME, title } from '@/lib/format';
+import { BRAND_LETTER, title } from '@/lib/format';
 import { useEntitySet } from '@/lib/odata/hooks';
 import type { Depot, Outlet } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
+import { useDepots } from '@/components/live/depots';
 
 type Chip = 'all' | 'FRESH' | 'STYLE' | 'TECH' | 'van' | 'mall';
 const CHIP: Record<Chip, [string, string | undefined]> = {
@@ -23,19 +24,23 @@ const CHIP: Record<Chip, [string, string | undefined]> = {
 };
 const DOCK: Record<string, string> = { REAR_DOCK: 'rear dock', STREET: 'street', MALL_BAY: 'mall bay' };
 
+/** Outlets of one depot (the table footer's per-depot counts). */
+function DepotN({ code }: { code: string }) {
+  return <>{useCount('Outlets', `depot eq '${code}'`) ?? '…'}</>;
+}
+
 function ChipN({ filter }: { filter: string | undefined }) {
   return <b>{useCount('Outlets', filter) ?? '…'}</b>;
 }
 
 export default function LiveAdm08Outlets() {
+  const { short: depotShort, depots: depotRows } = useDepots();
   const [, setFocus] = useFocusId('outlet');
   const [chip, setChip] = useState<Chip>('all');
   const [depot, setDepot] = useState<Depot | ''>('');
   const [search, setSearch] = useState('');
   const filter = [CHIP[chip][1], depot ? `depot eq '${depot}'` : undefined].filter(Boolean).join(' and ') || undefined;
   const outlets = useEntitySet<Outlet>('Outlets', { filter, orderby: 'id', top: 30, count: true, search: search.trim() || undefined });
-  const plg = useCount('Outlets', "depot eq 'PELIYAGODA'");
-  const kdy = useCount('Outlets', "depot eq 'KANDY'");
 
   return (
     <div className="frame frame--desktop mode-dispatcher" data-name="ADM-08 Outlets · desktop">
@@ -64,9 +69,8 @@ export default function LiveAdm08Outlets() {
               <span className="d-filter">
                 <Ic n="depot" className="ic ic--sm" />
                 <select className="lv-input" aria-label="Depot" value={depot} onChange={e => setDepot(e.target.value as Depot | '')} style={{ width: 'auto' }}>
-                  <option value="">Both depots</option>
-                  <option value="PELIYAGODA">{DEPOT_NAME.PELIYAGODA}</option>
-                  <option value="KANDY">{DEPOT_NAME.KANDY}</option>
+                  <option value="">All depots</option>
+                  {depotRows.map(d => <option key={d.code} value={d.code}>{d.name}{d.isActive ? '' : ' (deactivated)'}</option>)}
                 </select>
               </span>
               <span className="d-search" style={{ width: '200px' }}>
@@ -94,7 +98,7 @@ export default function LiveAdm08Outlets() {
                   <span className="hstack" style={{ gap: '10px' }}><span className={`bb bb--${o.brand.toLowerCase()} dx-bb`}>{BRAND_LETTER[o.brand]}</span><span className="dx-td2"><b>{o.name}</b><span>Waypoint {title(o.brand)}</span></span></span>
                 </span>
                 <span className="dx-td" style={{ width: '120px' }}>{o.district}</span>
-                <span className="dx-td" style={{ width: '100px' }}>{(DEPOT_NAME[o.depot] ?? o.depot).split(' ')[0]}</span>
+                <span className="dx-td" style={{ width: '100px' }}>{depotShort(o.depot)}</span>
                 <span className="dx-td" style={{ width: '100px' }}><span className="dx-mono">{DOCK[o.dockType] ?? o.dockType}</span></span>
                 <span className="dx-td" style={{ width: '130px' }}><span className="dx-mono">{o.windowOpen} to {o.windowClose}</span></span>
                 <span className="dx-td" style={{ width: '100px' }}>
@@ -107,7 +111,7 @@ export default function LiveAdm08Outlets() {
             ))}
             <div className="spacer" />
             <div className="x-tfoot">
-              <span>Showing <b>{outlets.data?.length ?? 0}</b> of <b>{outlets.count ?? '…'}</b> · {DEPOT_NAME.PELIYAGODA} {plg ?? '…'} · {DEPOT_NAME.KANDY} {kdy ?? '…'}</span>
+              <span>Showing <b>{outlets.data?.length ?? 0}</b> of <b>{outlets.count ?? '…'}</b> {depotRows.filter(d => d.isActive).map(d => <span key={d.code}> · {d.name} <DepotN code={d.code} /></span>)}</span>
               <span className="spacer" />
               {outlets.hasMore && (outlets.loadingMore ? <Spinner /> : <Btn className="x-link" onClick={() => void outlets.loadMore()}>{"Show more"}<Ic n="chevron-down" /></Btn>)}
             </div>

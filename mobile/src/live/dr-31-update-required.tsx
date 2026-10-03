@@ -3,13 +3,15 @@
 import { Text, View, StyleSheet } from 'react-native';
 import { applyUpdate, useVersion } from '@/lib/version';
 import { hm } from '@/lib/time';
-import { plural, titleCase } from '@/lodestar/live';
+import { plural } from '@/lodestar/live';
 import { useClaims, useOutbox, useRun } from '@/model/hooks';
 import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L277":{"to":"dr-04-run-complete","kind":"go"},"L278":{"to":"dr-04-run-complete","kind":"go"}}};
 
 export default function ScreenDr31UpdateRequired() {
+  const { name: depotName } = useDepots();
   const { current, minimum } = useVersion();
   const claims = useClaims();
   const { view, updatedAt } = useRun();
@@ -70,7 +72,7 @@ export default function ScreenDr31UpdateRequired() {
                   <Text style={s.t13}>{"Update on depot Wi-Fi"}</Text>
                 </View>
                 <View style={s.v15}>
-                  <Text style={s.t14}>{depot ? `Back at ${titleCase(depot)} hub, once your records are sent.` : 'Back at the depot, once your records are sent.'}</Text>
+                  <Text style={s.t14}>{depot ? `Back at ${depotName(depot)}, once your records are sent.` : 'Back at the depot, once your records are sent.'}</Text>
                 </View>
               </View>
             </View>

@@ -14,11 +14,12 @@ import { PlanSide } from '@/components/live/chrome';
 import { riskiestStop, sendNotice, skipAfter, useNextRunDay, useStoreManagers } from '@/components/live/degradation';
 import { Ic } from '@/components/live/icons';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
-import { DEPOT_NAME, fmtClock, fmtNum, fmtRunDate, fmtTime } from '@/lib/format';
+import { fmtClock, fmtNum, fmtRunDate, fmtTime } from '@/lib/format';
 import { useAction } from '@/lib/odata/hooks';
 import type { Deferral, DeferralReason } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
 import { BlackoutHero, TripsTable, useBlackout } from './dsp-a1-blackout-view';
+import { useDepots } from '@/components/live/depots';
 
 const REASONS: Array<[DeferralReason, string]> = [
   ['CAP_TIME', 'Fresh window at risk'],
@@ -31,6 +32,7 @@ const REASONS: Array<[DeferralReason, string]> = [
 const code = (r: string) => r.replace('_', '-');
 
 export default function LiveDspA1bProvisionalDeferral() {
+  const { name: depotName } = useDepots();
   const nav = useScreenNav();
   const { scope, trips, signal, trip, rows } = useBlackout();
   const [orderId] = useFocusId('order');
@@ -79,7 +81,7 @@ export default function LiveDspA1bProvisionalDeferral() {
           <div className="d-head">
             <div className="d-head__txt">
               <div className="d-eyebrow">
-                {scope.active.length > 1 ? 'Both depots ' : `${DEPOT_NAME[scope.active[0]] ?? scope.active[0] ?? ''} `}<span className="m-sep" />
+                {scope.active.length > 1 ? 'Both depots ' : `${depotName(scope.active[0])} `}<span className="m-sep" />
                 {` ${scope.runDate ? fmtRunDate(scope.runDate) : '…'}, ${fmtTime(new Date())} `}
               </div>
               <div className="d-h1">{"Live operations"}</div>
@@ -161,7 +163,7 @@ export default function LiveDspA1bProvisionalDeferral() {
               <div className="hstack" style={{ gap: '8px', padding: '14px 26px', borderTop: '1px solid var(--hair)' }}>
                 <div className="d-btn d-btn--ghost" data-lk="L47">{"Cancel"}</div>
                 <div className="spacer" />
-                {!done && <div className="d-btn" data-lk="L48">{"Wait 15 min more"}</div>}
+                {!done && <div className="d-btn" data-lk="L48">{"Wait for the signal"}</div>}
                 <Btn
                   className="d-btn d-btn--primary"
                   style={{ background: 'linear-gradient(135deg,#D97706 0%,#B45309 100%)', boxShadow: '0 6px 16px rgba(180,83,9,.28)' }}

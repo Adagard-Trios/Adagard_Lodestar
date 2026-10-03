@@ -10,6 +10,7 @@ import { isReleased, onTime, useRePlanAlert, useTickCounts, useTripLineCounts } 
 import { effectiveShortfalls, useBayQueue, useClaims, useOutbox } from '@/model/hooks';
 import type { Shortfall, Trip } from '@/model/types';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec, type Target } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L222":{"to":"ld-02-load-sheet-tablet","kind":"go"},"L223":{"to":"ld-13-flags-tab","kind":"go"}}};
 
@@ -24,6 +25,7 @@ const initials = (name?: string) =>
 const shortBy = (sf: Shortfall) => Math.max(0, sf.qtyOrdered - sf.qtyLoaded);
 
 export default function ScreenLd21BayOverview() {
+  const { name: depotName } = useDepots();
   const claims = useClaims();
   const { data, loading, error } = useBayQueue();
   const { items } = useOutbox();
@@ -64,7 +66,7 @@ export default function ScreenLd21BayOverview() {
           </View>
           <View style={s.v9}>
             <View>
-              <Text style={s.t7} numberOfLines={1}>{[depot ? `${titleCase(depot)} hub` : '', data ? dayLabel(data.date) : '', data && !data.isToday ? 'last run day' : ''].filter(Boolean).join(' · ') || '—'}</Text>
+              <Text style={s.t7} numberOfLines={1}>{[depot ? `${depotName(depot)}` : '', data ? dayLabel(data.date) : '', data && !data.isToday ? 'last run day' : ''].filter(Boolean).join(' · ') || '—'}</Text>
             </View>
             <View>
               <Text style={s.t8} numberOfLines={1}>{"Bay overview"}</Text>
@@ -103,7 +105,7 @@ export default function ScreenLd21BayOverview() {
             <Grad g={G0} style={s.v23} />
             <View style={s.v27}>
               <View>
-                <Text style={s.t24}>{depot ? `${titleCase(depot)} hub right now` : "Right now"}</Text>
+                <Text style={s.t24}>{depot ? `${depotName(depot)} right now` : "Right now"}</Text>
               </View>
               <View>
                 <Text style={s.t26} testID="on-time">{trips.length ? String(onTimeCount) : "—"}<Text style={s.t25}>{trips.length ? `of ${plural(trips.length, 'bay')} on time` : ` ${empty}`}</Text></Text>

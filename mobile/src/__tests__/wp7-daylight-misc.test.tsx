@@ -159,7 +159,7 @@ describe('DSP-30 / DSP-31 directory contacts', () => {
     const Screen = require('@/live/dsp-31-call-or-sms-driver').default;
     await render(<Screen />);
     await waitFor(() => expect(screen.getByTestId('desk-line').props.children).toBe('Kamal Loader · 071 ••• 3344'));
-    expect(screen.getByText('Call Kandy desk')).toBeTruthy();
+    expect(await screen.findByText('Call Kandy Hub desk')).toBeTruthy();
     expect((users.mock.calls as unknown as [string, { filter: string }][]).some(([, q]) => q?.filter?.includes("depot eq 'KANDY'"))).toBe(true);
     await fireEvent.press(screen.getByTestId('call-desk'));
     expect(open).toHaveBeenCalledWith('tel:0712223344');

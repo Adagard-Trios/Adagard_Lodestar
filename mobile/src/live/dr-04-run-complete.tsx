@@ -8,10 +8,12 @@ import { finishDeliveredTrips } from '@/model/actions';
 import { isUnsent, useOutbox, useRun } from '@/model/hooks';
 import { labelParts, minutesUntil, tripSummary } from '@/model/run';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L21":{"to":"dr-28-end-of-shift-summary","kind":"go"},"N0":{"to":"dr-01-today-s-run","kind":"nav"},"N1":{"to":"dr-21-records","kind":"nav"},"N2":{"to":"dr-23-dispatch-notices","kind":"nav"}}};
 
 export default function ScreenDr04RunComplete() {
+  const { name: depotName } = useDepots();
   const { view } = useRun();
   const { waiting, synced, attention, summary } = useOutbox();
   const sum = tripSummary(view);
@@ -172,7 +174,7 @@ export default function ScreenDr04RunComplete() {
                 </View>
                 <View style={s.v26}>
                   <View>
-                    <Text style={s.t23}>{sum.nextTrip ? `Trip ${sum.nextTrip.tripNumber} · ${titleCase(sum.nextTrip.brand)} · ${sum.nextTrip.district}` : trip ? `Return to ${titleCase(trip.depot)} depot` : 'Return to depot'}</Text>
+                    <Text style={s.t23}>{sum.nextTrip ? `Trip ${sum.nextTrip.tripNumber} · ${titleCase(sum.nextTrip.brand)} · ${sum.nextTrip.district}` : trip ? `Return to ${depotName(trip.depot)}` : 'Return to depot'}</Text>
                   </View>
                   <View style={s.v25}>
                     <Text style={s.t24}>{sum.nextTrip ? (sum.nextTrip.departTime ? `departs ${hm(sum.nextTrip.departTime)}` : 'departure not set yet') : trip?.returnTime ? `back ~${hm(trip.returnTime)}` : 'return time not planned'}</Text>

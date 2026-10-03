@@ -11,8 +11,15 @@ import { jwt } from './helpers';
 type Answer = unknown | ((path: string, query?: unknown) => unknown);
 export const routes = new Map<string, Answer>();
 
+/** The depot registry (OData Depots, ADM-21) as seeded; answered unless a test routes Depots itself. */
+export const DEPOTS = [
+  { code: 'KANDY', name: 'Kandy Hub', district: 'Kandy', isActive: true },
+  { code: 'PELIYAGODA', name: 'Peliyagoda DC', district: 'Gampaha', isActive: true },
+];
+
 function answer(path: string, query?: unknown): any {
   const hits = [...routes.keys()].filter(k => path.startsWith(k)).sort((a, b) => b.length - a.length);
+  if (path === 'Depots' && !hits.some(k => k.startsWith('Depots'))) return DEPOTS;
   if (!hits.length) return [];
   const v = routes.get(hits[0]);
   return typeof v === 'function' ? (v as (p: string, q?: unknown) => unknown)(path, query) : v;

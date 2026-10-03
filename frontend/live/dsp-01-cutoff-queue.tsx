@@ -12,10 +12,12 @@ import { PlanSide, useCount } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { useOpenRun, usePlanScope, useStartAgentRun } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton, Spinner } from '@/components/live/states';
-import { BRAND_LETTER, dayFilter, DEPOT_NAME, fmtNum, fmtRunDate, title } from '@/lib/format';
+import { BRAND_LETTER, dayFilter, fmtNum, fmtRunDate, title } from '@/lib/format';
 import { useEntitySet, useQuery } from '@/lib/odata/hooks';
 import type { Order, Vehicle } from '@/lib/odata/types';
-import { CUTOFF_LABEL, depotFilter, useAgentRunId, useFocusId } from '@/lib/workday';
+import { depotFilter, useAgentRunId, useFocusId } from '@/lib/workday';
+import { useCutoffLabel } from '@/components/live/planning-rules';
+import { useDepots } from '@/components/live/depots';
 
 type Chip = 'all' | 'chilled' | 'van' | 'mall' | 'flagged';
 const CHIP_FILTER: Record<Chip, string | undefined> = {
@@ -58,6 +60,8 @@ function Why({ o }: { o: Order }) {
 }
 
 export default function LiveDsp01CutoffQueue() {
+  const cutoffLabel = useCutoffLabel();
+  const { name: depotName, short: depotShort } = useDepots();
   const nav = useScreenNav();
   const router = useRouter();
   const scope = usePlanScope();
@@ -131,9 +135,9 @@ export default function LiveDsp01CutoffQueue() {
           <div className="d-head">
             <div className="d-head__txt">
               <div className="d-eyebrow">
-                {`Orders closed ${CUTOFF_LABEL}`}
+                {`Orders closed ${cutoffLabel}`}
                 <span className="m-sep" />
-                {active.map(d => DEPOT_NAME[d] ?? d).join(' + ')}
+                {active.map(d => depotName(d)).join(' + ')}
               </div>
               <div className="d-h1">Cutoff queue for {runDate ? fmtRunDate(runDate) : '…'}</div>
             </div>
@@ -146,7 +150,7 @@ export default function LiveDsp01CutoffQueue() {
               onClick={() => void start.run({ depot: draftDepot!, runDate: runDate! })}
             >
               <Ic n="sparkle-plus" />
-              {start.pending ? `Agent drafting… ${drafting}` : `Draft the plan with the agent${active.length > 1 ? ` · ${DEPOT_NAME[draftDepot!] ?? draftDepot}` : ''}`}
+              {start.pending ? `Agent drafting… ${drafting}` : `Draft the plan with the agent${active.length > 1 ? ` · ${depotName(draftDepot!) ?? draftDepot}` : ''}`}
             </Btn>
           </div>
           {start.error && <ErrorBanner error={start.error} onRetry={() => void start.run({ depot: draftDepot!, runDate: runDate! })} />}
@@ -183,7 +187,7 @@ export default function LiveDsp01CutoffQueue() {
             <div className="d-kpi" style={{ justifyContent: 'space-between' }}>
               <span className="d-kpi__l">{"Access limits"}</span>
               <span className="d-kpi__v">{counts.van}<small>{"van_only"}</small> {counts.mall}<small>{"mall"}</small></span>
-              <span className="d-kpi__s">{vans.length} vans at {active.map(d => (DEPOT_NAME[d] ?? d).split(' ')[0]).join(' + ')}, {vans.filter(v => v.tempClass === 'CHILLED').length} reefer</span>
+              <span className="d-kpi__s">{vans.length} vans at {active.map(d => depotShort(d)).join(' + ')}, {vans.filter(v => v.tempClass === 'CHILLED').length} reefer</span>
             </div>
           </div>
           <div className="d-card" style={{ flex: '1', minHeight: '0' }}>

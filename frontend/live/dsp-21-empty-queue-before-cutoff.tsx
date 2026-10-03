@@ -12,10 +12,12 @@ import { PlanSide, useCount } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { usePlanScope, useOpenRun } from '@/components/live/plan-data';
 import { ErrorBanner } from '@/components/live/states';
-import { addDays, dayFilter, DEPOT_NAME, fmtDayTime, fmtRunDate, fmtTime } from '@/lib/format';
+import { addDays, dayFilter, fmtDayTime, fmtRunDate, fmtTime } from '@/lib/format';
 import { useQuery } from '@/lib/odata/hooks';
 import type { Order, Vehicle } from '@/lib/odata/types';
-import { CUTOFF_LABEL, depotFilter } from '@/lib/workday';
+import { depotFilter } from '@/lib/workday';
+import { useCutoffLabel } from '@/components/live/planning-rules';
+import { useDepots } from '@/components/live/depots';
 
 const weekdayOf = (day: string) => new Date(`${day}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' });
 
@@ -50,6 +52,8 @@ export function weekdayPattern(orders: Pick<Order, 'runDate' | 'orderedAt'>[], d
 }
 
 export default function LiveDsp21EmptyQueueBeforeCutoff() {
+  const cutoffLabel = useCutoffLabel();
+  const { name: depotName, short: depotShort } = useDepots();
   const nav = useScreenNav();
   const { depot, depots, active, setDepot } = usePlanScope();
   const now = new Date();
@@ -89,8 +93,8 @@ export default function LiveDsp21EmptyQueueBeforeCutoff() {
   const pattern = weekdayPattern(history.data ?? [], pastDays);
   const ramp = calendar.data?.festivalRamp ?? 0;
   const forecast = pattern.avg !== null ? Math.round(pattern.avg * (1 + (ramp || 0))) : null;
-  const where = active.length === 1 ? DEPOT_NAME[active[0]] ?? active[0] : 'your depots';
-  const shortWhere = active.length === 1 ? (DEPOT_NAME[active[0]] ?? active[0]).split(' ')[0] : 'All';
+  const where = active.length === 1 ? depotName(active[0]) : 'your depots';
+  const shortWhere = active.length === 1 ? depotShort(active[0]) : 'All';
 
   return (
     <div className="frame frame--desktop mode-dispatcher" data-name="DSP-21 Empty queue before cutoff · desktop">
@@ -100,7 +104,7 @@ export default function LiveDsp21EmptyQueueBeforeCutoff() {
           <div className="d-head">
             <div className="d-head__txt">
               <div className="d-eyebrow">
-                {active.length === 1 ? `${DEPOT_NAME[active[0]] ?? active[0]} ` : 'Both depots '}
+                {active.length === 1 ? `${depotName(active[0])} ` : 'Both depots '}
                 <span className="m-sep" />{` ${fmtRunDate(run)} run `}<span className="m-sep" />{` ${fmtDayTime(now)}`}
               </div>
               <div className="d-h1">Cutoff queue for {fmtRunDate(run)}</div>
@@ -117,11 +121,11 @@ export default function LiveDsp21EmptyQueueBeforeCutoff() {
                   onClick={e => { e.stopPropagation(); setDepot(depot === d ? null : d); }}
                   onKeyDown={e => { if (e.key === 'Enter') setDepot(depot === d ? null : d); }}
                 >
-                  {`${(DEPOT_NAME[d] ?? d).replace(' DC', '')} `}<b>{counts.data?.[d] ?? '…'}</b>
+                  {`${depotShort(d)} `}<b>{counts.data?.[d] ?? '…'}</b>
                 </span>
               ))}
             </div>
-            <span className="d-btn d-btn--disabled" aria-disabled="true"><Ic n="sparkle-plus" />Agent drafts at {CUTOFF_LABEL}</span>
+            <span className="d-btn d-btn--disabled" aria-disabled="true"><Ic n="sparkle-plus" />Agent drafts at {cutoffLabel}</span>
           </div>
           <ErrorBanner error={counts.error ?? fleet.error} onRetry={() => { void counts.refresh(); void fleet.refresh(); }} />
           <div className="dx-card" style={{ flex: '1' }}>
@@ -136,9 +140,9 @@ export default function LiveDsp21EmptyQueueBeforeCutoff() {
                 <circle cx="166" cy="44" r="2.6" fill="#141B4D" />{" "}
                 <circle cx="44" cy="96" r="6" fill="#3B4CCA" opacity=".35" /><circle cx="30" cy="70" r="3.5" fill="#F5B83D" opacity=".7" />
               </svg>
-              <span className="dx-h1xl" data-testid="empty-title">No {active.length === 1 ? `${DEPOT_NAME[active[0]] ?? active[0]} ` : ''}orders yet</span>
+              <span className="dx-h1xl" data-testid="empty-title">No {active.length === 1 ? `${depotName(active[0])} ` : ''}orders yet</span>
               <span className="dx-t14" style={{ maxWidth: '520px' }}>
-                Orders for {weekdayOf(run)} land here as stores send them, from the store app or by phone. Nothing to plan until the {CUTOFF_LABEL} cutoff.
+                Orders for {weekdayOf(run)} land here as stores send them, from the store app or by phone. Nothing to plan until the {cutoffLabel} cutoff.
               </span>
               <div className="hstack" style={{ gap: '10px', marginTop: '6px' }}>
                 <span className="d-btn d-btn--primary" data-lk="L171"><Ic n="call" />{"Log phone order"}</span>

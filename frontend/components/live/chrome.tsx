@@ -6,14 +6,17 @@ import { useRouter } from 'next/navigation';
 import { type ReactNode, useEffect, useRef, useSyncExternalStore } from 'react';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { initials } from '@/lib/auth/session';
-import { DEPOT_NAME, BRAND_LETTER, dayFilter, fmtDay, fmtTime } from '@/lib/format';
+import { BRAND_LETTER, dayFilter, fmtDay, fmtTime } from '@/lib/format';
 import { useQuery } from '@/lib/odata/hooks';
 import { useEntity } from '@/lib/odata/hooks';
 import type { Outlet } from '@/lib/odata/types';
 import { depotFilter, useDepot, useRunDate } from '@/lib/workday';
 import { Ic, type IconName } from './icons';
 import { OfflineSideItem } from './offline';
+import { usePlanDrawer } from './plan-nav';
 import { useNow } from './store-data';
+import { useDepots } from './depots';
+import { reportForbidden } from '@/lib/desk-status';
 
 /** `$count` of a set with a filter (null = don't ask). Cached per key by useQuery's identity. */
 export function useCount(set: string, filter: string | undefined | null, refreshOn?: string[]) {
@@ -24,18 +27,31 @@ export function useCount(set: string, filter: string | undefined | null, refresh
   return q.data;
 }
 
-type SideItem = { code: string; icon: IconName; label: string; count?: number; tone?: 'warn' | 'bad' } | { sect: string };
+type SideItem = { code: string; icon: IconName; label: string; count?: number; tone?: 'warn' | 'bad'; href?: string } | { sect: string };
 
 // Every item carries its data-lk code, the active one too: ScreenShell only wires codes in the screen's link table
 // (some sub-screens link their active item back to the section's main screen).
+// An item with its own `href` (a screen added after the generated link tables, e.g. ADM-21 Depots) navigates itself.
 function SideItems({ items, active }: { items: SideItem[]; active: string }) {
+  const router = useRouter();
   return (
     <>
       {items.map((it, i) =>
         'sect' in it ? (
           <div key={`s${i}`} className="d-side__sect">{it.sect}</div>
         ) : (
-          <div key={it.code} className={`d-side__item${it.code === active ? ' is-on' : ''}`} data-lk={it.code}>
+          <div
+            key={it.code}
+            className={`d-side__item${it.code === active ? ' is-on' : ''}${it.href ? ' lv-click' : ''}`}
+            data-lk={it.href ? undefined : it.code}
+            title={it.label}
+            {...(it.href ? {
+              role: 'link',
+              tabIndex: 0,
+              onClick: (e: React.MouseEvent) => { e.stopPropagation(); router.push(it.href!); },
+              onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') router.push(it.href!); },
+            } : {})}
+          >
             <Ic n={it.icon} />
             {it.label}
             {it.count !== undefined && it.count > 0 && (
@@ -78,7 +94,10 @@ function SideFoot({ role, avatarStyle }: { role: string; avatarStyle?: React.CSS
  * DSP-24 offline marker.
  */
 export function PlanSide({ active, bellLk, brandLk }: { active: string; bellLk?: string; brandLk?: string }) {
+  const { name: depotName, active: registered } = useDepots();
   const { depot, depots, setDepot, active: inView } = useDepot();
+  // Every depot in service, from the registry (ADM-21); the account's own depots first, then the rest (locked).
+  const sideDepots = [...depots, ...registered.map(r => r.code).filter(c => !depots.includes(c))];
   const { runDate } = useRunDate('Plans');
   const scope = depotFilter('outlet/depot', inView);
   const cutoff = useCount('Orders', runDate ? [dayFilter('runDate', runDate), "status eq 'RECEIVED'", scope].filter(Boolean).join(' and ') : null, ['notification']);
@@ -96,8 +115,11 @@ export function PlanSide({ active, bellLk, brandLk }: { active: string; bellLk?:
     { code: 'N8', icon: 'sparkle-plus', label: 'Intelligence' },
     { code: 'N9', icon: 'cog', label: 'Settings' },
   ];
+  const drawer = usePlanDrawer();
   return (
-    <aside className="d-side">
+    <>
+    {drawer.bar}
+    <aside id="plan-nav" className={`d-side${drawer.open ? ' is-open' : ''}`} aria-label="Lodestar Plan navigation">
       <div className="d-side__brand" style={{ whiteSpace: 'nowrap', paddingRight: '0' }}>
         <svg viewBox="0 0 32 32" {...(brandLk ? { 'data-lk': brandLk } : {})}><rect width="32" height="32" rx="8" fill="#3B4CCA" /><g transform="translate(7.36 7.36) scale(0.72)" fill="none" stroke="#FFFFFF" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></g></svg>
         Lodestar Plan
@@ -106,24 +128,34 @@ export function PlanSide({ active, bellLk, brandLk }: { active: string; bellLk?:
       <SideItems items={items} active={active} />
       <OfflineSideItem />
       <div className="d-side__sect">Depots</div>
-      {depots.map(d => (
-        <div
-          key={d}
-          className={`d-side__item lv-click${depot === d ? ' is-on' : ''}`}
-          style={depot === d ? undefined : { color: 'var(--text)' }}
-          role="button"
-          tabIndex={0}
-          aria-pressed={depot === d}
-          title={depot === d ? 'Show all your depots' : `Show ${DEPOT_NAME[d] ?? d} only`}
-          onClick={e => { e.stopPropagation(); setDepot(depot === d ? null : d); }}
-          onKeyDown={e => { if (e.key === 'Enter') setDepot(depot === d ? null : d); }}
-        >
-          <Ic n="depot" />
-          {DEPOT_NAME[d] ?? d}
-        </div>
-      ))}
+      {sideDepots.map(d => {
+        const mine = depots.includes(d);
+        const go = () => {
+          if (mine) setDepot(depot === d ? null : d);
+          // A registered depot outside the account: the DSP-36 "no access" screen says so and offers a request.
+          else reportForbidden({ status: 403, target: 'depot', message: `You do not plan for depot ${d}` });
+        };
+        return (
+          <div
+            key={d}
+            className={`d-side__item lv-click${depot === d ? ' is-on' : ''}`}
+            style={depot === d ? undefined : { color: mine ? 'var(--text)' : 'var(--text-3)' }}
+            role="button"
+            tabIndex={0}
+            aria-pressed={depot === d}
+            data-depot={d}
+            title={!mine ? `${depotName(d)} is not one of your depots` : depot === d ? 'Show all your depots' : `Show ${depotName(d)} only`}
+            onClick={e => { e.stopPropagation(); go(); }}
+            onKeyDown={e => { if (e.key === 'Enter') go(); }}
+          >
+            <Ic n={mine ? 'depot' : 'lock'} />
+            {depotName(d)}
+          </div>
+        );
+      })}
       <SideFoot role={`Dispatcher · ${depots.length} depot${depots.length === 1 ? '' : 's'}`} />
     </aside>
+    </>
   );
 }
 
@@ -157,12 +189,16 @@ function useAdminCount(set: string, filter: string | undefined) {
   return q.data;
 }
 
-/** Lodestar Admin sidebar (ADM boards). `active`: N0 Overview … N11 Notifications. */
+/** ADM-21 Depots: the depot registry (not in the generated link tables, so its sidebar item carries the href). */
+export const ADMIN_DEPOTS = '/admin/adm-21-depots';
+
+/** Lodestar Admin sidebar (ADM boards). `active`: N0 Overview … N11 Notifications, D1 Depots. */
 export function AdminSide({ active }: { active: string }) {
   const requests = useAdminCount('Devices', "status eq 'PENDING'");
   const people = useAdminCount('Users', undefined);
   const revoked = useAdminCount('Devices', "status eq 'REVOKED'");
   const outlets = useAdminCount('Outlets', undefined);
+  const depotCount = useDepots().active.length || undefined;
   const vehicles = useAdminCount('Vehicles', undefined);
   const items: SideItem[] = [
     { code: 'N0', icon: 'home', label: 'Overview' },
@@ -170,6 +206,7 @@ export function AdminSide({ active }: { active: string }) {
     { code: 'N2', icon: 'people', label: 'People and roles', count: people },
     { code: 'N3', icon: 'phone', label: 'Devices', count: revoked, tone: 'bad' },
     { sect: 'Master data' },
+    { code: 'D1', icon: 'depot', label: 'Depots', count: depotCount, href: ADMIN_DEPOTS },
     { code: 'N4', icon: 'store', label: 'Outlets', count: outlets },
     { code: 'N5', icon: 'truck', label: 'Vehicles', count: vehicles },
     { code: 'N6', icon: 'sliders', label: 'Operating rules' },

@@ -96,6 +96,33 @@ describe('QueryBuilder', () => {
     expect(() => build('$expand=units')).toThrow(/not a navigation property/);
   });
 
+  it('walks a deeper filter path only when the set declares it', () => {
+    const item = model.entityTypes.get('OrderLineItem')!;
+    const mk = (p: Partial<SetQueryPolicy>) => new QueryBuilder(model, item, { navigation: ['order'], search: [], hidden: {}, ...p });
+    const q = parseQueryOptions("$filter=order/outlet/depot eq 'KANDY'");
+    expect(() => mk({}).build(q)).toThrow(/Navigation 'outlet' may not be used in filters/);
+    expect(mk({ filterPaths: ['order/outlet'] }).build(q).where).toEqual({ order: { is: { outlet: { is: { depot: { equals: 'KANDY' } } } } } });
+    // the first hop must itself be allow-listed, and paths do not extend
+    expect(() => mk({ navigation: [], filterPaths: ['order/outlet'] }).build(q)).toThrow(/may not be used in filters/);
+    expect(() => mk({ filterPaths: ['order/outlet'] }).build(parseQueryOptions("$filter=order/outlet/orders/any(o: o/units gt 1)"))).toThrow(/may not be used in filters/);
+    // never usable for $expand
+    expect(() => mk({ filterPaths: ['order/outlet'] }).build(parseQueryOptions('$expand=order/outlet'))).toThrow();
+  });
+
+  it('nests $expand only along declared expand paths', () => {
+    const item = model.entityTypes.get('OrderLineItem')!;
+    const mk = (p: Partial<SetQueryPolicy>) => new QueryBuilder(model, item, { navigation: ['order'], search: [], hidden: { Outlet: ['accessNote'] }, ...p });
+    const q = parseQueryOptions('$expand=order($select=id;$expand=outlet($select=id,name))');
+    expect(() => mk({}).build(q)).toThrow(/Navigation 'order\/outlet' may not be expanded/);
+    const plan = mk({ expandPaths: ['order/outlet'] }).build(q);
+    expect(plan.select.order.select.outlet).toEqual({ select: { id: true, name: true } });
+    expect(plan.projection.expand.order.expand.outlet.fields).toEqual(['id', 'name']);
+    // hidden fields stay hidden one level down; the first hop must itself be allow-listed
+    expect(() => mk({ expandPaths: ['order/outlet'] }).build(parseQueryOptions('$expand=order($expand=outlet($select=accessNote))'))).toThrow(/does not exist/);
+    expect(() => mk({ navigation: [], expandPaths: ['order/outlet'] }).build(q)).toThrow(/may not be expanded/);
+    expect(() => mk({ expandPaths: ['order/outlet'] }).build(parseQueryOptions('$expand=order($expand=lineItems)'))).toThrow(/may not be expanded/);
+  });
+
   it('does not let nested filters traverse further', () => {
     expect(() => build("$expand=lineItems($filter=order/id eq 'x')")).toThrow(/may not be used in filters/);
   });

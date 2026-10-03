@@ -10,10 +10,10 @@ import { AdminSide, adminChanged } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { ROLE_INFO, ROLES } from '@/components/live/admin-data';
 import { ErrorBanner, Skeleton } from '@/components/live/states';
-import { DEPOT_NAME } from '@/lib/format';
 import { useAction, useEntity, useQuery } from '@/lib/odata/hooks';
 import type { Depot, Outlet, User, UserRole } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
+import { useDepots } from '@/components/live/depots';
 
 const CAN: Record<UserRole, Array<[boolean, string]>> = {
   DISPATCHER: [[true, 'Review agent drafts and approve plans for their depots'], [true, 'Decide deferrals, follow live operations'], [false, 'Change master data or people (asks the Lodestar admin)']],
@@ -36,6 +36,7 @@ interface Form {
 const EMPTY: Form = { role: 'STORE_MANAGER', name: '', email: '', phone: '', depot: '', outletId: '', isActive: true };
 
 function PersonForm({ person }: { person: (User & { '@odata.etag'?: string }) | null }) {
+  const { name: depotName, active: activeDepots, loading: depotsLoading } = useDepots();
   const nav = useScreenNav();
   const [form, setForm] = useState<Form>(
     person
@@ -43,6 +44,8 @@ function PersonForm({ person }: { person: (User & { '@odata.etag'?: string }) | 
       : EMPTY,
   );
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm(f => ({ ...f, [k]: v }));
+  // Depot choices from the registry (ADM-21): depots in service, plus the person's current one if since deactivated.
+  const depotChoices = [...activeDepots.map(d => d.code), ...(form.depot && !activeDepots.some(d => d.code === form.depot) ? [form.depot] : [])];
   const outlets = useQuery<Outlet[]>('adm-outlets', c => c.all<Outlet>('Outlets', { select: 'id,name,district,depot', orderby: 'id' }));
   const outlet = outlets.data?.find(o => o.id === form.outletId);
   const needsOutlet = form.role === 'STORE_MANAGER';
@@ -106,18 +109,19 @@ function PersonForm({ person }: { person: (User & { '@odata.etag'?: string }) | 
                 {(outlets.data ?? []).map(o => <option key={o.id} value={o.id}>{o.id} · {o.name}</option>)}
               </select>
               <span className="spacer" />
-              {outlet && <span className="t-3" style={{ fontSize: '13px' }}>{outlet.district} · {DEPOT_NAME[outlet.depot] ?? outlet.depot}</span>}
+              {outlet && <span className="t-3" style={{ fontSize: '13px' }}>{outlet.district} · {depotName(outlet.depot)}</span>}
             </div>
           </div>
         ) : form.role !== 'ADMIN' ? (
           <div className="dx-field">
             <span className="dx-label">{"Depot scope"}</span>
-            <div className="hstack" style={{ gap: '10px' }}>
-              {(['PELIYAGODA', 'KANDY'] as Depot[]).map(d => (
+            <div className="hstack" style={{ gap: '10px', flexWrap: 'wrap' }}>
+              {depotsLoading && !depotChoices.length && <span className="t-3" style={{ fontSize: '13px' }}>Loading depots…</span>}
+              {depotChoices.map(d => (
                 <div key={d} className={`adm-opt lv-click${form.depot === d ? ' is-on' : ''}`} style={{ flex: '1', padding: '10px 12px' }} role="radio" aria-checked={form.depot === d} tabIndex={0}
                   onClick={e => { e.stopPropagation(); set('depot', d); }} onKeyDown={e => { if (e.key === 'Enter') set('depot', d); }}>
                   <span className={`dx-radio${form.depot === d ? ' is-on' : ''}`} />
-                  <span className="dx-td2"><b>{DEPOT_NAME[d]}</b><span>{d}</span></span>
+                  <span className="dx-td2"><b>{depotName(d)}</b><span>{d}</span></span>
                 </div>
               ))}
             </div>

@@ -11,7 +11,7 @@ describe('gateway OData documents', () => {
     const sets = doc.value.filter((v: any) => v.kind === 'EntitySet').map((v: any) => v.name);
     expect(sets.sort()).toEqual(
       [
-        'Orders', 'OrderLineItems', 'Plans', 'Deferrals', 'Vehicles', 'Outlets', 'Calendar', 'DistrictTravel', 'ServiceAllowances',
+        'Orders', 'OrderLineItems', 'Plans', 'Deferrals', 'Vehicles', 'Depots', 'Outlets', 'Calendar', 'DistrictTravel', 'ServiceAllowances',
         'Trips', 'TripStops', 'PODs', 'LoadRecords', 'OfflineEvents', 'Notifications', 'AuditEntries', 'Users', 'Devices', 'AgentRuns', 'DataImports',
       ].sort(),
     );

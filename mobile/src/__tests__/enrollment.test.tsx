@@ -211,10 +211,13 @@ describe('DeviceEnrollment', () => {
   });
 
   it('names the approving hub', () => {
-    expect(hubName(['KANDY'])).toBe('Kandy Hub');
-    expect(hubName(['PELIYAGODA', 'KANDY'])).toBe('Kandy Hub');
-    expect(hubName(['PELIYAGODA'])).toBe('Peliyagoda DC');
-    expect(hubName(undefined)).toBe('Kandy Hub');
+    const names: Record<string, string> = { KANDY: 'Kandy Hub', PELIYAGODA: 'Peliyagoda DC' };
+    const name = (c: string) => names[c] ?? c;
+    expect(hubName(['KANDY'], name)).toBe('Kandy Hub');
+    expect(hubName(['PELIYAGODA'], name)).toBe('Peliyagoda DC');
+    expect(hubName(['GALLE'], name)).toBe('GALLE'); // not in the registry yet: its code, never a guess
+    expect(hubName(['PELIYAGODA', 'KANDY'], name)).toBe('your depot');
+    expect(hubName(undefined)).toBe('your depot');
   });
 });
 
@@ -324,7 +327,8 @@ describe('SM-32 access request (live)', () => {
     const Screen = require('@/live/sm-32-access-request-sent').default;
     await render(<Screen />);
     expect(screen.getByTestId('device-id').props.children).toBe(INSTALL);
-    expect(screen.getByTestId('enroll-title').props.children).toBe('Access request sent to Kandy Hub');
+    // the hub's name from the depot registry (Depots), which an enrolling phone may read
+    await waitFor(() => expect(screen.getByTestId('enroll-title').props.children).toBe('Access request sent to Kandy Hub'));
     expect(screen.getByTestId('enroll-status').props.children).toBe('Sent');
   });
 

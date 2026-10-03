@@ -4,7 +4,9 @@
 // trips per vehicle, reason codes, protected score), Calendar (run days and the next closed days), Vehicles and
 // DistrictTravel counts per depot, Users of the dispatcher's depots, Outlets with an access note (the notes the
 // agent reads with the outlet rows), and the dispatcher's own alert rules and on-call hours
-// (Users/Lodestar.MyPreferences, saved with SaveMyPreferences; the phone's DSP-33 reads the same rules).
+// (Users/Lodestar.MyPreferences, saved with SaveMyPreferences; the phone's DSP-33 reads the same rules). The order
+// cut-off, deferral score weights, protected score, late-risk threshold choices and the default alert rules come
+// from the planning service (Plans/Lodestar.PlanningRules), the same values its scoring code uses.
 // The planning rules are enforced in code (planning, agent): they show with a lock and cannot be edited here.
 // "Save changes" saves the alert rules and goes to Today (the design's L170). Added to the design: the "Alert
 // rules" card (DSP-14's "Alert rules" opens this screen). Not drawn: "Add code", "Invite", the notes' "+" and
@@ -18,10 +20,12 @@ import { Ic } from '@/components/live/icons';
 import { type AlertRules, type Preferences, useAgentConfig, usePreferences } from '@/components/live/settings-data';
 import { ErrorBanner, Skeleton } from '@/components/live/states';
 import { usePlanScope } from '@/components/live/plan-data';
-import { addDays, DEPOT_NAME, isoDay, LATE_RISK_PCT } from '@/lib/format';
+import { addDays, isoDay } from '@/lib/format';
 import { useQuery } from '@/lib/odata/hooks';
 import type { Outlet, User, UserRole } from '@/lib/odata/types';
-import { CUTOFF_LABEL, colomboDay, depotFilter } from '@/lib/workday';
+import { colomboDay, depotFilter } from '@/lib/workday';
+import { clock12, usePlanningRules } from '@/components/live/planning-rules';
+import { useDepots } from '@/components/live/depots';
 
 const REASON_TEXT: Record<string, string> = {
   CAP_REEFER: 'Not enough reefer space',
@@ -34,13 +38,8 @@ const REASON_TEXT: Record<string, string> = {
 const ROLE_PILL: Record<UserRole, string> = { ADMIN: 'Admin', DISPATCHER: 'Plan', LOADER: 'Dock', DRIVER: 'Run', STORE_MANAGER: 'Store' };
 const ROLE_LABEL: Record<UserRole, string> = { ADMIN: 'Admin', DISPATCHER: 'Dispatcher', LOADER: 'Loader', DRIVER: 'Driver', STORE_MANAGER: 'Store manager' };
 const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const DEFAULT_ALERTS: Required<AlertRules> = {
-  vehicleFault: { push: true, sms: true },
-  lateRisk: { push: true, threshold: LATE_RISK_PCT, risingOnly: true },
-  flags: { push: true },
-  silence: { push: true, call: true, minutes: 15 },
-  signalZones: { alert: false },
-};
+const NO_ALERTS: Required<AlertRules> = { vehicleFault: {}, lateRisk: {}, flags: {}, silence: {}, signalZones: {} };
+const signed = (n: number) => (n < 0 ? `−${Math.abs(n)}` : `+${n}`);
 
 const hhmm = (min: number) => `${Math.floor(min / 60) % 24}:${String(min % 60).padStart(2, '0')}`;
 const toMin = (v: string) => { const [h, m] = v.split(':').map(Number); return h * 60 + (m || 0); };
@@ -62,10 +61,15 @@ function Kv({ label, children, style }: { label: ReactNode; children: ReactNode;
 }
 
 export default function LiveDsp20Settings() {
+  const { name: depotName } = useDepots();
   const router = useRouter();
   const { active } = usePlanScope();
   const prefs = usePreferences();
   const config = useAgentConfig();
+  const rules = usePlanningRules();
+  const r = rules.data;
+  // a dispatcher who saved no alert rules gets the planning service's defaults (PlanningRules.alertDefaults)
+  const alertDefaults: Required<AlertRules> = r?.alertDefaults ?? NO_ALERTS;
   const today = colomboDay();
   const calendar = useQuery<Array<{ date: string; isOperating: boolean; festivalName?: string | null }>>(`dsp20-cal:${today}`, c =>
     c.all('Calendar', { filter: `date ge ${today} and date le ${addDays(today, 60)}`, select: 'date,isOperating,festivalName', orderby: 'date' }),
@@ -90,11 +94,11 @@ export default function LiveDsp20Settings() {
   const draft: Preferences | null = edit ?? prefs.data ?? null;
   const setDraft = (next: Preferences | ((d: Preferences | null) => Preferences)) =>
     setEdit(e => (typeof next === 'function' ? next(e ?? prefs.data ?? null) : next));
-  const alerts: Required<AlertRules> = { ...DEFAULT_ALERTS, ...(draft?.alerts ?? {}) } as Required<AlertRules>;
+  const alerts: Required<AlertRules> = { ...alertDefaults, ...(draft?.alerts ?? {}) } as Required<AlertRules>;
   // on-call hours are only what the dispatcher saved (MyPreferences); none set = empty, as on the phone (DSP-33)
   const onCall = { from: '', to: '', ...(draft?.onCall ?? {}) };
   const setAlert = <K extends keyof AlertRules>(k: K, v: Partial<NonNullable<AlertRules[K]>>) =>
-    setDraft(d => ({ ...(d ?? {}), alerts: { ...DEFAULT_ALERTS, ...(d?.alerts ?? {}), [k]: { ...DEFAULT_ALERTS[k], ...(d?.alerts?.[k] ?? {}), ...v } } }));
+    setDraft(d => ({ ...(d ?? {}), alerts: { ...alertDefaults, ...(d?.alerts ?? {}), [k]: { ...alertDefaults[k], ...(d?.alerts?.[k] ?? {}), ...v } } }));
   const dirty = edit !== null && JSON.stringify(edit) !== JSON.stringify(prefs.data ?? {});
 
   const runDays = useMemo(() => {
@@ -112,7 +116,7 @@ export default function LiveDsp20Settings() {
 
   const c = config.data;
   const freshStart = c ? toMin(c.firstDeparture) : null;
-  const save = () => void prefs.save.run({ alerts: draft?.alerts ?? DEFAULT_ALERTS, ...(onCall.from && onCall.to ? { onCall } : {}) })
+  const save = () => void prefs.save.run({ alerts: draft?.alerts ?? alertDefaults, ...(onCall.from && onCall.to ? { onCall } : {}) })
     .then(r => { if (r) { setEdit(null); router.push('/plan/dsp-08-today-overview'); } });
 
   return (
@@ -128,18 +132,18 @@ export default function LiveDsp20Settings() {
             <Btn className="d-btn d-btn--ghost" disabled={!dirty} onClick={() => setEdit(null)}>{"Discard"}</Btn>
             <Btn className="d-btn d-btn--primary" lk="L170" busy={prefs.save.pending} disabled={!draft} onClick={save}><Ic n="check" />{"Save changes"}</Btn>
           </div>
-          <ErrorBanner error={prefs.error ?? prefs.save.error ?? config.error} onRetry={() => { void prefs.refresh(); void config.refresh(); }} />
+          <ErrorBanner error={prefs.error ?? prefs.save.error ?? config.error ?? rules.error} onRetry={() => { void prefs.refresh(); void config.refresh(); void rules.refresh(); }} />
           <div className="dx-hrow" style={{ flex: '1' }}>
             <div className="dx-col" style={{ flex: '1' }}>
               <div className="dx-card">
                 <div className="dx-card__head"><span className="dx-card__title">{"Order cutoff"}</span></div>
                 <div className="dx-card__body" style={{ gap: '10px' }}>
                   <div className="vstack" style={{ gap: '4px' }}>
-                    <span className="dx-display">{CUTOFF_LABEL}</span>
+                    <span className="dx-display">{r ? clock12(r.cutoff) : '…'}</span>
                     <span className="dx-t14">{"the day before each run"}</span>
                   </div>
                   <div className="dx-input dx-input--sm" style={{ width: '180px' }} title="Set in the planning service: the same for every depot">
-                    <Ic n="clock" />{"16:00"}<span className="spacer" /><Ic n="lock" />
+                    <Ic n="clock" />{r?.cutoff ?? '…'}<span className="spacer" /><Ic n="lock" />
                   </div>
                   <span className="dx-t13">{"At cutoff the planning agent starts the draft. Later orders roll to the next run and the store is told."}</span>
                 </div>
@@ -165,20 +169,20 @@ export default function LiveDsp20Settings() {
                   <span className="dx-t13">{"yours, on this desk and your phone"}</span>
                 </div>
                 <div className="dx-card__body" style={{ gap: '0' }}>
-                  {!draft ? <Skeleton rows={4} /> : (
+                  {!draft || !r ? <Skeleton rows={4} /> : (
                     <>
                       <div className="dx-kv"><span>{"Vehicle can't depart"}</span><span className="hstack" style={{ gap: '8px' }}><span className="dx-t13">{"push"}</span><Toggle label="Vehicle fault push" on={!!alerts.vehicleFault.push} onChange={v => setAlert('vehicleFault', { push: v })} /><span className="dx-t13">{"SMS"}</span><Toggle label="Vehicle fault SMS" on={!!alerts.vehicleFault.sms} onChange={v => setAlert('vehicleFault', { sms: v })} /></span></div>
                       <div className="dx-kv">
                         <span className="hstack" style={{ gap: '6px' }}>{"Late risk"}
-                          <select className="lv-input" aria-label="Late risk threshold" style={{ width: 'auto', height: '30px' }} value={alerts.lateRisk.threshold ?? LATE_RISK_PCT}
+                          <select className="lv-input" aria-label="Late risk threshold" style={{ width: 'auto', height: '30px' }} value={alerts.lateRisk.threshold ?? r.lateRisk.alertPct}
                             onChange={e => setAlert('lateRisk', { threshold: Number(e.target.value) })} onClick={e => e.stopPropagation()}>
-                            {[20, 30, 40, 50].map(n => <option key={n} value={n}>{`${n}% or more`}</option>)}
+                            {r.lateRisk.thresholdOptions.map(n => <option key={n} value={n}>{`${n}% or more`}</option>)}
                           </select>
                         </span>
                         <Toggle label="Late risk push" on={!!alerts.lateRisk.push} onChange={v => setAlert('lateRisk', { push: v })} />
                       </div>
                       <div className="dx-kv"><span>{"Loader and store flags"}</span><Toggle label="Flags push" on={!!alerts.flags.push} onChange={v => setAlert('flags', { push: v })} /></div>
-                      <div className="dx-kv"><span>{`Silent ${alerts.silence.minutes ?? 15} min, unknown place`}</span><span className="hstack" style={{ gap: '8px' }}><span className="dx-t13">{"push"}</span><Toggle label="Silence push" on={!!alerts.silence.push} onChange={v => setAlert('silence', { push: v })} /><span className="dx-t13">{"call"}</span><Toggle label="Silence call" on={!!alerts.silence.call} onChange={v => setAlert('silence', { call: v })} /></span></div>
+                      <div className="dx-kv"><span>{`Silent ${alerts.silence.minutes ?? r.alertDefaults.silence.minutes} min, unknown place`}</span><span className="hstack" style={{ gap: '8px' }}><span className="dx-t13">{"push"}</span><Toggle label="Silence push" on={!!alerts.silence.push} onChange={v => setAlert('silence', { push: v })} /><span className="dx-t13">{"call"}</span><Toggle label="Silence call" on={!!alerts.silence.call} onChange={v => setAlert('silence', { call: v })} /></span></div>
                       <div className="dx-kv"><span>{"Known signal-loss zones alert"}</span><Toggle label="Signal-loss zones" on={!!alerts.signalZones.alert} onChange={v => setAlert('signalZones', { alert: v })} /></div>
                       <div className="dx-kv">
                         <span>{"On call"}</span>
@@ -208,15 +212,20 @@ export default function LiveDsp20Settings() {
               <div className="dx-card" style={{ flex: '1' }}>
                 <div className="dx-card__head"><span className="dx-card__title">{"Deferral score weights"}</span><span className="spacer" /><span className="dx-t13">{"higher = keep"}</span></div>
                 <div className="dx-card__body" style={{ gap: '0' }}>
-                  <Kv label="Deferred on the previous run"><span style={{ fontSize: '14px', color: 'var(--text)' }}>{"+40"}</span></Kv>
-                  <Kv label="Days since last served"><span style={{ fontSize: '14px', color: 'var(--text)' }}>{"×12 a day"}</span></Kv>
-                  <Kv label="Chilled order"><span style={{ fontSize: '14px', color: 'var(--text)' }}>{"+15"}</span></Kv>
-                  <Kv label="Fresh, before the store opens"><span style={{ fontSize: '14px', color: 'var(--text)' }}>{"+10"}</span></Kv>
-                  <Kv label="Next run within 24 h"><span style={{ fontSize: '14px', color: 'var(--st-delivered-fg)' }}>{"−10"}</span></Kv>
-                  <Kv label="Stock cover"><span style={{ fontSize: '14px', color: 'var(--text)' }}>{"from store stock"}</span></Kv>
+                  {!r && !rules.error && <Skeleton rows={5} />}
+                  {r && (
+                    <>
+                      <Kv label="Deferred on the previous run"><span style={{ fontSize: '14px', color: 'var(--text)' }}>{signed(r.deferral.weights.deferredYesterday)}</span></Kv>
+                      <Kv label="Days since last served"><span style={{ fontSize: '14px', color: 'var(--text)' }}>{`×${r.deferral.weights.perDaySince} a day`}</span></Kv>
+                      <Kv label="Chilled order"><span style={{ fontSize: '14px', color: 'var(--text)' }}>{signed(r.deferral.weights.chilled)}</span></Kv>
+                      <Kv label="Fresh, before the store opens"><span style={{ fontSize: '14px', color: 'var(--text)' }}>{signed(r.deferral.weights.freshBeforeOpening)}</span></Kv>
+                      <Kv label="Next run within 24 h"><span style={{ fontSize: '14px', color: 'var(--st-delivered-fg)' }}>{signed(r.deferral.weights.nextRunWithin24h)}</span></Kv>
+                      <Kv label="Stock cover"><span style={{ fontSize: '14px', color: 'var(--text)' }}>{`${signed(r.deferral.weights.stockCoverPerDay)} a day of cover, up to ${signed(-r.deferral.weights.stockCoverCap)}`}</span></Kv>
+                    </>
+                  )}
                   <div className="hstack" style={{ gap: '12px', marginTop: '10px', fontSize: '14px' }}>
                     <Toggle label="Protect outlets deferred on the previous run" on locked />
-                    <span><b>{"Protect"}</b>{` outlets deferred on the previous run${c ? ` (score ${c.limits.protectedScore} or more is never deferred)` : ''}`}</span>
+                    <span><b>{"Protect"}</b>{` outlets deferred on the previous run${r ? ` (score ${r.deferral.protectedScore} or more is never deferred)` : ''}`}</span>
                   </div>
                 </div>
               </div>
@@ -231,7 +240,7 @@ export default function LiveDsp20Settings() {
                     <div key={d.depot} className="dx-kv" style={{ minHeight: '54px' }}>
                       <span className="hstack" style={{ gap: '10px' }}>
                         <span className="dx-lead" style={{ width: '34px', height: '34px' }}><Ic n="depot" /></span>
-                        <span className="dx-td2"><b>{DEPOT_NAME[d.depot] ?? d.depot}</b><span>{`${d.districts} districts`}</span></span>
+                        <span className="dx-td2"><b>{depotName(d.depot)}</b><span>{`${d.districts} districts`}</span></span>
                       </span>
                       <b>{`${d.vehicles} vehicles`}</b>
                     </div>
@@ -247,7 +256,7 @@ export default function LiveDsp20Settings() {
                     <div key={u.id} className="dx-kv" style={{ minHeight: '50px' }}>
                       <span className="hstack" style={{ gap: '10px' }}>
                         <span className="d-avatar" style={i ? { background: 'var(--tint-brand)', color: 'var(--brand-600)' } : undefined}>{initials(u.name)}</span>
-                        <span className="dx-td2"><b>{u.name}</b><span>{`${ROLE_LABEL[u.role]} · ${u.outletId ?? (u.depot ? DEPOT_NAME[u.depot] : 'both depots')}`}</span></span>
+                        <span className="dx-td2"><b>{u.name}</b><span>{`${ROLE_LABEL[u.role]} · ${u.outletId ?? (u.depot ? depotName(u.depot) : 'both depots')}`}</span></span>
                       </span>
                       <b className="m-pill" style={{ height: '26px', fontSize: '13px' }}>{ROLE_PILL[u.role]}</b>
                     </div>
@@ -263,7 +272,7 @@ export default function LiveDsp20Settings() {
                     <div key={o.id} className="dx-kv" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '2px', minHeight: '0', paddingTop: '8px', paddingBottom: '8px' }}>
                       <span className="hstack" style={{ gap: '8px' }}><span className="id" style={{ color: 'var(--text)' }}>{o.id}</span><b style={{ fontSize: '14px' }}>{o.district}</b></span>
                       <span style={{ fontSize: '13.5px', lineHeight: '1.4', color: 'var(--text-2)', whiteSpace: 'normal' }}>{o.accessNote}</span>
-                      <span className="dx-t13">{`${o.name} · ${DEPOT_NAME[o.depot] ?? o.depot}`}</span>
+                      <span className="dx-t13">{`${o.name} · ${depotName(o.depot)}`}</span>
                     </div>
                   ))}
                 </div>

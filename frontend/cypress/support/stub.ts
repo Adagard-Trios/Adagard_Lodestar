@@ -38,6 +38,12 @@ export const apiError = (statusCode: number, message: string, code = 'Failed') =
 const isReply = (r: unknown): r is { statusCode: number; body?: unknown } =>
   Boolean(r && typeof r === 'object' && typeof (r as { statusCode?: unknown }).statusCode === 'number' && !('value' in (r as object)));
 
+/** The seeded depot registry (OData Depots). */
+export const DEPOTS = [
+  { code: 'KANDY', name: 'Kandy Hub', district: 'Kandy', address: null, phone: null, lat: null, lng: null, isActive: true },
+  { code: 'PELIYAGODA', name: 'Peliyagoda DC', district: 'Gampaha', address: null, phone: null, lat: null, lng: null, isActive: true },
+];
+
 /** Every OData call answered by `handler`; the realtime socket is refused (the screens then show "Reconnecting"). */
 export function stubApi(handler: ApiHandler) {
   cy.intercept({ pathname: /^\/ws\// }, { statusCode: 404, body: '' });
@@ -45,7 +51,11 @@ export function stubApi(handler: ApiHandler) {
     const url = new URL(req.url);
     const query: Record<string, string> = {};
     url.searchParams.forEach((v, k) => (query[k] = v));
-    const r = handler({ method: req.method, path: decodeURIComponent(url.pathname.replace(/^\/odata\/v4\//, '')), query, body: req.body });
+    const path = decodeURIComponent(url.pathname.replace(/^\/odata\/v4\//, ''));
+    let r = handler({ method: req.method, path, query, body: req.body });
+    // the depot registry (ADM-21) every screen names depots from, unless the spec answers Depots itself
+    const rows = (r as { value?: unknown[] } | undefined)?.value;
+    if (req.method === 'GET' && path === 'Depots' && !isReply(r) && !(Array.isArray(rows) && rows.length && rows.every(x => x && typeof x === 'object' && 'code' in (x as object)))) r = page(DEPOTS);
     if (isReply(r)) req.reply({ statusCode: r.statusCode, body: r.body ?? '' });
     else req.reply({ statusCode: 200, body: r ?? page([]) });
   }).as('api');

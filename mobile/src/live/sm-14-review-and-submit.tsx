@@ -3,15 +3,17 @@
 import { Text, View, StyleSheet } from 'react-native';
 import { network } from '@/offline/network';
 import { addDays, dayLabel } from '@/lib/time';
-import { plural, titleCase } from '@/lodestar/live';
+import { plural } from '@/lodestar/live';
 import { placeOrder } from '@/model/actions';
 import { useClaims, useStoreDay } from '@/model/hooks';
 import { byClass, clearDraft, cutoffFor, left, toOrderLines, totals, useNow, useOrderDraft } from '@/model/store-face';
 import { Frame, Grad, Icon, Scroll, Tap, openScreen, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L83":{"to":"sm-01-received","kind":"go"},"L84":{"to":"sm-13-new-order","kind":"go"}}};
 
 export default function ScreenSm14ReviewAndSubmit() {
+  const { name: depotName } = useDepots();
   const claims = useClaims();
   const day = useStoreDay();
   const outlet = day.data?.outlet ?? null;
@@ -53,7 +55,7 @@ export default function ScreenSm14ReviewAndSubmit() {
               <Text style={s.t3}>{"Review"}</Text>
             </View>
             <View>
-              <Text style={s.t4} numberOfLines={1}>{`${dayLabel(runDate)}${outlet ? ` · ${titleCase(outlet.depot)} run` : ''}`}</Text>
+              <Text style={s.t4} numberOfLines={1}>{`${dayLabel(runDate)}${outlet ? ` · ${depotName(outlet.depot)} run` : ''}`}</Text>
             </View>
           </View>
           <View style={s.v6} />

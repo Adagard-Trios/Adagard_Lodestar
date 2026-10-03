@@ -16,7 +16,8 @@ import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { useLateRiskExplain, useMessageStore, usePlanScope } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
-import { fmtClock, fmtNum, isoDay, LATE_RISK_HIGH_PCT, LATE_RISK_PCT, TIME_ZONE } from '@/lib/format';
+import { fmtClock, fmtNum, isoDay, TIME_ZONE } from '@/lib/format';
+import { usePlanningRules } from '@/components/live/planning-rules';
 import { useEntity, useQuery } from '@/lib/odata/hooks';
 import type { Order, Outlet, Trip, TripStop } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
@@ -30,6 +31,7 @@ const toMin = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); re
 const clock = (min: number) => `${Math.floor(min / 60)}:${String(min % 60).padStart(2, '0')}`;
 
 export default function LiveDsp15LateRiskExplainer() {
+  const levels = usePlanningRules().data?.lateRisk;
   const nav = useScreenNav();
   const { runDate, tripsFilter } = usePlanScope();
   const [focusOrder] = useFocusId('order');
@@ -67,7 +69,7 @@ export default function LiveDsp15LateRiskExplainer() {
   const to = pts.length ? Math.max(from + 60, Math.ceil(Math.max(...pts) / 30) * 30) : 60;
   const at = (m: number) => `${(((m - from) / (to - from)) * 100).toFixed(1)}%`;
   const ticks = Array.from({ length: Math.floor((to - from) / 30) + 1 }, (_, i) => from + i * 30);
-  const tone = risk === null ? 'var(--text)' : risk >= LATE_RISK_HIGH_PCT ? 'var(--st-exception-fg)' : risk >= LATE_RISK_PCT ? 'var(--st-deferred-fg)' : 'var(--st-delivered-fg)';
+  const tone = risk === null || !levels ? 'var(--text)' : risk >= levels.highPct ? 'var(--st-exception-fg)' : risk >= levels.alertPct ? 'var(--st-deferred-fg)' : 'var(--st-delivered-fg)';
   const nowLabel = fmtClock(new Date());
   let cum = 0;
 

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
-import { EntitySet, ODataAction, ODataEntitySet, ODataError, OperationContext } from '@lodestar/odata';
+import { assertDepotCode, EntitySet, ODataAction, ODataEntitySet, ODataError, OperationContext } from '@lodestar/odata';
 import { canAccessDepot, HUMAN_ROLES, isPrivileged, Roles } from '@lodestar/security';
 import { NotificationsService } from './notifications.service';
 
@@ -47,7 +47,7 @@ export class NotificationsSet extends ODataEntitySet {
       type: { type: 'Edm.String', required: true },
       payload: 'Edm.Untyped',
       tripId: 'Edm.String',
-      depot: 'Lodestar.Depot',
+      depot: 'Edm.String',
       outletId: 'Edm.String',
       creditNoteId: 'Edm.String',
     },
@@ -56,6 +56,7 @@ export class NotificationsSet extends ODataEntitySet {
   async send(ctx: OperationContext) {
     const recipient = await this.prisma.user.findUnique({ where: { id: ctx.params.recipientId }, select: { id: true, depot: true } });
     if (!recipient) throw ODataError.badRequest('Unknown recipient', 'recipientId');
+    if (ctx.params.depot !== undefined) ctx.params.depot = await assertDepotCode(this.prisma, ctx.params.depot, { active: false });
     // A dispatcher notifies people and depot rooms of their own depots only.
     const p = ctx.principal;
     if (!isPrivileged(p)) {

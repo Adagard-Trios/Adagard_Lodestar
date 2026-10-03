@@ -5,11 +5,13 @@ import { useSplash } from '@/lodestar/live';
 import { useClaims } from '@/model/hooks';
 import { depotsLabel } from '@/model/plan';
 import { Frame, Grad, Icon, Scroll, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 // No timed hop here: useSplash() opens the role's first screen when signed in, else the sign-in screen.
 const nav: ScreenNav = {"links":{}};
 
 export default function ScreenDsp25Splash() {
+  useDepots(); // re-render when the depot names (depotsLabel) arrive
   useSplash('dsp-26-sign-in');
   // the depots in the signed-in dispatcher's token; nothing before sign-in
   const depots = depotsLabel(useClaims()?.depots);

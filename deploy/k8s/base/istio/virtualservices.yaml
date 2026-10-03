@@ -57,7 +57,7 @@ spec:
   - name: odata-outlets
     match:
     - uri:
-        regex: /odata/v4/(Outlets|Calendar|DistrictTravel|ServiceAllowances|DataImports)([(/?].*)?
+        regex: /odata/v4/(Depots|Outlets|Calendar|DistrictTravel|ServiceAllowances|DataImports)([(/?].*)?
     route:
     - destination:
         host: outlets.lodestar.svc.cluster.local
@@ -215,7 +215,7 @@ spec:
   - name: odata-outlets
     match:
     - uri:
-        regex: /odata/v4/(Outlets|Calendar|DistrictTravel|ServiceAllowances|DataImports)([(/?].*)?
+        regex: /odata/v4/(Depots|Outlets|Calendar|DistrictTravel|ServiceAllowances|DataImports)([(/?].*)?
     route:
     - destination:
         host: outlets.lodestar.svc.cluster.local

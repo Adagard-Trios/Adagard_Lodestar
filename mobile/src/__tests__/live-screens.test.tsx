@@ -123,7 +123,7 @@ describe('LD-01 dock queue', () => {
     routes.set('Trips/Lodestar.BayQueue', [{ ...trip, status: 'LOADING', stops: [{ stopSeq: 1 }, { stopSeq: 2 }] }, { ...trip, id: 'T-2', vehicleId: 'TRK-T4', bay: 'B3', status: 'PLANNED', stops: [] }]);
     const Screen = require('@/live/ld-01-dock-queue').default;
     await render(<Screen />);
-    expect(await screen.findByText('Kandy hub')).toBeTruthy();
+    expect(await screen.findByText('Kandy Hub')).toBeTruthy(); // the depot's name from the registry (Depots)
     expect(screen.getByTestId('next-vehicle').props.children).toBe('VAN-T9');
     expect(screen.getByText('TRK-T4')).toBeTruthy();
     expect(client.fn.mock.calls.some(c => /^Trips\/Lodestar\.BayQueue\(depot='KANDY',runDate=\d{4}-\d{2}-\d{2}\)$/.test(c[0]))).toBe(true);

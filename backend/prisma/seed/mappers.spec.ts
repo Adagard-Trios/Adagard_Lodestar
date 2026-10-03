@@ -34,7 +34,9 @@ describe('normalisers', () => {
     expect(parseTempClass('reefer')).toBe('CHILLED');
     expect(parseTempClass('dry')).toBe('AMBIENT');
     expect(parseTempClass('Ambient')).toBe('AMBIENT');
-    expect(() => parseDepot('Galle')).toThrow(ValueError);
+    expect(parseDepot('Galle')).toBe('GALLE'); // a registered depot by code; the import checks the registry
+    expect(parseDepot('galle dc')).toBe('GALLE_DC');
+    expect(() => parseDepot('#42')).toThrow(ValueError);
     expect(() => parseTempClass('frozen')).toThrow(ValueError);
   });
 
@@ -99,8 +101,8 @@ describe('mapDistrict', () => {
   });
 
   it('skips unknown depot', () => {
-    const m = mapDistrict(rec('district,depot,road_class,depot_to_dist_min,inter_stop_min\nX,Moonbase,urban,1,1\n'));
-    expect(m).toEqual({ ok: false, reason: 'unknown depot: "Moonbase"' });
+    const m = mapDistrict(rec('district,depot,road_class,depot_to_dist_min,inter_stop_min\nX,#moon,urban,1,1\n'));
+    expect(m).toEqual({ ok: false, reason: 'unknown depot: "#moon"' });
   });
 });
 

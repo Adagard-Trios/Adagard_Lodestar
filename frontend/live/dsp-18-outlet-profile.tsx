@@ -8,16 +8,18 @@ import { Ic } from '@/components/live/icons';
 import { usePlanScope } from '@/components/live/plan-data';
 import { useAgentConfig } from '@/components/live/settings-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
-import { DEPOT_NAME, fmtDay, fmtNum, fmtRunDate, pct, title } from '@/lib/format';
+import { fmtDay, fmtNum, fmtRunDate, pct, title } from '@/lib/format';
 import { useEntity, useQuery } from '@/lib/odata/hooks';
 import type { Deferral, Order, Outlet } from '@/lib/odata/types';
 import { depotFilter, useFocusId } from '@/lib/workday';
+import { useDepots } from '@/components/live/depots';
 
 const DOCK: Record<string, string> = { REAR_DOCK: 'Rear dock', STREET: 'Street, no dock', MALL_BAY: 'Mall bay' };
 const PARKING: Record<string, string> = { NORMAL: 'Normal, any vehicle', VAN_ONLY: 'Vans only', MALL_DOCK: 'Mall dock' };
 const code = (r: string) => r.replace('_', '-');
 
 export default function LiveDsp18OutletProfile() {
+  const { name: depotName } = useDepots();
   const { runDate, active } = usePlanScope();
   const [focus, setFocus] = useFocusId('outlet');
   const [, setOrder] = useFocusId('order');
@@ -43,7 +45,7 @@ export default function LiveDsp18OutletProfile() {
   const stops = list.map(x => x.tripStop).filter(s => s?.arrivalActual);
   const onTime = stops.filter(s => !s!.etaModelBandLate || new Date(s!.arrivalActual!) <= new Date(s!.etaModelBandLate)).length;
   const chilled = list.filter(x => x.tempClass === 'CHILLED');
-  const typical = chilled.length ? chilled.reduce((s, x) => s + x.m3, 0) / chilled.length : 0;
+  const typical = chilled.length ? chilled.reduce((s, x) => s + x.m3, 0) / chilled.length : null;
   const protectedNext = upcoming && (upcoming.deferredYesterday || (protectedScore !== undefined && (upcoming.deferralScore ?? 0) >= protectedScore));
 
   return (
@@ -54,7 +56,7 @@ export default function LiveDsp18OutletProfile() {
           <div className="d-head">
             <div className="d-head__txt">
               <div className="d-eyebrow">
-                {"Fleet & outlets "}<span className="m-sep" />{" Outlets "}<span className="m-sep" />{` ${o?.district ?? ''} `}<span className="m-sep" />{` ${DEPOT_NAME[o?.depot ?? ''] ?? ''}`}
+                {"Fleet & outlets "}<span className="m-sep" />{" Outlets "}<span className="m-sep" />{` ${o?.district ?? ''} `}<span className="m-sep" />{` ${depotName(o?.depot)}`}
               </div>
               <div className="d-h1">{o?.name ?? (outlet.loading ? 'Loading…' : 'Outlet')} <span className="id" style={{ fontSize: '18px', color: 'var(--text-3)', fontWeight: '600' }}>{o?.id}</span></div>
             </div>
@@ -108,7 +110,7 @@ export default function LiveDsp18OutletProfile() {
                     <div className="dx-kv"><span>{"Parking"}</span><b>{PARKING[o.parking] ?? o.parking}</b></div>
                     <div className="dx-kv"><span>{"Window"}</span><b className="mono">{o.windowOpen}–{o.windowClose}</b></div>
                     <div className="dx-kv"><span>{"Service allowance"}</span><b>{allowance.data ? `${allowance.data.minutes} min` : '—'}</b></div>
-                    <div className="dx-kv"><span>From {DEPOT_NAME[o.depot] ?? o.depot}</span><b>{travel.data ? `${travel.data.depotToDistMin} min · ${o.district}` : o.district}</b></div>
+                    <div className="dx-kv"><span>From {depotName(o.depot)}</span><b>{travel.data ? `${travel.data.depotToDistMin} min · ${o.district}` : o.district}</b></div>
                     {o.accessNote && (
                       <div className="dx-inset" style={{ marginTop: '8px', padding: '12px 14px', gap: '4px' }}>
                         <span className="dx-sech" style={{ color: 'var(--brand-600)' }}><Ic n="pen-2" />{"Access note the planner uses"}</span>
@@ -137,7 +139,7 @@ export default function LiveDsp18OutletProfile() {
                     </div>
                     <div className="dx-stats">
                       <div className="dx-stat"><b>{stops.length ? `${pct(onTime, stops.length)}%` : '—'}</b><span>on time, last {stops.length} deliveries</span></div>
-                      <div className="dx-stat"><b>{fmtNum(typical, 1)}<small>m³</small></b><span>{"typical chilled order"}</span></div>
+                      <div className="dx-stat"><b>{typical === null ? '—' : <>{fmtNum(typical, 1)}<small>m³</small></>}</b><span>{"typical chilled order"}</span></div>
                       <div className="dx-stat"><b>{skips.data?.length ?? '…'}</b><span>{"recent skips"}</span></div>
                     </div>
                     <div className="dx-sech"><b>{"Skip history"}</b></div>

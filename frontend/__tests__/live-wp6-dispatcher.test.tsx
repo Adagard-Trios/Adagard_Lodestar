@@ -92,11 +92,34 @@ describe('DSP-05 Capacity outlook', () => {
     expect(screen.queryByText('Create hire request')).not.toBeInTheDocument();
   });
 
+  it('says what the forecast rests on, which weeks have no calendar rows, and why a depot has no forecast', async () => {
+    const basis = { historyDays: 12, historyFrom: '2026-03-23', historyTo: '2026-04-04', minHistoryDays: 5, medianTotalM3PerDay: 31.5, medianChilledM3PerDay: 12.25 };
+    renderLive(<CapacityOutlook />, {
+      handler: handler(req => fnDepot(req.path) === 'PELIYAGODA' ? { ...(outlooks.PELIYAGODA as object), basis, uncoveredWeeks: ['W17', 'W18'], reason: null }
+        : fnDepot(req.path) === 'KANDY' ? { depot: 'KANDY', weeks: [], uncoveredWeeks: [], basis: { ...basis, historyDays: 2 }, reason: 'Only 2 past run dates of orders; the forecast needs 5.' } : undefined),
+    });
+    const text = await screen.findByTestId('forecast-basis');
+    await waitFor(() => expect(text).toHaveTextContent('Peliyagoda: 12 run dates, 23 Mar to 4 Apr · median 31.5 m³ a day, 12.3 chilled.'));
+    expect(text).toHaveTextContent('No calendar rows yet for W17 to W18, so no forecast there.');
+    expect(text).toHaveTextContent('Only 2 past run dates of orders; the forecast needs 5.');
+    expect(text).not.toHaveTextContent('Datathon');
+  });
+
+  it('shows no chart when no depot has enough history', async () => {
+    renderLive(<CapacityOutlook />, {
+      handler: handler(req => fnDepot(req.path) ? { depot: fnDepot(req.path), weeks: [], uncoveredWeeks: [], basis: null, reason: 'Only 0 past run dates of orders; the forecast needs 5.' } : undefined),
+    });
+    expect(await screen.findByText('No forecast')).toBeInTheDocument();
+    expect(screen.getByText(/Peliyagoda: Only 0 past run dates/)).toBeInTheDocument();
+    expect(screen.queryByTestId('outlook-chart')).not.toBeInTheDocument();
+  });
+
   it('the depot chips narrow the outlook to one depot', async () => {
     const view = renderLive(<CapacityOutlook />, { handler: handler() });
     await screen.findByTestId('peak-week');
-    fireEvent.click(screen.getAllByRole('button', { name: 'Kandy Hub' }).find(el => el.classList.contains('d-filter'))!);
-    await waitFor(() => expect(screen.getByTestId('peak-week')).toHaveTextContent('Peak week · W16 · Kandy Hub'));
+    // chips and labels use the depot's short name from the registry (Depots): "Kandy Hub" → "Kandy"
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Kandy' })).find(el => el.classList.contains('d-filter'))!);
+    await waitFor(() => expect(screen.getByTestId('peak-week')).toHaveTextContent('Peak week · W16 · Kandy'));
     expect(window.sessionStorage.getItem('lodestar.depot')).toBe('KANDY');
     expect(view.calls.filter(c => fnDepot(c.path) === 'KANDY').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByTestId('outlook-table').querySelectorAll('[data-week]')).toHaveLength(2);

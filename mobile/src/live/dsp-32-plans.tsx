@@ -4,13 +4,15 @@
 // trips are (the day's trips), the orders moved off the day (Deferrals), and the queue for the next run (Orders).
 import { Text, View, StyleSheet } from 'react-native';
 import { dayLabel, hm, isoDay } from '@/lib/time';
-import { depotName, LIVE_POLL_MS, orderCutoff, reasonCode, useAlertCount, useEvery, usePlansBoard } from '@/model/plan';
+import { LIVE_POLL_MS, orderCutoff, reasonCode, useAlertCount, useEvery, usePlansBoard } from '@/model/plan';
 import { clock12 } from '@/model/preferences';
 import { Frame, Icon, Scroll, Tap, type ScreenNav } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L183":{"to":"dsp-29-live-routes","kind":"go"},"N0":{"to":"dsp-27-alerts","kind":"nav"},"N1":{"to":"dsp-29-live-routes","kind":"nav"},"N3":{"to":"dsp-33-me-and-alert-rules","kind":"nav"}}};
 
 export default function ScreenDsp32Plans() {
+  const { name: depotName } = useDepots();
   const b = usePlansBoard();
   useEvery(LIVE_POLL_MS, b.refresh);
   const alertCount = useAlertCount();

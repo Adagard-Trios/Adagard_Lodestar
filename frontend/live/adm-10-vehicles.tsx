@@ -7,10 +7,11 @@ import Btn from '@/components/live/Btn';
 import { AdminSide, useCount } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { Empty, ErrorBanner, Skeleton, Spinner } from '@/components/live/states';
-import { DEPOT_NAME, fmtNum } from '@/lib/format';
+import { fmtNum } from '@/lib/format';
 import { useEntitySet, useQuery } from '@/lib/odata/hooks';
 import type { Vehicle } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
+import { useDepots } from '@/components/live/depots';
 
 type Chip = 'all' | 'reefer' | 'vans' | 'workshop';
 const CHIP: Record<Chip, [string, string | undefined]> = {
@@ -21,11 +22,12 @@ const CHIP: Record<Chip, [string, string | undefined]> = {
 };
 
 function DepotKpi({ depot }: { depot: string }) {
+  const { name: depotName } = useDepots();
   const all = useCount('Vehicles', `depot eq '${depot}'`);
   const down = useCount('Vehicles', `depot eq '${depot}' and status eq 'WORKSHOP'`);
   return (
     <div className="d-kpi">
-      <span className="d-kpi__l">{DEPOT_NAME[depot] ?? depot}</span>
+      <span className="d-kpi__l">{depotName(depot)}</span>
       <span className="d-kpi__v">{all !== undefined && down !== undefined ? all - down : '…'}<small>of {all ?? '…'}</small></span>
       <span className="d-kpi__s">{down ? `${down} in the workshop` : 'all in service'}</span>
     </div>
@@ -33,6 +35,7 @@ function DepotKpi({ depot }: { depot: string }) {
 }
 
 export default function LiveAdm10Vehicles() {
+  const { short: depotShort, active: activeDepots } = useDepots();
   const [, setFocus] = useFocusId('vehicle');
   const [chip, setChip] = useState<Chip>('all');
   const [search, setSearch] = useState('');
@@ -54,8 +57,7 @@ export default function LiveAdm10Vehicles() {
             </div>
           </div>
           <div className="d-kpis">
-            <DepotKpi depot="PELIYAGODA" />
-            <DepotKpi depot="KANDY" />
+            {activeDepots.map(d => <DepotKpi key={d.code} depot={d.code} />)}
             <div className="d-kpi"><span className="d-kpi__l">{"Reefer capable"}</span><span className="d-kpi__v">{reefers ?? '…'}</span><span className="d-kpi__s">{"chilled orders only travel on these"}</span></div>
             <div className="d-kpi" style={down.data?.length ? { background: 'var(--tint-bad)' } : undefined}>
               <span className="d-kpi__l">{"In the workshop"}</span>
@@ -102,7 +104,7 @@ export default function LiveAdm10Vehicles() {
                 </span>
                 <span className="dx-td" style={{ width: '110px' }}><span className="dx-mono">{fmtNum(v.capacityKg)} kg</span></span>
                 <span className="dx-td" style={{ width: '100px' }}><span className="dx-mono">{fmtNum(v.capacityM3, 1)} m³</span></span>
-                <span className="dx-td" style={{ width: '110px' }}>{(DEPOT_NAME[v.depot] ?? v.depot).split(' ')[0]}</span>
+                <span className="dx-td" style={{ width: '110px' }}>{depotShort(v.depot)}</span>
                 <span className="dx-td" style={{ width: '120px' }}><span className="dx-mono">{v.weeklyLFuel} L/wk</span></span>
                 <span className="dx-td" style={{ flex: '1', minWidth: '0' }}>
                   {v.status === 'WORKSHOP'

@@ -10,10 +10,11 @@ import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { PLAN_EVENTS, useNextOperatingDay, useReviewRun, usePlanScope } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
-import { BRAND_LETTER, DEPOT_NAME, dayFilter, fmtDay, fmtNum, fmtRunDate, fmtTime } from '@/lib/format';
+import { BRAND_LETTER, dayFilter, fmtDay, fmtNum, fmtRunDate, fmtTime } from '@/lib/format';
 import { useAction, useQuery } from '@/lib/odata/hooks';
 import type { Deferral, Outlet } from '@/lib/odata/types';
 import { depotFilter } from '@/lib/workday';
+import { useDepots } from '@/components/live/depots';
 
 const REASONS: Record<string, string> = {
   CAP_REEFER: 'Reefer capacity', CAP_TIME: 'Time window', ACCESS: 'Access', WINDOW: 'Delivery window', FUEL: 'Fuel quota', VEH_DOWN: 'Vehicle down',
@@ -25,6 +26,7 @@ const weekday = (day: string) => fmtRunDate(day).split(' ')[0];
 interface Row extends Deferral { outlet?: Outlet }
 
 export default function LiveDsp03DeferralDecision() {
+  const { name: depotName } = useDepots();
   const nav = useScreenNav();
   const { runDate, active } = usePlanScope();
   const { run } = useReviewRun();
@@ -60,7 +62,7 @@ export default function LiveDsp03DeferralDecision() {
   const dismiss = useAction<string, unknown>((c, id) => c.action('Deferrals', id, 'Dismiss'), { onSuccess: () => void list.refresh() });
 
   const m3 = chosen.reduce((s, r) => s + (r.order?.m3 ?? 0), 0);
-  const depotName = active.map(d => DEPOT_NAME[d] ?? d).join(' + ');
+  const depotLine = active.map(d => depotName(d)).join(' + ');
 
   return (
     <div className="frame frame--desktop mode-dispatcher" data-name="DSP-03 Deferral decision">
@@ -71,7 +73,7 @@ export default function LiveDsp03DeferralDecision() {
             <div className="d-head__txt">
               <div className="d-eyebrow">
                 {"Plan board "}<Ic n="chevron-right" className="ic ic--sm" />
-                {runDate ? ` ${fmtRunDate(runDate)} ` : ' '}<span className="m-sep" />{` ${depotName}`}
+                {runDate ? ` ${fmtRunDate(runDate)} ` : ' '}<span className="m-sep" />{` ${depotLine}`}
               </div>
               <div className="d-h1" style={{ fontSize: '28px' }}>
                 {rows.length ? `Defer ${rows.length} order${rows.length === 1 ? '' : 's'} to ${nextDay ? fmtRunDate(nextDay).split(' ')[0] : 'the next run'}` : 'No deferrals to decide'}

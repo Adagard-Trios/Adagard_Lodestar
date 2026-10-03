@@ -16,7 +16,7 @@ import { DevicesSet, UsersSet } from '../apps/auth/src/auth.sets';
 import { VehiclesSet } from '../apps/fleet/src/vehicles.set';
 import { NotificationsSet } from '../apps/notifications/src/notifications.set';
 import { OrderLineItemsSet, ORDERS_SUMMARY_TYPE, OrdersSet } from '../apps/orders/src/orders.sets';
-import { CalendarSet, DataImportsSet, DistrictTravelSet, OutletsSet, ServiceAllowancesSet } from '../apps/outlets/src/outlets.sets';
+import { CalendarSet, DataImportsSet, DepotsSet, DistrictTravelSet, OutletsSet, ServiceAllowancesSet } from '../apps/outlets/src/outlets.sets';
 import { AgentRunsSet, DeferralsSet, PlansSet } from '../apps/planning/src/planning.sets';
 import { OfflineEventsSet } from '../apps/sync/src/offline-events.set';
 import { LoadRecordsSet, PODsSet, TripStopsSet, TripsSet } from '../apps/trips/src/trips.sets';
@@ -27,7 +27,7 @@ export const SERVICE_SETS: Record<string, Function[]> = {
   orders: [OrdersSet, OrderLineItemsSet],
   planning: [PlansSet, DeferralsSet, AgentRunsSet],
   fleet: [VehiclesSet],
-  outlets: [OutletsSet, CalendarSet, DistrictTravelSet, ServiceAllowancesSet, DataImportsSet],
+  outlets: [DepotsSet, OutletsSet, CalendarSet, DistrictTravelSet, ServiceAllowancesSet, DataImportsSet],
   trips: [TripsSet, TripStopsSet, PODsSet, LoadRecordsSet],
   sync: [OfflineEventsSet],
   notifications: [NotificationsSet],

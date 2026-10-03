@@ -8,8 +8,8 @@ import { dayLabel, hm } from '@/lib/time';
 import { signOutTo } from '@/lodestar/live';
 import { collectFlags, isReleased, onTime, useFlagRecords, useTripLineCounts } from '@/model/dock';
 import { useBayQueue, useClaims, useNotifications, useOutbox } from '@/model/hooks';
-import { depotName } from '@/model/plan';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L208":{"to":"ld-06-sign-in","kind":"go"},"N0":{"to":"ld-01-dock-queue","kind":"nav"},"N1":{"to":"ld-13-flags-tab","kind":"nav"}}};
 
@@ -22,6 +22,7 @@ const initials = (name?: string) =>
     .join('');
 
 export default function ScreenLd16ShiftSummary() {
+  const { name: depotName } = useDepots();
   const claims = useClaims();
   const bay = useBayQueue();
   const date = bay.data?.date;

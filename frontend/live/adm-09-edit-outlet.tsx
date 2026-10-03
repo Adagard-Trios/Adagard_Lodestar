@@ -13,16 +13,18 @@ import Btn from '@/components/live/Btn';
 import { AdminSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
-import { BRAND_LETTER, DEPOT_NAME, title } from '@/lib/format';
+import { BRAND_LETTER, title } from '@/lib/format';
 import { useAction, useEntity, useQuery } from '@/lib/odata/hooks';
 import type { Outlet, User } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
+import { useDepots } from '@/components/live/depots';
 
 const DOCK: Record<string, string> = { REAR_DOCK: 'rear_dock', STREET: 'street', MALL_BAY: 'mall_bay' };
 const ACCESS: Record<string, string> = { NORMAL: 'normal access', VAN_ONLY: 'van_only', MALL_DOCK: 'mall_dock' };
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 function OutletForm({ outlet }: { outlet: Outlet & { '@odata.etag'?: string } }) {
+  const { name: depotName } = useDepots();
   const nav = useScreenNav();
   const [open, setOpen] = useState(outlet.windowOpen);
   const [close, setClose] = useState(outlet.windowClose);
@@ -50,7 +52,7 @@ function OutletForm({ outlet }: { outlet: Outlet & { '@odata.etag'?: string } })
       <div className="dx-drawer__body">
         <div className="hstack" style={{ gap: '10px', flexWrap: 'wrap' }}>
           <span className="m-tag m-tag--ok"><span className="dot" />{brand}</span>
-          <span className="m-tag"><Ic n="depot" />{`${outlet.district} · ${DEPOT_NAME[outlet.depot] ?? outlet.depot}`}</span>
+          <span className="m-tag"><Ic n="depot" />{`${outlet.district} · ${depotName(outlet.depot)}`}</span>
           <span className="m-tag"><Ic n="store" />{`${DOCK[outlet.dockType] ?? outlet.dockType} · ${ACCESS[outlet.parking] ?? outlet.parking}`}</span>
         </div>
         <div className="dx-field">

@@ -42,6 +42,7 @@ function validateLineItems(raw: unknown): LineItemInput[] {
   update: [Roles.StoreManager, Roles.Dispatcher, Roles.Admin],
   abac: orderAbac,
   navigation: ['outlet', 'lineItems', 'tripStop', 'deferralLog'],
+  expandPaths: ['tripStop/trip', 'tripStop/pod'],
   search: ['id', 'notes', 'outlet/name'],
   // orderedAt: when the phone saved it (honoured for the cut-off only within the offline grace window)
   insertable: ['id', 'outletId', 'runDate', 'brand', 'tempClass', 'units', 'kg', 'm3', 'notes', 'lineItems', 'orderedAt', 'lateReason'],

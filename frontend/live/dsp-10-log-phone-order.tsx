@@ -14,10 +14,12 @@ import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { usePlanScope } from '@/components/live/plan-data';
 import { Empty, ErrorBanner } from '@/components/live/states';
-import { DEPOT_NAME, fmtNum, fmtRunDate, fmtTime, isoDay } from '@/lib/format';
+import { fmtNum, fmtRunDate, fmtTime, isoDay } from '@/lib/format';
 import { useAction, useQuery } from '@/lib/odata/hooks';
 import type { Order, Outlet, TempClass } from '@/lib/odata/types';
-import { CUTOFF_LABEL, cutoffFor, depotFilter } from '@/lib/workday';
+import { cutoffFor, depotFilter } from '@/lib/workday';
+import { clock12, usePlanningRules } from '@/components/live/planning-rules';
+import { useDepots } from '@/components/live/depots';
 
 interface Line {
   key: number;
@@ -27,7 +29,6 @@ interface Line {
 }
 
 /** m³ per kg when the outlet has no earlier order to estimate from (the same default as the store's order form). */
-const DEFAULT_M3_PER_KG = 0.0045;
 const DOCK: Record<string, string> = { REAR_DOCK: 'rear dock', STREET: 'street', MALL_BAY: 'mall bay' };
 const PARKING: Record<string, string> = { NORMAL: 'normal access', VAN_ONLY: 'van_only access', MALL_DOCK: 'mall dock access' };
 
@@ -53,6 +54,9 @@ function Check({ on, label, disabled, onToggle }: { on: boolean; label: string; 
 }
 
 export default function LiveDsp10LogPhoneOrder() {
+  const cutoff = usePlanningRules().data?.cutoff;
+  const cutoffLabel = cutoff ? clock12(cutoff) : '…';
+  const { name: depotName } = useDepots();
   const nav = useScreenNav();
   const { runDate, active, noPlans } = usePlanScope();
   const [outletId, setOutletId] = useState('');
@@ -70,21 +74,25 @@ export default function LiveDsp10LogPhoneOrder() {
       orderby: 'id',
     }));
   const outlet = outlets.data?.find(o => o.id === outletId);
-  // the outlet's own earlier orders of this temperature give the m³ per kg estimate
-  const history = useQuery<Order[]>(outletId ? `phone-ratio:${outletId}:${tempClass}` : null, async c =>
-    (await c.list<Order>('Orders', { filter: `outletId eq '${outletId}' and tempClass eq '${tempClass}'`, select: 'id,kg,m3', orderby: 'runDate desc', top: 12 })).value);
+  // the outlet's own earlier orders of this temperature give the m³ per kg estimate; an outlet without any uses
+  // the recent orders of that temperature across the depots in view
+  const history = useQuery<Order[]>(outletId ? `phone-ratio:${outletId}:${tempClass}` : null, async c => {
+    const own = (await c.list<Order>('Orders', { filter: `outletId eq '${outletId}' and tempClass eq '${tempClass}' and kg gt 0 and m3 gt 0`, select: 'id,kg,m3', orderby: 'runDate desc', top: 12 })).value;
+    if (own.length) return own;
+    return (await c.list<Order>('Orders', { filter: [`tempClass eq '${tempClass}' and kg gt 0 and m3 gt 0`, depotFilter('outlet/depot', active)].filter(Boolean).join(' and '), select: 'id,kg,m3', orderby: 'runDate desc', top: 100 })).value;
+  });
   const base = (history.data ?? []).filter(o => o.kg > 0 && o.m3 > 0);
   const baseKg = base.reduce((s, o) => s + o.kg, 0);
-  const ratio = baseKg > 0 ? base.reduce((s, o) => s + o.m3, 0) / baseKg : DEFAULT_M3_PER_KG;
+  const ratio = baseKg > 0 ? base.reduce((s, o) => s + o.m3, 0) / baseKg : null;
 
   const filled = lines.filter(l => !blank(l));
   const units = filled.reduce((s, l) => s + (Number(l.qty) || 0), 0);
   const kg = Math.round(filled.reduce((s, l) => s + (Number(l.kg) || 0), 0) * 10) / 10;
-  const m3 = Math.round(kg * ratio * 100) / 100;
+  const m3 = ratio === null ? null : Math.round(kg * ratio * 100) / 100;
 
   const now = new Date();
-  const msLeft = runDate ? cutoffFor(runDate).getTime() - now.getTime() : 0;
-  const late = Boolean(runDate) && msLeft <= 0;
+  const msLeft = runDate && cutoff ? cutoffFor(runDate, cutoff).getTime() - now.getTime() : 0;
+  const late = Boolean(runDate && cutoff) && msLeft <= 0;
   const left = msLeft < 3_600_000 ? `${Math.max(1, Math.ceil(msLeft / 60_000))} min` : `${Math.floor(msLeft / 3_600_000)} h ${Math.floor((msLeft % 3_600_000) / 60_000)} m`;
 
   const problem =
@@ -95,9 +103,11 @@ export default function LiveDsp10LogPhoneOrder() {
             : filled.some(l => !lineOk(l)) ? 'Every line needs an item, a whole quantity and its weight in kg.'
               : !readBack ? 'Read the order back to the caller.'
                 : late && !lineCheck ? 'The cutoff has passed: flag it for a line check to log it as a late order.'
-                  // the m³ sent is estimated from the outlet's earlier orders: never send the default while they load
+                  // the m³ sent is estimated from earlier orders: never send a guess while they load
                   : history.loading ? 'Working out the volume from the outlet’s earlier orders…'
-                    : null;
+                    : !cutoff ? 'Loading the order cutoff…'
+                      : m3 === null ? 'No earlier order of this temperature has a volume to estimate m³ from.'
+                        : null;
 
   const save = useAction<void, Order>(async c => {
     if (!outlet || !runDate) throw new Error('Choose the outlet.');
@@ -133,7 +143,7 @@ export default function LiveDsp10LogPhoneOrder() {
         <div className="d-main">
           <div className="d-head">
             <div className="d-head__txt">
-              <div className="d-eyebrow">{`Orders ${late ? 'closed' : 'close'} ${CUTOFF_LABEL}`}<span className="m-sep" />{active.map(d => DEPOT_NAME[d] ?? d).join(' + ')}</div>
+              <div className="d-eyebrow">{`Orders ${late ? 'closed' : 'close'} ${cutoffLabel}`}<span className="m-sep" />{active.map(d => depotName(d)).join(' + ')}</div>
               <div className="d-h1">Cutoff queue for {runDate ? fmtRunDate(runDate) : '…'}</div>
             </div>
           </div>
@@ -173,7 +183,7 @@ export default function LiveDsp10LogPhoneOrder() {
             <div className="dx-field" style={{ flex: '1' }}>
               <span className="dx-label">{"Run"}</span>
               <div className="dx-input"><Ic n="calendar" /><span data-testid="run-date">{runDate ? fmtRunDate(runDate) : '…'}</span></div>
-              <span className="dx-t13">{`Set by the ${CUTOFF_LABEL} cutoff`}</span>
+              <span className="dx-t13">{`Set by the ${cutoffLabel} cutoff`}</span>
             </div>
           </div>
           <div className="hstack" style={{ gap: '14px', alignItems: 'flex-start' }}>
@@ -214,7 +224,7 @@ export default function LiveDsp10LogPhoneOrder() {
               ))}
               <div className="dx-tr" style={{ minHeight: '42px', padding: '0 16px', background: '#FAFBFD' }} data-testid="lines-total">
                 <b className="dx-td" style={{ flex: '1' }}>{filled.length} line{filled.length === 1 ? '' : 's'} · {units} units</b>
-                <span className="dx-td t-2" style={{ width: '110px' }}>{fmtNum(m3, 1)} m³</span>
+                <span className="dx-td t-2" style={{ width: '110px' }}>{m3 === null ? '—' : `${fmtNum(m3, 1)} m³`}</span>
                 <b className="dx-td x-num" style={{ width: '70px' }}>{fmtNum(kg)} kg</b>
               </div>
             </div>
