@@ -16,6 +16,7 @@ import { PlanSide } from '@/components/live/chrome';
 import { sendNotice, useStoreManagers } from '@/components/live/degradation';
 import { useBlackout } from './dsp-a1-blackout-view';
 import { Ic } from '@/components/live/icons';
+import PodPhoto from '@/components/live/PodPhoto';
 import { usePlanScope } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { useAuth } from '@/lib/auth/AuthProvider';
@@ -197,9 +198,9 @@ export default function LiveDspA2ReconcileConflict() {
                       </div>
                       {pod && (
                         <div className="hstack" style={{ gap: '10px' }}>
-                          <div className="photo" style={{ width: '84px', height: '56px', border: '0' }}><Ic n="camera" /></div>
+                          <PodPhoto pod={pod} label={`the drop at ${stop?.outletId ?? 'the stop'}`} />
                           <div className="vstack" style={{ gap: '1px', fontSize: '13px', color: 'var(--text-2)' }}>
-                            <span>{pod.photoUrl ? 'Photo' : 'No photo'}{pod.receiverName ? ` · received by ${pod.receiverName}` : ''}</span>
+                            <span>{pod.photoCount ? (pod.photoCount > 1 ? `${pod.photoCount} photos` : 'Photo') : pod.photoUrl ? 'Photo' : 'No photo'}{pod.receiverName ? ` · received by ${pod.receiverName}` : ''}</span>
                             <span>{`by ${driverName}`}</span>
                           </div>
                         </div>

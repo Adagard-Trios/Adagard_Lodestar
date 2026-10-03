@@ -108,6 +108,8 @@ export type RequestOptions = {
   ifMatch?: string;
   idempotencyKey?: string;
   headers?: Record<string, string>;
+  /** A binary body sent as is (a POD photo); its Content-Type goes in `headers`. */
+  raw?: ArrayBuffer | Uint8Array;
 };
 
 export type Response<T> = { status: number; data: T; etag?: string };
@@ -140,8 +142,10 @@ export class ODataClient {
       if (o.idempotencyKey) headers['Idempotency-Key'] = o.idempotencyKey;
     }
     if (o.ifMatch) headers['If-Match'] = o.ifMatch;
-    let body: string | undefined;
-    if (o.body !== undefined) {
+    let body: string | ArrayBuffer | Uint8Array | undefined;
+    if (o.raw !== undefined) {
+      body = o.raw;
+    } else if (o.body !== undefined) {
       headers['Content-Type'] = 'application/json';
       body = JSON.stringify(o.body);
     }
@@ -150,7 +154,7 @@ export class ODataClient {
     const timer = ctrl ? setTimeout(() => ctrl.abort(), this.opts.timeoutMs ?? 20_000) : undefined;
     let res: globalThis.Response;
     try {
-      res = await this.doFetch(this.url(path, o.query), { method, headers, body, signal: ctrl?.signal });
+      res = await this.doFetch(this.url(path, o.query), { method, headers, body: body as BodyInit | undefined, signal: ctrl?.signal });
     } catch (e) {
       this.opts.onNetwork?.(false);
       const aborted = (e as Error)?.name === 'AbortError';

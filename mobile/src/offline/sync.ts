@@ -11,6 +11,9 @@
 //                 the driver started the trip: ENROUTE; the driver finished it: COMPLETE, the server records the return
 //                 time and the fuel used. No client sets COMPLETE any other way.)
 //     VEHICLE_FAULT → Trips('…')/Lodestar.ReportVehicleFault {fault, reeferTempC?, note?} (LD-B1)
+//     POD_PHOTO → POST /media/pod-photos?stopId=…&takenAt=…&eventId=… with the image bytes (the server stores one copy
+//                 per stop and SHA-256, so a resend is a duplicate, not a second photo). Once sent, the image is dropped
+//                 from the outbox (only its size stays).
 //   STATUS_CHANGE (driver reports to dispatch) goes in the PushBatch with the other driver events.
 // Outcomes: applied → synced (a server conflict note is kept and shown); 409/412 → conflict;
 // other 4xx → rejected (shown, the user can discard); network / 5xx / 429 → stays pending.
@@ -40,7 +43,7 @@ export class SyncEngine {
 
   constructor(
     private readonly queue: OfflineQueue,
-    private readonly client: Pick<ODataClient, 'action' | 'create' | 'list'>,
+    private readonly client: Pick<ODataClient, 'action' | 'create' | 'list'> & Partial<Pick<ODataClient, 'request'>>,
     private readonly opts: {
       /** Subject of the signed-in user; null when signed out (nothing is sent). */
       sub: () => string | null;
@@ -103,7 +106,11 @@ export class SyncEngine {
     if (o.status === 'synced') {
       result.synced++;
       if (o.conflict) result.conflicts++;
-      await this.queue.update(item.id, { status: 'synced', attempts, conflict: o.conflict ?? null, syncedAt: new Date(this.now()).toISOString(), lastError: undefined });
+      await this.queue.update(item.id, {
+        status: 'synced', attempts, conflict: o.conflict ?? null, syncedAt: new Date(this.now()).toISOString(), lastError: undefined,
+        // a sent photo leaves the phone's outbox storage (the server has it)
+        ...(item.kind === 'POD_PHOTO' ? { payload: withoutImage(item.payload) } : {}),
+      });
       done.push(item);
     } else if (o.status === 'retry') {
       if (o.stop) result.offline = true;
@@ -215,6 +222,17 @@ export class SyncEngine {
           await this.client.action(`Trips${key(p.tripId)}/Lodestar.ReportVehicleFault`, body, idem);
           return { status: 'synced' };
         }
+        case 'POD_PHOTO': {
+          if (!this.client.request) return { status: 'retry', reason: 'Photos cannot be sent from here yet', stop: false };
+          if (typeof p.dataBase64 !== 'string') return { status: 'synced', conflict: null }; // sent already
+          const q = new URLSearchParams({ ...(p.stopId ? { stopId: p.stopId } : { orderId: p.orderId }), takenAt: p.takenAt ?? item.savedAt, eventId: item.id });
+          await this.client.request('POST', `/media/pod-photos?${q.toString()}`, {
+            raw: base64ToBytes(p.dataBase64),
+            headers: { 'Content-Type': p.mime ?? 'image/jpeg' },
+            idempotencyKey: item.id,
+          });
+          return { status: 'synced' };
+        }
         case 'ORDER': {
           // orderedAt = when the store saved it: an order saved before the 4:00 PM cut-off and sent
           // later (no signal) still counts, within the server's grace window
@@ -228,6 +246,35 @@ export class SyncEngine {
       return classify(e);
     }
   }
+}
+
+const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+const B64_INDEX = (() => {
+  const t = new Int16Array(128).fill(-1);
+  for (let i = 0; i < B64.length; i++) t[B64.charCodeAt(i)] = i;
+  return t;
+})();
+
+/** Base64 (a data: URL is fine) → bytes, without atob/Buffer (not on every phone runtime). */
+export function base64ToBytes(data: string): Uint8Array {
+  const s = data.replace(/^data:[^,]*,/, '').replace(/[^A-Za-z0-9+/]/g, '');
+  const out = new Uint8Array(Math.floor((s.length * 3) / 4));
+  const at = (i: number) => (i < s.length ? B64_INDEX[s.charCodeAt(i)] : -1);
+  let n = 0;
+  for (let i = 0; i < s.length; i += 4) {
+    const a = at(i), b = at(i + 1), c = at(i + 2), d = at(i + 3);
+    out[n++] = (a << 2) | (b >> 4);
+    if (c >= 0) out[n++] = ((b & 15) << 4) | (c >> 2);
+    if (d >= 0) out[n++] = ((c & 3) << 6) | d;
+  }
+  return out.subarray(0, n);
+}
+
+function withoutImage(payload: Record<string, any>): Record<string, any> {
+  const { dataBase64, ...rest } = payload;
+  if (typeof dataBase64 !== 'string') return rest;
+  const b64 = dataBase64.replace(/^data:[^,]*,/, '');
+  return { ...rest, bytes: rest.bytes ?? Math.floor((b64.length * 3) / 4) - (b64.match(/=+$/)?.[0].length ?? 0) };
 }
 
 function toEvent(i: QueueItem) {

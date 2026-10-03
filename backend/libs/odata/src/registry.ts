@@ -19,9 +19,11 @@ export interface RegisteredSet {
   defaultOrderBy?: OrderByItem[];
 }
 
-/** Hidden in every service: credentials never leave the database. */
+/** Hidden in every service: credentials never leave the database; binary blobs have their own endpoints. */
 export const GLOBAL_HIDDEN: Record<string, string[]> = {
   User: ['passwordHash', 'refreshToken'],
+  // POD photo bytes are served only by GET /media/pod-photos/<id> (sync service), never as OData
+  PodPhoto: ['bytes'],
 };
 
 function parseDefaultOrder(text?: string): OrderByItem[] | undefined {

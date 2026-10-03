@@ -89,7 +89,7 @@ export default function ScreenSm03ConfirmReceiptCount() {
             <Icon xml={X1} width={20} height={20} style={s.v8} />
             <View style={s.v11}>
               <View>
-                <Text style={s.t9}>{pod ? `Driver's record: ${pod.unitsDelivered} of ${pod.unitsOrdered} delivered` : "Driver's record not synced yet"}</Text>
+                <Text style={s.t9}>{pod ? `Driver's record: ${pod.unitsDelivered} of ${pod.unitsOrdered} delivered${pod.photoCount ? ` · ${pod.photoCount === 1 ? 'photo' : `${pod.photoCount} photos`} on the desk` : ''}` : "Driver's record not synced yet"}</Text>
               </View>
               <View>
                 <Text style={s.t10}>{pod ? `Saved ${hm(pod.savedAt)}${pod.savedOffline ? ' on the driver\'s phone' : ''}. Confirm your own count; differences are credited.` : "Confirm your own count now, we'll match it later."}</Text>

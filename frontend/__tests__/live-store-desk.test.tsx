@@ -5,7 +5,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import PlaceOrder from '@/live/sm-01-place-order';
 import Deliveries from '@/live/sm-02-deliveries';
-import StoreSignIn from '@/live/sm-26-sign-in';
 import OrdersHistory from '@/live/sm-27-orders-and-history';
 import Receipts from '@/live/sm-28-receipts-and-credit-notes';
 import Messages from '@/live/sm-29-messages';
@@ -69,6 +68,19 @@ describe('SM-01 Place order', () => {
     fireEvent.change(screen.getByLabelText('Delivery date'), { target: { value: '2026-04-10' } });
     expect(await screen.findByText('Order for Fri 10 Apr')).toBeInTheDocument();
     await waitFor(() => expect(view.calls.some(c => c.path === 'Calendar' && c.query.$filter === 'date eq 2026-04-10T00:00:00Z')).toBe(true));
+  });
+
+  it('shows "orders closed" when dispatch closed the run (Orders/Lodestar.OrderWindow), and that run cannot be submitted', async () => {
+    const last = [order('ORDT1', { lineItems: [{ id: 'l1', orderId: 'ORDT1', name: 'Rice 5 kg', qty: 3, kg: 15, tempClass: 'AMBIENT' }] })];
+    const view = renderLive(<PlaceOrder />, {
+      session: SESSIONS.store,
+      handler: req => storeBase(req) ?? (req.path.startsWith('Orders/Lodestar.OrderWindow(') ? { depot: 'KANDY', runDate: '2026-04-07', closed: true, reason: 'Planning the run' }
+        : req.path === 'Orders' ? page(last) : page([])),
+    });
+    expect(await screen.findByTestId('orders-closed')).toHaveTextContent('Orders closed for the Tue 7 Apr run');
+    expect(screen.getByTestId('orders-closed')).toHaveTextContent('(Planning the run)');
+    expect(view.calls.find(c => c.path.startsWith('Orders/Lodestar.OrderWindow('))!.path).toBe('Orders/Lodestar.OrderWindow(runDate=2026-04-07)');
+    expect(disabled(screen.getByTestId('submit-order'))).toBe(true);
   });
 
   it('warns when the calendar has no run on the chosen date, and that date cannot be submitted', async () => {
@@ -336,32 +348,7 @@ describe('SM-02 Deliveries', () => {
 
 // ------------------------------------------------------------------------------------------------ SM-26
 
-describe('SM-26 Sign in', () => {
-  it('sends the store manager to Keycloak and back to /store', async () => {
-    const view = renderLive(<StoreSignIn />, { session: null, handler: () => page([]) });
-    expect(screen.getByTestId('sign-in')).toHaveTextContent('Continue to sign in');
-    fireEvent.click(screen.getByTestId('sign-in'));
-    await waitFor(() => expect(view.auth.login).toHaveBeenCalledWith('/store'));
-    expect(screen.getByTestId('sign-in')).toHaveTextContent('Opening sign-in…');
-    expect(view.fetch).not.toHaveBeenCalled();
-  });
-
-  it('says so when the sign-in service cannot be reached, and can try again', async () => {
-    const view = renderLive(<StoreSignIn />, { session: null, handler: () => page([]) });
-    (view.auth.login as jest.Mock).mockRejectedValueOnce(new Error('offline'));
-    fireEvent.click(screen.getByTestId('sign-in'));
-    expect(await screen.findByText('Sign-in unavailable, try again')).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('sign-in'));
-    await waitFor(() => expect(view.auth.login).toHaveBeenCalledTimes(2));
-  });
-
-  it('a signed-in store manager continues to the store face', () => {
-    renderLive(<StoreSignIn />, { session: SESSIONS.store, handler: () => page([]) });
-    expect(screen.getByTestId('sign-in')).toHaveTextContent('Continue as Sam Store');
-    fireEvent.click(screen.getByTestId('sign-in'));
-    expect(router.push).toHaveBeenCalledWith('/store');
-  });
-});
+// SM-26: the designed sign-in form (direct grant) is covered in sign-in-screens.test.tsx.
 
 // ------------------------------------------------------------------------------------------------ SM-27
 

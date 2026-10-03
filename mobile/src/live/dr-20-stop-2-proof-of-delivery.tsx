@@ -7,9 +7,9 @@ import { hm } from '@/lib/time';
 import { CameraBox, useCamera } from '@/lodestar/camera';
 import { plural } from '@/lodestar/live';
 import { showToast } from '@/lodestar/runtime';
-import { completeStop } from '@/model/actions';
+import { completeStop, queuePodPhoto } from '@/model/actions';
 import { afterPod } from '@/model/run';
-import { useOnline, useStop } from '@/model/hooks';
+import { useOnline, useOutbox, useStop } from '@/model/hooks';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L20":{"to":"dr-04-run-complete","kind":"go"},"L260":{"to":"dr-16-store-code-entry","kind":"go"},"B":{"to":"dr-19-stop-2-arrival-hawa-eliya","kind":"back"}}};
@@ -28,17 +28,23 @@ export default function ScreenDr20Stop2ProofOfDelivery() {
   const ordered = order?.units ?? 0;
   const [units, setUnits] = useState<number | null>(null);
   const [receiver, setReceiver] = useState('');
-  // the photo of the drop stays on the phone (only the count and the receiver travel with the POD)
+  // the photo of the drop: compressed, saved in the outbox and uploaded with signal (POD_PHOTO); the server links it to the POD
   const cam = useCamera();
-  const [photoAt, setPhotoAt] = useState<string | null>(null);
+  const { items } = useOutbox();
+  const photos = items.filter(i => i.kind === 'POD_PHOTO' && i.ref === stop?.id && i.status !== 'rejected');
+  const lastPhoto = photos[photos.length - 1];
+  const photoAt = lastPhoto?.payload.takenAt ?? lastPhoto?.savedAt ?? null;
   const photo = async () => {
     if (!cam.granted) {
       if (!(await cam.ensure())) showToast('No camera · the count and the name are enough', 'error');
       return false;
     }
-    const uri = await cam.capture();
-    if (uri) setPhotoAt(new Date().toISOString());
-    else showToast('No photo taken · the count and the name are enough', 'error');
+    const pic = await cam.capturePhoto();
+    if (!pic) showToast('No photo taken · the count and the name are enough', 'error');
+    else if (stop) {
+      await queuePodPhoto(stop, pic);
+      showToast(online ? 'Photo saved · sending' : 'Photo saved on this phone · sends with signal');
+    }
     return false;
   };
   const count = units ?? pod?.unitsDelivered ?? Math.max(0, ordered - short);
@@ -112,7 +118,7 @@ export default function ScreenDr20Stop2ProofOfDelivery() {
                   <Text style={s.t20}>{"Photo of the drop"}</Text>
                 </View>
                 <View style={s.v22}>
-                  <Text style={s.t21} testID="drop-photo-state">{photoAt ? `${hm(photoAt)} · saved on phone` : pod?.photoUrl ? `${hm(pod.savedAt)} · ${pod.savedOffline ? 'saved on phone' : 'sent'}` : 'Optional · none yet'}</Text>
+                  <Text style={s.t21} testID="drop-photo-state">{photoAt ? `${hm(photoAt)} · ${lastPhoto?.status === 'synced' ? 'sent' : 'saved on phone'}${photos.length > 1 ? ` · ${photos.length} photos` : ''}` : pod?.photoCount ? `${plural(pod.photoCount, 'photo')} · sent` : pod?.photoUrl ? `${hm(pod.savedAt)} · ${pod.savedOffline ? 'saved on phone' : 'sent'}` : 'Optional · none yet'}</Text>
                 </View>
               </View>
               <Tap style={s.v30} onPress={photo} to={null} testID="drop-photo">

@@ -13,6 +13,7 @@ import { useMemo, useState } from 'react';
 import Btn from '@/components/live/Btn';
 import { StoreTop, useMyOutlet } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
+import PodPhoto from '@/components/live/PodPhoto';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { isCounted, leftText, noticeText, orderCredit, STORE_EVENTS, useNextRun } from '@/components/live/store-data';
 import { useAuth } from '@/lib/auth/AuthProvider';
@@ -255,6 +256,7 @@ export default function LiveSm02Deliveries() {
                             : s.pod && s.pod.unitsDelivered !== s.pod.unitsOrdered
                               ? <span style={{ color: 'var(--st-deferred-fg)', fontWeight: '700' }}>{s.pod.unitsDelivered} of {s.pod.unitsOrdered}</span>
                               : <span>{s.order?.units ?? 0} units</span>}
+                          {s.pod && <PodPhoto pod={s.pod} label={`the drop of ${s.orderId}`} width={40} height={30} />}
                         </div>
                       ))}
                       <span className="t-3" style={{ fontSize: '12.5px' }}>{units} units in this delivery</span>

@@ -256,7 +256,7 @@ describe('registry', () => {
     const r = new ODataRegistry('orders', model, [new A(null)]);
     expect([...r.sets.keys()]).toEqual(['Orders']);
     expect(r.unbound.has('F')).toBe(true);
-    expect(r.hiddenFields()).toEqual({ User: ['passwordHash', 'refreshToken'], Order: ['meta'] });
+    expect(r.hiddenFields()).toEqual({ User: ['passwordHash', 'refreshToken'], PodPhoto: ['bytes'], Order: ['meta'] });
     expect(r.csdlOperations()).toEqual([{ name: 'F', kind: 'function', binding: 'unbound', bindingType: undefined, params: {}, returns: undefined }]);
   });
 

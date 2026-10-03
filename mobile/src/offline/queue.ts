@@ -5,7 +5,8 @@ import { Store } from '@/lib/store';
 
 /** Driver events go through OfflineEvents/Lodestar.PushBatch; the rest are replayed as their OData call. */
 export type EventKind = 'ARRIVAL' | 'LEAVE' | 'POD_SAVE' | 'STATUS_CHANGE';
-export type CommandKind = 'SHORTFALL' | 'RELEASE' | 'RECEIPT' | 'ORDER' | 'PRECOOL' | 'TRIP_STATUS' | 'VEHICLE_FAULT';
+// POD_PHOTO: a proof-of-delivery photo (base64 until sent), uploaded to /media/pod-photos with the stop.
+export type CommandKind = 'SHORTFALL' | 'RELEASE' | 'RECEIPT' | 'ORDER' | 'PRECOOL' | 'TRIP_STATUS' | 'VEHICLE_FAULT' | 'POD_PHOTO';
 export type QueueKind = EventKind | CommandKind;
 
 // STATUS_CHANGE: a driver's report to dispatch (delay, reefer alert, problem, vehicle check), stored as the trip's OfflineEvent.

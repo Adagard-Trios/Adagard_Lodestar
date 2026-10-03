@@ -186,6 +186,37 @@ export class ODataClient {
     return { data, status: res.status, etag: etag ?? (data as Json | undefined)?.['@odata.etag'] as string | undefined };
   }
 
+  /**
+   * A binary resource behind the gateway (a POD photo at /media/pod-photos/<id>), fetched with the bearer
+   * token (an <img src> cannot send it). Same origin as the API only; renews the token once on a 401.
+   */
+  async blob(path: string): Promise<Blob> {
+    if (!/^\/media\/[\w/-]+$/.test(path)) throw new ODataError(0, { code: 'ForeignLink', message: `Not a media path: ${path}` });
+    const url = `${new URL(this.baseUrl, typeof window !== 'undefined' ? window.location.href : 'http://localhost').origin}${path}`;
+    const send = async (token: string) => {
+      try {
+        const res = await this.fetchImpl(url, { method: 'GET', headers: { Accept: 'image/*', Authorization: `Bearer ${token}` }, credentials: 'omit' });
+        reportResponse(res.status);
+        return res;
+      } catch (err) {
+        reportNetworkError();
+        throw new ODataError(0, { code: 'NetworkError', message: `The Lodestar API is not reachable (${(err as Error).message})` });
+      }
+    };
+    const token = await this.tokens.getAccessToken();
+    if (!token) {
+      this.tokens.loginRequired();
+      throw new ODataError(401, { code: 'Unauthorized', message: 'Sign in to continue' });
+    }
+    let res = await send(token);
+    if (res.status === 401) {
+      const fresh = await this.tokens.renew();
+      if (fresh) res = await send(fresh);
+    }
+    if (!res.ok) throw await toError(res);
+    return res.blob();
+  }
+
   /** One page of an entity set. */
   async list<T>(set: string, q?: QueryOptions): Promise<Page<WithEtag<T>>> {
     const { data } = await this.request<Json>('GET', `${set}${buildQuery(q)}`);

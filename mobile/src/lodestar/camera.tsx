@@ -9,6 +9,14 @@ import { readPhoto, type OcrKind, type OcrResult } from './ocr';
 
 export type CameraHandle = { capture: () => Promise<string | null> };
 
+/** A compressed JPEG for the server (proof of delivery): base64, its size, when it was taken. */
+export type CapturedPhoto = { dataBase64: string; mime: 'image/jpeg'; bytes: number; takenAt: string };
+
+/** The server keeps photos up to 3 MB; the phone aims well below (a JPEG at quality 0.35 is ~200–600 KB). */
+export const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
+const PHOTO_QUALITY = [0.35, 0.15];
+const b64Bytes = (b64: string) => Math.floor((b64.length * 3) / 4) - (b64.match(/=+$/)?.[0].length ?? 0);
+
 const BARCODES: BarcodeType[] = ['ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'code39', 'qr', 'datamatrix', 'itf14'];
 
 export function useCamera() {
@@ -37,6 +45,21 @@ export function useCamera() {
     }
   }
 
+  /** Takes a compressed photo for upload (proof of delivery), or null without a camera or when it stays too large. */
+  async function capturePhoto(): Promise<CapturedPhoto | null> {
+    if (!granted || !ready || !view) return null;
+    try {
+      for (const quality of PHOTO_QUALITY) {
+        const pic = await view.takePictureAsync({ quality, base64: true, skipProcessing: false, exif: false });
+        const b64 = pic?.base64?.replace(/^data:[^,]*,/, '');
+        if (b64 && b64Bytes(b64) <= MAX_PHOTO_BYTES) return { dataBase64: b64, mime: 'image/jpeg', bytes: b64Bytes(b64), takenAt: new Date().toISOString() };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
   const [reading, setReading] = useState(false);
   /** Photographs and reads it (OCR). null when there is no camera or nothing could be read: type it instead. */
   async function read(kind: OcrKind): Promise<OcrResult | null> {
@@ -53,7 +76,7 @@ export function useCamera() {
     }
   }
 
-  return { setView, permission, granted, ready, setReady, failed, setFailed, ensure, capture, read, reading };
+  return { setView, permission, granted, ready, setReady, failed, setFailed, ensure, capture, capturePhoto, read, reading };
 }
 
 /**

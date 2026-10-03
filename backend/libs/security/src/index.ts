@@ -13,3 +13,4 @@ export * from './field-progress';
 export * from './audit.interceptor';
 export * from './zero-trust.guard';
 export * from './security.module';
+export * from './pod-photo-link';

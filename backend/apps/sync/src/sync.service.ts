@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { ODataError } from '@lodestar/odata';
 import {
@@ -6,6 +6,12 @@ import {
   Principal, ProgressTrip, publishEtaUpdates, recordArrival, recordDeparture, shiftRemainingEtas, storeManagers,
 } from '@lodestar/security';
 import { DeferralStatus, OrderStatus, Prisma } from '@prisma/client';
+import { MAX_PHOTO_BYTES, PodPhotoService, validatePhoto } from './pod-photos';
+
+/** A PHOTO event's inline image (base64, a data: URL is fine) as bytes. */
+export function photoBytes(data: string): Buffer {
+  return Buffer.from(data.replace(/^data:[^,]*,/, ''), 'base64');
+}
 
 /** Driver reports to dispatch (DR-12, DR-16, DR-17/18, DR-37, DR-38): STATUS_CHANGE events with payload.report. */
 export const DRIVER_REPORTS = ['PROBLEM', 'DELAY', 'REEFER_TEMP', 'VEHICLE_CHECK', 'STORE_CODE'] as const;
@@ -147,6 +153,7 @@ export class SyncService {
   constructor(
     private prisma: PrismaService,
     @Inject(NOTIFY) private notify: NotifyClient,
+    @Optional() private photos?: PodPhotoService,
   ) {}
 
   validate(raw: unknown[]): OfflineEventInput[] {
@@ -178,6 +185,21 @@ export class SyncService {
           throw bad(`exceptions must be at most ${MAX_EXCEPTIONS} entries of {type, description?, photoUrl?} or "TYPE:detail"`);
         }
       }
+      if (e.eventType === 'PHOTO') {
+        // {stopId? | orderId? | stopSeq?, sha256? (a photo uploaded to /media/pod-photos), dataBase64? + mime? (inline), takenAt?}
+        if (payload.orderId !== undefined && (typeof payload.orderId !== 'string' || !payload.orderId)) throw bad('orderId must be text');
+        if (payload.stopId !== undefined && (typeof payload.stopId !== 'string' || !payload.stopId)) throw bad('stopId must be text');
+        if (payload.stopSeq !== undefined && !Number.isInteger(payload.stopSeq)) throw bad('stopSeq must be an integer');
+        if (payload.sha256 !== undefined && (typeof payload.sha256 !== 'string' || !/^[a-f0-9]{64}$/i.test(payload.sha256))) throw bad('sha256 must be 64 hex digits');
+        if (payload.dataBase64 !== undefined) {
+          if (typeof payload.dataBase64 !== 'string' || payload.dataBase64.length > Math.ceil(MAX_PHOTO_BYTES / 3) * 4 + 64) throw bad(`dataBase64 must be a photo of at most ${MAX_PHOTO_BYTES / 1024 / 1024} MB`);
+          try {
+            validatePhoto(photoBytes(payload.dataBase64), payload.mime);
+          } catch (err) {
+            throw bad(`dataBase64: ${(err as Error).message}`);
+          }
+        }
+      }
       return { id: e.id, tripId: e.tripId, eventType: e.eventType, payload, savedAt: e.savedAt };
     });
   }
@@ -206,7 +228,7 @@ export class SyncService {
       // so the device's retry is applied instead of being skipped as a duplicate.
       // Applying is idempotent (updates and upserts), so a retry after a
       // failed record is safe too.
-      const outcome = await this.applyEvent(evt, pendingPods);
+      const outcome = await this.applyEvent(evt, pendingPods, principal.sub);
       const saved = await this.prisma.offlineEvent.create({
         data: {
           ...(evt.id ? { id: evt.id } : {}),
@@ -358,7 +380,7 @@ export class SyncService {
     return undefined;
   }
 
-  private async applyEvent(evt: OfflineEventInput, pendingPods: PendingPods): Promise<ApplyOutcome | null> {
+  private async applyEvent(evt: OfflineEventInput, pendingPods: PendingPods, driverId: string): Promise<ApplyOutcome | null> {
     switch (evt.eventType) {
       case 'ARRIVAL': {
         const stop = await this.prisma.tripStop.findFirst({
@@ -473,6 +495,8 @@ export class SyncService {
             syncedAt: new Date(),
           },
         });
+        // photos uploaded before this POD (the outbox sends them in either order) now count on it
+        if (this.photos) await this.photos.linkStopQuietly(stop.id);
 
         // Nothing delivered is a failed stop: stop and order go to EXCEPTION (DSP-13), never DELIVERED.
         const status = podOutcome({ unitsDelivered: evt.payload.units, unitsOrdered }) === 'STOP_FAILED' ? OrderStatus.EXCEPTION : OrderStatus.DELIVERED;
@@ -502,9 +526,45 @@ export class SyncService {
         }
         return null;
       }
+      case 'PHOTO':
+        return this.applyPhoto(evt, driverId);
       default:
         return null;
     }
+  }
+
+  /**
+   * A proof-of-delivery photo: stored with the event's stop (inline dataBase64) or, for a photo the phone already
+   * uploaded (sha256), linked to its POD. Idempotent: the event id and the stop + SHA-256 are unique, so a replay
+   * stores nothing new. The image never stays in the event log: only its SHA-256 and photo id.
+   */
+  private async applyPhoto(evt: OfflineEventInput, driverId: string): Promise<ApplyOutcome | null> {
+    const p = evt.payload ?? {};
+    if (!this.photos || !(p.stopId || p.orderId || Number.isInteger(p.stopSeq))) return null;
+    const { dataBase64, ...rest } = p;
+    evt.payload = rest;
+    let stop;
+    try {
+      stop = await this.photos.findStop({ stopId: p.stopId, orderId: p.orderId, tripId: evt.tripId, stopSeq: p.stopSeq });
+    } catch {
+      return { note: 'Photo for a stop that is not on this trip: not stored', resolved: false };
+    }
+    if (stop.tripId !== evt.tripId) return { note: 'Photo for a stop that is not on this trip: not stored', resolved: false };
+    if (typeof dataBase64 === 'string') {
+      const { photo } = await this.photos.store({
+        stop, bytes: photoBytes(dataBase64), declaredMime: p.mime, takenAt: p.takenAt ?? evt.savedAt, eventId: evt.id, uploadedBy: driverId,
+      });
+      evt.payload = { ...rest, stopId: stop.id, sha256: photo.sha256, photoId: photo.id, size: photo.size };
+      return null;
+    }
+    if (typeof p.sha256 === 'string') {
+      const found = await this.photos.findBySha(stop.id, p.sha256.toLowerCase());
+      if (found) {
+        evt.payload = { ...rest, stopId: stop.id, photoId: found.id };
+        await this.photos.linkStopQuietly(stop.id);
+      }
+    }
+    return null;
   }
 
   async getSyncStatus(tripId: string, scope?: Prisma.OfflineEventWhereInput) {

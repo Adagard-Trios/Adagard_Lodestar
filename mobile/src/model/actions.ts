@@ -68,6 +68,21 @@ export async function completeStop(stop: TripStop, pod: PodInput, at: Date = new
   return saved;
 }
 
+/**
+ * A proof-of-delivery photo of the stop (DR-20 / DR-03), as a POD_PHOTO write: kept on the phone until there is
+ * signal, then uploaded to /media/pod-photos (the server links it to the stop's POD whichever arrives first).
+ */
+export async function queuePodPhoto(stop: TripStop, photo: { dataBase64: string; mime: string; bytes: number; takenAt: string }) {
+  return queue.enqueue('POD_PHOTO', {
+    sub: sub(),
+    tripId: stop.tripId,
+    ref: stop.id,
+    label: `Photo · ${stop.orderId}`,
+    payload: { stopId: stop.id, orderId: stop.orderId, mime: photo.mime, dataBase64: photo.dataBase64, bytes: photo.bytes, takenAt: photo.takenAt },
+    savedAt: photo.takenAt,
+  });
+}
+
 // ---------------------------------------------------------------- trip status (driver)
 
 const STATUS_ORDER: TripStatus[] = ['PLANNED', 'LOADING', 'ENROUTE', 'COMPLETE'];
