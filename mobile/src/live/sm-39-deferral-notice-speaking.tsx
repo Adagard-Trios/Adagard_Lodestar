@@ -9,7 +9,7 @@ import { useEffect, useRef } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { useSettings, LANGUAGE_NAMES } from '@/lib/settings';
 import { dayLabel, hm, isoDay } from '@/lib/time';
-import { titleCase } from '@/lodestar/live';
+import { callDispatcher, titleCase, useDispatcher } from '@/lodestar/live';
 import { speakIn, stopSpeaking, useSpeaking, useVoiceCheck } from '@/lodestar/voice';
 import * as api from '@/model/api';
 import { useClaims, useNotifications, useParam, useStoreDay } from '@/model/hooks';
@@ -36,6 +36,7 @@ export default function ScreenSm39DeferralNoticeSpeaking() {
   const claims = useClaims();
   const day = useStoreDay();
   const notes = useNotifications();
+  const dispatcher = useDispatcher();
   const param = useParam('order');
   const { language, readAloud } = useSettings();
   const voice = useVoiceCheck(language);
@@ -203,10 +204,10 @@ export default function ScreenSm39DeferralNoticeSpeaking() {
                 </View>
               ) : null}
             </View>
-            <View style={s.v55}>
+            <Tap to={null} onPress={() => { stopSpeaking(); return callDispatcher(dispatcher.data); }} style={s.v55} testID="call-dispatcher">
               <Icon xml={X3} width={18} height={18} style={s.v1} />
               <Text style={s.t54} numberOfLines={1}>{"Call dispatcher"}</Text>
-            </View>
+            </Tap>
           </Tap>
         </View>
       </View>

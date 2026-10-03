@@ -583,3 +583,14 @@ export function shortfallsFor(notes: Notification[] | undefined, orderId?: strin
   }
   return [...seen.values()];
 }
+
+// ---------------------------------------------------------------- voice test line (SM-37, SM-38)
+
+/** The line "Test" reads aloud: the store's own arrival window from its outlet record (no made-up times). */
+export function useArrivalLine(): string {
+  const outlet = useStoreDay().data?.outlet;
+  const wall = (v?: string | null) => (v ? v.replace(/^0(\d)/, '$1') : '');
+  return outlet?.windowOpen && outlet.windowClose
+    ? `Van arrives between ${wall(outlet.windowOpen)} and ${wall(outlet.windowClose)}.`
+    : 'Your arrival window will be read here once your store is loaded.';
+}

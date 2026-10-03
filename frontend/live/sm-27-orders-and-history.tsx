@@ -17,7 +17,7 @@ import { useAuth } from '@/lib/auth/AuthProvider';
 import { daysAgo, fmtClock, fmtDay, fmtRunDate, isoDay, title } from '@/lib/format';
 import { useAction, useEntity, useEntitySet, useQuery } from '@/lib/odata/hooks';
 import type { Order, POD } from '@/lib/odata/types';
-import { useFocusId } from '@/lib/workday';
+import { CUTOFF_LABEL, useFocusId } from '@/lib/workday';
 
 type Filter = 'all' | 'upcoming' | 'delivered' | 'credited';
 const FILTER: Record<Filter, string | undefined> = {
@@ -93,7 +93,7 @@ export default function LiveSm27OrdersAndHistory() {
           </div>
           <div className="d-kpis">
             <div className="d-kpi d-kpi--hero" style={{ flex: '1.6' }}>
-              <span className="d-kpi__l"><Ic n="clock" className="ic ic--sm" />{fmtRunDate(nextRun)} orders close at 4:00 PM</span>
+              <span className="d-kpi__l"><Ic n="clock" className="ic ic--sm" />{fmtRunDate(nextRun)} orders close at {CUTOFF_LABEL}</span>
               <span className="d-kpi__v cd__v" style={{ fontSize: '36px' }} data-testid="cutoff-left">{left || 'Closed'}<small>{left ? 'left' : ''}</small></span>
               <span className="d-kpi__s">{"Orders after the cutoff go to the following run"}</span>
             </div>

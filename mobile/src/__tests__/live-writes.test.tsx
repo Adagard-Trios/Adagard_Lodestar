@@ -124,6 +124,28 @@ describe('SM-17 deferral notice', () => {
     expect(screen.getByText('At risk, not cancelled: dispatch will confirm the new day.')).toBeTruthy();
   });
 
+  it('"Call dispatcher" dials the depot dispatcher, and stays put when none is on file', async () => {
+    const { Linking } = require('react-native');
+    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    routes.set('Users/Lodestar.MyDispatcher()', { depot: 'KANDY', name: 'Test Dispatcher', phone: '+94 77 000 1111' });
+    const Screen = require('@/live/sm-17-deferral-notice-out027').default;
+    const view = await render(<Screen />);
+    await waitFor(() => expect(client.fn).toHaveBeenCalledWith('Users/Lodestar.MyDispatcher()'));
+    await fireEvent.press(screen.getByTestId('call-dispatcher'));
+    await waitFor(() => expect(open).toHaveBeenCalledWith('tel:+94770001111'));
+    expect(push).not.toHaveBeenCalled();
+    view.unmount();
+    open.mockClear();
+    routes.set('Users/Lodestar.MyDispatcher()', { depot: 'KANDY', name: null, phone: null });
+    const { clearCache } = require('@/model/query');
+    await clearCache();
+    await render(<Screen />);
+    await waitFor(() => expect(screen.getByTestId('call-dispatcher')).toBeTruthy());
+    await fireEvent.press(screen.getByTestId('call-dispatcher'));
+    expect(open).not.toHaveBeenCalled();
+    open.mockRestore();
+  });
+
   it('SM-21 opens the deferral notice for the order', async () => {
     const Messages = require('@/live/sm-21-messages').default;
     await render(<Messages />);

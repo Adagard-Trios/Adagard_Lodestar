@@ -510,7 +510,15 @@
         <Parameter Name="preferences" Type="Edm.Untyped" Nullable="false"/>
         <ReturnType Type="Edm.Untyped"/>
       </Action>
+      <Function Name="MyDispatcher" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.User)" Nullable="false"/>
+        <ReturnType Type="Edm.Untyped"/>
+      </Function>
       <Function Name="MyTwoFactor" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.User)" Nullable="false"/>
+        <ReturnType Type="Edm.Untyped"/>
+      </Function>
+      <Function Name="MyOutletUsers" IsBound="true">
         <Parameter Name="bindingParameter" Type="Collection(Lodestar.User)" Nullable="false"/>
         <ReturnType Type="Edm.Untyped"/>
       </Function>

@@ -17,7 +17,7 @@ import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { isCounted, leftText, noticeText, orderCredit, STORE_EVENTS, useNextRun } from '@/components/live/store-data';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { addDays, daysAgo, DEPOT_NAME, fmtClock, fmtDay, fmtRunDate, fmtTime, LATE_RISK_PCT, title } from '@/lib/format';
-import { colomboDay } from '@/lib/workday';
+import { colomboDay, CUTOFF_LABEL } from '@/lib/workday';
 import { useAction, useQuery } from '@/lib/odata/hooks';
 import type { Notification, Order, Trip, TripStop } from '@/lib/odata/types';
 
@@ -280,7 +280,7 @@ export default function LiveSm02Deliveries() {
               ))}
               <div className="d-card" data-lk="L124">
                 <div className="ncard" style={{ gap: '6px' }}>
-                  <span className="ncard__meta" style={{ color: 'var(--brand-600)' }} data-testid="next-run"><Ic n="clock" className="ic ic--sm" />{fmtRunDate(nextRun)} orders close 4:00 PM {closesWhen}{leftText(next.msLeft) ? ` · ${leftText(next.msLeft)} left` : ''}</span>
+                  <span className="ncard__meta" style={{ color: 'var(--brand-600)' }} data-testid="next-run"><Ic n="clock" className="ic ic--sm" />{fmtRunDate(nextRun)} orders close {CUTOFF_LABEL} {closesWhen}{leftText(next.msLeft) ? ` · ${leftText(next.msLeft)} left` : ''}</span>
                   <span className="ncard__p">Start from your last order. <b style={{ color: 'var(--brand-600)' }}>Start {fmtRunDate(nextRun).split(' ')[0]} order</b></span>
                 </div>
               </div>

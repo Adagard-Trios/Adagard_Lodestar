@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { dayLabel, hm, isoDay } from '@/lib/time';
-import { titleCase } from '@/lodestar/live';
+import { callDispatcher, titleCase, useDispatcher } from '@/lodestar/live';
 import * as api from '@/model/api';
 import { useClaims, useNotifications, useParam, useStoreDay } from '@/model/hooks';
 import { bumpRevision, client } from '@/model/platform';
@@ -34,6 +34,7 @@ export default function ScreenSm17DeferralNoticeOut027() {
   const claims = useClaims();
   const day = useStoreDay();
   const notes = useNotifications();
+  const dispatcher = useDispatcher();
   const param = useParam('order');
   const [picked, setPicked] = useState<string | null>(null);
   const list = (day.data?.orders ?? []).filter(moved);
@@ -215,10 +216,10 @@ export default function ScreenSm17DeferralNoticeOut027() {
               <Icon xml={X4} width={20} height={20} style={s.v1} />
               <Text style={s.t46} numberOfLines={1}>{"Read aloud"}</Text>
             </View>
-            <View style={s.v49}>
+            <Tap to={null} onPress={() => callDispatcher(dispatcher.data)} style={s.v49} testID="call-dispatcher">
               <Icon xml={X5} width={18} height={18} style={s.v1} />
               <Text style={s.t48} numberOfLines={1}>{"Call dispatcher"}</Text>
-            </View>
+            </Tap>
           </Tap>
         </View>
       </View>

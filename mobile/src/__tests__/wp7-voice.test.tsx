@@ -55,12 +55,15 @@ beforeEach(() => {
 describe('Voice and language', () => {
   it('SM-37: the language picker and read aloud set the phone settings; Test speaks in that voice', async () => {
     await signInAs(store('u-sm37'));
+    routes.set("Outlets('OUT-T1')", outlet);
     const Screen = require('@/live/sm-37-voice-and-language').default;
     await render(<Screen />);
     await fireEvent.press(screen.getByTestId('lang-ta'));
     expect(settings.get().language).toBe('ta');
+    // the test line is the store's own arrival window from its outlet record
+    await waitFor(() => expect(screen.getByText('"Van arrives between 5:30 and 8:00."')).toBeTruthy());
     await fireEvent.press(screen.getByTestId('voice-test'));
-    expect(speak).toHaveBeenCalledWith('Van arrives between 6:15 and 6:55.', expect.objectContaining({ language: 'ta-IN' }));
+    expect(speak).toHaveBeenCalledWith('Van arrives between 5:30 and 8:00.', expect.objectContaining({ language: 'ta-IN' }));
     await fireEvent.press(screen.getByTestId('read-aloud-toggle'));
     expect(settings.get().readAloud).toBe(false);
     expect(push).not.toHaveBeenCalled();
@@ -130,12 +133,13 @@ describe('Voice pack check', () => {
 });
 
 describe('Read aloud', () => {
+  const moved = {
+    id: 'O-7', outletId: 'OUT-T1', runDate: '2026-04-08T00:00:00.000Z', orderedAt: '2026-04-06T03:00:00.000Z', brand: 'FRESH', tempClass: 'CHILLED', units: 6, kg: 6, m3: 1.6, status: 'DEFERRED', tripStop: null, outlet,
+    deferralLog: { id: 'D-7', orderId: 'O-7', reason: 'CAP_REEFER', score: 22, status: 'CONFIRMED', isProvisional: false, rescheduledDate: '2026-04-08T00:00:00.000Z', notes: 'First slot on Wed', createdAt: '2026-04-06T13:10:00.000Z' },
+  };
+
   it('SM-39: speaks the moved order\'s notice on open; the speaking bar stops it and returns to the notice', async () => {
     await signInAs(store('u-sm39'));
-    const moved = {
-      id: 'O-7', outletId: 'OUT-T1', runDate: '2026-04-08T00:00:00.000Z', orderedAt: '2026-04-06T03:00:00.000Z', brand: 'FRESH', tempClass: 'CHILLED', units: 6, kg: 6, m3: 1.6, status: 'DEFERRED', tripStop: null, outlet,
-      deferralLog: { id: 'D-7', orderId: 'O-7', reason: 'CAP_REEFER', score: 22, status: 'CONFIRMED', isProvisional: false, rescheduledDate: '2026-04-08T00:00:00.000Z', notes: 'First slot on Wed', createdAt: '2026-04-06T13:10:00.000Z' },
-    };
     routes.set('Orders', [moved]);
     routes.set("Orders('O-7')", moved);
     routes.set("Outlets('OUT-T1')", outlet);
@@ -148,6 +152,24 @@ describe('Read aloud', () => {
     await fireEvent.press(screen.getByTestId('lk-L120'));
     expect(stop).toHaveBeenCalled();
     expect(push).toHaveBeenCalledWith(opened('sm-17-deferral-notice-out027', { order: 'O-7' }));
+  });
+
+  it('SM-39: "Call dispatcher" phones the depot dispatcher from Users/Lodestar.MyDispatcher', async () => {
+    await signInAs(store('u-sm39c'));
+    routes.set('Orders', [moved]);
+    routes.set("Orders('O-7')", moved);
+    routes.set("Outlets('OUT-T1')", outlet);
+    routes.set('Users/Lodestar.MyDispatcher()', { depot: 'KANDY', name: 'Test Dispatcher', phone: '077 123 4567' });
+    params.order = 'O-7';
+    const { Linking } = require('react-native');
+    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    const Screen = require('@/live/sm-39-deferral-notice-speaking').default;
+    await render(<Screen />);
+    await waitFor(() => expect(client.fn).toHaveBeenCalledWith('Users/Lodestar.MyDispatcher()'));
+    await fireEvent.press(screen.getByTestId('call-dispatcher'));
+    await waitFor(() => expect(open).toHaveBeenCalledWith('tel:0771234567'));
+    expect(push).not.toHaveBeenCalled();
+    open.mockRestore();
   });
 
   it('LD-30: speaks the load sheet (vehicle, bay, lines, next line) and Tick opens the scan for that line', async () => {

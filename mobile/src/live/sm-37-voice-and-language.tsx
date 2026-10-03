@@ -7,15 +7,16 @@
 import { Text, View, StyleSheet } from 'react-native';
 import { setSettings, useSettings, type AppLanguage } from '@/lib/settings';
 import { speakIn, useVoiceCheck, type VoiceCheck } from '@/lodestar/voice';
+import { useArrivalLine } from '@/model/store-face';
 import { Frame, Icon, Scroll, Tap, type ScreenNav } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L116":{"to":"sm-38-voice-pack-downloading","kind":"go"},"L117":{"to":"sm-22-profile-and-settings","kind":"go"}}};
 
-const SAMPLE = 'Van arrives between 6:15 and 6:55.';
 const voiceLine = (v: VoiceCheck) => (v.checking ? 'Checking this phone…' : v.available ? 'On this phone · works offline' : 'No voice on this phone · text still works');
 
 export default function ScreenSm37VoiceAndLanguage() {
   const { language, readAloud } = useSettings();
+  const sampleLine = useArrivalLine();
   const en = useVoiceCheck('en');
   const ta = useVoiceCheck('ta');
   const si = useVoiceCheck('si');
@@ -112,10 +113,10 @@ export default function ScreenSm37VoiceAndLanguage() {
                     <Text style={s.t22}>{"Test"}</Text>
                   </View>
                   <View style={s.v24}>
-                    <Text style={s.t23}>{`"${SAMPLE}"`}</Text>
+                    <Text style={s.t23}>{`"${sampleLine}"`}</Text>
                   </View>
                 </View>
-                <Tap to={null} onPress={() => { speakIn(SAMPLE, language); return false; }} style={s.v35} testID="voice-test">
+                <Tap to={null} onPress={() => { speakIn(sampleLine, language); return false; }} style={s.v35} testID="voice-test">
                   <Icon xml={X2} width={20} height={20} style={s.v1} />
                   <Text style={s.t34} numberOfLines={1}>{"Read aloud"}</Text>
                 </Tap>

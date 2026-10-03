@@ -75,6 +75,27 @@ describe('SM-30 Settings', () => {
     expect((save.body as SaveBody).preferences.notifications.vanOnTheWay).toEqual({ app: true, sms: true });
     expect((save.body as SaveBody).preferences.language).toBe('si');
   });
+
+  it('lists the outlet’s sign-ins from the directory (Users/Lodestar.MyOutletUsers), the manager first', async () => {
+    const view = renderLive(<StoreSettings />, {
+      session: SESSIONS.store,
+      handler: req => req.path.includes('MyOutletUsers')
+        ? { value: [{ id: 'u-s', name: 'Sam Store', role: 'STORE_MANAGER', self: true }, { id: 'u-r', name: 'Rita Receiver', role: 'STORE_MANAGER', self: false }] }
+        : req.path.includes('MyPreferences') ? { value: {} } : fallback(req),
+    });
+    expect(await screen.findByText('Rita Receiver')).toBeInTheDocument();
+    expect(view.calls.some(c => c.method === 'GET' && c.path.includes('Users/Lodestar.MyOutletUsers'))).toBe(true);
+    const rows = document.querySelectorAll('[data-user]');
+    expect([...rows].map(r => r.getAttribute('data-user'))).toEqual(['u-s', 'u-r']);
+    expect(rows[0].querySelector('.d-avatar')).toHaveTextContent('SS');
+    expect(screen.getAllByText('Owner')).toHaveLength(2);
+  });
+
+  it('shows only the signed-in manager when the directory has nobody for the outlet', async () => {
+    renderLive(<StoreSettings />, { session: SESSIONS.store, handler: req => (req.path.includes('MyPreferences') ? { value: {} } : fallback(req)) });
+    await waitFor(() => expect(document.querySelectorAll('[data-user]')).toHaveLength(1));
+    expect(document.querySelector('[data-user="u-s"]')).toHaveTextContent('Sam Store');
+  });
 });
 
 describe('DSP-20 Settings', () => {

@@ -7,15 +7,16 @@ import { Text, View, StyleSheet } from 'react-native';
 import { useSettings, LANGUAGE_NAMES, type AppLanguage } from '@/lib/settings';
 import { useParam } from '@/model/hooks';
 import { speakIn, useVoiceCheck } from '@/lodestar/voice';
+import { useArrivalLine } from '@/model/store-face';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L118":{"to":"sm-11-today-order-day","kind":"go"},"L119":{"to":"sm-37-voice-and-language","kind":"go"}}};
 
 const ENGLISH_NAME: Record<AppLanguage, string> = { en: 'English', si: 'Sinhala', ta: 'Tamil' };
-const SAMPLE = 'Van arrives between 6:15 and 6:55.';
 const isLang = (v?: string): v is AppLanguage => v === 'en' || v === 'si' || v === 'ta';
 
 export default function ScreenSm38VoicePackDownloading() {
+  const sampleLine = useArrivalLine();
   const settings = useSettings();
   const param = useParam('lang');
   const lang: AppLanguage = isLang(param) ? param : settings.language;
@@ -120,7 +121,7 @@ export default function ScreenSm38VoicePackDownloading() {
             <Grad g={G0} style={s.v39} />
             <Text style={s.t40}>{"Keep using the app"}</Text>
           </Tap>
-          <Tap to={null} onPress={() => { speakIn(SAMPLE, lang); return false; }} disabled={state === 'checking'} style={s.v43} testID="voice-test">
+          <Tap to={null} onPress={() => { speakIn(sampleLine, lang); return false; }} disabled={state === 'checking'} style={s.v43} testID="voice-test">
             <Text style={s.t42}>{"Try the voice"}</Text>
           </Tap>
         </View>

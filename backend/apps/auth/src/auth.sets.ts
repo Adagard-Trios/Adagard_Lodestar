@@ -96,10 +96,35 @@ export class UsersSet extends ODataEntitySet {
     return this.auth.saveMyPreferences(ctx.principal, ctx.params.preferences);
   }
 
+  /** GET /odata/v4/Users/Lodestar.MyDispatcher() — the dispatcher of the caller's depot to call (SM-17, SM-39). */
+  @ODataFunction({ name: 'MyDispatcher', binding: 'collection', roles: HUMAN_ROLES, returns: 'Edm.Untyped' })
+  myDispatcher(ctx: OperationContext) {
+    return this.auth.myDispatcher(ctx.principal);
+  }
+
   /** GET /odata/v4/Users/Lodestar.MyTwoFactor() — whether the caller has an authenticator app in Keycloak (DSP-07). */
   @ODataFunction({ name: 'MyTwoFactor', binding: 'collection', roles: HUMAN_ROLES, returns: 'Edm.Untyped' })
   myTwoFactor(ctx: OperationContext) {
     return this.auth.myTwoFactor(ctx.principal);
+  }
+
+  /**
+   * GET /odata/v4/Users/Lodestar.MyOutletUsers() — the active sign-ins of the caller's own outlet (SM-30 "Users &
+   * access"): name and role only, the caller first. Store managers cannot list Users; nobody else's outlet is
+   * readable. Empty when the token carries no outlet.
+   */
+  @ODataFunction({ name: 'MyOutletUsers', binding: 'collection', roles: [Roles.StoreManager], returns: 'Edm.Untyped' })
+  async myOutletUsers(ctx: OperationContext) {
+    const { sub, outletId } = ctx.principal;
+    if (!outletId) return [];
+    const rows: Array<{ id: string; name: string; role: string }> = await this.prisma.user.findMany({
+      where: { outletId, isActive: true },
+      select: { id: true, name: true, role: true },
+      orderBy: { name: 'asc' },
+    });
+    return rows
+      .map(u => ({ id: u.id, name: u.name, role: u.role, self: u.id === sub }))
+      .sort((a, b) => Number(b.self) - Number(a.self));
   }
 }
 

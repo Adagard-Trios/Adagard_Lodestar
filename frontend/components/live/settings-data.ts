@@ -52,6 +52,18 @@ export interface TwoFactor {
 
 export const useTwoFactor = () => useQuery<TwoFactor>('my-two-factor', async c => valueOf<TwoFactor>(await c.fn('Users', null, 'MyTwoFactor')));
 
+/** One sign-in of the store's own outlet (Users/Lodestar.MyOutletUsers, SM-30 "Users & access"). */
+export interface OutletUser {
+  id: string;
+  name: string;
+  role: string;
+  /** The signed-in user. */
+  self: boolean;
+}
+
+export const useOutletUsers = (enabled = true) =>
+  useQuery<OutletUser[]>(enabled ? 'my-outlet-users' : null, async c => valueOf<OutletUser[]>(await c.fn('Users', null, 'MyOutletUsers')) ?? []);
+
 export interface AgentConfig {
   model: { setting: string; provider: string; label: string; configured: boolean; deployment: string | null; endpointHost: string | null; missing: string[] };
   fallback: string;

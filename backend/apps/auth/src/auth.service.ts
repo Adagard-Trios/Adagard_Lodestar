@@ -116,6 +116,27 @@ export class AuthService {
     return (user.preferences as Preferences | null) ?? {};
   }
 
+  /**
+   * MyDispatcher(): who the caller phones at their depot (SM-17/SM-39 "Call dispatcher"): an active dispatcher of
+   * the caller's depot (a store's depot comes from its outlet when the token carries none), one with a phone first.
+   * Only the name and phone are shown; store and field roles cannot list Users. Nulls when nobody is on file.
+   */
+  async myDispatcher(p: Principal): Promise<{ depot: Depot | null; name: string | null; phone: string | null }> {
+    let depots = p.depots.filter((d): d is Depot => (Object.values(Depot) as string[]).includes(d));
+    if (!depots.length && p.outletId) {
+      const outlet = await this.prisma.outlet.findUnique({ where: { id: p.outletId }, select: { depot: true } });
+      if (outlet) depots = [outlet.depot];
+    }
+    if (!depots.length) return { depot: null, name: null, phone: null };
+    const rows = await this.prisma.user.findMany({
+      where: { role: Role.DISPATCHER, isActive: true, depot: { in: depots } },
+      select: { name: true, phone: true, depot: true },
+      orderBy: { name: 'asc' },
+    });
+    const pick = rows.find(r => r.phone?.trim()) ?? rows[0];
+    return pick ? { depot: pick.depot ?? depots[0], name: pick.name, phone: pick.phone?.trim() || null } : { depot: depots[0], name: null, phone: null };
+  }
+
   /** SaveMyPreferences({preferences}): merges the given sections into the signed-in user's own settings. */
   async saveMyPreferences(p: Principal, input: unknown): Promise<Preferences> {
     const patch = validatePreferences(input);

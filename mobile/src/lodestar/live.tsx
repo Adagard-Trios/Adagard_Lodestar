@@ -1,10 +1,11 @@
 // Shared pieces for live screens (src/live/<key>.tsx).
 import { useEffect, useState } from 'react';
-import { useWindowDimensions } from 'react-native';
+import { Linking, useWindowDimensions } from 'react-native';
 import { useStore } from '@/lib/store';
 import { goHome } from '@/auth/use-sign-in';
 import { getDeviceId, session } from '@/model/platform';
-import { openScreen } from './runtime';
+import { useQuery } from '@/model/query';
+import { openScreen, showToast } from './runtime';
 
 export { useSignIn } from '@/auth/use-sign-in';
 
@@ -57,3 +58,22 @@ export const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n ==
 
 /** "FRESH" → "Fresh" */
 export const titleCase = (s?: string | null) => (s ? s.charAt(0) + s.slice(1).toLowerCase().replace(/_/g, ' ') : '');
+
+export type DispatcherContact = { depot: string | null; name: string | null; phone: string | null };
+
+/** The dispatcher of the signed-in user's depot (Users/Lodestar.MyDispatcher), kept for offline use. */
+export function useDispatcher() {
+  return useQuery<DispatcherContact>('my-dispatcher', c => c.fn<DispatcherContact>('Users/Lodestar.MyDispatcher()'), { persist: true });
+}
+
+/** "Call dispatcher": opens the phone app on the depot dispatcher's number (stays on the screen). */
+export async function callDispatcher(contact?: DispatcherContact | null): Promise<false> {
+  const phone = contact?.phone?.trim();
+  if (!phone) {
+    showToast('No dispatcher phone number on file for your depot', 'error');
+    return false;
+  }
+  const ok = await Linking.openURL(`tel:${phone.replace(/[^\d+]/g, '')}`).then(() => true, () => false);
+  if (!ok) showToast(`Call ${contact?.name ?? 'the dispatcher'} on ${phone}`);
+  return false;
+}

@@ -22,7 +22,7 @@ import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { nextOpenDay, useNextRun } from '@/components/live/store-data';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { addDays, DEPOT_NAME, fmtNum, fmtRunDate, isoDay } from '@/lib/format';
-import { colomboDay, cutoffFor } from '@/lib/workday';
+import { colomboDay, CUTOFF_LABEL, cutoffFor } from '@/lib/workday';
 import { useAction, useQuery } from '@/lib/odata/hooks';
 import type { Order, OrderLineItem, TempClass } from '@/lib/odata/types';
 
@@ -241,10 +241,10 @@ export default function LiveSm01PlaceOrder() {
           )}
           <div className="d-kpis">
             <div className="d-kpi d-kpi--hero" style={{ flex: '1.75', gap: '8px' }}>
-              <div className="between"><span className="d-kpi__l"><Ic n="clock" className="ic ic--sm" />{"Orders close at 4:00 PM"}</span><span className="d-kpi__l">for the {fmtRunDate(runDate)} run</span></div>
+              <div className="between"><span className="d-kpi__l"><Ic n="clock" className="ic ic--sm" />{`Orders close at ${CUTOFF_LABEL}`}</span><span className="d-kpi__l">for the {fmtRunDate(runDate)} run</span></div>
               <span className="d-kpi__v cd__v">{late ? 'Closed' : `${h} h ${m} m`}<small>{late ? '' : 'left'}</small></span>
               <div className="m-progress cd__bar"><div style={{ width: `${late ? 100 : Math.max(0, Math.min(100, 100 - (msLeft / 86_400_000) * 100))}%` }} /></div>
-              <span className="d-kpi__s">{late ? <>This run is closed. Submit now and the order goes to the next open run, <b style={{ color: '#FFFFFF' }}>{fmtRunDate(next.runDate)}</b>.</> : <>After 4:00 PM this order goes to the <b style={{ color: '#FFFFFF' }}>{fmtRunDate(nextOpenDay(addDays(runDate, 1), next.closed))} run</b></>}</span>
+              <span className="d-kpi__s">{late ? <>This run is closed. Submit now and the order goes to the next open run, <b style={{ color: '#FFFFFF' }}>{fmtRunDate(next.runDate)}</b>.</> : <>After {CUTOFF_LABEL} this order goes to the <b style={{ color: '#FFFFFF' }}>{fmtRunDate(nextOpenDay(addDays(runDate, 1), next.closed))} run</b></>}</span>
             </div>
             <div className="d-kpi">
               <span className="d-kpi__l"><span className="m-tag"><span className="dot" />{"Dry order"}</span><span className="m-sep" />{dryLines.length} lines</span>

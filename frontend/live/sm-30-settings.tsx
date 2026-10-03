@@ -14,11 +14,11 @@ import { useRouter } from 'next/navigation';
 import Btn from '@/components/live/Btn';
 import { StoreTop, useMyOutlet } from '@/components/live/chrome';
 import { Ic, type IconName } from '@/components/live/icons';
-import { type Channels, type Preferences, type ReceivingStaff, type StoreTopic, usePreferences } from '@/components/live/settings-data';
+import { type Channels, type Preferences, type ReceivingStaff, type StoreTopic, useOutletUsers, usePreferences } from '@/components/live/settings-data';
 import { ErrorBanner, Skeleton } from '@/components/live/states';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { resetOptions, telHref } from '@/lib/auth/reset';
-import { DEPOT_NAME, fmtDayTime } from '@/lib/format';
+import { DEPOT_NAME, fmtDayTime, title } from '@/lib/format';
 
 const TOPICS: Array<{ k: StoreTopic; label: string; sub: string; def: Channels }> = [
   { k: 'arrivalWindow', label: 'Arrival window', sub: 'by 7 PM the evening before', def: { app: true, sms: true } },
@@ -31,6 +31,9 @@ const DOCK: Record<string, string> = { REAR_DOCK: 'Rear dock', STREET: 'Street',
 const PARKING: Record<string, string> = { NORMAL: 'normal access', VAN_ONLY: 'vans only', MALL_DOCK: 'mall dock' };
 const initials = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join('');
 const clock = (v: string) => { const [h, m] = v.split(':').map(Number); return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
+/** What each directory role may do at a store, and its pill (SM-30 "Users & access"). */
+const ROLE: Record<string, [string, string, string]> = { STORE_MANAGER: ['Store manager · orders, receipts, settings', 'Owner', 'm-pill--brand'] };
+const roleOf = (role: string): [string, string, string] => ROLE[role] ?? [title(role), title(role), ''];
 const SECTIONS: Array<[string, IconName, string]> = [
   ['store', 'store', 'Store details'], ['receiving', 'people', 'Receiving'], ['notifications', 'bell', 'Notifications'], ['access', 'key', 'Users & access'], ['language', 'globe', 'Language'],
 ];
@@ -58,6 +61,12 @@ export default function LiveSm30Settings() {
   const { session, logout } = useAuth();
   const outlet = useMyOutlet();
   const prefs = usePreferences();
+  // the active sign-ins of this outlet, from the directory (Users/Lodestar.MyOutletUsers)
+  const users = useOutletUsers(Boolean(session?.outletId));
+  // no directory row yet (or no outlet on the token): the signed-in user, as the token names them
+  const me = { id: session?.sub ?? 'me', name: session?.name ?? '', role: session?.roles.includes('store_manager') ? 'STORE_MANAGER' : '', self: true };
+  const loadingUsers = Boolean(session?.outletId) && !users.data && !users.error;
+  const people = loadingUsers ? null : users.data?.length ? users.data : [me];
   // Local edits on top of the saved preferences; null = nothing edited.
   const [edit, setEdit] = useState<Preferences | null>(null);
   const draft: Preferences | null = edit ?? prefs.data ?? null;
@@ -72,7 +81,6 @@ export default function LiveSm30Settings() {
   const setChannel = (t: (typeof TOPICS)[number], ch: keyof Channels, v: boolean) =>
     setDraft(d => ({ ...(d ?? {}), notifications: { ...(d?.notifications ?? {}), [t.k]: { ...channels(t), [ch]: v } } }));
   const setReceiving = (r: NonNullable<Preferences['receiving']>) => setDraft(d => ({ ...(d ?? {}), receiving: { ...(d?.receiving ?? {}), ...r } }));
-  const dirty = edit !== null && JSON.stringify(edit) !== JSON.stringify(prefs.data ?? {});
   const [section, setSection] = useState('receiving');
   const goTo = (k: string) => {
     setSection(k);
@@ -106,7 +114,7 @@ export default function LiveSm30Settings() {
             <Btn className="d-btn d-btn--ghost" lk="L139" testId="discard" onClick={() => { setEdit(null); setAdding(null); }}>{"Discard"}</Btn>
             <Btn className="d-btn d-btn--primary" lk="L139" busy={prefs.save.pending} disabled={!draft} onClick={save}>{"Save changes"}</Btn>
           </div>
-          <ErrorBanner error={prefs.error ?? prefs.save.error ?? outlet.error} onRetry={() => { void prefs.refresh(); void outlet.refresh(); }} />
+          <ErrorBanner error={prefs.error ?? prefs.save.error ?? outlet.error ?? users.error} onRetry={() => { void prefs.refresh(); void outlet.refresh(); void users.refresh(); }} />
           <div className="d-split">
             <div className="sx-subnav">
               {SECTIONS.map(([k, icon, label]) => (
@@ -177,14 +185,20 @@ export default function LiveSm30Settings() {
                     ? <a className="d-btn" style={{ height: '34px' }} href={inviteLink} data-testid="invite"><Ic n="user-plus" />{"Invite"}</a>
                     : <span style={{ fontSize: '13px', color: 'var(--text-3)' }} data-testid="invite">{"Your Lodestar admin adds store sign-ins."}</span>}
                 </div>
-                <div className="sx-set-row">
-                  <span className="d-avatar">{initials(session?.name ?? '')}</span>
-                  <div className="sx-set-row__main">
-                    <b>{session?.name}</b>
-                    <span>{"Store manager · orders, receipts, settings"}</span>
-                  </div>
-                  <span className="m-pill m-pill--brand">{"Owner"}</span>
-                </div>
+                {people === null && <Skeleton rows={2} />}
+                {people?.map(u => {
+                  const [what, pill, cls] = roleOf(u.role);
+                  return (
+                    <div key={u.id} className="sx-set-row" data-user={u.id}>
+                      <span className={u.self ? 'd-avatar' : 'sx-set-av'}>{initials(u.name)}</span>
+                      <div className="sx-set-row__main">
+                        <b>{u.name}</b>
+                        <span>{what}</span>
+                      </div>
+                      {pill && <span className={`m-pill${cls ? ` ${cls}` : ''}`}>{pill}</span>}
+                    </div>
+                  );
+                })}
                 <div className="sx-set-row">
                   <span className="sx-set-av"><Ic n="grid" /></span>
                   <div className="sx-set-row__main">

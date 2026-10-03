@@ -356,6 +356,34 @@ describe('AuthService', () => {
       expect(me).toMatchObject({ deviceId: 'DEV-RB-01', enrollment: { deviceId: 'DEV-NEWPHONE01', reason: 'DeviceMismatch' } });
     });
   });
+
+  describe('myDispatcher', () => {
+    const svc = (users: any[], outlet: any = null) => {
+      const findMany = jest.fn().mockResolvedValue(users);
+      const outletFind = jest.fn().mockResolvedValue(outlet);
+      const s = new AuthService({ user: { findMany }, outlet: { findUnique: outletFind } } as any, instance(keycloak), instance(posture), instance(audit));
+      return { s, findMany, outletFind };
+    };
+
+    it("returns an active dispatcher of the caller's depot with a phone", async () => {
+      const { s, findMany } = svc([{ name: 'Anil', phone: null, depot: 'KANDY' }, { name: 'Dilani', phone: ' 0771234567 ', depot: 'KANDY' }]);
+      await expect(s.myDispatcher(personas.fathima)).resolves.toEqual({ depot: 'KANDY', name: 'Dilani', phone: '0771234567' });
+      expect(findMany.mock.calls[0][0].where).toEqual({ role: 'DISPATCHER', isActive: true, depot: { in: ['KANDY'] } });
+    });
+
+    it("takes the store's depot from its outlet when the token has none", async () => {
+      const { s, findMany, outletFind } = svc([], { depot: 'PELIYAGODA' });
+      await expect(s.myDispatcher(principal({ sub: 'sm', roles: ['store_manager'], outletId: 'OUT027' }))).resolves.toEqual({ depot: 'PELIYAGODA', name: null, phone: null });
+      expect(outletFind.mock.calls[0][0].where).toEqual({ id: 'OUT027' });
+      expect(findMany.mock.calls[0][0].where.depot).toEqual({ in: ['PELIYAGODA'] });
+    });
+
+    it('is empty without a depot', async () => {
+      const { s, findMany } = svc([]);
+      await expect(s.myDispatcher(principal({ sub: 'x', roles: ['store_manager'] }))).resolves.toEqual({ depot: null, name: null, phone: null });
+      expect(findMany).not.toHaveBeenCalled();
+    });
+  });
 });
 
 describe('AuthService directory writes with Keycloak', () => {
