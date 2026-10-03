@@ -82,6 +82,20 @@ describe('PlanningService', () => {
       expect(res.status).toBe('PUBLISHED');
     });
 
+    it('an auto-plan approved as a plan closes its agent run, so the run is no longer offered for approval', async () => {
+      when(txPlan.findUnique(anything())).thenResolve({ ...open, agentRunId: 'run-7' });
+      when(txPlan.updateMany(anything())).thenResolve({ count: 0 });
+      when(txPlan.update(anything())).thenCall(async (a: any) => ({ id: a.where.id, ...a.data }));
+      const agentRun = { updateMany: jest.fn().mockResolvedValue({ count: 1 }) };
+      const tx = { plan: instance(txPlan), agentRun };
+      const svc = new PlanningService({ user: users, $transaction: async (cb: (t: any) => any) => cb(tx) } as any, scoring, instance(capacity), instance(notify));
+      await svc.approvePlan(open.id, 'nilanthi');
+      expect(agentRun.updateMany).toHaveBeenCalledWith({
+        where: { id: 'run-7', status: 'NEEDS_APPROVAL' },
+        data: { status: 'APPROVED', decision: 'approve', decidedBy: 'nilanthi', planId: open.id },
+      });
+    });
+
     it('puts the plan into effect in the same transaction, then tells stores, dock and drivers', async () => {
       when(txPlan.findUnique(anything())).thenResolve(open);
       when(txPlan.updateMany(anything())).thenResolve({ count: 0 });
@@ -185,8 +199,40 @@ describe('PlanningService', () => {
     it('runAutoPlan checks the day before planning anything', async () => {
       const calendar = { findUnique: jest.fn().mockResolvedValue({ isOperating: false }) };
       const svc = new PlanningService({ calendar } as any, scoring, instance(capacity), instance(notify));
-      await expect(svc.runAutoPlan('KANDY' as any, '2026-04-12', 'nilanthi')).rejects.toMatchObject({ code: 'NonOperatingDay' });
-      verify(capacity.getReeferCapacity(anything())).never();
+      const draft = jest.fn();
+      await expect(svc.runAutoPlan('KANDY' as any, '2026-04-12', 'nilanthi', draft)).rejects.toMatchObject({ code: 'NonOperatingDay' });
+      expect(draft).not.toHaveBeenCalled();
+    });
+
+    const autoPlanSvc = (version = 1) => {
+      const calendar = { findUnique: jest.fn().mockResolvedValue(null) };
+      const agentRun = { create: jest.fn(async (a: any) => a.data), update: jest.fn(async (a: any) => a.data) };
+      const planRows = { findFirst: jest.fn().mockResolvedValue({ version }), create: jest.fn(async (a: any) => a.data) };
+      const svc = new PlanningService({ calendar, agentRun, plan: planRows } as any, scoring, instance(capacity), instance(notify));
+      return { svc, agentRun, planRows };
+    };
+
+    it('runAutoPlan drafts with the agent and stores an executable AUTOPLAN version linked to the run', async () => {
+      const { svc, agentRun, planRows } = autoPlanSvc(2);
+      const trips = [{ tripId: 'VEH057-T1', vehicleId: 'VEH057', stops: [] }];
+      const draft = jest.fn().mockResolvedValue({ id: 'run-7', status: 'needs_approval', plan: { trips }, violations: [], explanation: 'why' });
+      const created = await svc.runAutoPlan('KANDY' as any, '2026-04-07', 'nilanthi', draft);
+      expect(draft).toHaveBeenCalledWith('KANDY', '2026-04-07');
+      expect(agentRun.create.mock.calls[0][0].data).toMatchObject({ id: 'run-7', depot: 'KANDY', status: 'NEEDS_APPROVAL', requestedBy: 'nilanthi' });
+      expect(created).toMatchObject({ id: 'PLK-2026-04-07-v3', source: 'AUTOPLAN', status: 'NEEDS_APPROVAL', agentRunId: 'run-7', summary: { plan: { trips } } });
+      expect(planRows.create).toHaveBeenCalledTimes(1);
+      expect(agentRun.update).toHaveBeenCalledWith({ where: { id: 'run-7' }, data: { planId: 'PLK-2026-04-07-v3' } });
+    });
+
+    it('runAutoPlan stores no plan when the agent run has no trips to approve (409 AutoPlanIncomplete)', async () => {
+      const { svc, agentRun, planRows } = autoPlanSvc();
+      const empty = jest.fn().mockResolvedValue({ id: 'run-8', status: 'NEEDS_APPROVAL', plan: { trips: [] } });
+      await expect(svc.runAutoPlan('KANDY' as any, '2026-04-07', 'nilanthi', empty)).rejects.toMatchObject({ status: 409, code: 'AutoPlanIncomplete' });
+      const failed = jest.fn().mockResolvedValue({ id: 'run-9', status: 'FAILED' });
+      await expect(svc.runAutoPlan('KANDY' as any, '2026-04-07', 'nilanthi', failed)).rejects.toMatchObject({ code: 'AutoPlanIncomplete' });
+      expect(agentRun.create).toHaveBeenCalledTimes(2);
+      expect(planRows.create).not.toHaveBeenCalled();
+      await expect(svc.runAutoPlan('KANDY' as any, '2026-04-07', 'nilanthi', jest.fn().mockResolvedValue({}))).rejects.toMatchObject({ status: 502 });
     });
   });
 

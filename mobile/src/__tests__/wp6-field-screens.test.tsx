@@ -326,6 +326,19 @@ describe('State screens', () => {
     expect(push).toHaveBeenCalledWith(opened('sm-13-new-order'));
   });
 
+  it('SM-23 orders closed: says when dispatch closed the next run (Orders/Lodestar.OrderWindow), and SM-13 shows it', async () => {
+    await signInAs(store('u-sm23'));
+    routes.set('Orders/Lodestar.OrderWindow', { depot: 'KANDY', runDate: '2099-01-02', closed: true, closedBy: 'u-d', closedAt: '2026-10-03T05:00:00.000Z', reason: 'Planning the run' });
+    const Screen = require('@/live/sm-23-orders-closed').default;
+    await render(<Screen />);
+    expect((await screen.findByTestId('closed-why')).props.children).toMatch(/^Dispatch closed \w+'s orders at /);
+    expect(await screen.findByText(/takes no new orders for it \(Planning the run\)/)).toBeTruthy();
+    await screen.unmount();
+    const NewOrder = require('@/live/sm-13-new-order').default;
+    await render(<NewOrder />);
+    expect(await screen.findByText('Dispatch closed orders for this day')).toBeTruthy();
+  });
+
   it('SM-25 offline draft saved: the orders waiting in the outbox for the run date', async () => {
     await signInAs(store('u-sm25'));
     params.runDate = RUN;

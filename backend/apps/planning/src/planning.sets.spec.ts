@@ -23,12 +23,14 @@ const RUN_DATE = new Date('2026-04-07T00:00:00.000Z');
 describe('PlansSet', () => {
   let planning: PlanningService;
   let eta: EtaService;
+  let agent: AgentClient;
   let set: PlansSet;
 
   beforeEach(() => {
     planning = mock(PlanningService);
     eta = mock(EtaService);
-    set = new PlansSet({ depot: depotDelegate() } as any, instance(planning), instance(eta));
+    agent = mock(AgentClient);
+    set = new PlansSet({ depot: depotDelegate() } as any, instance(planning), instance(eta), instance(agent));
     when(planning.nextPlanId(anything(), anything())).thenResolve({ id: 'PLK-2026-04-07-v2', version: 2, runDate: RUN_DATE });
   });
 
@@ -102,24 +104,33 @@ describe('PlansSet', () => {
   });
 
   describe('Lodestar.AutoPlan / Board / CapacityOutlook', () => {
-    it('runs the auto-planner for an allowed depot', async () => {
-      when(planning.runAutoPlan('KANDY' as any, '2026-04-07', 'nilanthi')).thenResolve({ id: 'PLK-2026-04-07-v1' } as any);
-      await set.autoPlan({ principal: personas.nilanthi, params: { depot: 'KANDY', runDate: '2026-04-07' }, headers: {} });
-      verify(planning.runAutoPlan('KANDY' as any, '2026-04-07', 'nilanthi')).once();
+    const bearer = { authorization: 'Bearer t' };
+    it('drafts with the planning agent for an allowed depot, with the caller token', async () => {
+      when(planning.runAutoPlan('KANDY' as any, '2026-04-07', 'nilanthi', anything())).thenResolve({ id: 'PLK-2026-04-07-v1' } as any);
+      when(agent.startRun('KANDY', '2026-04-07', 'Bearer t')).thenResolve({ id: 'run-1', status: 'NEEDS_APPROVAL' });
+      await set.autoPlan({ principal: personas.nilanthi, params: { depot: 'KANDY', runDate: '2026-04-07' }, headers: bearer });
+      const [, , , draft] = capture(planning.runAutoPlan).last();
+      await expect(draft('KANDY', '2026-04-07')).resolves.toMatchObject({ id: 'run-1' });
+      verify(agent.startRun('KANDY', '2026-04-07', 'Bearer t')).once();
+    });
+
+    it('needs the dispatcher token to reach the agent', async () => {
+      await expect(set.autoPlan({ principal: personas.nilanthi, params: { depot: 'KANDY', runDate: '2026-04-07' }, headers: {} })).rejects.toMatchObject({ status: 403 });
+      verify(planning.runAutoPlan(anything(), anything(), anything(), anything())).never();
     });
 
     it('refuses auto-plan, board and outlook for a foreign depot', async () => {
-      const ctx = { principal: personas.kasun, params: { depot: 'PELIYAGODA', runDate: '2026-04-07' }, headers: {} };
+      const ctx = { principal: personas.kasun, params: { depot: 'PELIYAGODA', runDate: '2026-04-07' }, headers: bearer };
       await expect(set.autoPlan(ctx)).rejects.toMatchObject({ status: 403 });
       await expect(set.board(ctx)).rejects.toMatchObject({ status: 403 });
       await expect(set.capacityOutlook(ctx)).rejects.toMatchObject({ status: 403 });
-      verify(planning.runAutoPlan(anything(), anything(), anything())).never();
+      verify(planning.runAutoPlan(anything(), anything(), anything(), anything())).never();
     });
 
     it('accepts a depot code in any case and refuses one the Depots registry does not know (400)', async () => {
-      await set.autoPlan({ principal: personas.nilanthi, params: { depot: 'kandy', runDate: '2026-04-07' }, headers: {} });
-      verify(planning.runAutoPlan('KANDY' as any, '2026-04-07', 'nilanthi')).once();
-      await expect(set.autoPlan({ principal: personas.admin, params: { depot: 'GALLE', runDate: '2026-04-07' }, headers: {} })).rejects.toMatchObject({ status: 400, target: 'depot' });
+      await set.autoPlan({ principal: personas.nilanthi, params: { depot: 'kandy', runDate: '2026-04-07' }, headers: bearer });
+      verify(planning.runAutoPlan('KANDY' as any, '2026-04-07', 'nilanthi', anything())).once();
+      await expect(set.autoPlan({ principal: personas.nilanthi, params: { depot: 'GALLE', runDate: '2026-04-07' }, headers: bearer })).rejects.toMatchObject({ status: 400, target: 'depot' });
     });
 
     it('lets an admin plan any depot', async () => {

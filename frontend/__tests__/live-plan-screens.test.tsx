@@ -663,7 +663,7 @@ describe('DSP-01/02/03/12 · loading, empty and error states', () => {
 
   it('DSP-12: a refused approval is shown and the plan does not go live', async () => {
     const view = renderLive(<ApproveAndGoLive />, {
-      handler: req => base(req) ?? (req.path === 'Plans' ? page([{ id: 'PLT-v5', depot: 'KANDY', runDate: DAY, version: 5, status: 'NEEDS_APPROVAL', source: 'AUTOPLAN' }])
+      handler: req => base(req) ?? (req.path === 'Plans' ? page([{ id: 'PLT-v5', depot: 'KANDY', runDate: DAY, version: 5, status: 'NEEDS_APPROVAL', source: 'AUTOPLAN', summary: { plan: { trips: [{ id: 'VEHT1-T1' }] } } }])
         : req.method === 'POST' ? err(412, 'Someone else changed this plan first') : page([])),
     });
     await screen.findByText(/Approve \d+ orders and go live/);

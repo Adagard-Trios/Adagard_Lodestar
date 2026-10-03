@@ -6,7 +6,7 @@ import { addDays, dayLabel } from '@/lib/time';
 import { plural } from '@/lodestar/live';
 import { placeOrder } from '@/model/actions';
 import { useClaims, useStoreDay } from '@/model/hooks';
-import { byClass, clearDraft, cutoffFor, left, toOrderLines, totals, useNow, useOrderDraft } from '@/model/store-face';
+import { byClass, clearDraft, cutoffFor, left, toOrderLines, totals, useNow, useOrderDraft, useOrderWindow } from '@/model/store-face';
 import { Frame, Grad, Icon, Scroll, Tap, openScreen, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 import { useDepots } from '@/model/depots';
 
@@ -24,7 +24,9 @@ export default function ScreenSm14ReviewAndSubmit() {
   const all = totals(draft?.lines ?? [], ratio);
   const orders = [tDry.units, tChilled.units].filter(n => n > 0).length;
   const now = useNow();
-  const remaining = left(cutoffFor(runDate), now);
+  // closed by dispatch (DSP-01 "Close orders") or past the 4:00 PM cut-off: the design's "Orders closed" (SM-23)
+  const dispatchClosed = useOrderWindow(runDate)?.closed === true;
+  const remaining = dispatchClosed ? '' : left(cutoffFor(runDate), now);
 
   const submit = async () => {
     if (!claims || !draft) return true; // design preview: follow the prototype

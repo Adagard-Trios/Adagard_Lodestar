@@ -4,7 +4,7 @@ import { Text, View, StyleSheet } from 'react-native';
 import { addDays, dayLabel, hm } from '@/lib/time';
 import { plural } from '@/lodestar/live';
 import { today } from '@/model/hooks';
-import { cutoffFor, useDelivery, useNextRun, useNow } from '@/model/store-face';
+import { cutoffFor, useDelivery, useNextRun, useNow, useOrderWindow } from '@/model/store-face';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 import { useDepots } from '@/model/depots';
 
@@ -19,7 +19,10 @@ export default function ScreenSm23OrdersClosed() {
   const next = useNextRun();
   // the run whose cut-off has passed: tomorrow's after 4:00 PM today, else today's
   const tomorrow = addDays(today(), 1);
-  const closed = now >= cutoffFor(tomorrow) ? tomorrow : today();
+  // dispatch may close the next run before its cut-off (DSP-01 "Close orders"); then that is the closed run
+  const byDispatch = useOrderWindow(next);
+  const dispatchClosed = byDispatch?.closed === true;
+  const closed = dispatchClosed ? next : now >= cutoffFor(tomorrow) ? tomorrow : today();
   const weekday = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' });
   const onVan = groups.find(g => g.date === closed)?.orders ?? [];
   const units = onVan.reduce((n, o) => n + o.units, 0);
@@ -46,13 +49,15 @@ export default function ScreenSm23OrdersClosed() {
           <View style={s.v12}>
             <View style={s.v8}>
               <Icon xml={X1} width={14} height={14} style={s.v1} />
-              <Text style={s.t4}>{`${weekday(closed)}'s orders closed at 4:00 PM`}</Text>
+              <Text style={s.t4} testID="closed-why">{dispatchClosed ? `Dispatch closed ${weekday(closed)}'s orders${byDispatch?.closedAt ? ` at ${hm(byDispatch.closedAt)}` : ''}` : `${weekday(closed)}'s orders closed at 4:00 PM`}</Text>
             </View>
             <View>
-              <Text style={s.t9}>{dayLabel(next)}</Text>
+              <Text style={s.t9}>{dispatchClosed ? 'Closed' : dayLabel(next)}</Text>
             </View>
             <View>
-              <Text style={s.t11}>{"A new order now goes to the "}<Text style={s.t10}>{dayLabel(next)}</Text>{" run. Same thread, new date, stated before you submit."}</Text>
+              {dispatchClosed
+                ? <Text style={s.t11}>{"Dispatch is planning the "}<Text style={s.t10}>{dayLabel(next)}</Text>{` run and takes no new orders for it${byDispatch?.reason ? ` (${byDispatch.reason})` : ''}. Call the depot for anything urgent.`}</Text>
+                : <Text style={s.t11}>{"A new order now goes to the "}<Text style={s.t10}>{dayLabel(next)}</Text>{" run. Same thread, new date, stated before you submit."}</Text>}
             </View>
           </View>
           <View style={s.v18}>

@@ -47,7 +47,8 @@ describe('internal models (@odata.ignore)', () => {
   it('cover the per-service IdempotencyKey tables of the real schema', () => {
     const dmmf = Prisma.dmmf.datamodel as unknown as DmmfDatamodel;
     const ignored = dmmf.models.filter(isIgnoredModel).map((m) => m.name).sort();
-    expect(ignored).toEqual(['OrdersIdempotencyKey', 'TripsIdempotencyKey']);
+    expect(ignored).toEqual(['OrderClosure', 'OrdersIdempotencyKey', 'TripsIdempotencyKey']);
+    expect(buildEdmModel(dmmf).entityTypes.has('OrderClosure')).toBe(false); // read through Orders/Lodestar.OrderWindow only
     const model = buildEdmModel(dmmf);
     expect(model.entityTypes.has('OrdersIdempotencyKey')).toBe(false);
     expect([...model.entityTypes.get('Order')!.properties.keys()]).toEqual(

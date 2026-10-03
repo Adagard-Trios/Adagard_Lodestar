@@ -182,12 +182,11 @@ def test_window_close_accept_arrival_before_close_is_planned():
 
 
 def test_window_close_reject_arrival_after_close_is_deferred_with_window():
-    """KNOWN GAP: check_rules only checks the close time for mall stops."""
     ctx = ctx_for(_window_world("Remote"))  # 150 min out: 03:30 + 150 = 06:00, window closed at 05:00
     plan = draft_plan(ctx)
-    assert stop_of(trip_of(plan, "D-1"), "D-1")["arrive"] == "06:00"  # the late arrival is real
-    flagged = [v for v in check_rules(ctx, plan)[1] if "D-1" in v["orderIds"]]
-    assert flagged and flagged[0]["reason"] == "WINDOW"
+    # the drafter simulates the clock while packing: the late stop is never drawn, the first draft is rule-clean
+    assert trip_of(plan, "D-1") is None and reasons(plan) == {"D-1": "WINDOW"}
+    assert check_rules(ctx, plan)[1] == []
     result = run_pipeline(ctx)
     assert trip_of(result["plan"], "D-1") is None
     assert deferral_reasons(result) == {"D-1": "WINDOW"}
@@ -218,25 +217,40 @@ def test_mall_accept_mall_stop_inside_mall_window():
     assert result["deferrals"] == [] and check_rules(ctx, result["plan"])[1] == []
 
 
-def test_mall_reject_mall_stop_after_close_is_deferred_with_window():
-    ctx = ctx_for(_mall_world(long_service=100))  # 09:00 + 100 + 10 -> 10:50, mall closed at 10:30
+def test_mall_reject_mall_stop_after_close_is_split_onto_its_own_trip():
+    ctx = ctx_for(_mall_world(long_service=100))  # 09:00 + 100 + 10 -> 10:50 behind the long stop, mall closed at 10:30
+    late = schedule(ctx, {"version": 1, "unassigned": [], "trips": [{"vehicleId": "V-T1", "tripNo": 1, "orderIds": ["L-2", "L-1"]}]})
+    assert [(v["rule"], v["orderIds"], v["reason"]) for v in check_rules(ctx, late)[1]] == [("mall", ["L-1"], "WINDOW")]
+    # the drafter sees it while packing: the mall stop is not put behind the long one, and the first draft is clean
     first = draft_plan(ctx)
-    assert [(v["rule"], v["orderIds"], v["reason"]) for v in check_rules(ctx, first)[1]] == [("mall", ["L-1"], "WINDOW")]
-    result = run_pipeline(ctx)
-    assert trip_of(result["plan"], "L-2")["vehicleId"] == "V-T1"
-    assert trip_of(result["plan"], "L-1") is None
-    assert deferral_reasons(result) == {"L-1": "WINDOW"}
+    assert check_rules(ctx, first)[1] == [] and first["unassigned"] == []
+    assert trip_of(first, "L-1") is not trip_of(first, "L-2")
+    assert h.to_min(stop_of(trip_of(first, "L-1"), "L-1")["arrive"]) <= h.to_min("10:30")
+    assert run_pipeline(ctx)["deferrals"] == []
 
 
 def test_mall_reject_uses_the_mall_delivery_window_not_the_store_hours():
-    """KNOWN GAP: the mall delivery window (``mallWindow`` on the outlet, from the outlet master) is ignored.
-
-    Store hours run to 17:00 but the mall only accepts deliveries 10:00-10:30.
-    """
+    """Store hours run to 17:00 but the mall only accepts deliveries 10:00-10:30 (``mallWindow``)."""
     ctx = ctx_for(_mall_world(long_service=100, mall_close="17:00", mallWindow="10:00-10:30"))
+    late = schedule(ctx, {"version": 1, "unassigned": [], "trips": [{"vehicleId": "V-T1", "tripNo": 1, "orderIds": ["L-2", "L-1"]}]})
+    assert [(v["rule"], v["orderIds"]) for v in check_rules(ctx, late)[1]] == [("mall", ["L-1"])]
     plan = draft_plan(ctx)
-    assert stop_of(trip_of(plan, "L-1"), "L-1")["arrive"] == "10:50"
-    assert [(v["rule"], v["orderIds"], v["reason"]) for v in check_rules(ctx, plan)[1]] == [("mall", ["L-1"], "WINDOW")]
+    assert check_rules(ctx, plan)[1] == [] and plan["unassigned"] == []
+    assert h.to_min(stop_of(trip_of(plan, "L-1"), "L-1")["arrive"]) <= h.to_min("10:30")
+
+
+def test_mall_stop_that_no_trip_can_reach_is_deferred_with_window():
+    """With the only truck's first trip running past the mall window, the mall order is left out up front."""
+    mall = fx.outlet("L-M", "STYLE", "Gamma", "MALL_BAY", "MALL_DOCK", "10:00", "10:30")
+    far = fx.outlet("L-F", "TECH", "Remote", "REAR_DOCK", "NORMAL", "04:00", "17:00")
+    data = world(outlets=[mall, far], vehicles=[TRUCK],
+                 orders=[fx.order("L-1", "L-M", "STYLE", "AMBIENT", 100, 1.0), fx.order("L-9", "L-F", "TECH", "AMBIENT", 100, 1.0, deferredYesterday=True)],
+                 serviceAllowances=[{"brand": "STYLE", "dockType": "MALL_BAY", "minutes": 30}, {"brand": "TECH", "dockType": "REAR_DOCK", "minutes": 200}])
+    ctx = ctx_for(data)
+    first = draft_plan(ctx)
+    # the protected Tech order goes first (03:30-11:50); a second trip would reach the mall after 10:30
+    assert check_rules(ctx, first)[1] == [] and trip_of(first, "L-9")["returns"] == "11:50"
+    assert trip_of(first, "L-1") is None and reasons(first) == {"L-1": "WINDOW"}
     assert deferral_reasons(run_pipeline(ctx)) == {"L-1": "WINDOW"}
 
 
@@ -256,7 +270,8 @@ def test_fuel_accept_trip_within_remaining_quota():
 
 def test_fuel_reject_trip_over_quota_is_deferred_with_fuel():
     ctx = ctx_for(_fuel_world(used=95))  # 95 + 6 = 101 > 100
-    assert [(v["rule"], v["reason"]) for v in check_rules(ctx, draft_plan(ctx))[1]] == [("fuel", "FUEL")]
+    first = draft_plan(ctx)
+    assert first["trips"] == [] and reasons(first) == {"U-1": "FUEL"} and check_rules(ctx, first)[1] == []
     result = run_pipeline(ctx)
     assert result["plan"]["trips"] == []
     assert deferral_reasons(result) == {"U-1": "FUEL"}
@@ -451,3 +466,54 @@ def test_manual_move_is_checked_against_every_constraint():
         move("E-4", "V-T1", 3)
     with pytest.raises(EditError, match="Unknown vehicle"):  # another depot's vehicle is never in scope
         move("E-4", "V-X9")
+
+
+# ---------------------------------------------------------------- fuel and windows are packed up front
+def test_fuel_quota_counts_the_days_earlier_trips_on_the_same_vehicle():
+    """Two Alpha trips of 6 L each: with 90 of 100 L used, only one fits; the other goes to the second truck."""
+    other = fx.outlet("T-B", "STYLE", "Beta", "REAR_DOCK", "NORMAL", "09:00", "17:00")
+    data = world(
+        outlets=[STYLE_ALPHA, other],
+        vehicles=[fx.vehicle("V-T1", "TRUCK", "AMBIENT", 1000, 8, 5, 100, 90), fx.vehicle("V-T2", "TRUCK", "AMBIENT", 1000, 8, 5, 500, 0)],
+        orders=[fx.order("F-1", "T-A", "STYLE", "AMBIENT", 100, 1.0), fx.order("F-2", "T-B", "STYLE", "AMBIENT", 100, 1.0)],
+    )
+    ctx = ctx_for(data)
+    plan = draft_plan(ctx)
+    assert check_rules(ctx, plan)[1] == [] and plan["unassigned"] == []
+    litres = {}
+    for t in plan["trips"]:
+        litres[t["vehicleId"]] = litres.get(t["vehicleId"], 0) + t["litres"]
+    assert 90 + litres.get("V-T1", 0) <= 100
+
+
+def test_window_check_covers_the_second_trip_after_the_first_returns():
+    """A vehicle back late from its first trip cannot start a second one that misses its window."""
+    early = fx.outlet("W-E", "STYLE", "Remote", "REAR_DOCK", "NORMAL", "04:00", "17:00")
+    late = fx.outlet("W-L", "STYLE", "Alpha", "REAR_DOCK", "NORMAL", "04:00", "06:00")
+    data = world(outlets=[early, late], vehicles=[TRUCK],
+                 orders=[fx.order("W-1", "W-E", "STYLE", "AMBIENT", 100, 1.0), fx.order("W-2", "W-L", "STYLE", "AMBIENT", 100, 1.0)])
+    ctx = ctx_for(data)
+    plan = draft_plan(ctx)
+    assert check_rules(ctx, plan)[1] == []
+    for t in plan["trips"]:
+        for s in t["stops"]:
+            assert h.to_min(s["arrive"]) <= h.to_min(ctx.window_of(s["orderId"])[1])
+
+
+@pytest.mark.parametrize("raw", [fx.raw, fx.mall_conflict_raw, fx.fuel_starved_raw])
+def test_first_drafts_on_the_demo_like_worlds_are_rule_clean(raw):
+    """No redraft is needed: the drafter packs around fuel quotas and windows itself."""
+    ctx = ctx_for(raw())
+    plan = draft_plan(ctx)
+    assert check_rules(ctx, plan)[1] == []
+    assert planned_order_ids(plan) | {u["orderId"] for u in plan["unassigned"]} == set(ctx.orders)
+
+
+def test_redraft_constraints_still_steer_the_drafter():
+    """The safety net: a prioritise constraint puts the order first, an avoid keeps it off a vehicle."""
+    ctx = ctx_for(fx.raw())
+    plan = draft_plan(ctx, [{"type": "prioritise", "orderIds": ["O-5"], "reason": "WINDOW"}])
+    assert check_rules(ctx, plan)[1] == []
+    on = trip_of(plan, "O-5")["vehicleId"]
+    plan = draft_plan(ctx, [{"type": "avoid", "vehicleId": on, "orderIds": ["O-5"], "reason": "WINDOW"}])
+    assert (trip_of(plan, "O-5") or {}).get("vehicleId") != on

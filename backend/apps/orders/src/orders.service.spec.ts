@@ -112,4 +112,49 @@ describe('OrdersService', () => {
       verify(notify.notice(anything())).never();
     });
   });
+
+  describe('order window (dispatch closes orders for a run: Orders/Lodestar.CloseOrders)', () => {
+    const closures = () => {
+      const rows = new Map<string, any>();
+      const k = (w: any) => `${w.depot_runDate.depot}|${w.depot_runDate.runDate.toISOString()}`;
+      return {
+        rows,
+        findUnique: jest.fn(async ({ where }: any) => rows.get(k(where)) ?? null),
+        upsert: jest.fn(async ({ where, create, update }: any) => {
+          const row = rows.has(k(where)) ? { ...rows.get(k(where)), ...update } : { closedAt: new Date('2026-10-04T10:00:00Z'), ...create };
+          rows.set(k(where), row);
+          return row;
+        }),
+        update: jest.fn(async ({ where, data }: any) => {
+          const row = { ...rows.get(k(where)), ...data };
+          rows.set(k(where), row);
+          return row;
+        }),
+      };
+    };
+    const outlet = { findUnique: jest.fn(async () => ({ depot: 'KANDY' })), findMany: jest.fn(async () => [{ id: 'OUT106' }]) };
+
+    it('closes, refuses new orders with 422 OrdersClosed, reopens, and tells the desk and the stores', async () => {
+      const orderClosure = closures();
+      const svc = new OrdersService({ orderClosure, outlet } as any, instance(notify));
+      await expect(svc.orderWindow('KANDY', '2026-10-05')).resolves.toMatchObject({ depot: 'KANDY', runDate: '2026-10-05', closed: false });
+      await expect(svc.assertOrdersOpen('OUT106', '2026-10-05')).resolves.toBeUndefined();
+
+      const closed = await svc.closeOrders('KANDY', '2026-10-05', 'nilanthi', '  Planning the run  ');
+      expect(closed).toMatchObject({ closed: true, closedBy: 'nilanthi', reason: 'Planning the run' });
+      expect(capture(notify.publish).last()).toEqual(['order_window', ['dispatcher:KANDY', 'store:OUT106'], { depot: 'KANDY', runDate: '2026-10-05', closed: true }]);
+      await expect(svc.assertOrdersOpen('OUT106', '2026-10-05T00:00:00.000Z')).rejects.toMatchObject({ status: 422, code: 'OrdersClosed', target: 'runDate' });
+      // another run date and closing twice are no-ops for the closure
+      await expect(svc.assertOrdersOpen('OUT106', '2026-10-06')).resolves.toBeUndefined();
+      await svc.closeOrders('KANDY', '2026-10-05', 'someone-else');
+      expect(orderClosure.upsert).toHaveBeenCalledTimes(1);
+
+      const reopened = await svc.reopenOrders('KANDY', '2026-10-05', 'nilanthi');
+      expect(reopened).toMatchObject({ closed: false, reopenedBy: 'nilanthi' });
+      await expect(svc.assertOrdersOpen('OUT106', '2026-10-05')).resolves.toBeUndefined();
+      await svc.reopenOrders('KANDY', '2026-10-05', 'nilanthi');
+      expect(orderClosure.update).toHaveBeenCalledTimes(1);
+      verify(notify.publish('order_window', anything(), anything())).twice();
+    });
+  });
 });

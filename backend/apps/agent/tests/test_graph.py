@@ -45,26 +45,64 @@ def test_load_context_reads_every_entity_set_once(make_runtime):
         verify(rt.odata, times=1).get_all(entity_set, ...)
 
 
-def test_rule_violation_loops_back_to_draft(make_runtime):
+def test_mall_conflict_is_packed_around_up_front(make_runtime):
     rt = make_runtime(fx.mall_conflict_raw())
     run = rt.start_run(fx.DEPOT, fx.RUN_DATE, "user-1")
 
+    # the long Gamma run would push the mall stop past its window: the drafter sees it while packing
+    assert run["redrafts"] == 0 and nodes(run).count("draft_plan") == 1
+    assert all(c["passed"] for c in run["ruleChecks"])
+    mall_trip = next(t for t in run["plan"]["trips"] if "O-5" in t["orderIds"])
+    stop = next(s for s in mall_trip["stops"] if s["orderId"] == "O-5")
+    assert stop["arrive"] <= "11:00"
+
+
+def test_rule_violation_still_loops_back_to_draft_as_a_safety_net(make_runtime, monkeypatch):
+    from lodestar_agent.domain import rules
+
+    real = rules.check_rules
+    calls = {"n": 0}
+
+    def once(ctx, plan):
+        calls["n"] += 1
+        checks, violations = real(ctx, plan)
+        if calls["n"] == 1:  # something the drafter could not foresee
+            trip = plan["trips"][0]
+            violations = [{"rule": "mall", "tripId": trip["id"], "vehicleId": trip["vehicleId"], "orderIds": trip["orderIds"][:1], "reason": "WINDOW", "detail": "late"}]
+            checks = [{**c, "passed": c["rule"] != "mall", "violations": int(c["rule"] == "mall")} for c in checks]
+        return checks, violations
+
+    monkeypatch.setattr(rules, "check_rules", once)
+    run = make_runtime().start_run(fx.DEPOT, fx.RUN_DATE, "user-1")
     assert run["redrafts"] == 1
     assert nodes(run).count("draft_plan") == 2 and nodes(run).count("check_rules") == 2
     assert run["history"][2]["note"] == "violations: mall"
-    assert all(c["passed"] for c in run["ruleChecks"])
-    assert run["plan"]["version"] == 2
-    mall_trip = next(t for t in run["plan"]["trips"] if "O-5" in t["orderIds"])
-    assert mall_trip["tripNo"] == 1  # prioritised onto the first trip
+    assert all(c["passed"] for c in run["ruleChecks"]) and run["plan"]["version"] == 2
     assert any("Redrafted 1 time(s) to fix mall" in d for d in run["explanation"]["did"])
+
+
+def test_redraft_loop_is_bounded(make_runtime, monkeypatch):
+    from lodestar_agent.domain import rules
+
+    real = rules.check_rules
+
+    def always(ctx, plan):
+        checks, _ = real(ctx, plan)
+        trip = plan["trips"][0]
+        return checks, [{"rule": "fuel", "tripId": trip["id"], "vehicleId": trip["vehicleId"], "orderIds": [], "reason": "FUEL", "detail": "x"}]
+
+    monkeypatch.setattr(rules, "check_rules", always)
+    run = make_runtime().start_run(fx.DEPOT, fx.RUN_DATE, "user-1")
+    assert run["redrafts"] == 3 and nodes(run).count("draft_plan") == 4
 
 
 def test_loop_is_capped_and_leftovers_become_deferrals(make_runtime):
     rt = make_runtime(fx.fuel_starved_raw())
     run = rt.start_run(fx.DEPOT, fx.RUN_DATE, "user-1")
 
-    assert run["redrafts"] == 3
-    assert nodes(run).count("draft_plan") == 4
+    # every vehicle is at its quota: the first draft already leaves the orders out, with FUEL
+    assert run["redrafts"] == 0
+    assert nodes(run).count("draft_plan") == 1
     assert all(c["passed"] for c in run["ruleChecks"])
     reasons = {d["reason"] for d in run["deferrals"]}
     assert reasons == {"FUEL"}

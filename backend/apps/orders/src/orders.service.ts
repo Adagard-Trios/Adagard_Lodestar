@@ -2,7 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { ODataError } from '@lodestar/odata';
 import { Prisma, OrderStatus, TempClass } from '@prisma/client';
-import { addBusinessDays, businessDate, isOperatingDay, runDateRange, toBusinessDate } from '@lodestar/platform';
+import { addBusinessDays, businessDate, isOperatingDay, runDateRange, runDateValue, toBusinessDate } from '@lodestar/platform';
 import { depotDispatchers, NOTIFY, NotifyClient } from '@lodestar/security';
 
 /** Stored window [start, end) of a run date (YYYY-MM-DD, or a Date read in Sri Lanka time). */
@@ -333,6 +333,78 @@ export class OrdersService {
       if (isOperatingDay(d, calendar.get(d))) return d;
     }
     return first;
+  }
+
+  /**
+   * Whether dispatch has closed orders for a depot's run (Orders/Lodestar.CloseOrders): the time cut-off closes
+   * every run at 4:00 PM the day before; a dispatcher may also close one explicitly once the day is being planned.
+   */
+  async orderWindow(depot: string, runDate: string | Date) {
+    const iso = toBusinessDate(runDate);
+    const row = await this.prisma.orderClosure.findUnique({ where: { depot_runDate: { depot, runDate: runDateValue(iso) } } });
+    return {
+      depot,
+      runDate: iso,
+      closed: !!row?.closed,
+      closedBy: row?.closedBy ?? null,
+      closedAt: row?.closedAt?.toISOString() ?? null,
+      reason: row?.reason ?? null,
+      reopenedBy: row?.reopenedBy ?? null,
+      reopenedAt: row?.reopenedAt?.toISOString() ?? null,
+    };
+  }
+
+  /** 422 OrdersClosed when dispatch has closed orders for the outlet's depot on that run date. */
+  async assertOrdersOpen(outletId: string, runDate: string | Date) {
+    const outlet = await this.prisma.outlet.findUnique({ where: { id: outletId }, select: { depot: true } });
+    if (!outlet) return;
+    const w = await this.orderWindow(outlet.depot, runDate);
+    if (w.closed) {
+      throw ODataError.unprocessable(
+        'OrdersClosed',
+        `Dispatch has closed orders for the ${w.runDate} run at ${outlet.depot}${w.reason ? ` (${w.reason})` : ''}; order for a later run or call dispatch`,
+        'runDate',
+      );
+    }
+  }
+
+  /** Closes orders for a depot's run (dispatcher); stores and the desk are told. Closing twice keeps the first closure. */
+  async closeOrders(depot: string, runDate: string | Date, by: string, reason?: string | null) {
+    const iso = toBusinessDate(runDate);
+    const key = { depot, runDate: runDateValue(iso) };
+    const note = reason?.trim() ? reason.trim().slice(0, 300) : null;
+    const current = await this.prisma.orderClosure.findUnique({ where: { depot_runDate: key } });
+    if (!current?.closed) {
+      await this.prisma.orderClosure.upsert({
+        where: { depot_runDate: key },
+        create: { ...key, closed: true, closedBy: by, reason: note },
+        update: { closed: true, closedBy: by, closedAt: new Date(), reason: note, reopenedBy: null, reopenedAt: null },
+      });
+      await this.announceWindow(depot, iso, true);
+    }
+    return this.orderWindow(depot, iso);
+  }
+
+  /** Reopens orders for a depot's run (dispatcher). */
+  async reopenOrders(depot: string, runDate: string | Date, by: string) {
+    const iso = toBusinessDate(runDate);
+    const key = { depot, runDate: runDateValue(iso) };
+    const current = await this.prisma.orderClosure.findUnique({ where: { depot_runDate: key } });
+    if (current?.closed) {
+      await this.prisma.orderClosure.update({ where: { depot_runDate: key }, data: { closed: false, reopenedBy: by, reopenedAt: new Date() } });
+      await this.announceWindow(depot, iso, false);
+    }
+    return this.orderWindow(depot, iso);
+  }
+
+  /** Live refresh for the desk and the depot's stores (best effort). */
+  private async announceWindow(depot: string, runDate: string, closed: boolean) {
+    try {
+      const outlets = await this.prisma.outlet.findMany({ where: { depot }, select: { id: true } });
+      await this.notify.publish('order_window', [`dispatcher:${depot}`, ...outlets.map((o) => `store:${o.id}`)], { depot, runDate, closed });
+    } catch {
+      // the closure is stored; screens pick it up on their next read
+    }
   }
 
   /** Next order number in the ORD0000000 format. */

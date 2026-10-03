@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
-import { EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, OperationContext, WriteContext } from '@lodestar/odata';
+import { assertDepotCode, EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, OperationContext, WriteContext } from '@lodestar/odata';
 import { canAccessDepot, canAccessOutlet, HUMAN_ROLES, isPrivileged, Roles } from '@lodestar/security';
 import { OrderStatus, TempClass } from '@prisma/client';
 import { CANCELLABLE_STATUSES, EDITABLE_STATUSES, OrdersService } from './orders.service';
@@ -88,6 +88,8 @@ export class OrdersSet extends ODataEntitySet {
         data = { ...data, runDate: runDateValue(next), notes: [data.notes, closedDayNote(asked, next)].filter(Boolean).join(' ') };
       }
     }
+    // A run dispatch has closed (Orders/Lodestar.CloseOrders) takes no new orders, whoever places them.
+    await this.orders.assertOrdersOpen(data.outletId, data.runDate);
     return {
       ...data,
       id: data.id ?? this.generated(await this.orders.nextOrderId()),
@@ -132,6 +134,9 @@ export class OrdersSet extends ODataEntitySet {
         throw ODataError.conflict(`Order ${current.id} is ${current.status} and can no longer be edited`);
       }
       assertStoreMayEdit(ctx.principal.roles, current.runDate, patch.runDate, new Date(), cutoffSettings());
+      // nor change an order on (or move one into) a run dispatch has closed
+      await this.orders.assertOrdersOpen(current.outletId, current.runDate);
+      if (patch.runDate !== undefined && patch.runDate !== null) await this.orders.assertOrdersOpen(current.outletId, patch.runDate);
     }
     if (patch.runDate !== undefined && patch.runDate !== null) {
       const asked = toBusinessDate(patch.runDate);
@@ -194,6 +199,63 @@ export class OrdersSet extends ODataEntitySet {
     if (!canAccessOutlet(ctx.principal, ctx.entity.outletId)) throw ODataError.forbidden('You can only confirm receipts for your own outlet', 'outletId');
     const { unitsReceived, unitsExpected, note, savedAt } = ctx.params;
     return this.orders.confirmReceipt(ctx.entity.id, ctx.principal.sub, { unitsReceived, unitsExpected, note, savedAt });
+  }
+
+  /** The depot an order-window call is about: the one named (checked against the caller), else the store's own. */
+  private async windowDepot(ctx: OperationContext): Promise<string> {
+    const p = ctx.principal;
+    if (ctx.params.depot) {
+      const depot = await assertDepotCode(this.prisma, ctx.params.depot, { active: false });
+      if (!isPrivileged(p) && !canAccessDepot(p, depot)) throw ODataError.forbidden(`You do not work for depot ${depot}`, 'depot');
+      return depot;
+    }
+    const outlet = p.outletId ? await this.prisma.outlet.findUnique({ where: { id: p.outletId }, select: { depot: true } }) : null;
+    if (!outlet) throw ODataError.badRequest('depot is required', 'depot');
+    return outlet.depot;
+  }
+
+  /**
+   * POST Orders/Lodestar.CloseOrders {depot, runDate, reason?} - dispatch closes orders for a run (DSP-01): from now
+   * on the orders service refuses new orders for it (422 OrdersClosed), and store edits on it. Audited as Orders.CloseOrders.
+   */
+  @ODataAction({
+    name: 'CloseOrders',
+    binding: 'collection',
+    roles: [Roles.Dispatcher],
+    params: { depot: { type: 'Edm.String', required: true }, runDate: { type: 'Edm.Date', required: true }, reason: 'Edm.String' },
+    returns: 'Edm.Untyped',
+  })
+  async closeOrders(ctx: OperationContext) {
+    const depot = await this.windowDepot(ctx);
+    return this.orders.closeOrders(depot, ctx.params.runDate, ctx.principal.sub, ctx.params.reason);
+  }
+
+  /** POST Orders/Lodestar.ReopenOrders {depot, runDate} - dispatch takes orders for the run again. Audited. */
+  @ODataAction({
+    name: 'ReopenOrders',
+    binding: 'collection',
+    roles: [Roles.Dispatcher],
+    params: { depot: { type: 'Edm.String', required: true }, runDate: { type: 'Edm.Date', required: true } },
+    returns: 'Edm.Untyped',
+  })
+  async reopenOrders(ctx: OperationContext) {
+    const depot = await this.windowDepot(ctx);
+    return this.orders.reopenOrders(depot, ctx.params.runDate, ctx.principal.sub);
+  }
+
+  /**
+   * GET Orders/Lodestar.OrderWindow(runDate=2026-04-07,depot='KANDY') - whether dispatch closed orders for the run
+   * ({closed, closedBy, closedAt, reason, ...}). A store manager may leave depot out: their outlet's depot is used.
+   */
+  @ODataFunction({
+    name: 'OrderWindow',
+    binding: 'collection',
+    roles: [Roles.StoreManager, Roles.Dispatcher, Roles.Admin, Roles.Service],
+    params: { runDate: { type: 'Edm.Date', required: true }, depot: 'Edm.String' },
+    returns: 'Edm.Untyped',
+  })
+  async orderWindow(ctx: OperationContext) {
+    return this.orders.orderWindow(await this.windowDepot(ctx), ctx.params.runDate);
   }
 
   /** GET Orders/Lodestar.Summary(runDate=2026-04-07) */

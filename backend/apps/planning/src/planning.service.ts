@@ -7,6 +7,7 @@ import {
 import { runDateRange, runDateValue } from '@lodestar/platform';
 import { NOTIFY, NotifyClient } from '@lodestar/security';
 import { executePlan, type ExecutionResult } from './plan-execution';
+import type { AgentRunSnapshot } from './agent.client';
 import { DeferralScoringService } from './deferral-scoring.service';
 import { CapacityService } from './capacity.service';
 
@@ -175,51 +176,40 @@ export class PlanningService {
   }
 
   /**
-   * Auto-plan: computes the capacity picture and deferral suggestions, and
-   * stores them as a new plan version awaiting a dispatcher's approval.
+   * Auto-plan (Plans/Lodestar.AutoPlan): drafts the day with the planning agent — the same path as
+   * POST AgentRuns — so the plan version it stores carries the agent's trips, rule checks and deferrals and
+   * Plans/Lodestar.Approve can put it into effect. The run is kept as an AgentRun row linked to the plan, so
+   * the dispatcher can approve either the plan or the run. `draft` starts the run with the caller's token.
+   * A run that ends without a draft to approve (failed, or no trips) stores no plan: 409 AutoPlanIncomplete.
    */
-  async runAutoPlan(depot: string, runDate: string, requestedBy: string) {
+  async runAutoPlan(depot: string, runDate: string, requestedBy: string, draft: (depot: string, runDate: string) => Promise<AgentRunSnapshot>) {
     await this.assertOperatingDay(runDate);
-    const { summary, suggestions } = await this.suggestDeferrals(depot, runDate);
-    const next = await this.nextPlanId(depot, runDate);
-
-    return this.prisma.$transaction(async (tx) => {
-      const plan = await tx.plan.create({
-        data: {
-          id: next.id,
-          depot,
-          runDate: next.runDate,
-          version: next.version,
-          status: PlanStatus.NEEDS_APPROVAL,
-          source: PlanSource.AUTOPLAN,
-          summary: { ...summary, suggestions } as unknown as Prisma.InputJsonValue,
-          createdBy: requestedBy,
-        },
-      });
-      for (const s of suggestions) {
-        // Never overwrite a deferral a dispatcher already decided on.
-        await tx.deferralLog.upsert({
-          where: { orderId: s.orderId },
-          update: {},
-          create: {
-            orderId: s.orderId,
-            reason: s.reason,
-            score: s.score,
-            notes: s.notes,
-            status: DeferralStatus.SUGGESTED,
-            planId: plan.id,
-          },
-        });
-      }
-      return plan;
+    const { iso, start } = dayRange(runDate);
+    const snapshot = await draft(depot, iso);
+    if (!snapshot?.id) throw new ODataError(502, 'BadGateway', 'The planning agent returned no run id');
+    const runId = String(snapshot.id);
+    const status = String(snapshot.status ?? 'DRAFTING').toUpperCase();
+    await this.prisma.agentRun.create({
+      data: { id: runId, depot, runDate: start, requestedBy, status, detail: snapshot as any, lastSyncedAt: new Date() },
     });
+    const trips = (snapshot.plan as { trips?: unknown[] } | undefined)?.trips;
+    if (status !== 'NEEDS_APPROVAL' || !Array.isArray(trips) || !trips.length) {
+      throw new ODataError(
+        409,
+        'AutoPlanIncomplete',
+        `The planning agent's run ${runId} is ${status} without trips to approve; no plan was stored. Review it in AgentRuns('${runId}')`,
+      );
+    }
+    const plan = await this.createAgentPlan({ id: runId, depot, runDate: start }, snapshot, requestedBy, PlanSource.AUTOPLAN);
+    await this.prisma.agentRun.update({ where: { id: runId }, data: { planId: plan.id } });
+    return plan;
   }
 
   /**
    * Turns an approved planning-agent run into a plan version. The agent only
    * drafts; this row is what a dispatcher's approval then publishes.
    */
-  async createAgentPlan(run: { id: string; depot: string; runDate: Date }, snapshot: Record<string, any>, createdBy: string) {
+  async createAgentPlan(run: { id: string; depot: string; runDate: Date }, snapshot: Record<string, any>, createdBy: string, source: PlanSource = PlanSource.AGENT) {
     const next = await this.nextPlanId(run.depot, run.runDate);
     const explanation = snapshot.explanation;
     return this.prisma.plan.create({
@@ -229,7 +219,7 @@ export class PlanningService {
         runDate: next.runDate,
         version: next.version,
         status: PlanStatus.NEEDS_APPROVAL,
-        source: PlanSource.AGENT,
+        source,
         agentRunId: run.id,
         createdBy,
         explanation: explanation === undefined ? null : typeof explanation === 'string' ? explanation : JSON.stringify(explanation),
@@ -268,6 +258,13 @@ export class PlanningService {
       });
       execution = await executePlan(tx, plan);
       const now = new Date();
+      // An auto-plan keeps its agent run: once the plan is live, that run is no longer waiting for approval.
+      if (plan.agentRunId) {
+        await tx.agentRun.updateMany({
+          where: { id: plan.agentRunId, status: 'NEEDS_APPROVAL' },
+          data: { status: 'APPROVED', decision: 'approve', decidedBy: approvedBy, planId: plan.id },
+        });
+      }
       return tx.plan.update({
         where: { id: plan.id },
         data: {

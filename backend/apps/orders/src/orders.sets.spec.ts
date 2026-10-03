@@ -2,6 +2,7 @@ import { anything, capture, instance, mock, verify, when } from 'ts-mockito';
 import { ODataError } from '@lodestar/odata';
 import { nextOrderableRunDate, toBusinessDate } from '@lodestar/platform';
 import { personas } from '../../../libs/security/test/principals';
+import { depotDelegate } from '../../../libs/odata/test/depots';
 import { OrdersService } from './orders.service';
 import { OrdersSet } from './orders.sets';
 
@@ -164,7 +165,10 @@ describe('OrdersSet', () => {
 
   describe('closed run dates (Calendar; a silent calendar runs Monday to Saturday)', () => {
     // the real rule, on an empty Calendar
-    const realOrders = () => new OrdersService({ calendar: { findMany: async () => [] }, order: { findFirst: async () => ({ id: 'ORD0104299' }) } } as any, {} as any);
+    const realOrders = () => new OrdersService({
+      calendar: { findMany: async () => [] }, order: { findFirst: async () => ({ id: 'ORD0104299' }) },
+      outlet: { findUnique: async () => ({ depot: 'KANDY' }) }, orderClosure: { findUnique: async () => null },
+    } as any, {} as any);
 
     afterEach(() => jest.useRealTimers());
 
@@ -197,6 +201,38 @@ describe('OrdersSet', () => {
       when(orders.nextOperatingRunDate('2026-10-11')).thenResolve('2026-10-12');
       await expect(set.beforeUpdate({ runDate: '2026-10-11' }, { id: 'ORD1', status: 'PLANNED', runDate: new Date('2026-10-10T00:00:00Z') }, { principal: personas.nilanthi, headers: {} }))
         .rejects.toMatchObject({ status: 422, code: 'NonOperatingDay', target: 'runDate' });
+    });
+  });
+
+  describe('closed by dispatch (Orders/Lodestar.CloseOrders, ReopenOrders, OrderWindow)', () => {
+    const refused = () => Object.assign(new ODataError(422, 'OrdersClosed', 'closed', 'runDate'));
+
+    it('refuses a new order, and a store edit, for a run dispatch has closed', async () => {
+      when(outlet.findUnique(anything())).thenResolve({ depot: 'KANDY' });
+      when(orders.assertOrdersOpen(anything(), anything())).thenReject(refused());
+      await expect(set.beforeCreate({ ...body }, { principal: personas.fathima, headers: {} })).rejects.toMatchObject({ code: 'OrdersClosed' });
+      await expect(set.beforeCreate({ ...body }, { principal: personas.nilanthi, headers: {} })).rejects.toMatchObject({ code: 'OrdersClosed' });
+      const current = { id: 'ORD1', outletId: 'OUT106', status: 'RECEIVED', runDate: body.runDate };
+      await expect(set.beforeUpdate({ units: 5 }, current, { principal: personas.fathima, headers: {} })).rejects.toMatchObject({ code: 'OrdersClosed' });
+    });
+
+    it('closes and reopens for a dispatcher of the depot, with the reason', async () => {
+      set = new OrdersSet({ outlet: instance(outlet), depot: depotDelegate() } as any, instance(orders));
+      when(orders.closeOrders('KANDY', '2026-10-05', 'nilanthi', 'planning')).thenResolve({ closed: true } as any);
+      when(orders.reopenOrders('KANDY', '2026-10-05', 'nilanthi')).thenResolve({ closed: false } as any);
+      await expect(set.closeOrders({ principal: personas.nilanthi, params: { depot: 'kandy', runDate: '2026-10-05', reason: 'planning' }, headers: {} })).resolves.toEqual({ closed: true });
+      await expect(set.reopenOrders({ principal: personas.nilanthi, params: { depot: 'KANDY', runDate: '2026-10-05' }, headers: {} })).resolves.toEqual({ closed: false });
+      const galle = { ...personas.nilanthi, depots: ['PELIYAGODA'] };
+      await expect(set.closeOrders({ principal: galle, params: { depot: 'KANDY', runDate: '2026-10-05' }, headers: {} })).rejects.toMatchObject({ status: 403 });
+      await expect(set.closeOrders({ principal: personas.nilanthi, params: { depot: 'NOWHERE', runDate: '2026-10-05' }, headers: {} })).rejects.toMatchObject({ status: 400 });
+    });
+
+    it("tells a store manager her own depot's window without naming the depot", async () => {
+      set = new OrdersSet({ outlet: instance(outlet), depot: depotDelegate() } as any, instance(orders));
+      when(outlet.findUnique(anything())).thenResolve({ depot: 'KANDY' });
+      when(orders.orderWindow('KANDY', '2026-10-05')).thenResolve({ closed: true } as any);
+      await expect(set.orderWindow({ principal: personas.fathima, params: { runDate: '2026-10-05' }, headers: {} })).resolves.toEqual({ closed: true });
+      await expect(set.orderWindow({ principal: personas.nilanthi, params: { runDate: '2026-10-05' }, headers: {} })).rejects.toMatchObject({ status: 400, target: 'depot' });
     });
   });
 });

@@ -34,6 +34,7 @@ export class PlansSet extends ODataEntitySet {
     prisma: PrismaService,
     private readonly planning: PlanningService,
     private readonly eta: EtaService,
+    private readonly agent: AgentClient,
   ) {
     super(prisma);
   }
@@ -81,18 +82,24 @@ export class PlansSet extends ODataEntitySet {
     return this.planning.rejectPlan(ctx.entity.id, ctx.params.reason);
   }
 
-  /** POST Plans/Lodestar.AutoPlan {depot, runDate} — runs the auto-planner and stores a draft. */
+  /**
+   * POST Plans/Lodestar.AutoPlan {depot, runDate} — drafts the day with the planning agent (as POST AgentRuns does,
+   * with the calling dispatcher's token) and stores the draft as a plan version awaiting approval, with its trips,
+   * so Plans('…')/Lodestar.Approve can put it into effect. Dispatchers only, like AgentRuns.
+   */
   @ODataAction({
     name: 'AutoPlan',
     binding: 'collection',
-    roles: [Roles.Dispatcher, Roles.Admin],
+    roles: [Roles.Dispatcher],
     params: { depot: { type: 'Edm.String', required: true }, runDate: { type: 'Edm.Date', required: true } },
     returns: 'Lodestar.Plan',
   })
   async autoPlan(ctx: OperationContext) {
     const depot = await assertDepotCode(this.prisma, ctx.params.depot);
     assertDepot(ctx.principal, depot);
-    return this.planning.runAutoPlan(depot, ctx.params.runDate, ctx.principal.sub);
+    const auth = callerAuthorization(ctx.headers);
+    if (!auth) throw ODataError.forbidden('The planning agent needs the calling dispatcher’s token');
+    return this.planning.runAutoPlan(depot, ctx.params.runDate, ctx.principal.sub, (d, iso) => this.agent.startRun(d, iso, auth));
   }
 
   /** GET Plans/Lodestar.Board(depot='KANDY',runDate=2026-04-07) — DSP-01 plan board. */

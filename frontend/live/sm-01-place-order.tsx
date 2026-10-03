@@ -5,7 +5,8 @@
 // in the user's token (the API refuses any other outlet). The Calendar row of the run date feeds the festival card.
 // The run offered is the next one still open for orders: tomorrow until its 4:00 PM cut-off (Colombo), then the
 // day after, never a day the operating Calendar closes (the next operating day instead); it moves on by itself as
-// the clock passes the cut-off. A closed date picked by hand cannot be submitted. After a run's cut-off the API
+// the clock passes the cut-off. A closed date picked by hand cannot be submitted, nor a run dispatch has closed
+// (Orders/Lodestar.OrderWindow: the "orders closed" banner). After a run's cut-off the API
 // still takes the order and moves it to the next open operating run; the screen then shows the run date and note
 // the API returned instead of moving on.
 // The lines are kept in this browser tab as the store edits them (components/live/order-draft.ts). When the server
@@ -24,7 +25,8 @@ import { useAuth } from '@/lib/auth/AuthProvider';
 import { addDays, fmtNum, fmtRunDate, isoDay } from '@/lib/format';
 import { colomboDay, CUTOFF_LABEL, cutoffFor } from '@/lib/workday';
 import { useAction, useQuery } from '@/lib/odata/hooks';
-import type { Order, OrderLineItem, TempClass } from '@/lib/odata/types';
+import type { Order, OrderLineItem, OrderWindow, TempClass } from '@/lib/odata/types';
+import { valueOf } from '@/lib/odata/client';
 import { useDepots } from '@/components/live/depots';
 
 type Line = DraftLine;
@@ -159,6 +161,10 @@ export default function LiveSm01PlaceOrder() {
   const late = msLeft <= 0;
   // a day the operating Calendar closes has no run: it cannot be ordered for
   const closedDay = next.closed.has(runDate) || calendar.data?.isOperating === false;
+  // dispatch may close a run before its cut-off (DSP-01 "Close orders"): the API then refuses orders for it
+  const orderWindow = useQuery<OrderWindow>(outletId ? `store-window:${runDate}` : null, async c =>
+    valueOf<OrderWindow>(await c.fn('Orders', null, 'OrderWindow', { runDate })), { refreshOn: ['order_window'] });
+  const dispatchClosed = orderWindow.data?.closed === true;
 
   const draftNow = (): OrderDraft | null =>
     outletId && outlet.data ? { outletId, brand: outlet.data.brand, runDate, dry: dryLines, chilled: chilledLines, ratio, savedAt: Date.now(), sent } : null;
@@ -226,11 +232,20 @@ export default function LiveSm01PlaceOrder() {
               </span>
               <span style={{ fontSize: '13px', color: 'var(--text-3)' }}>{"\"Received\" with order numbers at once"}</span>
             </div>
-            <Btn className="d-btn d-btn--primary" style={{ padding: '0 20px' }} testId="submit-order" busy={submit.pending} disabled={!orders || !o || Boolean(moved) || closedDay} onClick={() => void submit.run()}>
+            <Btn className="d-btn d-btn--primary" style={{ padding: '0 20px' }} testId="submit-order" busy={submit.pending} disabled={!orders || !o || Boolean(moved) || closedDay || dispatchClosed} onClick={() => void submit.run()}>
               <Ic n="send" />Submit {orders} order{orders === 1 ? '' : 's'}
             </Btn>
           </div>
           <ErrorBanner error={submit.error ?? history.error ?? outlet.error} onRetry={history.error ? history.refresh : undefined} />
+          {dispatchClosed && (
+            <div className="lv-banner lv-banner--warn" role="status" data-testid="orders-closed">
+              <Ic n="lock" />
+              <div className="lv-banner__txt">
+                <b>Orders closed for the {fmtRunDate(runDate)} run</b>
+                <span>Dispatch closed this run{orderWindow.data?.reason ? ` (${orderWindow.data.reason})` : ''}. Pick a later delivery date, or call the depot for anything urgent.</span>
+              </div>
+            </div>
+          )}
           {moved && (
             <div className="lv-banner lv-banner--warn" role="status" data-testid="order-moved">
               <Ic n="clock" />

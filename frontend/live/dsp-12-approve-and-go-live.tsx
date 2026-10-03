@@ -4,7 +4,8 @@
 //  - a planning-agent draft: AgentRuns('…')/Lodestar.Resume {decision: 'approve'} (planning stores the draft as a
 //    plan version and publishes it with the dispatcher's authority; the agent itself can never publish), or
 //    {decision: 'reject'};
-//  - a plan waiting for approval (auto-plan or manual): Plans('…')/Lodestar.Approve {note}.
+//  - a plan waiting for approval (auto-plan or manual) with trips: Plans('…')/Lodestar.Approve {note}; one without
+//    trips (older capacity-only auto-plan) cannot go live and the approve button stays disabled.
 // A plan or draft with rule violations needs a reason to override them: the note becomes required and is also sent
 // as overrideReason (the API refuses the approval without one, OverrideReasonRequired).
 // On success the design's link continues to the loaders' Lodestar Dock (the cross-device notice).
@@ -72,6 +73,11 @@ function Approve({ onClose, framed = false }: { onClose?: () => void; framed?: b
   const [done, setDone] = useState<string | null>(null);
   const violations = (draft ? draft.detail?.violations : pending?.summary?.violations) ?? [];
   const needsReason = violations.length > 0 && !note.trim();
+  // A plan approval puts its trips into effect; one stored without trips (an older capacity-only auto-plan) cannot
+  // go live (the API answers 409 PlanNotExecutable), so it is not offered: draft the day with the agent instead.
+  // The same holds for an agent draft without trips (it can still be rejected).
+  const shownTrips = draft ? draft.detail?.plan?.trips : (pending?.summary as { plan?: { trips?: unknown[] } } | null | undefined)?.plan?.trips;
+  const notExecutable = (!!draft || !!pending) && !(Array.isArray(shownTrips) && shownTrips.length > 0);
 
   const approveDraft = useAction<{ decision: 'approve' | 'reject' }, AgentRun>(
     (c, p) => c.action<AgentRun>('AgentRuns', runId!, 'Resume', {
@@ -149,6 +155,9 @@ function Approve({ onClose, framed = false }: { onClose?: () => void; framed?: b
                   ) : (
                     <Check label={violations.length ? `${violations.length} rule violation(s) in the plan` : 'Plan checked by the planner'} value={pending ? title(pending.source) : ''} ok={!violations.length} />
                   )}
+                  {notExecutable && (
+                    <Check label={draft ? 'This draft has no trips to put into effect: reject it or re-draft' : 'This plan has no trips to put into effect: draft the day with the planning agent'} value="cannot go live" ok={false} />
+                  )}
                   <Check label="Deferrals with a reason code" value={`${deferred ?? '…'}`} />
                   <Check label="Orders to review" value={review.length ? `${review.length} open` : 'none'} ok={!review.length} />
                   <Check label="Protected outlets kept" value={protectedDeferred === undefined ? '…' : protectedDeferred ? `${protectedDeferred} deferred` : 'never deferred'} ok={!protectedDeferred} />
@@ -184,7 +193,7 @@ function Approve({ onClose, framed = false }: { onClose?: () => void; framed?: b
             <Btn className="d-btn d-btn--ghost" testId="reject-draft" busy={approveDraft.pending} onClick={() => void approveDraft.run({ decision: 'reject' })}>{"Reject draft"}</Btn>
           )}
           <span className="d-btn d-btn--ghost" data-lk="C">{"Not yet"}</span>
-          <Btn className="d-btn d-btn--primary" testId="approve" busy={busy} disabled={!target || Boolean(done) || needsReason} onClick={approve}>
+          <Btn className="d-btn d-btn--primary" testId="approve" busy={busy} disabled={!target || Boolean(done) || needsReason || notExecutable} onClick={approve}>
             <Ic n="check" />{done ? 'Live' : 'Approve & go live'}
           </Btn>
         </div>

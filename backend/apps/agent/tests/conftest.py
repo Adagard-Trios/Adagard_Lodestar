@@ -87,9 +87,9 @@ def odata_mock(data: dict[str, list[dict[str, Any]]]) -> ODataClient:
 
 @pytest.fixture
 def make_runtime() -> Callable[..., AgentRuntime]:
-    def _make(data: dict[str, list[dict[str, Any]]] | None = None, **kw: Any) -> AgentRuntime:
+    def _make(data: dict[str, list[dict[str, Any]]] | None = None, model: Any = None, **kw: Any) -> AgentRuntime:
         client = odata_mock(data or fx.raw())
-        rt = AgentRuntime(MockChatModel(), lambda: client, Checkpointing(MemorySaver(), "memory"), **kw)
+        rt = AgentRuntime(model or MockChatModel(), lambda: client, Checkpointing(MemorySaver(), "memory"), **kw)
         rt.odata = client  # type: ignore[attr-defined]  # exposed for verify()
         return rt
 

@@ -4,6 +4,8 @@
 // planning-agent run (POST AgentRuns) and follows the design link to DSP-22.
 // Before the 4:00 PM cutoff, while the run the queue fills for has no orders yet in the depot(s) in view, the
 // queue is the designed empty state DSP-21 (Empty queue before cutoff): the screen moves there.
+// "Close orders" closes the run in view for the depot being drafted (Orders/Lodestar.CloseOrders): the orders service
+// then refuses new orders for it (422 OrdersClosed) and the stores show "orders closed"; "Reopen orders" undoes it.
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useScreenNav } from '@/components/ScreenShell';
@@ -12,9 +14,10 @@ import { PlanSide, useCount } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { useOpenRun, usePlanScope, useStartAgentRun } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton, Spinner } from '@/components/live/states';
-import { BRAND_LETTER, dayFilter, fmtNum, fmtRunDate, title } from '@/lib/format';
-import { useEntitySet, useQuery } from '@/lib/odata/hooks';
-import type { Order, Vehicle } from '@/lib/odata/types';
+import { BRAND_LETTER, dayFilter, fmtClock, fmtNum, fmtRunDate, isoDay, title } from '@/lib/format';
+import { useAction, useEntitySet, useQuery } from '@/lib/odata/hooks';
+import { valueOf } from '@/lib/odata/client';
+import type { Order, OrderWindow, Vehicle } from '@/lib/odata/types';
 import { depotFilter, useAgentRunId, useFocusId } from '@/lib/workday';
 import { useCutoffLabel } from '@/components/live/planning-rules';
 import { useDepots } from '@/components/live/depots';
@@ -127,6 +130,17 @@ export default function LiveDsp01CutoffQueue() {
   // a busy day can take a while on a small VM: show how long the draft has been running
   const drafting = useElapsed(start.pending);
 
+  // Dispatch may close orders for the run explicitly (the time cut-off still applies on its own).
+  const day = runDate ? isoDay(runDate) : null;
+  const orderWindow = useQuery<OrderWindow>(draftDepot && day ? `order-window:${draftDepot}:${day}` : null, async c =>
+    valueOf<OrderWindow>(await c.fn('Orders', null, 'OrderWindow', { runDate: day!, depot: draftDepot! })),
+  { refreshOn: ['order_window'] });
+  const closedRun = orderWindow.data?.closed === true;
+  const toggleOrders = useAction<boolean, OrderWindow>(
+    async (c, close) => valueOf<OrderWindow>(await c.action('Orders', null, close ? 'CloseOrders' : 'ReopenOrders', { depot: draftDepot!, runDate: day! })),
+    { onSuccess: () => void orderWindow.refresh() },
+  );
+
   return (
     <div className="frame frame--desktop mode-dispatcher" data-name="DSP-01 Cutoff queue">
       <div className="d-app">
@@ -135,13 +149,26 @@ export default function LiveDsp01CutoffQueue() {
           <div className="d-head">
             <div className="d-head__txt">
               <div className="d-eyebrow">
-                {`Orders closed ${cutoffLabel}`}
+                {closedRun
+                  ? `Orders closed by dispatch${orderWindow.data?.closedAt ? ` at ${fmtClock(orderWindow.data.closedAt)}` : ''}`
+                  : `Orders closed ${cutoffLabel}`}
                 <span className="m-sep" />
                 {active.map(d => depotName(d)).join(' + ')}
               </div>
               <div className="d-h1">Cutoff queue for {runDate ? fmtRunDate(runDate) : '…'}</div>
             </div>
-            <span className="d-btn" data-lk="L151"><Ic n="call" />{"Log phone order"}</span>
+            {closedRun && <span className="m-pill m-pill--warn" data-testid="orders-closed"><Ic n="lock" />{"Orders closed"}</span>}
+            <Btn
+              className="d-btn"
+              testId={closedRun ? 'reopen-orders' : 'close-orders'}
+              busy={toggleOrders.pending}
+              disabled={!day || !draftDepot || !orderWindow.data}
+              onClick={() => void toggleOrders.run(!closedRun)}
+            >
+              <Ic n={closedRun ? 'refresh' : 'lock'} />
+              {closedRun ? 'Reopen orders' : `Close orders${active.length > 1 && draftDepot ? ` · ${depotName(draftDepot) ?? draftDepot}` : ''}`}
+            </Btn>
+            {!closedRun && <span className="d-btn" data-lk="L151"><Ic n="call" />{"Log phone order"}</span>}
             <Btn
               className="d-btn d-btn--primary"
               testId="start-agent"
@@ -153,6 +180,7 @@ export default function LiveDsp01CutoffQueue() {
               {start.pending ? `Agent drafting… ${drafting}` : `Draft the plan with the agent${active.length > 1 ? ` · ${depotName(draftDepot!) ?? draftDepot}` : ''}`}
             </Btn>
           </div>
+          {toggleOrders.error && <ErrorBanner error={toggleOrders.error} />}
           {start.error && <ErrorBanner error={start.error} onRetry={() => void start.run({ depot: draftDepot!, runDate: runDate! })} />}
           {scope.noPlans && <Empty title="No run date yet" text="There are no plans to queue orders against." icon="calendar" />}
           <div className="d-kpis">

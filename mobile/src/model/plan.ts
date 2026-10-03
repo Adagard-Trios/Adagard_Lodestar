@@ -34,7 +34,7 @@ export const LATE_RISK = LATE_RISK_PCT;
 
 /** The planning agent's limits (AgentRuns/Lodestar.AgentConfig, from the agent's GET /config). */
 export type AgentLimits = { maxTripsPerVehicle: number; freshMinutesBudget: number; otherMinutesBudget: number };
-export type AgentConfig = { firstDeparture?: string; limits: AgentLimits; rules: Array<{ rule: string; label: string }> };
+export type AgentConfig = { firstDeparture?: string; limits: AgentLimits; rules: { rule: string; label: string }[] };
 
 export function useAgentConfig() {
   return useQuery<AgentConfig>('agent-config', c => c.fn<AgentConfig>('AgentRuns/Lodestar.AgentConfig()'), { persist: true });
@@ -284,8 +284,8 @@ export function runAsPlan(r: AgentRunRow): ReviewPlan {
 }
 
 /**
- * A Plan row that approval can put into effect: one with drawn trips (an agent or manual plan). An auto-plan
- * suggestion has no trips (Plans/Approve answers 409 PlanNotExecutable): it is drafted on the desk with the agent.
+ * A Plan row that approval can put into effect: one with drawn trips (an agent, auto-plan or manual plan). An older
+ * capacity-only auto-plan has no trips (Plans/Approve answers 409 PlanNotExecutable) and is never offered.
  */
 export function isExecutable(p: Pick<Plan, 'summary'>): boolean {
   const trips = (p.summary as { plan?: { trips?: unknown[] } } | null | undefined)?.plan?.trips;
@@ -298,7 +298,9 @@ export async function reviewPlans(c: ODataClient): Promise<ReviewPlan[]> {
     api.plansAwaitingApproval(c),
     c.list<AgentRunRow>('AgentRuns', { filter: "status eq 'NEEDS_APPROVAL'", orderby: 'createdAt desc', top: 10 }).then(r => r.value),
   ]);
-  const out: ReviewPlan[] = [...runs.map(runAsPlan), ...plans.filter(isExecutable)];
+  // An auto-plan is a plan version linked to the agent run that drafted it: list it once, as the run.
+  const runIds = new Set(runs.map(r => r.id));
+  const out: ReviewPlan[] = [...runs.map(runAsPlan), ...plans.filter(p => isExecutable(p) && !runIds.has((p as ReviewPlan).agentRunId ?? ''))];
   return out.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 

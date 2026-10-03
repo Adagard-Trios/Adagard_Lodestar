@@ -5,7 +5,7 @@ import { Text, TextInput, View, StyleSheet } from 'react-native';
 import { dayLabel, hm } from '@/lib/time';
 import { plural } from '@/lodestar/live';
 import { useClaims } from '@/model/hooks';
-import { byClass, cutoffFor, left, lineKg, totals, updateDraft, useNow, useOrderDraft, type DraftLine } from '@/model/store-face';
+import { byClass, cutoffFor, left, lineKg, totals, updateDraft, useNow, useOrderDraft, useOrderWindow, type DraftLine } from '@/model/store-face';
 import type { TempClass } from '@/model/types';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
@@ -28,7 +28,9 @@ export default function ScreenSm13NewOrder() {
   const tChilled = totals(chilled, ratio);
   const orders = [totals(dry).units, tChilled.units].filter(n => n > 0).length;
   const now = useNow();
-  const remaining = left(cutoffFor(runDate), now);
+  // dispatch may close the run before the 4:00 PM cut-off (DSP-01 "Close orders"): the order cannot make it
+  const dispatchClosed = useOrderWindow(runDate)?.closed === true;
+  const remaining = dispatchClosed ? '' : left(cutoffFor(runDate), now);
   const from = draft?.fromRunDate ?? template.data?.runDate;
   const empty = !claims ? 'Sign in to start an order' : template.loading && !draft ? 'Loading your last order…' : `No ${tab === 'AMBIENT' ? 'dry' : 'chilled'} lines yet`;
 
@@ -69,7 +71,7 @@ export default function ScreenSm13NewOrder() {
           <View style={s.v14}>
             <View style={s.v11}>
               <Icon xml={X1} width={18} height={18} style={s.v1} />
-              <Text style={s.t10}>{remaining ? 'Orders close at 4:00 PM' : 'Orders for this day are closed'}</Text>
+              <Text style={s.t10}>{remaining ? 'Orders close at 4:00 PM' : dispatchClosed ? 'Dispatch closed orders for this day' : 'Orders for this day are closed'}</Text>
             </View>
             <View style={s.v13}>
               <Text style={s.t12}>{remaining || '—'}</Text>

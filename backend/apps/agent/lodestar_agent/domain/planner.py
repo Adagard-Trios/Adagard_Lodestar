@@ -2,9 +2,11 @@
 
 Packing rules the drafter enforces itself:
   chilled orders only on reefers, van_only outlets only on vans, one brand +
-  one district per trip, at most 2 trips per vehicle, weight, volume and the
-  daily minutes budget. It does *not* look at fuel quotas or mall windows:
-  ``check_rules`` is the authority and feeds violations back as constraints.
+  one district per trip, at most 2 trips per vehicle, weight, volume, the
+  daily minutes budget, the weekly fuel quota and every stop's window close
+  (mall windows included), simulated with the same clock ``schedule`` uses.
+  ``check_rules`` stays the authority: anything it still finds is fed back as
+  constraints by the graph's bounded redraft loop (the safety net).
 """
 
 from __future__ import annotations
@@ -14,6 +16,7 @@ from typing import Any
 
 from . import heuristics as h
 from .context import PlanningContext
+from .stop_model import apply_stop_model
 
 Plan = dict[str, Any]
 
@@ -104,6 +107,8 @@ def schedule(ctx: PlanningContext, plan: Plan) -> Plan:
             trip["returns"] = h.fmt_min(t + to_dist)
             prev_return = t + to_dist
             trips.append(trip)
+    # the Task 1 model's service minutes, ETA and late risk per stop, one batch per draft (heuristics stay without it)
+    apply_stop_model(ctx, trips)
     plan["trips"] = trips
     return plan
 
@@ -121,9 +126,11 @@ def _index_constraints(constraints: list[dict[str, Any]]) -> tuple[dict[str, dic
     return avoid, prioritise
 
 
-def _unplaced_reason(ctx: PlanningContext, oid: str, avoid: dict[str, dict[str, str]]) -> str:
+def _unplaced_reason(ctx: PlanningContext, oid: str, avoid: dict[str, dict[str, str]], blocked: dict[str, str] | None = None) -> str:
     if avoid.get(oid):
         return sorted(avoid[oid].values())[0]
+    if blocked and oid in blocked:
+        return blocked[oid]
     needs_reefer, needs_van = ctx.needs_reefer(oid), ctx.needs_van(oid)
 
     def compatible(v: dict[str, Any]) -> bool:
@@ -136,6 +143,38 @@ def _unplaced_reason(ctx: PlanningContext, oid: str, avoid: dict[str, dict[str, 
     if needs_van:
         return "ACCESS"
     return "CAP_TIME"
+
+
+# ---------------------------------------------------------------- up-front rule checks while packing
+def _trip_clock(ctx: PlanningContext, travel: dict[str, Any], order_ids: list[str], prev_return: int) -> tuple[bool, int]:
+    """(every stop arrives by its window close, return to depot) for a tentative trip.
+
+    The same clock as ``schedule``: stops in window order, the van leaves no earlier than the first departure, the
+    earliest window less the drive out, or the vehicle's previous return, and waits at a stop until its window opens.
+    """
+    ordered = sorted(order_ids, key=lambda o: _stop_sort_key(ctx, o))
+    to_dist = int(travel.get("depotToDistMin") or 0)
+    inter = int(travel.get("interStopMin") or 0)
+    earliest_open = min(h.to_min(ctx.window_of(o)[0]) for o in ordered)
+    t = max(h.to_min(ctx.first_departure), earliest_open - to_dist, prev_return) + to_dist
+    on_time = True
+    for i, oid in enumerate(ordered):
+        opens, closes = ctx.window_of(oid)
+        if i:
+            t += inter
+        arrive = max(t, h.to_min(opens))
+        if arrive > h.to_min(closes):
+            on_time = False
+        t = arrive + ctx.service_min(oid)
+    return on_time, t + to_dist
+
+
+def _fuel_left(v: dict[str, Any], litres_planned: float) -> float | None:
+    """Litres of weekly quota still free after the trips already packed, or None when the vehicle has no quota."""
+    quota = float(v.get("weeklyLFuel") or 0)
+    if not quota:
+        return None
+    return quota - float(v.get("usedLThisWeek") or 0) - litres_planned
 
 
 # ---------------------------------------------------------------- the drafter
@@ -163,6 +202,8 @@ def draft_plan(ctx: PlanningContext, constraints: list[dict[str, Any]] | None = 
 
     vehicle_trips: dict[str, list[dict[str, Any]]] = defaultdict(list)
     unassigned: list[dict[str, Any]] = []
+    # why an order was last turned away by an up-front rule check (FUEL / WINDOW), for its deferral reason
+    blocked: dict[str, str] = {}
 
     for (brand, district, needs_reefer, needs_van), oids in sorted(groups.items(), key=group_key):
         travel = ctx.travel_for(district)
@@ -193,8 +234,11 @@ def draft_plan(ctx: PlanningContext, constraints: list[dict[str, Any]] | None = 
                 vid = v["id"]
                 used = sum(t["minutes"] for t in vehicle_trips[vid])
                 budget = h.minutes_budget([t["brand"] for t in vehicle_trips[vid]] + [brand])
+                fuel_left = _fuel_left(v, sum(t["litres"] for t in vehicle_trips[vid]))
+                prev_return = vehicle_trips[vid][-1]["returns"] if vehicle_trips[vid] else 0
                 kg = m3 = 0.0
                 services: list[int] = []
+                returns = prev_return
                 for oid in remaining:
                     if vid in avoid.get(oid, {}):
                         continue
@@ -205,15 +249,33 @@ def draft_plan(ctx: PlanningContext, constraints: list[dict[str, Any]] | None = 
                         continue
                     if used + h.trip_minutes(travel, nsvc) > budget:
                         continue
-                    kg, m3, services = nkg, nm3, nsvc
+                    # weekly fuel quota: this trip's litres (one more stop) on top of the week and the day so far
+                    if fuel_left is not None and h.trip_litres(h.trip_km(travel, len(nsvc)), v.get("kmPerLitre")) > fuel_left:
+                        blocked[oid] = "FUEL"
+                        continue
+                    # every stop of the trip (the earlier ones too) still arrives by its window close
+                    on_time, nreturns = _trip_clock(ctx, travel, placed + [oid], prev_return)
+                    if not on_time:
+                        blocked[oid] = "WINDOW"
+                        continue
+                    kg, m3, services, returns = nkg, nm3, nsvc, nreturns
                     placed.append(oid)
                 if placed:
                     vehicle_trips[vid].append(
-                        {"orderIds": placed, "brand": brand, "minutes": h.trip_minutes(travel, services), "tripNo": len(vehicle_trips[vid]) + 1}
+                        {
+                            "orderIds": placed,
+                            "brand": brand,
+                            "minutes": h.trip_minutes(travel, services),
+                            "litres": h.trip_litres(h.trip_km(travel, len(placed)), v.get("kmPerLitre")),
+                            "returns": returns,
+                            "tripNo": len(vehicle_trips[vid]) + 1,
+                        }
                     )
+                    for oid in placed:
+                        blocked.pop(oid, None)
                     break
             if not placed:
-                unassigned.extend({"orderId": o, "reason": _unplaced_reason(ctx, o, avoid)} for o in remaining)
+                unassigned.extend({"orderId": o, "reason": _unplaced_reason(ctx, o, avoid, blocked)} for o in remaining)
                 break
             remaining = [o for o in remaining if o not in placed]
 

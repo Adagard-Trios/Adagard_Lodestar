@@ -6,9 +6,8 @@ import PlanBoard from '@/live/dsp-02-plan-board';
 import DeferralDecision from '@/live/dsp-03-deferral-decision';
 import ApproveAndGoLive from '@/live/dsp-12-approve-and-go-live';
 import AskAgent from '@/live/dsp-39-ask-the-planning-agent';
-import SignIn from '@/live/dsp-06-sign-in';
 import type { FakeRequest } from './helpers/live';
-import { agentConfigReply, page, renderLive, SESSIONS } from './helpers/live';
+import { agentConfigReply, page, renderLive } from './helpers/live';
 import { closeOverlay, currentOverlay } from '@/lib/overlay';
 
 const router = { push: jest.fn(), replace: jest.fn(), back: jest.fn(), forward: jest.fn(), refresh: jest.fn(), prefetch: jest.fn() };
@@ -68,6 +67,30 @@ describe('DSP-01 Cutoff queue', () => {
     const post = view.calls.find(c => c.method === 'POST')!;
     expect(post).toMatchObject({ path: 'AgentRuns', body: { depot: 'PELIYAGODA', runDate: '2026-04-07T00:00:00.000Z' } });
     expect(window.sessionStorage.getItem('lodestar.agentRun')).toBe('run-1');
+  });
+
+  it('closes orders for the run with Orders/Lodestar.CloseOrders, shows the closed state, and reopens', async () => {
+    let closed = false;
+    const win = () => ({ depot: 'PELIYAGODA', runDate: '2026-04-07', closed, closedBy: closed ? 'u-d' : null, closedAt: closed ? '2026-04-06T11:00:00.000Z' : null, reason: null, reopenedBy: null, reopenedAt: null });
+    const view = renderLive(<CutoffQueue />, {
+      handler: req => {
+        if (req.path.startsWith('Orders/Lodestar.OrderWindow(')) return win();
+        if (req.path === 'Orders/Lodestar.CloseOrders') { closed = true; return win(); }
+        if (req.path === 'Orders/Lodestar.ReopenOrders') { closed = false; return win(); }
+        return base(req) ?? (req.path === 'Orders' ? page([order('ORDT1')], 1) : page([]));
+      },
+    });
+    await screen.findByTestId('queue');
+    const read = await waitFor(() => view.calls.find(c => c.path.startsWith('Orders/Lodestar.OrderWindow('))!);
+    expect(read.path).toBe("Orders/Lodestar.OrderWindow(runDate=2026-04-07,depot='PELIYAGODA')");
+    expect(screen.queryByTestId('orders-closed')).toBeNull();
+    fireEvent.click(await screen.findByTestId('close-orders'));
+    expect(await screen.findByTestId('orders-closed')).toHaveTextContent('Orders closed');
+    expect(view.calls.find(c => c.method === 'POST')).toMatchObject({ path: 'Orders/Lodestar.CloseOrders', body: { depot: 'PELIYAGODA', runDate: '2026-04-07' } });
+    expect(screen.getByText(/Orders closed by dispatch/)).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('reopen-orders'));
+    await waitFor(() => expect(screen.queryByTestId('orders-closed')).toBeNull());
+    expect(view.calls.filter(c => c.method === 'POST').map(c => c.path)).toEqual(['Orders/Lodestar.CloseOrders', 'Orders/Lodestar.ReopenOrders']);
   });
 
   it('opens on the first run from today that still has open orders (a new demo day), not the latest plan', async () => {
@@ -181,7 +204,7 @@ describe('DSP-12 Approve and go live', () => {
 
   it('approves a plan waiting for approval with Plans(…)/Lodestar.Approve when there is no agent draft', async () => {
     const view = renderLive(<ApproveAndGoLive />, {
-      handler: req => base(req) ?? (req.path === 'Plans' ? page([{ id: 'PLT-v5', depot: 'KANDY', runDate: DAY, version: 5, status: 'NEEDS_APPROVAL', source: 'AUTOPLAN' }])
+      handler: req => base(req) ?? (req.path === 'Plans' ? page([{ id: 'PLT-v5', depot: 'KANDY', runDate: DAY, version: 5, status: 'NEEDS_APPROVAL', source: 'AUTOPLAN', summary: { plan: { trips: [{ id: 'VEHT1-T1' }] } } }])
         : req.method === 'POST' ? { id: 'PLT-v5', status: 'PUBLISHED' } : page([])),
     });
     await screen.findByText(/Approve \d+ orders and go live/);
@@ -189,10 +212,20 @@ describe('DSP-12 Approve and go live', () => {
     await waitFor(() => expect(view.calls.some(c => c.method === 'POST' && c.path === "Plans('PLT-v5')/Lodestar.Approve")).toBe(true));
   });
 
+  it('does not offer to approve a plan without trips (an older capacity-only auto-plan): it cannot go live', async () => {
+    const view = renderLive(<ApproveAndGoLive />, {
+      handler: req => base(req) ?? (req.path === 'Plans' ? page([{ id: 'PLT-v2', depot: 'KANDY', runDate: DAY, version: 2, status: 'NEEDS_APPROVAL', source: 'AUTOPLAN', summary: { suggestions: [] } }]) : page([])),
+    });
+    expect(await screen.findByText('This plan has no trips to put into effect: draft the day with the planning agent')).toBeInTheDocument();
+    expect(screen.getByTestId('approve')).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(screen.getByTestId('approve'));
+    expect(view.calls.filter(c => c.method === 'POST')).toHaveLength(0);
+  });
+
   it('a plan with rule violations needs an override reason, sent as overrideReason with the note', async () => {
     const violation = { rule: 'weight', tripId: 'VEHT1-T1', vehicleId: 'VEHT1', orderIds: ['ORDT1'], reason: 'Over weight', detail: '1050 kg of 1000 kg' };
     const view = renderLive(<ApproveAndGoLive />, {
-      handler: req => base(req) ?? (req.path === 'Plans' ? page([{ id: 'PLT-v5', depot: 'KANDY', runDate: DAY, version: 5, status: 'NEEDS_APPROVAL', source: 'MANUAL', summary: { violations: [violation] } }])
+      handler: req => base(req) ?? (req.path === 'Plans' ? page([{ id: 'PLT-v5', depot: 'KANDY', runDate: DAY, version: 5, status: 'NEEDS_APPROVAL', source: 'MANUAL', summary: { plan: { trips: [{ id: 'VEHT1-T1' }] }, violations: [violation] } }])
         : req.method === 'POST' ? { id: 'PLT-v5', status: 'PUBLISHED' } : page([])),
     });
     await screen.findByText(/Approve \d+ orders and go live/);
@@ -260,17 +293,4 @@ describe('DSP-39 Ask the planning agent', () => {
   });
 });
 
-describe('DSP-06 Sign in', () => {
-  it('starts the Keycloak login instead of showing a password form', async () => {
-    const view = renderLive(<SignIn />, { handler: () => page([]), session: null });
-    fireEvent.click(screen.getByTestId('sign-in'));
-    await waitFor(() => expect(view.auth.login).toHaveBeenCalledWith('/plan'));
-    expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument();
-  });
-
-  it('offers to continue when already signed in', () => {
-    renderLive(<SignIn />, { handler: () => page([]), session: SESSIONS.dispatcher });
-    fireEvent.click(screen.getByTestId('sign-in'));
-    expect(router.push).toHaveBeenCalledWith('/plan');
-  });
-});
+// DSP-06: the designed sign-in form (direct grant) is covered in sign-in-screens.test.tsx.
