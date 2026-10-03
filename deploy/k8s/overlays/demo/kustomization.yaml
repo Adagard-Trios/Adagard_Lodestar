@@ -17,46 +17,46 @@ resources:
 images:
 - name: lodestar-agent
   newName: ghcr.io/adagard-trios/lodestar-agent
-  newTag: pending-first-ci-run
+  newTag: 0b95ca31a62cbfaea98602a600d642d2cbcd25ef
 - name: lodestar-audit
   newName: ghcr.io/adagard-trios/lodestar-audit
-  newTag: pending-first-ci-run
+  newTag: 0b95ca31a62cbfaea98602a600d642d2cbcd25ef
 - name: lodestar-auth
   newName: ghcr.io/adagard-trios/lodestar-auth
-  newTag: pending-first-ci-run
+  newTag: 0b95ca31a62cbfaea98602a600d642d2cbcd25ef
 - name: lodestar-fleet
   newName: ghcr.io/adagard-trios/lodestar-fleet
-  newTag: pending-first-ci-run
+  newTag: 0b95ca31a62cbfaea98602a600d642d2cbcd25ef
 - name: lodestar-frontend
   newName: ghcr.io/adagard-trios/lodestar-frontend
-  newTag: pending-first-ci-run
+  newTag: 0b95ca31a62cbfaea98602a600d642d2cbcd25ef
 - name: lodestar-gateway
   newName: ghcr.io/adagard-trios/lodestar-gateway
-  newTag: pending-first-ci-run
+  newTag: 0b95ca31a62cbfaea98602a600d642d2cbcd25ef
 - name: lodestar-migrate
   newName: ghcr.io/adagard-trios/lodestar-migrate
-  newTag: pending-first-ci-run
+  newTag: 0b95ca31a62cbfaea98602a600d642d2cbcd25ef
 - name: lodestar-mobile-web
   newName: ghcr.io/adagard-trios/lodestar-mobile-web
-  newTag: pending-first-ci-run
+  newTag: 0b95ca31a62cbfaea98602a600d642d2cbcd25ef
 - name: lodestar-notifications
   newName: ghcr.io/adagard-trios/lodestar-notifications
-  newTag: pending-first-ci-run
+  newTag: 0b95ca31a62cbfaea98602a600d642d2cbcd25ef
 - name: lodestar-ocr
   newName: ghcr.io/adagard-trios/lodestar-ocr
-  newTag: pending-first-ci-run
+  newTag: 0b95ca31a62cbfaea98602a600d642d2cbcd25ef
 - name: lodestar-orders
   newName: ghcr.io/adagard-trios/lodestar-orders
-  newTag: pending-first-ci-run
+  newTag: 0b95ca31a62cbfaea98602a600d642d2cbcd25ef
 - name: lodestar-outlets
   newName: ghcr.io/adagard-trios/lodestar-outlets
-  newTag: pending-first-ci-run
+  newTag: 0b95ca31a62cbfaea98602a600d642d2cbcd25ef
 - name: lodestar-planning
   newName: ghcr.io/adagard-trios/lodestar-planning
-  newTag: pending-first-ci-run
+  newTag: 0b95ca31a62cbfaea98602a600d642d2cbcd25ef
 - name: lodestar-sync
   newName: ghcr.io/adagard-trios/lodestar-sync
-  newTag: pending-first-ci-run
+  newTag: 0b95ca31a62cbfaea98602a600d642d2cbcd25ef
 - name: lodestar-trips
   newName: ghcr.io/adagard-trios/lodestar-trips
-  newTag: pending-first-ci-run
+  newTag: 0b95ca31a62cbfaea98602a600d642d2cbcd25ef
