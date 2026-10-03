@@ -1,9 +1,10 @@
 # Demo overlay: the whole platform on the demo VM's k3s, synced by Argo CD (deploy/argocd/envs/demo).
 # Setup and the compose <-> k3s switch: deploy/argocd/README.md, "Demo on k3s".
 #
-# This file holds only the image tags. CI (.circleci/config.yml, gitops-bump) rewrites it on every main
-# build with `kustomize edit set image lodestar-<svc>=ghcr.io/adagard-trios/lodestar-<svc>:<commit sha>`
-# and commits it with [skip ci]; `kustomize edit` reformats this file, so keep the rest in platform/.
+# This file holds only the image tags. CI (GitHub Actions, .github/workflows/deploy-demo.yml, job `release`)
+# rewrites it on every green main build with
+# `kustomize edit set image lodestar-<svc>=ghcr.io/adagard-trios/lodestar-<svc>:<commit sha>` for every image
+# listed below, and commits it with [skip ci]; `kustomize edit` reformats this file, so keep the rest in platform/.
 # The names on the left are lodestar-<svc> because overlays/local has already renamed lodestar/<svc>.
 #
 # Build (the realm and the Postgres init script live outside this folder; Argo CD gets the same flag
@@ -40,6 +41,9 @@ images:
   newTag: pending-first-ci-run
 - name: lodestar-notifications
   newName: ghcr.io/adagard-trios/lodestar-notifications
+  newTag: pending-first-ci-run
+- name: lodestar-ocr
+  newName: ghcr.io/adagard-trios/lodestar-ocr
   newTag: pending-first-ci-run
 - name: lodestar-orders
   newName: ghcr.io/adagard-trios/lodestar-orders

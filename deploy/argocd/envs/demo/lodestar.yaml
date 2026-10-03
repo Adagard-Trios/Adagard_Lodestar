@@ -1,5 +1,5 @@
 # The demo application: deploy/k8s/overlays/demo on main, automated sync with prune and self-heal.
-# CircleCI's gitops-bump job commits the new image tags to that overlay ([skip ci]); Argo CD polls the repo
+# GitHub Actions (deploy-demo.yml, job `release`) commits the new image tags to that overlay ([skip ci]); Argo CD polls the repo
 # (every 3 minutes by default), runs the migrate Job as a Sync hook, then rolls the services.
 apiVersion: argoproj.io/v1alpha1
 kind: Application

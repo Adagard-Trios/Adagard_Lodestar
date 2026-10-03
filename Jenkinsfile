@@ -1,5 +1,5 @@
 // Waypoint Lodestar · main pipeline (PLATFORM.md §7).
-// PRs are checked by CircleCI (.circleci/config.yml). This pipeline runs on `main`:
+// Reference only, not on the live path (GitHub Actions: .github/workflows/deploy-demo.yml). This pipeline would run on `main`:
 //   unit suites -> compose stack + Playwright -> SonarQube gate -> images (Trivy, push, cosign)
 //   -> terraform plan/apply (dev, manual approval) -> GitOps tag bump in deploy/k8s/overlays/dev -> Argo CD syncs.
 //

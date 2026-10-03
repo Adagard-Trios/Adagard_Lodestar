@@ -22,8 +22,8 @@ fi
 
 repo=$(git remote get-url origin | sed -E 's#^https://github\.com/##; s#\.git$##')
 sha=$(curl -fsS --max-time 20 -H 'Accept: application/vnd.github+json' \
-  "https://api.github.com/repos/$repo/actions/workflows/deploy-demo.yml/runs?branch=main&status=success&per_page=1" \
-  | jq -r '.workflow_runs[0].head_sha // empty')
+  "https://api.github.com/repos/$repo/actions/workflows/deploy-demo.yml/runs?branch=main&status=success&per_page=20" \
+  | jq -r '[.workflow_runs[] | select(.event != "pull_request")][0].head_sha // empty')   # PR runs only check, never deploy
 [ -n "$sha" ] || exit 0
 [ "$sha" = "$(cat .deployed-sha 2>/dev/null || true)" ] && exit 0
 

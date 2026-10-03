@@ -127,8 +127,8 @@ An order for a run date must be placed before **4:00 PM Asia/Colombo on the day 
 
 ## 7. CI/CD
 
-- **CircleCI**, pull requests: lint, typecheck, Jest, pytest and Cypress. Fast feedback on every PR.
-- **Jenkins**, `main`:
+- **GitHub Actions** (`.github/workflows/deploy-demo.yml`, the live path): on every pull request and on `main`, lint, typecheck, Jest, pytest and integration tests on Postgres; on `main` it then pushes the images to GHCR and bumps the demo overlay for Argo CD.
+- **Jenkins** (reference design for AKS, not applied), `main`:
   1. Build.
   2. Run the full `docker compose` stack plus Playwright.
   3. SonarQube analysis with a quality gate.

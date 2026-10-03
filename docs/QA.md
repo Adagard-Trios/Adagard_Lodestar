@@ -235,39 +235,35 @@ It prints PASS/FAIL per stage and exits non-zero if any stage failed. The full-s
 
 ## CI/CD flow
 
+One pipeline: GitHub Actions, [`.github/workflows/deploy-demo.yml`](../.github/workflows/deploy-demo.yml). **The live path is GitHub Actions → GHCR → the demo VM.**
+
 ```
-PR ──▶ CircleCI pr-checks: lint · typecheck · unit suites ∥ · integration · Sonar gate · full stack (2 shards)
-main ─▶ CircleCI main: the same ─▶ images → ghcr.io (SHA tag) ─▶ tag bump in deploy/k8s/overlays/demo [skip ci]
-                                 ─▶ Argo CD syncs the demo VM's k3s ─▶ smoke test of the public URL as the four roles
+PR to main ──▶ checks: data-model check · lint · typecheck · unit suites · integration (Postgres) · Sonar gate (optional)
+                       (no build, no push, no deploy)
+push to main ─▶ checks ─▶ changes ─▶ build: only the changed images → ghcr.io (:main and :<sha>)
+                                  ─▶ release: every image of overlays/demo at :<sha>, tag bump in
+                                     deploy/k8s/overlays/demo/kustomization.yaml, commit [skip ci]
+               ├─▶ compose VM (live today): autodeploy.sh polls for the newest green run and deploys that SHA
+               └─▶ Argo CD core on the VM's k3s (after the cut-over, deploy/argocd/README.md) syncs the bump
 ```
 
-Jenkins (`Jenkinsfile`) is not on the live path any more; it is kept for reference only.
+Jenkins (`Jenkinsfile`) is not on the live path; it is kept for reference only. The full compose stack with Playwright and the Cypress click-through are not in CI (they need a ~25-minute machine run); they run with `tools/qa/gate.sh` before a release.
 
-### CircleCI jobs (`.circleci/config.yml`)
+### Jobs
 
-| Stage | Jobs |
-|---|---|
-| Lint and typecheck | `frontend-lint`, `frontend-typecheck`, `backend-lint`, `backend-typecheck`, `mobile-typecheck`, `screengen-check` |
-| Unit suites (parallel, with coverage) | `frontend-jest`, `mobile-jest`, `backend-jest`, `agent-pytest`, `frontend-build` → `frontend-cypress` |
-| Integration | `backend-integration`: OData endpoints against a Postgres service container (`npm run test:int`) |
-| Sonar | `sonar`: SonarQube Cloud scan with every suite's coverage, `sonar.qualitygate.wait=true` |
-| Full stack | `full-stack` (machine executor, 2 shards): `docker compose up --build` on synthetic data, `tools/qa/wait-stack.sh`, then Playwright projects `api`, `web-chromium`, `mobile-web`, `flows`, `clicks`, `visual` |
-| Deliver (main only) | `images` requires every job above; then `gitops-bump`, then `smoke-public` |
+| Job | When | What |
+|---|---|---|
+| `checks` | PRs and `main` | `node tools/docs/erd.mjs --check`; backend lint, typecheck, `jest --ci --coverage`, integration tests against a `postgres:16` service container (`npm run test:int`); frontend lint, typecheck, Jest; mobile `tsc`, Jest; agent pytest (coverage.xml); OCR pytest; coverage uploaded as the `coverage` artifact; SonarQube Cloud scan with `sonar.qualitygate.wait=true` when `SONAR_TOKEN` is set |
+| `changes` | `main` | `deploy/azure-demo/changed-images.sh`: which images the push needs rebuilt |
+| `build` | `main`, after `checks` | matrix, one image per runner, pushed to `ghcr.io/adagard-trios/lodestar-<svc>` with tags `main` and the commit SHA |
+| `release` | `main`, after `build` | images that were not rebuilt get `:<sha>` as an alias of `:main`; `kustomize edit set image` for every image the demo overlay lists; render guard; commit `deploy: demo → <sha7> [skip ci]` pushed with `GITHUB_TOKEN` |
 
-Artifacts: coverage per workspace, the Playwright HTML report, traces and screenshots of failures (`playwright-traces`), the design-conformance report with diff images, and the stack logs when a job fails.
+Loops: the bump commit says `[skip ci]` (GitHub skips it), pushes made with `GITHUB_TOKEN` never start a workflow, and every job also skips a head commit that contains `[skip ci]`. PR runs never count as deployable: `autodeploy.sh` ignores runs whose event is `pull_request`.
 
-Expected time per run (free plan, 30,000 credits a month): about 90 credit-minutes for a pull request (≈ 900 credits: the two full-stack shards are ~50 of them) and about 110 on `main`, so roughly 25–30 runs a month. Wall-clock time is about 30 minutes, set by the full-stack shards.
-
-Caching: npm per workspace (`circleci/node` orb), pip, the Cypress binary, the Next build cache and the Playwright browsers. Docker layer caching is left off: it costs 200 credits per job, more than the build time it saves here.
+Caching: npm per workspace and pip (`actions/setup-node`, `actions/setup-python`), Docker layers per image in the GitHub Actions cache.
 
 ### Setting up the credentials (owner only)
 
-1. **SonarQube Cloud**: sign in at sonarcloud.io with GitHub, import the repository (free for public repositories), note the organization key and project key. Run `SONAR_HOST_URL=https://sonarcloud.io SONAR_TOKEN=<token> SONAR_ORGANIZATION=<org> SONAR_PROJECT_KEY=<key> tools/qa/sonar-gate.sh`. Turn off "Automatic Analysis" for the project (CI analysis replaces it).
-2. **CircleCI**: set up the project from the GitHub repository using the existing `.circleci/config.yml`. Organization Settings → Contexts:
-   - `sonarcloud`: `SONAR_TOKEN`, `SONAR_ORGANIZATION`, `SONAR_PROJECT_KEY`
-   - `ghcr`: `GHCR_USER` and `GHCR_TOKEN` (a GitHub token with `write:packages`)
-   - `smoke`: nothing secret today (the demo personas' passwords are public in the README); kept for later
-3. **Deploy key** for the tag bump: `ssh-keygen -t ed25519 -f lodestar-ci -N ""`; add `lodestar-ci.pub` to the GitHub repository as a deploy key **with write access**; add the private key in CircleCI → Project Settings → SSH Keys (host `github.com`); put its fingerprint in the `deploy-key-fingerprint` pipeline parameter.
-4. Set the `public-url` pipeline parameter once the demo URL is live.
-
-If SonarQube Cloud is not wanted, the `sonar` job can instead start `sonarqube:community` as a service container and scan against it.
+1. **GHCR and the tag bump**: nothing to create. Both use the workflow's built-in `GITHUB_TOKEN` (`packages: write`, `contents: write`). The workflow requests these permissions per job, so the repository default may stay read-only (only an organization policy that caps `GITHUB_TOKEN` would block them). If `main` is protected, allow GitHub Actions to push to it (or the `release` job's push is rejected).
+2. **SonarQube Cloud (optional)**: sign in at sonarcloud.io with GitHub, import the repository (free for public repositories), turn off "Automatic Analysis" (CI analysis replaces it), and run `SONAR_HOST_URL=https://sonarcloud.io SONAR_TOKEN=<token> SONAR_ORGANIZATION=<org> SONAR_PROJECT_KEY=<key> tools/qa/sonar-gate.sh` once. Then add the repository **secret** `SONAR_TOKEN`; the organization and project key default to `adagard-trios` / `waypoint-lodestar` and can be overridden with the repository **variables** `SONAR_ORGANIZATION` / `SONAR_PROJECT_KEY`. Without the secret the scan step is skipped.
+3. **GHCR packages**: make the `lodestar-*` packages public, or give the VM a `read:packages` token (deploy/azure-demo/README.md).

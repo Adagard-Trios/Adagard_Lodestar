@@ -1,8 +1,14 @@
-# Continuous deployment of the public demo (deploy/azure-demo/README.md, "Automatic deploys").
-#   push to main that changes app code or deploy config → build only the changed images → push them to GHCR
-#   (tags :main and :<sha>). The demo VM polls for the newest successful run of this workflow and deploys that
-#   commit itself (deploy/azure-demo/autodeploy.sh): nothing here can reach the VM, and no cloud or SSH secret
-#   lives in this public repository.
+# The one CI/CD pipeline (docs/QA.md "CI/CD"). The live path is GitHub Actions → GHCR → the demo VM.
+#   pull request to main   checks only: lint, typecheck, every unit suite, backend integration (real Postgres),
+#                          optional SonarQube Cloud scan. Never builds, pushes or deploys.
+#   push to main           checks → build only the changed images → push them to GHCR (tags :main and :<sha>)
+#                          → release: every image the demo overlay lists gets the :<sha> tag, and
+#                          deploy/k8s/overlays/demo/kustomization.yaml is bumped to <sha> ([skip ci] commit,
+#                          for Argo CD on k3s: deploy/argocd/README.md "Demo on k3s").
+#   The compose demo VM polls for the newest successful non-PR run of this workflow and deploys that commit itself
+#   (deploy/azure-demo/autodeploy.sh): nothing here can reach the VM, and no cloud or SSH secret lives in this
+#   public repository. Secrets: SONAR_TOKEN (optional; the scan is skipped without it). GHCR and the tag-bump
+#   push use the built-in GITHUB_TOKEN.
 name: deploy-demo
 
 on:
@@ -16,8 +22,11 @@ on:
       - 'deploy/azure-demo/**'
       - 'deploy/local/postgres/**'
       - 'tools/qa/wait-stack.sh'
+      - 'tools/docs/**'
       - '.github/workflows/deploy-demo.yml'
       - '!**/*.md'
+  pull_request:
+    branches: [main]
   workflow_dispatch:
     inputs:
       all:
@@ -27,18 +36,152 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
-# one deploy at a time, in push order
+# main: one deploy at a time, in push order. PRs: the newest push to a PR cancels its older run.
 concurrency:
-  group: deploy-demo
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && format('checks-{0}', github.ref) || 'deploy-demo' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   REGISTRY: ghcr.io/adagard-trios
 
 jobs:
+  # ------------------------------------------------------------------ the quality gate (PRs and main)
+  checks:
+    # the tag-bump commit says [skip ci]; GitHub already skips it, this is the belt to those braces
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: lodestar
+          POSTGRES_PASSWORD: lodestar-ci
+          POSTGRES_DB: lodestar_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U lodestar -d lodestar_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      CI: 'true'
+      NEXT_TELEMETRY_DISABLED: '1'
+      CYPRESS_INSTALL_BINARY: '0'
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}   # optional; empty skips the scan
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # SonarQube Cloud blames new code
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+            mobile/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            backend/apps/agent/requirements-dev.txt
+            backend/apps/ocr/requirements-dev.txt
+
+      - name: Data-model diagram is up to date with schema.prisma
+        run: node tools/docs/erd.mjs --check
+
+      - name: backend · npm ci + prisma generate
+        working-directory: backend
+        run: npm ci && npx prisma generate
+      - name: backend · lint
+        working-directory: backend
+        run: npm run lint
+      - name: backend · typecheck
+        working-directory: backend
+        run: npm run typecheck
+      - name: backend · jest (coverage)
+        working-directory: backend
+        run: npx jest --ci --coverage
+      - name: backend · integration tests against Postgres (global setup applies the migrations)
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://lodestar:lodestar-ci@localhost:5432/lodestar_test
+        run: npm run test:int -- --ci --coverage --coverageDirectory=coverage-int
+
+      - name: frontend · npm ci
+        working-directory: frontend
+        run: npm ci
+      - name: frontend · lint
+        working-directory: frontend
+        run: npm run lint
+      - name: frontend · typecheck (app, Jest, Cypress)
+        working-directory: frontend
+        run: npm run typecheck
+      - name: frontend · jest (coverage)
+        working-directory: frontend
+        run: npx jest --ci --coverage
+
+      - name: mobile · npm ci
+        working-directory: mobile
+        run: npm ci
+      - name: mobile · typecheck
+        working-directory: mobile
+        run: npx tsc --noEmit
+      - name: mobile · jest (coverage)
+        working-directory: mobile
+        run: npx jest --ci --coverage --coverageReporters=lcov --coverageReporters=text-summary
+
+      - name: agent · pytest (coverage)
+        working-directory: backend/apps/agent
+        run: |
+          python -m pip install -r requirements-dev.txt
+          mkdir -p reports
+          python -m pytest --junitxml=reports/pytest.xml --cov=lodestar_agent --cov-report=xml:coverage.xml
+      - name: ocr · pytest
+        working-directory: backend/apps/ocr
+        run: |
+          # as the Dockerfile: rapidocr without its own deps, so OpenCV stays the headless build
+          python -m venv .venv-ci
+          grep -v '^rapidocr' requirements.txt > /tmp/ocr-deps.txt
+          grep -v '^-r ' requirements-dev.txt >> /tmp/ocr-deps.txt
+          .venv-ci/bin/python -m pip install -r /tmp/ocr-deps.txt
+          .venv-ci/bin/python -m pip install --no-deps "$(grep '^rapidocr' requirements.txt)"
+          .venv-ci/bin/python -m pytest
+
+      - name: Coverage reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          if-no-files-found: ignore
+          retention-days: 14
+          path: |
+            backend/coverage
+            backend/coverage-int
+            frontend/coverage
+            mobile/coverage
+            backend/apps/agent/coverage.xml
+            backend/apps/agent/reports
+
+      # Optional: runs only when the SONAR_TOKEN secret exists, and then waits for the quality gate
+      # (docs/QA.md): no new bugs/vulnerabilities, no new blocker/critical issues, coverage on new code >= 80 %,
+      # duplication on new code < 3 %. Pull requests are detected from the GitHub Actions environment.
+      - name: SonarQube Cloud scan + quality gate
+        if: ${{ env.SONAR_TOKEN != '' }}
+        env:
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION || 'adagard-trios' }}
+          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || 'waypoint-lodestar' }}
+        run: |
+          npx -y sonarqube-scanner@4 \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.organization="$SONAR_ORGANIZATION" \
+            -Dsonar.projectKey="$SONAR_PROJECT_KEY" \
+            -Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=600
+
+  # ------------------------------------------------------------------ main only: which images changed
   changes:
+    if: ${{ github.event_name != 'pull_request' && !contains(github.event.head_commit.message, '[skip ci]') }}
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.pick.outputs.matrix }}
@@ -54,10 +197,14 @@ jobs:
           deploy/azure-demo/changed-images.sh
           cat "$GITHUB_OUTPUT"
 
+  # ------------------------------------------------------------------ main only: build + push to GHCR
   build:
-    needs: changes
-    if: needs.changes.outputs.matrix != '[]'
+    needs: [checks, changes]
+    if: ${{ github.event_name != 'pull_request' && needs.changes.outputs.matrix != '[]' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false   # one flaky runner must not cancel the other images
       max-parallel: 6
@@ -86,10 +233,71 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.image.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image.name }}
 
-  # The VM deploys the newest commit whose run succeeded; this job only marks the run as complete.
+  # ------------------------------------------------------------------ main only: release
+  # A successful run is what the compose VM deploys (autodeploy.sh). For Argo CD, this job pins every image of
+  # deploy/k8s/overlays/demo to this commit: images not rebuilt get :<sha> as an alias of their current :main,
+  # then `kustomize edit set image` rewrites the overlay and the bump is pushed as a [skip ci] commit.
   release:
-    needs: [changes, build]
-    if: always() && needs.changes.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped')
+    needs: [checks, changes, build]
+    if: >-
+      ${{ always() && github.event_name != 'pull_request'
+          && needs.checks.result == 'success' && needs.changes.result == 'success'
+          && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # the tag-bump commit
+      packages: write   # :<sha> aliases for the images this run did not rebuild
+    env:
+      KUSTOMIZE_VERSION: v5.4.3
+      SHA: ${{ github.sha }}
     steps:
-      - run: echo "Ready to deploy ${{ github.sha }}; the demo VM picks it up within a few minutes."
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: kustomize
+        run: |
+          curl -fsSL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" \
+            | tar -xz -C /usr/local/bin kustomize
+          kustomize version
+      - name: Every image of the demo overlay at :${{ github.sha }}
+        working-directory: deploy/k8s/overlays/demo
+        run: |
+          # overlays/demo builds on overlays/local, which renames lodestar/<svc> to lodestar-<svc>, so the names
+          # to override are lodestar-<svc> (the GHCR package names).
+          names=$(grep -oE '^- name: lodestar-[a-z-]+' kustomization.yaml | awk '{print $3}')
+          [ -n "$names" ] || { echo "no images listed in the overlay"; exit 1; }
+          for n in $names; do
+            ref="$REGISTRY/$n"
+            if docker buildx imagetools inspect "$ref:$SHA" >/dev/null 2>&1; then
+              echo "$n: built in this run"
+            else
+              docker buildx imagetools create -t "$ref:$SHA" "$ref:main"
+              echo "$n: unchanged, :$SHA aliases :main"
+            fi
+            kustomize edit set image "$n=$ref:$SHA"
+          done
+          # guard: the overlay must render, and every lodestar image in it must carry this commit's tag
+          kustomize build --load-restrictor LoadRestrictionsNone . > /tmp/demo.yaml
+          want=$(wc -w <<<"$names")
+          got=$(grep -oE "image: $REGISTRY/lodestar-[a-z-]+:$SHA" /tmp/demo.yaml | sort -u | wc -l)
+          if grep -E "image: $REGISTRY/" /tmp/demo.yaml | grep -v ":$SHA"; then echo "an image kept an old tag"; exit 1; fi
+          [ "$got" -ge "$want" ] || { echo "expected $want images at $SHA, found $got"; exit 1; }
+      - name: Commit the bump ([skip ci]) and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then echo "overlay already at $SHA"; exit 0; fi
+          git commit -am "deploy: demo → ${SHA:0:7} [skip ci]"
+          # main may have moved on while the images built: replay the bump on top of it
+          for _ in 1 2 3; do
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            sleep 5
+          done
+          exit 1
+      - run: echo "Ready to deploy $SHA; the compose VM picks it up within a few minutes, Argo CD within 3."

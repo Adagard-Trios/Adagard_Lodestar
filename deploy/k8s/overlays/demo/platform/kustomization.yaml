@@ -2,7 +2,7 @@
 # ../kustomization.yaml so CI's `kustomize edit set image` only ever rewrites that small file).
 #
 # Built from overlays/local (same Deployments, in-cluster Postgres, Redis and Keycloak, the NGINX gateway),
-# then, for plain k3s on one 2 vCPU / 8 GiB VM:
+# then, for plain k3s on the one demo VM (Standard_B2als_v2: 2 vCPU, 4 GiB + 4 GiB swap, compose stopped):
 #   - no Azure workload identity, no Key Vault CSI, no Istio sidecars (already removed by overlays/local)
 #   - no KEDA: the agent and sync ScaledObjects/TriggerAuthentications are dropped; one replica each,
 #     no HPAs (one node: scaling out only competes for the same 2 vCPUs)
@@ -13,6 +13,7 @@
 #   - Keycloak in production mode (`start`), as deploy/azure-demo/compose.prod.yml
 #   - ingress-nginx + cert-manager (Let's Encrypt) in front of the gateway (ingress.yaml)
 #   - the public host name lives in host.env only
+#   - the OCR service (ocr.yaml), which base/ does not have yet
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: lodestar
@@ -23,6 +24,7 @@ labels:
 resources:
 - ../../local
 - ingress.yaml
+- ocr.yaml
 
 generatorOptions:
   disableNameSuffixHash: true
@@ -220,7 +222,8 @@ patches:
     - op: remove
       path: /spec/template/spec/nodeSelector
 
-# --- requests sized so everything (plus k3s, Argo CD, cert-manager, ingress-nginx) fits 2 vCPU / 8 GiB
+# --- requests sized so everything (plus k3s ~450 MiB, Argo CD core ~300 MiB, cert-manager, ingress-nginx) is
+# schedulable on 4 GiB: the sum of all app requests is ~2.2 GiB; real use idles at ~1.6 GiB, the 4 GiB swap absorbs peaks
 - target:
     kind: Deployment
     labelSelector: app in (auth,orders,planning,fleet,outlets,trips,sync,notifications,audit,frontend)
@@ -230,7 +233,7 @@ patches:
       value:
         requests:
           cpu: 25m
-          memory: 160Mi
+          memory: 96Mi
         limits:
           cpu: '1'
           memory: 512Mi
@@ -243,7 +246,7 @@ patches:
       value:
         requests:
           cpu: 25m
-          memory: 256Mi
+          memory: 192Mi
         limits:
           cpu: '1'
           memory: 768Mi
@@ -283,7 +286,7 @@ patches:
         memory: 256Mi
 
 # --- gateway: the init container adapts the compose nginx.conf to Kubernetes DNS (as overlays/local),
-# adds the field app's upstream (Service port 80) and trusts X-Forwarded-For from the in-cluster
+# adds the field app's upstream (Service port 80) and OCR's (ocr.yaml) and trusts X-Forwarded-For from the in-cluster
 # ingress, so the per-IP rate limits apply per visitor instead of to the ingress pod.
 - target:
     kind: Deployment
@@ -301,7 +304,7 @@ patches:
         cp -R /etc/nginx/. /work/
         sed -i -E \
           -e 's/resolver 127\.0\.0\.11/resolver kube-dns.kube-system.svc.cluster.local/' \
-          -e 's/([[:space:]])(auth|orders|planning|fleet|outlets|trips|sync|notifications|audit|frontend|identity):([0-9]+)/\1\2.lodestar.svc.cluster.local:\3/g' \
+          -e 's/([[:space:]])(auth|orders|planning|fleet|outlets|trips|sync|notifications|audit|frontend|identity|ocr):([0-9]+)/\1\2.lodestar.svc.cluster.local:\3/g' \
           -e 's/([[:space:]])mobile-web:8080/\1mobile-web.lodestar.svc.cluster.local:80/' \
           -e 's#resolver_timeout 5s;#resolver_timeout 5s; set_real_ip_from 10.0.0.0/8; set_real_ip_from 172.16.0.0/12; set_real_ip_from 192.168.0.0/16; real_ip_header X-Forwarded-For; real_ip_recursive on;#' \
           /work/nginx.conf /work/conf.d/identity-proxy.conf
@@ -339,7 +342,7 @@ patches:
             resources:
               requests:
                 cpu: 250m
-                memory: 640Mi
+                memory: 512Mi
               limits:
                 cpu: '2'
                 memory: 1Gi

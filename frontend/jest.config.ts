@@ -22,7 +22,7 @@ const config: Config = {
     'live/**/*.{ts,tsx}',
     '!**/*.d.ts',
   ],
-  // JUnit XML for CircleCI/Jenkins test results.
+  // JUnit XML for CI test results.
   reporters: process.env.CI
     ? ['default', ['jest-junit', { outputDirectory: 'reports/junit', outputName: 'jest.xml' }]]
     : ['default'],

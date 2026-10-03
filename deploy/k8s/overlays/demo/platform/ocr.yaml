@@ -1,0 +1,158 @@
+# OCR ("Read from photo · confirm"; backend/apps/ocr): demo-only, as the base has no OCR service yet.
+# Shaped like the agent (base/services/agent) after overlays/local and this overlay have trimmed it for one k3s
+# node: one replica, no KEDA, no Key Vault, no workload identity. No database and no Secret: it only checks the
+# caller's token against Keycloak's JWKS. The gateway reaches it at ocr:8000 (/ocr/, rewritten in the gateway patch).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ocr-config
+  labels:
+    app: ocr
+    app.kubernetes.io/name: ocr
+data:
+  OCR_THREADS: '2'
+  OMP_NUM_THREADS: '2'
+  OCR_TIMEOUT_S: '10'
+  LOG_LEVEL: INFO     # Python logging wants the upper-case name (lodestar-common says "info")
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ocr
+  labels:
+    app: ocr
+    app.kubernetes.io/name: ocr
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ocr
+  labels:
+    app: ocr
+    app.kubernetes.io/name: ocr
+spec:
+  type: ClusterIP
+  selector:
+    app: ocr
+  ports:
+  - name: http
+    port: 8000
+    targetPort: http
+    protocol: TCP
+    appProtocol: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ocr
+  labels:
+    app: ocr
+    app.kubernetes.io/name: ocr
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  minReadySeconds: 5
+  selector:
+    matchLabels:
+      app: ocr
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: ocr
+        app.kubernetes.io/name: ocr
+        version: v1
+      annotations:
+        kubectl.kubernetes.io/default-container: ocr
+    spec:
+      serviceAccountName: ocr
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      priorityClassName: lodestar-api
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: ocr
+        image: lodestar-ocr:latest   # tag set in ../kustomization.yaml
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        envFrom:
+        - configMapRef:
+            name: ocr-config
+        env:
+        - name: OIDC_ISSUER
+          valueFrom:
+            configMapKeyRef:
+              name: lodestar-common
+              key: OIDC_ISSUER
+        - name: OIDC_JWKS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: lodestar-common
+              key: OIDC_JWKS_URL
+        - name: OIDC_AUDIENCE
+          valueFrom:
+            configMapKeyRef:
+              name: lodestar-common
+              key: OIDC_AUDIENCE
+        # the ONNX models load at start (a few seconds); RSS stays around 200-300 MiB
+        resources:
+          requests:
+            cpu: 25m
+            memory: 128Mi
+          limits:
+            cpu: '1'
+            memory: 768Mi
+        lifecycle:
+          preStop:
+            sleep:
+              seconds: 5
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+          periodSeconds: 5
+          failureThreshold: 36
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          periodSeconds: 15
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 2
+        securityContext:
+          allowPrivilegeEscalation: false
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: tmp
+        emptyDir:
+          sizeLimit: 64Mi

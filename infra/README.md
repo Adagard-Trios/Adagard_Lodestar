@@ -2,7 +2,7 @@
 
 > **What is applied, and what is not.** The live demo runs on **`envs/demo`** only: one VM, a static IP with an Azure DNS name, an NSG and a budget (see [`deploy/azure-demo/README.md`](../deploy/azure-demo/README.md)). Everything else on this page is **target architecture that was not applied**: `envs/dev`, `envs/prod` and the modules behind them (AKS with Istio, Front Door, Premium ACR, managed Postgres and Redis, Key Vault, Entra apps, Log Analytics), together with the AKS overlays `deploy/k8s/overlays/dev` and `deploy/k8s/overlays/prod`. Their cost is well beyond the event's $100 Azure credit. They are kept as the design for a production rollout.
 
-Terraform for the Azure platform described in `docs/architecture/PLATFORM.md` §8. The workloads themselves are delivered by Argo CD from `deploy/` (see `deploy/argocd/README.md`).
+Terraform for the Azure platform described in `docs/architecture/PLATFORM.md` §8. The live delivery path is **GitHub Actions → GHCR → the demo VM** (`.github/workflows/deploy-demo.yml`): the VM's compose stack deploys each green `main` run, or, after the cut-over in `deploy/argocd/README.md` ("Demo on k3s"), Argo CD core on the same VM's k3s syncs the tag bump CI commits to `deploy/k8s/overlays/demo`. On AKS (target, not applied) Argo CD would deliver the workloads from `deploy/` the same way. For the existing demo VM, install k3s by hand: `install_k3s = true` changes its `custom_data` and makes Terraform replace the VM.
 
 ```
 infra/terraform/

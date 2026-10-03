@@ -1,20 +1,22 @@
-# GitOps delivery: CircleCI bumps tags, Argo CD syncs
+# GitOps delivery: GitHub Actions bumps tags, Argo CD syncs
 
-> **What is live, and what is not.** The live delivery path is the **demo on one VM**: CircleCI pushes images to GHCR and commits the new tags to `deploy/k8s/overlays/demo`, and Argo CD on the VM's k3s syncs them ("Demo on k3s" below). Until the cut-over in step 7 has happened, the public URL is still served by the compose stack (`deploy/azure-demo`), and this path is built but not serving. The AKS part (`envs/dev`, `envs/prod`, `overlays/dev|prod`, Istio, Front Door, Key Vault, Terraform `envs/dev|prod`) is **target architecture that was not applied**; see [`infra/README.md`](../../infra/README.md). Jenkins (`Jenkinsfile`) is not on the live path; it is kept for reference only, with the AKS design below.
+> **What is live, and what is not.** The live path is **GitHub Actions → GHCR → the demo VM**. Today the VM serves the public URL with the compose stack (`deploy/azure-demo`), which polls for the newest green run and deploys it. The same run also commits the new image tags to `deploy/k8s/overlays/demo`, so **Argo CD (core mode) on k3s on the same VM** can take over: "Demo on k3s" below. The VM has 4 GiB, so k3s and compose never run the app at the same time: the cut-over stops compose, the rollback stops k3s. The AKS part (`envs/dev`, `envs/prod`, `overlays/dev|prod`, Istio, Front Door, Key Vault, Terraform `envs/dev|prod`) is **target architecture that was not applied**; see [`infra/README.md`](../../infra/README.md). Jenkins (`Jenkinsfile`) is not on the live path; it is kept for reference only, with the AKS design below.
 
 The repository URL is written once, in [`repo/kustomization.yaml`](repo/kustomization.yaml) (a kustomize component). Every Application and AppProject here says `REPO_URL` and gets the value at build time, so apply these folders with `kubectl apply -k`, never `-f`.
 
 ## Demo on k3s
 
 ```
-GitHub main ──▶ CircleCI main: tests ─▶ 14 images → ghcr.io/adagard-trios/lodestar-<svc>:<sha>
-                                     ─▶ gitops-bump: kustomize edit set image in deploy/k8s/overlays/demo, commit [skip ci]
-Argo CD (k3s on the VM) polls main ──▶ Sync: Postgres, then the migrate Job (hook), then the services
-ingress-nginx (80/443, hostNetwork) + cert-manager (Let's Encrypt) ──▶ gateway ──▶ /, /field/, /odata/v4/, /auth/, /ws/
+GitHub main ──▶ GitHub Actions deploy-demo: checks ─▶ changed images → ghcr.io/adagard-trios/lodestar-<svc>:<sha>
+                                                 ─▶ release: every overlay image at :<sha>, kustomize edit set image
+                                                    in deploy/k8s/overlays/demo, commit [skip ci]
+Argo CD core (k3s on the VM) polls main ──▶ Sync: Postgres, then the migrate Job (hook), then the services
+ingress-nginx (80/443, hostNetwork) + cert-manager (Let's Encrypt) ──▶ gateway ──▶ /, /field/, /odata/v4/, /auth/, /ws/, /ocr/
 ```
 
 What `deploy/k8s/overlays/demo` is: `overlays/local` (the kind setup: in-cluster Postgres, Redis and Keycloak, the NGINX gateway, no Azure workload identity, no Key Vault CSI, no Istio) plus, for plain k3s on one node:
-- no KEDA (the agent and sync ScaledObjects go), no HPAs, one replica of everything, small requests;
+- no KEDA (the agent and sync ScaledObjects go), no HPAs, one replica of everything, requests sized for 4 GiB (~2.2 GiB in all);
+- the OCR service (`platform/ocr.yaml`; `base/` has none yet);
 - no Secret from git: every dev-only Secret of `overlays/local` is deleted, and the real ones are created on the VM from its `.env` by [`deploy/azure-demo/k3s-secrets.sh`](../azure-demo/k3s-secrets.sh);
 - the migrate + seed Job runs as an Argo CD Sync hook, reads the competition CSVs from the ConfigMap `lodestar-data` (created on the VM by the same script; optional) and `DEMO_DATE` from the overlay;
 - Keycloak in production mode, as in `compose.prod.yml`;
@@ -27,19 +29,36 @@ Render it without a cluster:
 kubectl kustomize --load-restrictor LoadRestrictionsNone deploy/k8s/overlays/demo
 ```
 
-### 0. The VM
+### Memory budget on the current VM (Standard_B2als_v2: 2 vCPU, 4 GiB + 4 GiB swap)
 
-k3s and the compose stack do not both fit in the default `Standard_B2als_v2` (4 GiB). For the GitOps path use **`Standard_B2ms`** (2 vCPU, 8 GiB) with **`install_k3s = true`** in `infra/terraform/envs/demo/terraform.tfvars`.
+| Part | Memory | When |
+|---|---|---|
+| compose stack (today's live path) | ~1.5 GB idle | until the cut-over; **stopped** by it |
+| k3s (server, containerd, CoreDNS, metrics-server, local-path) | ~450 MB | from step 0 |
+| Argo CD core (controller, repo-server, Redis; no UI server, Dex or notifications) | ~300 MB (limits: 416 MiB) | from step 3 |
+| cert-manager | ~100 MB | from step 2 |
+| ingress-nginx | ~100 MB | from the cut-over |
+| the app in k3s (17 pods) | ~1.6 GB idle (requests 2.2 GiB) | from the cut-over |
 
-- **New VM:** set both, then `terraform plan` / `apply` as in [`deploy/azure-demo/README.md`](../azure-demo/README.md). cloud-init installs k3s without Traefik and without its service load balancer, so nothing in k3s takes 80/443.
-- **The VM already serving the compose demo:** `install_k3s` changes the VM's cloud-init (`custom_data`), and Terraform then **replaces** the VM (new disk; the compose data and `.env` are gone). Change only `vm_size = "Standard_B2ms"`, check that `terraform plan` says *update in-place* (the VM reboots once; compose comes back by itself), then install k3s by hand with the same line cloud-init uses:
+- **During setup (steps 0–5)** compose keeps serving: compose ~1.5 GB + k3s, Argo CD core and cert-manager ~0.85 GB ≈ 2.4 GB. It fits.
+- **After the cut-over**: k3s ~0.45 + Argo CD ~0.3 + cert-manager and ingress-nginx ~0.2 + app ~1.6 ≈ **2.5–2.6 GB**. It fits, with the swap for peaks (Keycloak's first start, a planning run).
+- **Both at once does not fit** (~4 GB before any load). Running the app in k3s **replaces** compose; it is one or the other, and the Application is only created after compose has been stopped (step 6). The rollback (step 7) is the reverse.
+- If pods stay `Pending` (`kubectl describe pod` says *Insufficient memory*) or the VM swaps hard, roll back and resize to `Standard_B2ms` (8 GiB, `vm_size` only: an in-place update).
 
-  ```bash
-  ssh lodestar@<fqdn>
-  curl -sfL https://get.k3s.io | sudo INSTALL_K3S_EXEC="--disable=traefik --disable=servicelb --write-kubeconfig-mode=600" sh -
-  ```
+### 0. k3s on the VM (by hand)
 
-The steps below run **on the VM** (`ssh lodestar@<fqdn>`), from `/opt/lodestar`. They need no Azure login; the GitHub and GHCR tokens in steps 4 and 5 are only needed if the repo or the packages are private.
+Do **not** set `install_k3s = true` in Terraform for this VM: it changes the VM's cloud-init (`custom_data`), and Terraform then **replaces** the VM (new disk; the compose data and `.env` are gone). `install_k3s` is only for a brand-new VM. On the existing VM, install k3s by hand, without Traefik and its service load balancer (nothing in k3s may take 80/443 while compose runs), and with a 200 MiB hard-eviction floor so the kubelet evicts a pod before the VM runs out of memory:
+
+```bash
+ssh lodestar@<fqdn>
+curl -sfL https://get.k3s.io | sudo INSTALL_K3S_EXEC="--disable=traefik --disable=servicelb --write-kubeconfig-mode=600 --kubelet-arg=eviction-hard=memory.available<200Mi,nodefs.available<10%" sh -
+sudo systemctl status k3s --no-pager | head -5
+free -m                                             # compose still running: ~2 GB used
+```
+
+(`eviction-hard` replaces the kubelet's whole default list, hence the disk threshold next to the memory one. k3s runs the kubelet with `--fail-swap-on=false`, so the swap file can stay.)
+
+The steps below run **on the VM** (`ssh lodestar@<fqdn>`), from `/opt/lodestar`. They need no Azure login; the GitHub and GHCR tokens in step 4 are only needed if the repo or the packages are private.
 
 ### 1. kubectl and helm
 
@@ -54,7 +73,10 @@ cd /opt/lodestar && git remote set-url origin https://github.com/Adagard-Trios/L
 
 ```bash
 helm repo add jetstack https://charts.jetstack.io && helm repo update
-helm upgrade --install cert-manager jetstack/cert-manager -n cert-manager --create-namespace --set crds.enabled=true --wait
+helm upgrade --install cert-manager jetstack/cert-manager -n cert-manager --create-namespace --set crds.enabled=true \
+  --set resources.requests.memory=32Mi --set resources.limits.memory=128Mi \
+  --set cainjector.resources.requests.memory=32Mi --set cainjector.resources.limits.memory=128Mi \
+  --set webhook.resources.requests.memory=16Mi --set webhook.resources.limits.memory=64Mi --wait
 kubectl apply -f - <<'EOF'
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
@@ -84,25 +106,43 @@ EOF
 
 The Ingress uses `letsencrypt`. Caddy has already been issued certificates for the same name, and Let's Encrypt allows 5 duplicate certificates per name per week. The certificate Secret `lodestar-tls` survives switching back and forth, so cert-manager only asks once.
 
-### 3. Argo CD
+### 3. Argo CD core
+
+Core mode is Argo CD without its API/UI server, Dex and notifications: only the application controller, the repo server and Redis. [`core/kustomization.yaml`](core/kustomization.yaml) installs `core-install.yaml` (stable) with memory limits (controller 192 Mi, repo-server 176 Mi, Redis 48 Mi, the unused ApplicationSet controller scaled to 0; a `GOMEMLIMIT` under each Go limit), fewer workers, and the `--load-restrictor LoadRestrictionsNone` build option that `overlays/demo` needs.
 
 ```bash
+cd /opt/lodestar
 kubectl create namespace argocd
-kubectl apply -n argocd --server-side --force-conflicts \
-  -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-# overlays/demo (through overlays/local) reads the realm and the Postgres init script from outside its folder
-kubectl -n argocd patch configmap argocd-cm --type merge \
-  -p '{"data":{"kustomize.buildOptions":"--load-restrictor LoadRestrictionsNone"}}'
-kubectl -n argocd rollout restart deploy/argocd-repo-server
+kubectl apply -k deploy/argocd/core --server-side --force-conflicts
+kubectl -n argocd rollout status statefulset/argocd-application-controller
 kubectl -n argocd rollout status deploy/argocd-repo-server
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo
-# UI from your laptop: ssh -L 8081:localhost:8081 lodestar@<fqdn>, then on the VM
-#   kubectl -n argocd port-forward svc/argocd-server 8081:443     and open https://localhost:8081 (user admin)
+kubectl -n argocd top pods                          # together well under ~350 MiB
+```
+
+If the repo server is ever `OOMKilled` (`kubectl -n argocd get pods` shows restarts), raise its limit to 256Mi in `core/kustomization.yaml` and apply again.
+
+**Looking at it** (there is no Argo CD web server running):
+
+```bash
+# kubectl only
+kubectl -n argocd get applications                  # SYNC STATUS / HEALTH STATUS
+kubectl -n argocd describe application lodestar-demo
+# the argocd CLI in core mode: it talks to the Kubernetes API directly, no login, no password
+curl -sSL -o /tmp/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+sudo install -m 555 /tmp/argocd /usr/local/bin/argocd && rm /tmp/argocd
+kubectl config set-context --current --namespace=argocd
+argocd login --core
+argocd app list
+argocd app get lodestar-demo                        # every resource, its sync and health
+argocd app sync lodestar-demo                       # sync now instead of waiting up to 3 minutes
+# the web UI, only while you need it (an in-process API server, ~100 MB, gone when you press Ctrl-C):
+#   on your laptop:  ssh -L 8080:localhost:8080 lodestar@<fqdn>
+#   on the VM:       argocd admin dashboard -n argocd --port 8080        then open http://localhost:8080
 ```
 
 ### 4. Registry and repository access (only if private)
 
-- **GHCR images.** Either make the 14 `lodestar-*` packages public (GitHub → the org's Packages → each package → Package settings → Change visibility), or give k3s a read token:
+- **GHCR images.** Either make the 15 `lodestar-*` packages public (GitHub → the org's Packages → each package → Package settings → Change visibility), or give k3s a read token:
 
   ```bash
   sudo tee /etc/rancher/k3s/registries.yaml >/dev/null <<'EOF'
@@ -131,74 +171,63 @@ bash deploy/azure-demo/k3s-secrets.sh
 kubectl -n lodestar get secrets,configmaps
 ```
 
-The script reads the VM's `.env` (written by `make-env.sh` for compose), so Postgres, Keycloak, the service clients and the personas get the same passwords on both sides. It creates `postgres-credentials`, `redis-credentials`, `identity-secrets`, `<service>-secrets` for the ten services, and `lodestar-data` from `data/*.csv`.
+The script reads the VM's `.env` (written by `make-env.sh` for compose), so Postgres, Keycloak, the service clients and the personas get the same passwords on both sides. It creates `postgres-credentials`, `redis-credentials`, `identity-secrets`, `<service>-secrets` for the ten services, and `lodestar-data` from `data/*.csv`. (OCR needs no Secret.)
 
-### 6. The demo application
+Up to here compose has kept serving the public URL. Check the memory before going on: `free -m` should show about 2.4 GB used.
 
-CI must have pushed images at least once: `grep newTag deploy/k8s/overlays/demo/kustomization.yaml | sort -u` must show a commit SHA, not `pending-first-ci-run` (`git pull` first). Then:
+### 6. Cut-over: compose → k3s
 
-```bash
-kubectl apply -k deploy/argocd/envs/demo
-kubectl -n argocd get application lodestar-demo -w        # Synced, then Healthy (the first Keycloak start takes a few minutes)
-kubectl -n lodestar get pods,jobs
-kubectl -n lodestar logs job/migrate                      # migrations, then the seed (CSV or synthetic)
-```
+Only one of compose (Caddy) or k3s (ingress-nginx) listens on 80/443, and only one of them fits in 4 GiB with the app running. ingress-nginx runs with `hostNetwork`, so it binds 80/443 (and 8443 for its admission webhook, 10254 for health) whenever k3s runs. Hence the rule, from the moment ingress-nginx is installed: **k3s runs only when compose is down.**
 
-While compose still owns 80/443 the Ingress has no controller yet and stays *Progressing*; everything behind it can be checked through a port-forward:
+CI must have pushed images at least once: `git pull && grep newTag deploy/k8s/overlays/demo/kustomization.yaml | sort -u` must show one commit SHA, not `pending-first-ci-run` (run the workflow once by hand with "Rebuild every image", or push any change under `backend/`). Expect 5–10 minutes without service the first time: k3s pulls the 15 images and Keycloak starts from scratch.
 
 ```bash
-kubectl -n lodestar port-forward svc/gateway 9443:8443 &
-curl -sk https://localhost:9443/version; echo             # the SHA in overlays/demo
-curl -sk -H "Host: <fqdn>" https://localhost:9443/auth/realms/lodestar/.well-known/openid-configuration | jq -r .issuer
-kill %1
-```
-
-**A pushed change reaching the cluster** (the first half of the cut-over rule): push any commit to `main`; when CircleCI's `gitops-bump` has committed `deploy: demo → <sha> [skip ci]`, Argo CD syncs within 3 minutes. `kubectl -n lodestar get deploy gateway -o jsonpath='{.spec.template.spec.containers[0].image}'` and the `/version` call above then show the new SHA. (`argocd app get` or the UI show the same.)
-
-Memory while preparing: compose (~1.5–2 GB) and the k3s side (~3 GB with Argo CD and cert-manager) fit together in 8 GiB, but only just on 2 vCPUs. If pods stay `Pending` or are OOM-killed, cut over earlier rather than resizing again.
-
-### 7. Cut-over: who owns 80/443
-
-Only one of compose (Caddy) or k3s (ingress-nginx) listens on 80/443. ingress-nginx runs with `hostNetwork`, so it binds 80/443 (and 8443 for its admission webhook, 10254 for health) whenever k3s runs. Hence the rule, from the moment ingress-nginx is installed: **k3s runs only when compose is down.**
-
-**Compose → k3s** (cut-over; first time, ingress-nginx is installed here):
-
-```bash
-cd /opt/lodestar
+cd /opt/lodestar && git pull
+sudo systemctl disable --now lodestar-autodeploy.timer    # the compose autodeploy must not start compose again
 bash deploy/azure-demo/up.sh down                          # Caddy releases 80/443; the compose volumes stay
-sudo systemctl enable --now k3s                            # no-op if it is already running
+free -m                                                    # ~1 GB used: k3s, Argo CD core, cert-manager
 helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx && helm repo update
 helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx -n ingress-nginx --create-namespace \
   --set controller.kind=DaemonSet --set controller.hostNetwork=true --set controller.dnsPolicy=ClusterFirstWithHostNet \
   --set controller.service.type=ClusterIP --set controller.publishService.enabled=false \
-  --set controller.reportNodeInternalIp=true --set controller.ingressClassResource.default=true --wait
-kubectl -n lodestar get certificate lodestar-tls -w        # READY True within a minute or two (HTTP-01 on port 80)
-curl -fsS https://<fqdn>/version; echo                     # the SHA Argo CD deployed
+  --set controller.reportNodeInternalIp=true --set controller.ingressClassResource.default=true \
+  --set controller.resources.requests.memory=64Mi --set controller.resources.limits.memory=192Mi --wait
+kubectl apply -k deploy/argocd/envs/demo
+kubectl -n argocd get application lodestar-demo -w        # Synced, then Healthy (Keycloak's first start takes a few minutes)
+kubectl -n lodestar get pods,jobs
+kubectl -n lodestar logs job/migrate                      # migrations, then the seed (CSV or synthetic)
+kubectl -n lodestar get certificate lodestar-tls -w       # READY True within a minute or two (HTTP-01 on port 80)
+curl -fsS https://<fqdn>/version; echo                    # the SHA Argo CD deployed
+free -m                                                   # ~2.5-2.6 GB used
 ```
 
-If the certificate is not ready after five minutes: `kubectl -n lodestar describe challenges`. Before cert-manager asks Let's Encrypt, it fetches the challenge URL over the VM's own public IP. A challenge left waiting from step 6, when Caddy still held port 80, gets picked up again by itself. If the reason shown is anything else, `kubectl -n lodestar delete certificate lodestar-tls` re-creates the certificate from the Ingress.
+If the certificate is not ready after five minutes: `kubectl -n lodestar describe challenges`. If the reason is anything but a pending HTTP-01 check, `kubectl -n lodestar delete certificate lodestar-tls` re-creates the certificate from the Ingress. Caddy has already been issued certificates for the same name, and Let's Encrypt allows 5 duplicate certificates per name per week; the Secret `lodestar-tls` survives switching back and forth, so cert-manager only asks once.
 
-Then sign in as the four roles from a phone-sized browser (README accounts; driver and loader at `/field/`). If any role fails, switch back at once (below) and keep compose as the live path. Once it holds, set the CircleCI pipeline parameter `public-url` to `https://<fqdn>` so `smoke-public` checks every deploy.
+Then sign in as the four roles from a phone-sized browser (README accounts; driver and loader at `/field/`). If any role fails, roll back at once (step 7) and keep compose as the live path.
+
+**A pushed change reaching the cluster**: push any commit to `main`; when the `release` job has committed `deploy: demo → <sha> [skip ci]`, Argo CD syncs within 3 minutes (`argocd app sync lodestar-demo` for at once). `kubectl -n lodestar get deploy gateway -o jsonpath='{.spec.template.spec.containers[0].image}'` and `curl https://<fqdn>/version` then show the new SHA.
 
 ingress-nginx is retired upstream (best-effort maintenance ended in March 2026; no new releases). Its last release is fine for a demo. On a longer-lived cluster, re-enable k3s's Traefik instead and move the Ingress annotations over.
 
-**k3s → compose** (rollback; also frees the k3s memory):
+### 7. Rollback: k3s → compose
 
 ```bash
 cd /opt/lodestar
-sudo systemctl disable --now k3s && sudo /usr/local/bin/k3s-killall.sh   # stops every pod; 80/443 are free
+sudo systemctl disable --now k3s && sudo /usr/local/bin/k3s-killall.sh   # stops every pod; 80/443 and ~2.5 GB are free
 bash deploy/azure-demo/up.sh
+sudo systemctl enable --now lodestar-autodeploy.timer                   # compose deploys itself again
+curl -fsS https://<fqdn>/version; echo
 ```
 
-`disable` matters: a VM reboot would otherwise start k3s next to compose, and both would race for 80/443. Going back to k3s later is the first two commands of the cut-over (`up.sh down`, `systemctl enable --now k3s`); ingress-nginx, Argo CD, the certificate and the Postgres volume are all still there.
+`disable` matters: a VM reboot would otherwise start k3s next to compose, both would race for 80/443, and together they do not fit in 4 GiB. Going back to k3s later: `sudo systemctl disable --now lodestar-autodeploy.timer`, `bash deploy/azure-demo/up.sh down`, `sudo systemctl enable --now k3s`; ingress-nginx, Argo CD, the Application, the certificate and the Postgres volume are all still there. To remove k3s completely (also frees its images on disk): `sudo /usr/local/bin/k3s-uninstall.sh`.
 
-The two sides keep separate databases (the compose volume `lodestar_pgdata`, the k3s volume `data-postgres-0`). Each seeds the demo day itself, so orders placed on one side are not on the other.
+The two sides keep separate databases (the compose volume `lodestar_pgdata`, the k3s volume `data-postgres-0`). Each seeds the demo day itself, so orders placed on one side are not on the other. Both pull the same GHCR images, so the disk holds them twice (Docker and k3s's containerd): keep `df -h /` under ~80 % on the 32 GB disk (`docker image prune -a` while k3s is live frees the Docker copies).
 
 ### Day to day
 
-- Every green `main` build deploys itself: images, tag bump, Argo CD sync, smoke test (once `public-url` is set).
+- Every green `main` run deploys itself: the changed images, `:<sha>` aliases for the others, the tag bump, then either the compose autodeploy or the Argo CD sync, whichever side is live.
 - Config change (host, `DEMO_DATE`, resources): commit to `overlays/demo/platform`; ConfigMaps keep their names, so restart what reads them: `kubectl -n lodestar rollout restart deploy`.
-- Status: `kubectl -n argocd get applications`, `kubectl -n lodestar get pods`.
+- Status: `kubectl -n argocd get applications` (or `argocd app get lodestar-demo`), `kubectl -n lodestar get pods`, `kubectl top pods -A`.
 
 ## Target architecture: AKS (not applied)
 
@@ -225,13 +254,14 @@ deploy/
     overlays/dev|prod/          replicas, images (ACR), autoscaling bounds, LOG_LEVEL, RUN_SEED
       azure-wiring/azure.env    non-secret IDs from `terraform output -raw kustomize_azure_env`
     overlays/local/             kind only (deploy/local/kind/up.sh), never synced by Argo CD
-    overlays/demo/              the demo VM's k3s (the live GitOps path): overlays/local + k3s changes
+    overlays/demo/              the demo VM's k3s (GitOps path, after the cut-over): overlays/local + k3s changes + OCR
   argocd/
     repo/                       the one place the repo URL is written (kustomize component)
     bootstrap/root-app.yaml     root app-of-apps (Terraform installs the same via Helm)
     envs/dev/                   AppProject lodestar-dev + Application lodestar-dev (auto-sync)
     envs/prod/                  AppProject lodestar-prod (sync windows) + Application lodestar-prod (manual)
     envs/demo/                  AppProject lodestar-demo + Application lodestar-demo (auto-sync, prune, self-heal)
+    core/                       Argo CD core (no UI server, Dex, notifications) with memory limits, for the 4 GiB demo VM
 ```
 
 ### Flow (AKS)
@@ -244,7 +274,7 @@ sequenceDiagram
   participant ACR as ACR (Premium)
   participant A as Argo CD (in AKS)
   participant K as AKS (lodestar ns)
-  Dev->>GH: merge PR (CircleCI green)
+  Dev->>GH: merge PR (GitHub Actions checks green)
   GH->>J: webhook
   J->>J: build, compose + Playwright, SonarQube gate
   J->>ACR: docker push lodestar/<svc>:<git-sha> (Trivy scan, cosign sign)

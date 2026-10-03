@@ -72,12 +72,13 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  dev["Pull request"] --> ci["CircleCI pr-checks<br/>lint · typecheck · unit suites<br/>integration (Postgres) · Sonar gate<br/>full stack + Playwright (2 shards)"]
-  ci -->|merge| main["CircleCI main<br/>same checks"]
-  main --> img["14 images → ghcr.io<br/>tag = commit SHA"]
+  dev["Pull request"] --> ci["GitHub Actions checks<br/>lint · typecheck · unit suites<br/>integration (Postgres) · Sonar gate"]
+  ci -->|merge| main["GitHub Actions main<br/>same checks"]
+  main --> img["changed images → ghcr.io<br/>tags main + commit SHA"]
+  img --> vmdeploy["VM autodeploy.sh<br/>polls the green run"]
+  vmdeploy --> vm
   img --> bump["kustomize tag bump<br/>deploy/k8s/overlays/demo [skip ci]"]
   bump --> argo["Argo CD on the VM's k3s<br/>(target: built, cut over only when verified)"]
-  main --> smoke["Smoke test of the public URL<br/>(waits for /version = SHA)"]
   vm["Demo VM: docker compose + Caddy<br/>(live path today)"]
   argo -.-> vm
 ```

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# The whole quality gate on one machine, the same stages as CI (.circleci/config.yml):
+# The whole quality gate on one machine: the stages CI runs (.github/workflows/deploy-demo.yml, job `checks`)
+# plus the full stack + Playwright and Cypress, which run only here:
 #   1. lint + typecheck   2. unit suites (+ coverage)   3. backend integration (real Postgres)
 #   4. full stack: docker compose up from scratch, Playwright (api, web, mobile, flows, clicks, visual)
 #   5. SonarQube scan against the local server (compose `qa` profile), waiting for the gate
