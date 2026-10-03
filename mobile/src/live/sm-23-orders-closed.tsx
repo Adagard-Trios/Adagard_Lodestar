@@ -22,7 +22,7 @@ export default function ScreenSm23OrdersClosed() {
   const weekday = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' });
   const onVan = groups.find(g => g.date === closed)?.orders ?? [];
   const units = onVan.reduce((n, o) => n + o.units, 0);
-  const firstAt = onVan.map(o => o.orderedAt).filter(Boolean).sort()[0];
+  const firstAt = onVan.map(o => o.orderedAt).filter(Boolean).sort((a, b) => a.localeCompare(b))[0];
   const window = outlet ? `${outlet.windowOpen}–${outlet.windowClose}` : '';
   return (
     <Frame bg="#f4f5f9" nav={nav} style={s.v0}>

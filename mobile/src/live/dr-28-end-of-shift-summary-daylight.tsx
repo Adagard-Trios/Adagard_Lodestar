@@ -35,8 +35,8 @@ export default function ScreenDr28EndOfShiftSummaryDaylight() {
     ? first.exceptions?.[0]?.description ?? `${first.unitsOrdered - first.unitsDelivered} short at ${problems[0].outlet?.name ?? problems[0].outletId}`
     : '';
   const lastTrip = trips.at(-1) ?? null;
-  const out = trips.map(t => t.departTime).filter((x): x is string => !!x).sort()[0];
-  const back = lastTrip?.returnTime ?? stops.map(st => st.leaveActual).filter((x): x is string => !!x).sort().at(-1);
+  const out = trips.map(t => t.departTime).filter((x): x is string => !!x).sort((a, b) => a.localeCompare(b))[0];
+  const back = lastTrip?.returnTime ?? stops.map(st => st.leaveActual).filter((x): x is string => !!x).sort((a, b) => a.localeCompare(b)).at(-1);
   const vehicle = (lastTrip?.vehicle ?? null) as Fuel | null;
   const used = vehicle?.usedLThisWeek;
   const quota = vehicle?.weeklyLFuel;

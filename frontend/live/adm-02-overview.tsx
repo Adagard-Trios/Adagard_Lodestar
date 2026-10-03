@@ -34,7 +34,7 @@ export default function LiveAdm02Overview() {
   const denied = useQuery<AuditEntry[]>('adm-denied', async c => (await c.list<AuditEntry>('AuditEntries', { filter: `outcome eq 'DENIED' and at ge ${since}`, orderby: 'seq desc', top: 3 })).value);
   const mine = useQuery<AuditEntry[]>(session ? `adm-mine:${session.sub}` : null, async c =>
     (await c.list<AuditEntry>('AuditEntries', { filter: `actor eq '${session!.sub}' and at ge ${daysAgo(0)}T00:00:00Z`, orderby: 'seq desc', top: 4 })).value);
-  const askers = [...new Set((pending.data ?? []).map(d => d.userId))].sort();
+  const askers = [...new Set((pending.data ?? []).map(d => d.userId))].sort((a, b) => a.localeCompare(b));
   const lost = useQuery<Array<Device & { records: number }>>(pending.data ? `adm-lost:${askers.join(',')}` : null, async c => {
     if (!askers.length) return [];
     const [old, events] = await Promise.all([

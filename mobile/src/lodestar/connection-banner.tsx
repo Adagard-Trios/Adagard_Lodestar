@@ -33,7 +33,7 @@ export function useConnection(savedAt?: string | number | null): Connection {
   const { waiting, synced, syncing } = useOutbox();
   const sinceMs = Date.parse(since);
   const sentNow = synced.filter(i => i.syncedAt && Date.parse(i.syncedAt) >= sinceMs);
-  const lastSyncedAt = synced.map(i => i.syncedAt ?? '').sort().at(-1) || undefined;
+  const lastSyncedAt = synced.map(i => i.syncedAt ?? '').sort((a, b) => a.localeCompare(b)).at(-1) || undefined;
   const state: ConnectionState = !online
     ? waiting.length ? 'offline-waiting' : 'no-signal'
     : waiting.length ? 'sending' : sentNow.length && !syncing ? 'sent' : 'online';

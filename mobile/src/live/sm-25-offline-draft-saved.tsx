@@ -36,7 +36,7 @@ export default function ScreenSm25OfflineDraftSaved() {
   const { items } = useOutbox();
   const drafts = items.filter(i => i.kind === 'ORDER' && (i.status === 'pending' || i.status === 'sending' || i.status === 'conflict') && i.payload.order?.runDate === runDate);
   const units = drafts.reduce((n, i) => n + (i.payload.order.units ?? 0), 0);
-  const savedAt = drafts.map(i => i.savedAt).sort().at(-1);
+  const savedAt = drafts.map(i => i.savedAt).sort((a, b) => a.localeCompare(b)).at(-1);
   const cutoff = cutoffFor(runDate);
   const remaining = left(cutoff, now);
   const hub = outlet ? depotName(outlet.depot) : 'the depot';

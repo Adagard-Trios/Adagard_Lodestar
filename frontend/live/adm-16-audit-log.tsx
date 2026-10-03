@@ -54,7 +54,7 @@ export default function LiveAdm16AuditLog() {
   const todayAll = useCount('AuditEntries', today);
   const todayPeople = useCount('AuditEntries', `${today} and not startswith(client,'svc-')`);
   const agent = useCount('AuditEntries', `${today} and entitySet eq 'AgentRuns'`);
-  const actors = useMemo(() => [...new Set((log.data ?? []).map(a => a.actor))].sort(), [log.data]);
+  const actors = useMemo(() => [...new Set((log.data ?? []).map(a => a.actor))].sort((a, b) => a.localeCompare(b)), [log.data]);
   const names = useQuery<Map<string, string>>(actors.length ? `actors:${actors.join(',')}` : null, async c => {
     const users = await c.all<User>('Users', { filter: `id in (${actors.map(a => `'${a}'`).join(',')})`, select: 'id,name' });
     return new Map(users.map(u => [u.id, u.name]));

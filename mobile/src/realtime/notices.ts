@@ -27,10 +27,13 @@ export function roomsFor(c: Claims): string[] {
   return rooms;
 }
 
+// a local id for a notice without one (display only: nothing secret depends on it)
+let seq = 0;
+
 function push(event: string, payload: any) {
   const p = payload && typeof payload === 'object' ? payload : { value: payload };
   const n: Notice = {
-    id: String(p.id ?? `${event}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+    id: String(p.id ?? `${event}-${Date.now()}-${++seq}`),
     event,
     type: String(p.type ?? event).toUpperCase(),
     at: String(p.sentAt ?? new Date().toISOString()),

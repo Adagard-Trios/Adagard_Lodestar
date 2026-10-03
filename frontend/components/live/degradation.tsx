@@ -48,7 +48,7 @@ export function riskiestStop(t: Trip): TripStop | undefined {
  * contact: the screens show it as predicted, never as on time.
  */
 export function useSignal(trips: Trip[] | undefined) {
-  const ids = useMemo(() => (trips ?? []).slice(0, 60).map(t => t.id).sort(), [trips]);
+  const ids = useMemo(() => (trips ?? []).slice(0, 60).map(t => t.id).sort((a, b) => a.localeCompare(b)), [trips]);
   const [live, setLive] = useState<SignalEvent[]>([]);
   useRealtime(['signal_lost', 'signal_back'], (payload, event) => {
     setLive(l => [...l, fromPayload((payload ?? {}) as Payload, event === 'signal_lost', new Date().toISOString())]);
@@ -101,7 +101,7 @@ export function useNextRunDay(runDate: string | undefined | null) {
 
 /** Active store managers of these outlets (they receive the store notices). */
 export function useStoreManagers(outletIds: string[]) {
-  const ids = [...new Set(outletIds.filter(Boolean))].sort();
+  const ids = [...new Set(outletIds.filter(Boolean))].sort((a, b) => a.localeCompare(b));
   return useQuery<User[]>(ids.length ? `managers:${ids.join(',')}` : null, c =>
     c.all<User>('Users', { filter: `role eq 'STORE_MANAGER' and isActive eq true and outletId in (${ids.map(i => `'${i}'`).join(',')})`, select: 'id,name,outletId,phone' }),
   );

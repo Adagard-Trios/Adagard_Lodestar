@@ -22,7 +22,7 @@ export default function AgentBoardScreen({ name, mode }: { name: string; mode: '
   const version = detail?.plan?.version ?? detail?.version;
   const depot = run.data?.depot ?? scope.depot ?? scope.active[0];
   const waiting = run.data?.status === 'NEEDS_APPROVAL';
-  const firstDepart = board.cards.map(c => c.departs).filter(Boolean).sort()[0];
+  const firstDepart = board.cards.map(c => c.departs).filter(Boolean).sort((a, b) => String(a).localeCompare(String(b)))[0];
 
   return (
     <div className="frame frame--desktop mode-dispatcher" data-name={name}>

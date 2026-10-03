@@ -58,7 +58,7 @@ export default function ScreenLd22ReleaseChecklist() {
   const loaded = lines.filter(l => checks.isChecked(l.id) && !flagged(l)).length;
   const accounted = loaded + short;
   const acks = sheet.shortfalls.map(sf => (trip ? ackFor(notes.data, trip.id, sf.item) : undefined)).filter(Boolean);
-  const lastAck = acks.map(a => a!.sentAt).sort().at(-1);
+  const lastAck = acks.map(a => a!.sentAt).sort((a, b) => a.localeCompare(b)).at(-1);
   const driver = trip?.driver?.name ?? null;
   const ok = {
     lines: !!data && total > 0 && accounted === total,

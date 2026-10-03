@@ -47,7 +47,7 @@ export default function LiveDsp17DeferralLog() {
   const log = useEntitySet<Deferral>('Deferrals', { filter: [base, CHIP[chip]].filter(Boolean).join(' and '), expand: 'order', orderby: 'createdAt desc', top: 25, count: true, search: search.trim() || undefined }, {
     refreshOn: ['notification'],
   });
-  const ids = [...new Set((log.data ?? []).map(d => d.order?.outletId).filter(Boolean))].sort() as string[];
+  const ids = [...new Set((log.data ?? []).map(d => d.order?.outletId).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b))) as string[];
   const outlets = useQuery<Map<string, Outlet>>(ids.length ? `log-outlets:${ids.join(',')}` : null, async c => {
     const rows = await c.all<Outlet>('Outlets', { filter: `id in (${ids.map(i => `'${i}'`).join(',')})`, select: 'id,name,district,brand,parking' });
     return new Map(rows.map(o => [o.id, o]));

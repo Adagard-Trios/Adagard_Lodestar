@@ -24,7 +24,7 @@ export default function ScreenLd07StartShift() {
   const [bay, setBay] = useMyBay();
   const next = nextToLoad(trips, bay);
   const toLoad = trips.filter(t => t.status === 'PLANNED' || t.status === 'LOADING');
-  const departs = trips.map(t => t.departTime).filter((d): d is string => !!d).sort();
+  const departs = trips.map(t => t.departTime).filter((d): d is string => !!d).sort((a, b) => a.localeCompare(b));
   const span = departs.length ? `${hm(departs[0])}–${hm(departs[departs.length - 1])}` : '—';
   const tiles = trips.slice(0, 4);
   return (

@@ -100,7 +100,7 @@ export default function LiveDsp12ApproveAndGoLive() {
   const failing = rules.filter(r => !r.passed);
   const review = draft?.detail?.needsReview ?? [];
   const vehicles = board.lanes.length;
-  const firstDepart = board.cards.map(c => c.departs).filter(Boolean).sort()[0];
+  const firstDepart = board.cards.map(c => c.departs).filter(Boolean).sort((a, b) => String(a).localeCompare(String(b)))[0];
   const depotLine = active.map(d => DEPOT_NAME[d] ?? d).join(' + ');
   const busy = approveDraft.pending || approvePlan.pending;
   const error = approveDraft.error ?? approvePlan.error;

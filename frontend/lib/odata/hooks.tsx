@@ -93,7 +93,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const session = auth.status === 'authenticated' ? auth.session : null;
-  const rooms = session ? [...roomsFor(session), ...Object.keys(extra).sort()] : null;
+  const rooms = session ? [...roomsFor(session), ...Object.keys(extra).sort((a, b) => a.localeCompare(b))] : null;
   const roomKey = session ? `${session.sub}|${rooms!.join(',')}` : '';
   useEffect(() => {
     if (!roomKey) return;
@@ -143,7 +143,7 @@ export function useRealtime(events: string | string[] | null | undefined, handle
 /** Receive the realtime events of these rooms (e.g. trip:<id>) while mounted. The server checks each room. */
 export function useRealtimeRooms(rooms: string[]) {
   const { joinRooms } = useApi();
-  const key = [...new Set(rooms)].sort().join(',');
+  const key = [...new Set(rooms)].sort((a, b) => a.localeCompare(b)).join(',');
   useEffect(() => {
     if (!joinRooms || !key) return;
     return joinRooms(key.split(','));

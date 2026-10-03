@@ -42,7 +42,7 @@ export default function ScreenLd04ReleaseVehicle() {
   const ticked = lines.filter(l => t.isTicked(l.id) && !flagged(l)).length;
   const accounted = ticked + short;
   const acks = sheet.shortfalls.map(sf => (trip ? ackFor(notes.data, trip.id, sf.item) : undefined)).filter(Boolean);
-  const lastAck = acks.map(a => a!.sentAt).sort().at(-1);
+  const lastAck = acks.map(a => a!.sentAt).sort((a, b) => a.localeCompare(b)).at(-1);
   const driver = trip?.driver?.name ?? null;
   const checks = {
     lines: !!data && total > 0 && accounted === total,

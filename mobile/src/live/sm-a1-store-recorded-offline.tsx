@@ -40,7 +40,7 @@ export default function ScreenSmA1StoreRecordedOffline() {
   const savedAt = (typeof notice?.payload?.savedAt === 'string' ? (notice.payload.savedAt as string) : undefined) ?? pod?.savedAt;
   const syncedAt = (typeof notice?.payload?.syncedAt === 'string' ? (notice.payload.syncedAt as string) : undefined) ?? pod?.syncedAt ?? notice?.sentAt;
   const receipts = rows.filter(r => r.counted !== undefined);
-  const firstReceipt = receipts.map(r => r.countedAt).filter(Boolean).sort()[0];
+  const firstReceipt = receipts.map(r => r.countedAt).filter(Boolean).sort((a, b) => String(a).localeCompare(String(b)))[0];
   const matches = rows.every(r => r.counted === undefined || r.counted === r.pod!.unitsDelivered);
   const credits = rows.map(r => ({ r, c: orderCredit(r.o, r.pod) }));
   const creditRow = credits.find(x => x.c.creditNoteId) ?? null;

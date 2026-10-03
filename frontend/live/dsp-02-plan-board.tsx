@@ -39,7 +39,7 @@ export default function LiveDsp02PlanBoard() {
   const planned = showing === 'draft' ? cards.reduce((s, c) => s + c.stops, 0) : (orders.data ?? []).filter(o => !['RECEIVED', 'DEFERRED', 'CANCELLED'].includes(o.status)).length;
   const toApprove = Boolean(draft) || p?.status === 'NEEDS_APPROVAL' || p?.status === 'DRAFT';
   const checks = draft?.ruleChecks ?? [];
-  const firstDepart = cards.map(c => c.departs).filter(Boolean).sort()[0];
+  const firstDepart = cards.map(c => c.departs).filter(Boolean).sort((a, b) => String(a).localeCompare(String(b)))[0];
 
   return (
     <div className="frame frame--desktop mode-dispatcher" data-name="DSP-02 Plan board">

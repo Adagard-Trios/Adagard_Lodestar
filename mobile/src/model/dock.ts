@@ -279,7 +279,7 @@ export async function tripLineCounts(c: Pick<ODataClient, 'all'>, tripIds: strin
 }
 
 export function useTripLineCounts(tripIds: string[]) {
-  const ids = [...tripIds].sort().join(',');
+  const ids = [...tripIds].sort((a, b) => a.localeCompare(b)).join(',');
   return useQuery(ids ? `dock.lines.${ids}` : null, c => tripLineCounts(c, ids.split(',')), { persist: true });
 }
 
@@ -453,6 +453,6 @@ export async function vehicleDockLoad(c: Pick<ODataClient, 'all'>, tripIds: stri
 }
 
 export function useVehicleDockLoad(tripIds: string[]) {
-  const ids = [...tripIds].sort().join(',');
+  const ids = [...tripIds].sort((a, b) => a.localeCompare(b)).join(',');
   return useQuery(ids ? `dock.vehicle.${ids}` : null, c => vehicleDockLoad(c, ids.split(',')), { persist: true });
 }

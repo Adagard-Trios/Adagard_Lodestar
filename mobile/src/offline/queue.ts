@@ -144,7 +144,7 @@ export function summarize(items: QueueItem[], sub?: string): QueueSummary {
     synced: synced.length,
     attention: mine.filter(needsAttention).length,
     oldestPendingAt: waiting[0]?.savedAt,
-    lastSyncedAt: synced.map(i => i.syncedAt ?? '').sort().at(-1) || undefined,
+    lastSyncedAt: synced.map(i => i.syncedAt ?? '').sort((a, b) => a.localeCompare(b)).at(-1) || undefined,
   };
 }
 

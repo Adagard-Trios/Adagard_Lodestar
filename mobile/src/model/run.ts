@@ -185,8 +185,8 @@ export function tripSummary(view: RunView | null): TripSummary {
   const stops = stopsOf(trip);
   const delivered = stops.filter(s => s.status === 'DELIVERED');
   const pods = stops.map(s => s.pod).filter((p): p is NonNullable<TripStop['pod']> => !!p);
-  const leaves = stops.map(s => s.leaveActual).filter((x): x is string => !!x).sort();
-  const arrivals = stops.map(s => s.arrivalActual).filter((x): x is string => !!x).sort();
+  const leaves = stops.map(s => s.leaveActual).filter((x): x is string => !!x).sort((a, b) => a.localeCompare(b));
+  const arrivals = stops.map(s => s.arrivalActual).filter((x): x is string => !!x).sort((a, b) => a.localeCompare(b));
   return {
     trip,
     stops,
@@ -319,7 +319,7 @@ export type ServerEvent = { id: string; tripId?: string | null; eventType: strin
 
 /** The day's offline events the server holds for the driver's trips (the vehicle scope comes from the token). */
 export function useServerEvents(tripIds: string[]) {
-  const ids = [...tripIds].sort().join(',');
+  const ids = [...tripIds].sort((a, b) => a.localeCompare(b)).join(',');
   return useQuery<ServerEvent[]>(ids ? `run.events.${ids}` : null, c => c.all<ServerEvent>('OfflineEvents', { filter: inList('tripId', ids.split(',')), select: ['id', 'tripId', 'eventType', 'savedAt', 'syncedAt'], orderby: 'syncedAt desc' }));
 }
 
@@ -332,6 +332,6 @@ export function movedRun(events: ServerEvent[] | undefined, mine: QueueItem[], s
   const own = new Set(mine.map(i => i.id));
   const others = events.filter(e => !own.has(e.id));
   if (!others.length) return { moved: false };
-  const lastSynced = others.map(e => e.syncedAt ?? e.savedAt).filter(Boolean).sort().at(-1);
+  const lastSynced = others.map(e => e.syncedAt ?? e.savedAt).filter(Boolean).sort((a, b) => a.localeCompare(b)).at(-1);
   return { moved: true, lastSynced };
 }

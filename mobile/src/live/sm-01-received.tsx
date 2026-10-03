@@ -50,7 +50,7 @@ export default function ScreenSm01Received() {
     .filter(i => i.kind === 'ORDER' && (i.status === 'pending' || i.status === 'sending') && i.payload.order?.runDate === asked && (!since || i.savedAt >= since))
     .map(i => ({ key: i.id, id: null, tempClass: i.payload.order.tempClass, units: i.payload.order.units, kg: i.payload.order.kg, m3: i.payload.order.m3, at: i.savedAt, onPhone: true }));
   const rows = [...server, ...phone].sort((a, b) => (a.tempClass === b.tempClass ? a.at.localeCompare(b.at) : a.tempClass === 'AMBIENT' ? -1 : 1));
-  const latest = rows.map(r => r.at).sort().at(-1);
+  const latest = rows.map(r => r.at).sort((a, b) => a.localeCompare(b)).at(-1);
   const [time, ampm] = clock12(latest);
   const units = rows.reduce((n, r) => n + r.units, 0);
   const waiting = rows.some(r => r.onPhone);

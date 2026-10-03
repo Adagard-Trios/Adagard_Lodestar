@@ -244,7 +244,7 @@ export function StoreTop({ active, avatarLk, extra }: { active: string; avatarLk
       <div className="spacer" />
       {extra}
       <span className="s-top__clock">{fmtDay(new Date(now))} · {fmtTime(new Date(now))}</span>
-      <div className="m-iconbtn lv-click" title="Sign out" role="button" tabIndex={0} onClick={e => { e.stopPropagation(); void logout(); }}>
+      <div className="m-iconbtn lv-click" title="Sign out" role="button" tabIndex={0} onClick={e => { e.stopPropagation(); void logout(); }} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); void logout(); } }}>
         <Ic n="log-in" />
       </div>
       <span className="d-avatar" {...(avatarLk ? { 'data-lk': avatarLk } : {})} title={session?.name}>{initials(session?.name ?? '')}</span>

@@ -17,7 +17,7 @@ export default function ScreenDr21Records() {
   const list = pods.data ?? [];
   const records = newestFirst(items);
   const stopOf = (id: string) => view?.stops.find(x => x.id === id);
-  const lastPodSync = list.map(p => p.syncedAt ?? '').sort().at(-1);
+  const lastPodSync = list.map(p => p.syncedAt ?? '').sort((a, b) => a.localeCompare(b)).at(-1);
   const vehicle = claims?.vehicleId ?? view?.trip?.vehicleId;
   return (
     <Frame bg="#070b16" nav={nav} style={s.v0}>

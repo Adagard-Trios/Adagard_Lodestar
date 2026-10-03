@@ -81,7 +81,7 @@ export default function LiveDsp19FleetAndVehicleProfile() {
             </div>
             <div className="dx-tabs" role="tablist">
               {depots.map(d => <DepotTab key={d} depot={d} on={d === depot} onPick={() => setTab(d)} />)}
-              <span className="dx-tab lv-click" role="tab" tabIndex={0} onClick={e => { e.stopPropagation(); router.push('/plan/dsp-18-outlet-profile'); }}>Outlets <b>{outlets ?? '…'}</b></span>
+              <span className="dx-tab lv-click" role="tab" tabIndex={0} onClick={e => { e.stopPropagation(); router.push('/plan/dsp-18-outlet-profile'); }} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); router.push('/plan/dsp-18-outlet-profile'); } }}>Outlets <b>{outlets ?? '…'}</b></span>
             </div>
           </div>
           <ErrorBanner error={fleet.error ?? trips.error} onRetry={fleet.refresh} />

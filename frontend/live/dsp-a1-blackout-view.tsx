@@ -24,7 +24,7 @@ import { useFocusId } from '@/lib/workday';
 const vehicleKind = (t: Trip) => (t.vehicle ? `${t.vehicle.tempClass === 'CHILLED' ? 'Reefer' : 'Dry'} ${t.vehicle.type === 'VAN' ? 'van' : 'truck'}` : 'Vehicle');
 const riskColor = (p: number) => (p >= 50 ? '#D92D20' : p >= 30 ? '#F5B83D' : '#10B981');
 const lastActual = (t: Trip) =>
-  (t.stops ?? []).flatMap(s => [s.arrivalActual, s.leaveActual]).filter(Boolean).sort().at(-1) ?? (t.status !== 'PLANNED' ? t.departTime : null);
+  (t.stops ?? []).flatMap(s => [s.arrivalActual, s.leaveActual]).filter(Boolean).sort((a, b) => String(a).localeCompare(String(b))).at(-1) ?? (t.status !== 'PLANNED' ? t.departTime : null);
 
 /** The trips table (also drawn, dimmed, behind DSP-A1b). */
 export function TripsTable({ trips, signal, onOpen, compact }: { trips: Trip[]; signal: Map<string, SignalEvent>; onOpen?: (t: Trip) => void; compact?: boolean }) {

@@ -44,7 +44,7 @@ export default function LiveAdm18NotificationsAndIntegrations() {
     }
     return {
       total: page.count ?? page.value.length,
-      types: [...byType.entries()].map(([type, t]) => ({ type, count: t.count, roles: [...t.roles].sort() })).sort((a, b) => b.count - a.count),
+      types: [...byType.entries()].map(([type, t]) => ({ type, count: t.count, roles: [...t.roles].sort((a, b) => String(a).localeCompare(String(b))) })).sort((a, b) => b.count - a.count),
     };
   }, { refreshOn: ['notification'] });
   const hub = useRealtimeStatus();
