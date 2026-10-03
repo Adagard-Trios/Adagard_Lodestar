@@ -24,7 +24,7 @@ export interface Preferences {
   alerts?: AlertRules;
   onCall?: { from?: string; to?: string };
   notifications?: Partial<Record<StoreTopic, Channels>>;
-  receiving?: { staffFrom?: string; staff?: Array<{ name: string; phone?: string; note?: string }> };
+  receiving?: { staffFrom?: string; staff?: { name: string; phone?: string; note?: string }[] };
   language?: 'en' | 'si' | 'ta';
 }
 
@@ -44,6 +44,20 @@ export const DEFAULT_TOPICS: Record<StoreTopic, Channels> = {
   cutoffReminder: { app: true, sms: false },
   creditNotes: { app: true, sms: false },
 };
+
+/** The delivery channels this deployment offers (Notifications/Lodestar.Channels): SMS only with SMS_ENABLED, never a call. */
+export interface DeliveryChannels {
+  websocket: boolean;
+  push: boolean;
+  sms: boolean;
+  call: boolean;
+}
+
+export const SMS_UNAVAILABLE = 'SMS not available in this deployment';
+
+export function useDeliveryChannels() {
+  return useQuery<DeliveryChannels>('delivery-channels', c => c.fn<DeliveryChannels>('Notifications/Lodestar.Channels()'), { persist: true });
+}
 
 /** Sections saved on this phone but not yet answered by the server (shown at once). */
 const pending = new Store<{ sub?: string; p: Preferences }>({ p: {} });

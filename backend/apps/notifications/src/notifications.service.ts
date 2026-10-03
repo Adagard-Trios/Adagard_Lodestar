@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { Notification, NotificationChannel, OrderStatus, Prisma } from '@prisma/client';
 import { canonicalRoom, NotificationsGateway } from './notifications.gateway';
+import { SmsService } from './sms';
 
 export interface SendParams {
   recipientId: string;
@@ -23,7 +24,13 @@ export class NotificationsService {
   constructor(
     private prisma: PrismaService,
     private gateway: NotificationsGateway,
+    @Optional() private sms?: SmsService,
   ) {}
+
+  /** The delivery channels this deployment offers (Notifications/Lodestar.Channels): the faces hide the rest. */
+  channels() {
+    return { websocket: true, push: false, sms: this.sms?.enabled ?? false, call: false };
+  }
 
   async send(params: SendParams) {
     const notif = await this.prisma.notification.create({
@@ -35,6 +42,7 @@ export class NotificationsService {
         payload: (params.payload ?? {}) as Prisma.InputJsonValue,
       },
     });
+    const sent = await this.sendSms(notif);
 
     // Always deliver to the recipient's personal room…
     this.gateway.emit(`user:${params.recipientId}`, 'notification', notif);
@@ -62,7 +70,28 @@ export class NotificationsService {
         if (params.depot) this.gateway.dispatcherAlert(params.depot, params.type, params.payload);
     }
 
-    return notif;
+    return sent;
+  }
+
+  /**
+   * SMS when the flag is on and the recipient's preferences ask for this type (sms.ts). What was sent (or, with the
+   * log provider, what would have been) is kept on the notification as payload.delivery.sms and in the audit log.
+   */
+  private async sendSms(notif: Notification): Promise<Notification> {
+    if (!this.sms?.enabled) return notif;
+    try {
+      const recipient = await this.prisma.user.findUnique({ where: { id: notif.recipientId }, select: { phone: true, preferences: true } });
+      const sms = await this.sms.deliver(notif, recipient);
+      if (!sms) return notif;
+      const payload = (notif.payload && typeof notif.payload === 'object' && !Array.isArray(notif.payload) ? notif.payload : {}) as Record<string, unknown>;
+      const delivery = (payload.delivery && typeof payload.delivery === 'object' ? payload.delivery : {}) as Record<string, unknown>;
+      return await this.prisma.notification.update({
+        where: { id: notif.id },
+        data: { payload: { ...payload, delivery: { ...delivery, sms } } as unknown as Prisma.InputJsonValue },
+      });
+    } catch {
+      return notif; // an SMS problem never fails the in-app notification
+    }
   }
 
   /** Realtime only (nothing stored): an operational event to rooms, e.g. plan_published to dispatcher:KANDY. */

@@ -46,6 +46,8 @@ afterEach(unfreeze);
 type SaveBody = { preferences: Preferences & { notifications: Record<string, unknown>; alerts: Record<string, unknown> } };
 
 const fallback = (req: FakeRequest) => (req.query.$top === '0' ? page([], 0) : page([]));
+/** Notifications/Lodestar.Channels on a deployment with SMS_ENABLED=true. */
+const SMS_ON = { value: { websocket: true, push: false, sms: true, call: false } };
 
 describe('sidebars carry the designed links again', () => {
   it('Plan has N8 Intelligence and N9 Settings; Admin has N8 Data imports and N10 Planning agent', () => {
@@ -63,6 +65,7 @@ describe('SM-30 Settings', () => {
       session: SESSIONS.store,
       handler: req => req.path.includes('SaveMyPreferences') ? { value: (req.body as { preferences: unknown }).preferences }
         : req.path.includes('MyPreferences') ? { value: { language: 'si' } }
+          : req.path.includes('Lodestar.Channels') ? SMS_ON
           : req.path.startsWith("Outlets('OUTT01')") ? { id: 'OUTT01', name: 'Waypoint Fresh Test', brand: 'FRESH', depot: 'KANDY', dockType: 'REAR_DOCK', parking: 'NORMAL', windowOpen: '05:30', windowClose: '08:00', accessNote: 'Lawson St lane' }
             : fallback(req),
     });
@@ -98,15 +101,39 @@ describe('SM-30 Settings', () => {
   });
 });
 
+describe('SMS is offered only when the deployment sends it (SMS_ENABLED)', () => {
+  const off = (req: FakeRequest) => req.path.includes('MyPreferences') ? { value: {} }
+    : req.path.includes('Lodestar.Channels') ? { value: { websocket: true, push: false, sms: false, call: false } }
+      : req.path.includes('AgentConfig') ? { value: CONFIG } : fallback(req);
+
+  it('SM-30 shows the SMS switches off and disabled, with the reason', async () => {
+    renderLive(<StoreSettings />, { session: SESSIONS.store, handler: off });
+    expect(await screen.findByTestId('sms-unavailable')).toHaveTextContent('Not available in this deployment');
+    const sw = screen.getByLabelText('Van on the way SMS');
+    expect(sw).toHaveAttribute('aria-disabled', 'true');
+    expect(sw).toHaveAttribute('aria-checked', 'false');
+  });
+
+  it('DSP-20 shows the vehicle-fault SMS switch disabled and no call switch', async () => {
+    renderLive(<PlanSettings />, { handler: off });
+    expect(await screen.findByTestId('sms-unavailable')).toHaveTextContent('Not available in this deployment');
+    expect(screen.getByLabelText('Vehicle fault SMS')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.queryByLabelText('Silence call')).not.toBeInTheDocument();
+  });
+});
+
 describe('DSP-20 Settings', () => {
   it('shows the agent’s limits and reason codes and saves the dispatcher’s alert rules', async () => {
     const view = renderLive(<PlanSettings />, {
       handler: req => req.path.includes('SaveMyPreferences') ? { value: (req.body as { preferences: unknown }).preferences }
         : req.path.includes('MyPreferences') ? { value: {} }
-          : req.path.includes('AgentConfig') ? { value: CONFIG } : fallback(req),
+          : req.path.includes('Lodestar.Channels') ? SMS_ON
+            : req.path.includes('AgentConfig') ? { value: CONFIG } : fallback(req),
     });
     expect(await screen.findByText('3:30 to 8:00 · 270 min')).toBeInTheDocument();
     expect(screen.getByTestId('reason-codes')).toHaveTextContent('CAP_REEFER');
+    // no call channel: there is no voice provider
+    expect(screen.queryByLabelText('Silence call')).not.toBeInTheDocument();
     fireEvent.click(await screen.findByLabelText('Vehicle fault SMS'));
     fireEvent.click(screen.getByText('Save changes'));
     await waitFor(() => expect(router.push).toHaveBeenCalledWith('/plan/dsp-08-today-overview'));

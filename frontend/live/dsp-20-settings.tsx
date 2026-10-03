@@ -17,7 +17,7 @@ import { useRouter } from 'next/navigation';
 import Btn from '@/components/live/Btn';
 import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
-import { type AlertRules, type Preferences, useAgentConfig, usePreferences } from '@/components/live/settings-data';
+import { type AlertRules, type Preferences, SMS_UNAVAILABLE, useAgentConfig, useDeliveryChannels, usePreferences } from '@/components/live/settings-data';
 import { ErrorBanner, Skeleton } from '@/components/live/states';
 import { usePlanScope } from '@/components/live/plan-data';
 import { addDays, isoDay } from '@/lib/format';
@@ -46,7 +46,9 @@ const toMin = (v: string) => { const [h, m] = v.split(':').map(Number); return h
 const initials = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join('');
 const dm = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 
-function Toggle({ on, onChange, label, locked }: { on: boolean; onChange?: (v: boolean) => void; label: string; locked?: boolean }) {
+function Toggle({ on, onChange, label, locked, unavailable }: { on: boolean; onChange?: (v: boolean) => void; label: string; locked?: boolean; unavailable?: string }) {
+  // a channel this deployment does not offer (SMS without SMS_ENABLED): shown off and disabled, with the reason
+  if (unavailable) return <span className="dx-toggle dx-toggle--off" aria-label={label} aria-checked={false} aria-disabled="true" role="switch" title={unavailable} style={{ opacity: 0.45 }}><i /></span>;
   if (locked || !onChange) return <span className={`dx-toggle${on ? '' : ' dx-toggle--off'}`} aria-label={label} aria-checked={on} role="switch"><i /></span>;
   return (
     <span className={`dx-toggle lv-click${on ? '' : ' dx-toggle--off'}`} role="switch" aria-checked={on} aria-label={label} tabIndex={0}
@@ -65,6 +67,8 @@ export default function LiveDsp20Settings() {
   const router = useRouter();
   const { active } = usePlanScope();
   const prefs = usePreferences();
+  // SMS only when the deployment sends it (Notifications/Lodestar.Channels); there is no call channel at all
+  const smsOff = useDeliveryChannels().data?.sms === true ? undefined : SMS_UNAVAILABLE;
   const config = useAgentConfig();
   const rules = usePlanningRules();
   const r = rules.data;
@@ -171,7 +175,8 @@ export default function LiveDsp20Settings() {
                 <div className="dx-card__body" style={{ gap: '0' }}>
                   {!draft || !r ? <Skeleton rows={4} /> : (
                     <>
-                      <div className="dx-kv"><span>{"Vehicle can't depart"}</span><span className="hstack" style={{ gap: '8px' }}><span className="dx-t13">{"push"}</span><Toggle label="Vehicle fault push" on={!!alerts.vehicleFault.push} onChange={v => setAlert('vehicleFault', { push: v })} /><span className="dx-t13">{"SMS"}</span><Toggle label="Vehicle fault SMS" on={!!alerts.vehicleFault.sms} onChange={v => setAlert('vehicleFault', { sms: v })} /></span></div>
+                      <div className="dx-kv"><span>{"Vehicle can't depart"}</span><span className="hstack" style={{ gap: '8px' }}><span className="dx-t13">{"push"}</span><Toggle label="Vehicle fault push" on={!!alerts.vehicleFault.push} onChange={v => setAlert('vehicleFault', { push: v })} /><span className="dx-t13" title={smsOff}>{"SMS"}</span><Toggle label="Vehicle fault SMS" on={!smsOff && !!alerts.vehicleFault.sms} onChange={v => setAlert('vehicleFault', { sms: v })} unavailable={smsOff} /></span></div>
+                      {smsOff && <div className="dx-t13" data-testid="sms-unavailable" style={{ padding: '0 0 6px' }}>{`SMS: ${smsOff}`}</div>}
                       <div className="dx-kv">
                         <span className="hstack" style={{ gap: '6px' }}>{"Late risk"}
                           <select className="lv-input" aria-label="Late risk threshold" style={{ width: 'auto', height: '30px' }} value={alerts.lateRisk.threshold ?? r.lateRisk.alertPct}
@@ -182,7 +187,7 @@ export default function LiveDsp20Settings() {
                         <Toggle label="Late risk push" on={!!alerts.lateRisk.push} onChange={v => setAlert('lateRisk', { push: v })} />
                       </div>
                       <div className="dx-kv"><span>{"Loader and store flags"}</span><Toggle label="Flags push" on={!!alerts.flags.push} onChange={v => setAlert('flags', { push: v })} /></div>
-                      <div className="dx-kv"><span>{`Silent ${alerts.silence.minutes ?? r.alertDefaults.silence.minutes} min, unknown place`}</span><span className="hstack" style={{ gap: '8px' }}><span className="dx-t13">{"push"}</span><Toggle label="Silence push" on={!!alerts.silence.push} onChange={v => setAlert('silence', { push: v })} /><span className="dx-t13">{"call"}</span><Toggle label="Silence call" on={!!alerts.silence.call} onChange={v => setAlert('silence', { call: v })} /></span></div>
+                      <div className="dx-kv"><span>{`Silent ${alerts.silence.minutes ?? r.alertDefaults.silence.minutes} min, unknown place`}</span><Toggle label="Silence push" on={!!alerts.silence.push} onChange={v => setAlert('silence', { push: v })} /></div>
                       <div className="dx-kv"><span>{"Known signal-loss zones alert"}</span><Toggle label="Signal-loss zones" on={!!alerts.signalZones.alert} onChange={v => setAlert('signalZones', { alert: v })} /></div>
                       <div className="dx-kv">
                         <span>{"On call"}</span>

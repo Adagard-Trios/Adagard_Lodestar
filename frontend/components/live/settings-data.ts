@@ -43,6 +43,21 @@ export function usePreferences() {
   return { ...q, save };
 }
 
+/** The delivery channels this deployment offers (Notifications/Lodestar.Channels; SMS behind SMS_ENABLED). */
+export interface DeliveryChannels {
+  websocket: boolean;
+  push: boolean;
+  sms: boolean;
+  /** Always false: there is no voice provider, so no screen offers a call. */
+  call: boolean;
+}
+
+/** Shown on an SMS switch the deployment cannot honour. */
+export const SMS_UNAVAILABLE = 'Not available in this deployment';
+
+export const useDeliveryChannels = () =>
+  useQuery<DeliveryChannels>('delivery-channels', async c => valueOf<DeliveryChannels>(await c.fn('Notifications', null, 'Channels')));
+
 export interface TwoFactor {
   available: boolean;
   enabled: boolean;
@@ -50,7 +65,7 @@ export interface TwoFactor {
   otp: Array<{ label: string | null; createdAt: string | null }>;
 }
 
-export const useTwoFactor = () => useQuery<TwoFactor>('my-two-factor', async c => valueOf<TwoFactor>(await c.fn('Users', null, 'MyTwoFactor')));
+export const useTwoFactor = (enabled = true) => useQuery<TwoFactor>(enabled ? 'my-two-factor' : null, async c => valueOf<TwoFactor>(await c.fn('Users', null, 'MyTwoFactor')));
 
 /** One sign-in of the store's own outlet (Users/Lodestar.MyOutletUsers, SM-30 "Users & access"). */
 export interface OutletUser {

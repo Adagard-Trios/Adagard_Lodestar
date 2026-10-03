@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
-import { assertDepotCode, EntitySet, ODataAction, ODataEntitySet, ODataError, OperationContext } from '@lodestar/odata';
+import { assertDepotCode, EntitySet, ODataAction, ODataEntitySet, ODataError, ODataFunction, OperationContext } from '@lodestar/odata';
 import { canAccessDepot, HUMAN_ROLES, isPrivileged, Roles } from '@lodestar/security';
 import { NotificationsService } from './notifications.service';
 
@@ -35,6 +35,16 @@ export class NotificationsSet extends ODataEntitySet {
       await this.notifications.acknowledgeShortfall(read, { sub: ctx.principal.sub, name: ctx.principal.name });
     }
     return read;
+  }
+
+  /**
+   * GET /odata/v4/Notifications/Lodestar.Channels() — the delivery channels this deployment offers
+   * ({websocket, push, sms, call}). The settings screens (DSP-20, DSP-33, SM-30) hide SMS when sms is false;
+   * call is always false (no voice provider).
+   */
+  @ODataFunction({ name: 'Channels', binding: 'collection', roles: [...HUMAN_ROLES, Roles.Service], returns: 'Edm.Untyped' })
+  channels() {
+    return this.notifications.channels();
   }
 
   /** POST Notifications/Lodestar.Send {recipientId, type, payload, …} — stored and pushed over WebSocket. */

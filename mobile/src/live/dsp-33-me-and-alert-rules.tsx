@@ -6,7 +6,7 @@ import { Text, View, StyleSheet, type StyleProp, type ViewStyle } from 'react-na
 import { signOutTo, titleCase, useDeviceId } from '@/lodestar/live';
 import { useClaims } from '@/model/hooks';
 import { depotsLabel, useAlertCount } from '@/model/plan';
-import { alertRules, clock12, DEFAULT_ALERTS, LATE_RISK_PCT, onCallNow, savePreferences, usePreferences, type Preferences } from '@/model/preferences';
+import { alertRules, clock12, DEFAULT_ALERTS, LATE_RISK_PCT, onCallNow, savePreferences, SMS_UNAVAILABLE, useDeliveryChannels, usePreferences, type Preferences } from '@/model/preferences';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 import { useDepots } from '@/model/depots';
 
@@ -30,6 +30,8 @@ export default function ScreenDsp33MeAndAlertRules() {
   const device = useDeviceId();
   const alertCount = useAlertCount();
   const prefs = usePreferences();
+  // SMS only when the deployment sends it; there is no call channel (no voice provider)
+  const sms = useDeliveryChannels().data?.sms === true;
   const name = claims?.name ?? claims?.username;
   const role = claims ? (claims.roles.includes('dispatcher') ? 'Dispatcher' : titleCase(claims.roles[0])) : '';
   const depots = depotsLabel(claims?.depots);
@@ -39,10 +41,10 @@ export default function ScreenDsp33MeAndAlertRules() {
   const to = onCall?.to && clock12(onCall.to);
   const now = !!(from && to) && onCallNow(onCall);
   const rows: RuleRow[] = [
-    { key: 'vehicleFault', icon: X0, tile: s.v22, title: "Vehicle can't depart", sub: [a.vehicleFault.push && 'Push', a.vehicleFault.sms && 'SMS'].filter(Boolean).join(' and ') || 'Off', on: !!(a.vehicleFault.push || a.vehicleFault.sms), set: v => ({ ...a, vehicleFault: { push: v, sms: v } }) },
+    { key: 'vehicleFault', icon: X0, tile: s.v22, title: "Vehicle can't depart", sub: sms ? [a.vehicleFault.push && 'Push', a.vehicleFault.sms && 'SMS'].filter(Boolean).join(' and ') || 'Off' : `${a.vehicleFault.push ? 'Push' : 'Off'} · ${SMS_UNAVAILABLE}`, on: !!(a.vehicleFault.push || (sms && a.vehicleFault.sms)), set: v => ({ ...a, vehicleFault: sms ? { push: v, sms: v } : { ...a.vehicleFault, push: v } }) },
     { key: 'lateRisk', icon: X1, tile: s.v28, title: `Late risk ${a.lateRisk.threshold ?? LATE_RISK_PCT}% or more`, sub: a.lateRisk.risingOnly ? 'Push · rising risk only' : 'Push', on: !!a.lateRisk.push, set: v => ({ ...a, lateRisk: { ...a.lateRisk, push: v } }) },
     { key: 'flags', icon: X2, tile: s.v28, title: 'Loader and store flags', sub: 'Push · shortfalls, blocked docks', on: !!a.flags.push, set: v => ({ ...a, flags: { push: v } }) },
-    { key: 'silence', icon: X3, tile: s.v22, title: `Silent ${a.silence.minutes ?? DEFAULT_ALERTS.silence.minutes} min, unknown place`, sub: [a.silence.push && 'Push', a.silence.call && 'call'].filter(Boolean).join(' and ') || 'Off', on: !!(a.silence.push || a.silence.call), set: v => ({ ...a, silence: { ...a.silence, push: v, call: v } }) },
+    { key: 'silence', icon: X3, tile: s.v22, title: `Silent ${a.silence.minutes ?? DEFAULT_ALERTS.silence.minutes} min, unknown place`, sub: a.silence.push ? 'Push' : 'Off', on: !!a.silence.push, set: v => ({ ...a, silence: { ...a.silence, push: v } }) },
     { key: 'signalZones', icon: X4, tile: s.v30, title: 'Known signal-loss zones', sub: a.signalZones.alert ? 'Alert when a van goes quiet there' : 'Show as predicted, no alert', on: !!a.signalZones.alert, set: v => ({ ...a, signalZones: { alert: v } }) },
   ];
   const onCount = rows.filter(r => r.on).length;

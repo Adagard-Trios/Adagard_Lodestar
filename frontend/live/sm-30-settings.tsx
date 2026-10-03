@@ -14,7 +14,7 @@ import { useRouter } from 'next/navigation';
 import Btn from '@/components/live/Btn';
 import { StoreTop, useMyOutlet } from '@/components/live/chrome';
 import { Ic, type IconName } from '@/components/live/icons';
-import { type Channels, type Preferences, type ReceivingStaff, type StoreTopic, useOutletUsers, usePreferences } from '@/components/live/settings-data';
+import { type Channels, type Preferences, type ReceivingStaff, SMS_UNAVAILABLE, type StoreTopic, useDeliveryChannels, useOutletUsers, usePreferences } from '@/components/live/settings-data';
 import { ErrorBanner, Skeleton } from '@/components/live/states';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { resetOptions, telHref } from '@/lib/auth/reset';
@@ -46,7 +46,9 @@ function adminLink(subject: string, body: string): string | null {
   return supportPhone ? telHref(supportPhone) : null;
 }
 
-function Tg({ on, locked, label, onChange }: { on: boolean; locked?: boolean; label: string; onChange?: (v: boolean) => void }) {
+function Tg({ on, locked, label, onChange, unavailable }: { on: boolean; locked?: boolean; label: string; onChange?: (v: boolean) => void; unavailable?: string }) {
+  // a channel this deployment does not offer (SMS without SMS_ENABLED): shown off and disabled, with the reason
+  if (unavailable) return <div className="sx-tg" role="switch" aria-checked={false} aria-disabled="true" aria-label={label} title={unavailable} style={{ opacity: 0.45 }}><div /></div>;
   const cls = `sx-tg${on ? ' is-on' : ''}${locked ? ' is-lock' : ''}`;
   if (locked || !onChange) return <div className={cls} role="switch" aria-checked={on} aria-label={label}><div /></div>;
   return (
@@ -63,6 +65,8 @@ export default function LiveSm30Settings() {
   const { session, logout } = useAuth();
   const outlet = useMyOutlet();
   const prefs = usePreferences();
+  // SMS only when the deployment sends it (Notifications/Lodestar.Channels)
+  const smsOff = useDeliveryChannels().data?.sms === true ? undefined : SMS_UNAVAILABLE;
   // the active sign-ins of this outlet, from the directory (Users/Lodestar.MyOutletUsers)
   const users = useOutletUsers(Boolean(session?.outletId));
   // no directory row yet (or no outlet on the token): the signed-in user, as the token names them
@@ -217,25 +221,26 @@ export default function LiveSm30Settings() {
                   <span className="d-card__title">{"Notifications"}</span>
                   <div className="spacer" />
                   <span className="sx-col-h">{"App"}</span>
-                  <span className="sx-col-h">{"SMS"}</span>
+                  <span className="sx-col-h" title={smsOff}>{"SMS"}</span>
                 </div>
+                {smsOff && <div className="sx-set-row" data-testid="sms-unavailable"><div className="sx-set-row__main"><span>{`SMS: ${smsOff}`}</span></div></div>}
                 {TOPICS.slice(0, 2).map(t => (
                   <div key={t.k} className="sx-set-row">
                     <div className="sx-set-row__main"><b>{t.label}</b><span>{t.sub}</span></div>
                     <div className="sx-col-h"><Tg label={`${t.label} app`} on={!!channels(t).app} onChange={draft ? v => setChannel(t, 'app', v) : undefined} /></div>
-                    <div className="sx-col-h"><Tg label={`${t.label} SMS`} on={!!channels(t).sms} onChange={draft ? v => setChannel(t, 'sms', v) : undefined} /></div>
+                    <div className="sx-col-h"><Tg label={`${t.label} SMS`} on={!!channels(t).sms} onChange={draft ? v => setChannel(t, 'sms', v) : undefined} unavailable={smsOff} /></div>
                   </div>
                 ))}
                 <div className="sx-set-row">
-                  <div className="sx-set-row__main"><b>{"Short or moved orders"}</b><span>{"always on, both channels"}</span></div>
+                  <div className="sx-set-row__main"><b>{"Short or moved orders"}</b><span>{smsOff ? 'always on in the app' : 'always on, both channels'}</span></div>
                   <div className="sx-col-h"><Tg label="Short or moved orders app" on locked /></div>
-                  <div className="sx-col-h"><Tg label="Short or moved orders SMS" on locked /></div>
+                  <div className="sx-col-h"><Tg label="Short or moved orders SMS" on locked unavailable={smsOff} /></div>
                 </div>
                 {TOPICS.slice(2).map(t => (
                   <div key={t.k} className="sx-set-row">
                     <div className="sx-set-row__main"><b>{t.label}</b><span>{t.sub}</span></div>
                     <div className="sx-col-h"><Tg label={`${t.label} app`} on={!!channels(t).app} onChange={draft ? v => setChannel(t, 'app', v) : undefined} /></div>
-                    <div className="sx-col-h"><Tg label={`${t.label} SMS`} on={!!channels(t).sms} onChange={draft ? v => setChannel(t, 'sms', v) : undefined} /></div>
+                    <div className="sx-col-h"><Tg label={`${t.label} SMS`} on={!!channels(t).sms} onChange={draft ? v => setChannel(t, 'sms', v) : undefined} unavailable={smsOff} /></div>
                   </div>
                 ))}
               </div>
