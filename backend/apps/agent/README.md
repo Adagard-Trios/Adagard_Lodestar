@@ -17,7 +17,7 @@ await_approval ── approve / reject → END
 |---|---|
 | `load_context` | Tool-calling node: the model picks `fetch_*` tools for missing datasets (Orders, Outlets, Vehicles, Calendar, DistrictTravel, ServiceAllowances). Tools read OData with the agent's service token and refuse any depot/date outside the run's scope. |
 | `draft_plan` | Capacity and packing heuristics ported from `backend/apps/planning/src`: chilled on reefers, van_only on vans, dry Fresh off reefers, 1 brand + 1 district per trip, max 2 trips per vehicle, weight/volume, minute budget (270 Fresh / 480 Style-Tech), windows. |
-| `check_rules` | The 7 booklet rules (weight, volume, 270 min, 2 trips, fuel, van_only, mall, the mall checked against `mallWindow`) plus every stop arriving before its window closes. Violations become constraints (`prioritise` then `avoid`) and loop back to `draft_plan`, at most `AGENT_MAX_REDRAFTS` (3) times. Human edits are flagged, not redrafted. |
+| `check_rules` | The 7 booklet rules (weight, volume, 270 min, 2 trips, fuel, van_only, mall, the mall checked against `mallWindow`) plus every stop arriving before its window closes. `draft_plan` already packs around the weekly fuel quota and every stop's window close (mall windows included), simulating the same clock as the schedule, so drafts are normally rule-clean on the first pass (an order no vehicle can take in time or within quota is left out with `WINDOW` / `FUEL`). Violations that still appear become constraints (`prioritise` then `avoid`) and loop back to `draft_plan`, at most `AGENT_MAX_REDRAFTS` (3) times: the safety net. Human edits are flagged, not redrafted. |
 | `rank_deferrals` | Takes leftovers off the plan, keeps protected orders (score ≥ 91 or outlet flag) by bumping the lowest-score order when possible, otherwise sends them to `needsReview`. Ranks the rest, lowest score first, with reason codes `CAP_REEFER, CAP_TIME, ACCESS, WINDOW, FUEL, VEH_DOWN`. |
 | `explain` | The model writes the DSP-02 "What it did / What it checked" text from structured facts. |
 | `await_approval` | `interrupt()`; resumed with `Command(resume={decision, edits, by, roles})`. A resume without the `dispatcher` role or with a bad value is recorded and ignored (the run keeps waiting). |
@@ -26,7 +26,9 @@ await_approval ── approve / reject → END
 
 ## Model
 
-`AGENT_MODEL=mock` (default) uses `MockChatModel`, a deterministic `BaseChatModel` that emits LangChain tool calls, template explanations and answers grounded in tool results. `AGENT_MODEL=azure-openai` raises a clear *not configured yet* error unless `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_DEPLOYMENT` and `AZURE_OPENAI_API_VERSION` are set and `langchain-openai` is installed. The graph doesn't change.
+`AGENT_MODEL=mock` (default) uses `MockChatModel`, a deterministic `BaseChatModel` that emits LangChain tool calls, template explanations and answers grounded in tool results.
+
+`AGENT_MODEL=azure-openai` (with `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_DEPLOYMENT`, `AZURE_OPENAI_API_VERSION`; `langchain-openai` is pinned in `requirements.txt`) wraps `AzureChatOpenAI` in `PhrasingChatModel` (`llm/phrasing.py`). Planning stays deterministic: the mock still chooses the datasets `load_context` fetches, the tools `ask` calls and every fact; the LLM is offered no tools and only rewrites the finished `explain` text and `ask` answer (temperature 0, `AZURE_OPENAI_TIMEOUT_S`, one retry). Any LLM error, timeout or empty reply keeps the mock's text. If a variable is missing the service starts on the mock and `GET /config` reports `configured: false` with the missing names. Tests run the Azure path against a mocked endpoint (`tests/test_azure_model.py`, no key needed). The graph doesn't change.
 
 ## API
 
@@ -49,6 +51,8 @@ Errors use the OData shape `{"error": {"code", "message"}}`: 401/403 auth, 404 u
 | Variable | Default | Purpose |
 |---|---|---|
 | `AGENT_MODEL` | `mock` | `mock` or `azure-openai` |
+| `AZURE_OPENAI_ENDPOINT` / `AZURE_OPENAI_API_KEY` / `AZURE_OPENAI_DEPLOYMENT` / `AZURE_OPENAI_API_VERSION` | unset | Azure OpenAI for `azure-openai` (all four needed, else the mock runs) |
+| `AZURE_OPENAI_TIMEOUT_S` | `20` | one phrasing call; on timeout the mock's text is used |
 | `DATABASE_URL` | unset | Postgres checkpoints in schema `agent` (Prisma `?schema=` is ignored). Unset → in-memory `MemorySaver` |
 | `AGENT_DB_SCHEMA` | `agent` | checkpoint schema |
 | `OIDC_ISSUER` | `http://identity:8080/realms/lodestar` | expected `iss` |

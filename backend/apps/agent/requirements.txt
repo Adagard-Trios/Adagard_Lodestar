@@ -9,6 +9,10 @@ langgraph-prebuilt==1.1.0
 langgraph-checkpoint==4.2.0
 langgraph-checkpoint-postgres==3.1.2
 langchain-core==1.6.6
+# AGENT_MODEL=azure-openai (the LLM only phrases explanations and answers; mock stays the fallback)
+langchain-openai==1.6.7
+openai==3.24.0
+tiktoken==0.14.0
 psycopg[binary]==3.3.6
 psycopg-pool==3.3.3
 pyjwt[crypto]==2.15.1

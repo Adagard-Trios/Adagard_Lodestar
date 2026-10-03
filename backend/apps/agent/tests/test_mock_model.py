@@ -11,7 +11,9 @@ from langchain_core.tools import tool
 from pydantic import SecretStr
 
 from lodestar_agent.config import Settings
-from lodestar_agent.llm import MockChatModel, ModelNotConfiguredError, create_chat_model
+from langchain_openai import AzureChatOpenAI
+
+from lodestar_agent.llm import MockChatModel, ModelNotConfiguredError, PhrasingChatModel, create_chat_model
 
 
 @tool
@@ -137,7 +139,8 @@ def test_model_factory():
         AZURE_OPENAI_DEPLOYMENT="d",
         AZURE_OPENAI_API_VERSION="2024-10-21",
     )
-    with pytest.raises(ModelNotConfiguredError, match="langchain-openai"):
-        create_chat_model(full)
+    azure = create_chat_model(full)
+    assert isinstance(azure, PhrasingChatModel) and isinstance(azure.primary, AzureChatOpenAI)
+    assert azure.primary.deployment_name == "d" and azure.primary.temperature == 0
     with pytest.raises(ModelNotConfiguredError, match="Unknown AGENT_MODEL"):
         create_chat_model(Settings(AGENT_MODEL="gpt"))

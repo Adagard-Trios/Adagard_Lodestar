@@ -20,7 +20,7 @@ from .checkpoint import create_checkpointing
 from .config import Settings, get_settings
 from .domain.edits import EditError
 from .domain.planner import NonOperatingDay
-from .llm import create_chat_model
+from .llm import chat_model_or_mock
 from .logging_setup import configure_logging
 from .odata import ODataClient, ODataError, ServiceAuthError, ServiceTokenProvider
 from .runtime import AgentRuntime, RunConflict, RunNotFound
@@ -35,7 +35,7 @@ def _error(status_code: int, code: str, message: str) -> JSONResponse:
 def build_runtime(settings: Settings) -> tuple[AgentRuntime, list[Any]]:
     """Wire the real dependencies. Returns the runtime and things to close on shutdown."""
     checkpointing = create_checkpointing(settings)
-    model = create_chat_model(settings)
+    model = chat_model_or_mock(settings)
     http = httpx.Client(timeout=settings.http_timeout_s, verify=settings.odata_ca_bundle or True, follow_redirects=False)
     tokens = ServiceTokenProvider(http, settings.token_url, settings.oidc_client_id, settings.client_secret(), settings.oidc_scope)
 
