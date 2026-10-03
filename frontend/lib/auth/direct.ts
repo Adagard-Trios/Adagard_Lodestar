@@ -44,11 +44,29 @@ export function tokenEndpoint(cfg: Pick<RuntimeConfig, 'authority'>): string {
 
 const NETWORK: SignInStep = { error: 'network', description: 'Lodestar could not reach the sign-in service. Check the connection and try again.', status: 0 };
 
+// A code is single use: the same code sent twice at once (auto-submit on the sixth digit plus the button) would sign
+// in on the first request and read "expired" on the second. Identical code requests in flight share one answer.
+const inFlight = new Map<string, Promise<DirectResult>>();
+
 /** One direct-grant request. `params` are the screen's fields (phone, code, username, password, totp, send, channel). */
-export async function directGrant(
+export function directGrant(
   cfg: Pick<RuntimeConfig, 'authority' | 'clientId'>,
   params: Record<string, string | undefined>,
   doFetch: typeof fetch = (i, init) => fetch(i, init),
+): Promise<DirectResult> {
+  if (!params.code && !params.totp) return sendGrant(cfg, params, doFetch);
+  const key = JSON.stringify([cfg.clientId, params]);
+  const pending = inFlight.get(key);
+  if (pending) return pending;
+  const p = sendGrant(cfg, params, doFetch).finally(() => inFlight.delete(key));
+  inFlight.set(key, p);
+  return p;
+}
+
+async function sendGrant(
+  cfg: Pick<RuntimeConfig, 'authority' | 'clientId'>,
+  params: Record<string, string | undefined>,
+  doFetch: typeof fetch,
 ): Promise<DirectResult> {
   const body = new URLSearchParams({ grant_type: 'password', client_id: cfg.clientId, scope: SIGN_IN_SCOPE });
   for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '') body.set(k, v);

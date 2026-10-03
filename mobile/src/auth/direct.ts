@@ -60,7 +60,21 @@ const form = (o: Record<string, string>) =>
     .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
     .join('&');
 
-export async function directGrant(params: Record<string, string | undefined>, doFetch: typeof fetch = (i, init) => fetch(i, init), tokenEndpoint = discovery().tokenEndpoint, client = clientId()): Promise<DirectResult> {
+// A code is single use: the same code sent twice at once (auto-submit on the sixth digit plus Verify) would sign in on
+// the first request and read "expired" on the second. Identical code requests in flight share one answer.
+const inFlight = new Map<string, Promise<DirectResult>>();
+
+export function directGrant(params: Record<string, string | undefined>, doFetch: typeof fetch = (i, init) => fetch(i, init), tokenEndpoint = discovery().tokenEndpoint, client = clientId()): Promise<DirectResult> {
+  if (!params.code && !params.totp && !params.pin) return sendGrant(params, doFetch, tokenEndpoint, client);
+  const key = JSON.stringify([tokenEndpoint, client, params]);
+  const pending = inFlight.get(key);
+  if (pending) return pending;
+  const p = sendGrant(params, doFetch, tokenEndpoint, client).finally(() => inFlight.delete(key));
+  inFlight.set(key, p);
+  return p;
+}
+
+async function sendGrant(params: Record<string, string | undefined>, doFetch: typeof fetch, tokenEndpoint: string, client: string): Promise<DirectResult> {
   const body: Record<string, string> = { grant_type: 'password', client_id: client, scope: 'openid' };
   for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '') body[k] = v;
   let res: globalThis.Response;
