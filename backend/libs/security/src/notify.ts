@@ -115,6 +115,10 @@ export class NotifyClient {
   }
 
   private async post(path: string, body: unknown, what: string): Promise<boolean> {
+    if (!this.notificationsUrl) {
+      this.logger.warn(`Notify skipped (NOTIFICATIONS_URL is not configured): ${what}`);
+      return false;
+    }
     if (!this.tokens.configured) {
       this.logger.warn(`Notify (no service credentials configured): ${what}`);
       return false;

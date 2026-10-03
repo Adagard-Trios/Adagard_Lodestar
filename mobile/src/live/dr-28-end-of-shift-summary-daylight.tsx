@@ -1,174 +1,14 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // DR-28 End of shift summary · phone · daylight (P4, phone)
-// The day's run from the cached run and the outbox. Distance and fuel used per shift are not recorded
-// anywhere, and the next run date is not known until the plan arrives: those rows are left out.
-// "Fuel this week" is the vehicle's own counter (Vehicles usedLThisWeek / weeklyLFuel).
-import { Text, View, StyleSheet } from 'react-native';
-import { hm } from '@/lib/time';
-import { plural, signOutTo } from '@/lodestar/live';
-import { finishDeliveredTrips } from '@/model/actions';
-import { network } from '@/offline/network';
-import { queue, sync } from '@/model/platform';
-import { useClaims, useOutbox, useRun } from '@/model/hooks';
-import { depotName } from '@/model/plan';
-import type { Vehicle } from '@/model/types';
-import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
-
-// Close shift → DR-06 (P4): the finished trips are completed, the outbox is sent while there is signal, then the
-// driver is signed out (anything still unsent stays on the phone and goes after the next sign-in).
-const nav: ScreenNav = {"links":{"L22":{"to":"dr-06-sign-in","kind":"nav"}}};
-
-type Fuel = Vehicle & { usedLThisWeek?: number | null; weeklyLFuel?: number | null };
+// Same screen as the night one (Dr28Body): only the colours below differ.
+import { StyleSheet } from 'react-native';
+import type { GradSpec } from '@/lodestar/runtime';
+import { Dr28Body, type Dr28Theme } from './dr-28-end-of-shift-summary';
 
 export default function ScreenDr28EndOfShiftSummaryDaylight() {
-  const claims = useClaims();
-  const run = useRun();
-  const { waiting } = useOutbox();
-  const v = run.view;
-  const trips = v?.trips ?? [];
-  const stops = v?.stops ?? [];
-  const delivered = stops.filter(st => st.status === 'DELIVERED');
-  const orders = new Set(stops.map(st => st.orderId)).size;
-  const problems = delivered.filter(st => st.pod && ((st.pod.exceptions?.length ?? 0) > 0 || st.pod.unitsDelivered < st.pod.unitsOrdered));
-  const first = problems[0]?.pod ?? null;
-  const exText = first
-    ? first.exceptions?.[0]?.description ?? `${first.unitsOrdered - first.unitsDelivered} short at ${problems[0].outlet?.name ?? problems[0].outletId}`
-    : '';
-  const lastTrip = trips.at(-1) ?? null;
-  const out = trips.map(t => t.departTime).filter((x): x is string => !!x).sort((a, b) => a.localeCompare(b))[0];
-  const back = lastTrip?.returnTime ?? stops.map(st => st.leaveActual).filter((x): x is string => !!x).sort((a, b) => a.localeCompare(b)).at(-1);
-  const vehicle = (lastTrip?.vehicle ?? null) as Fuel | null;
-  const used = vehicle?.usedLThisWeek;
-  const quota = vehicle?.weeklyLFuel;
-  const pct = typeof used === 'number' && typeof quota === 'number' && quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : null;
-  const done = !!v && stops.length > 0 && delivered.length === stops.length;
-  const heading = !claims ? 'Sign in to see your shift' : run.loading && !v ? 'Loading…' : done ? 'Shift done' : `${delivered.length} of ${plural(stops.length, 'stop')} done`;
-  const depot = lastTrip ? depotName(lastTrip.depot) : '';
-  return (
-    <Frame bg="#f2f4f8" nav={nav} style={s.v0}>
-      <View style={s.v47}>
-        <View style={s.v7}>
-          <View style={s.v2}>
-            <Icon xml={X0} width={36} height={36} style={s.v1} />
-          </View>
-          <View style={s.v4}>
-            <Text style={s.t3}>{"End of shift"}</Text>
-          </View>
-          <View style={s.v6}>
-            <Icon xml={X1} width={14} height={14} style={s.v1} />
-            <Text style={s.t5} numberOfLines={1} testID="shift-sync">{waiting.length ? `${waiting.length} to send` : 'All synced'}</Text>
-          </View>
-        </View>
-        <Scroll style={s.v4} contentStyle={s.v42}>
-          <View style={s.v13}>
-            <View style={s.v11}>
-              <View style={s.v8}>
-                <Icon xml={X2} width={28} height={28} style={s.v1} />
-              </View>
-              <View style={s.v10}>
-                <Text style={s.t9} testID="shift-heading">{heading}</Text>
-              </View>
-            </View>
-            {lastTrip ? (
-              <View>
-                <Text style={s.t12}>{[back ? `Back at ${depot} ${hm(back)}` : '', out ? `out since ${hm(out)}` : ''].filter(Boolean).join(' · ') || depot}</Text>
-              </View>
-            ) : null}
-          </View>
-          <View style={s.v19}>
-            <View style={s.v16}>
-              <View>
-                <Text style={s.t14} testID="shift-stops">{String(stops.length)}</Text>
-              </View>
-              <View>
-                <Text style={s.t15}>{stops.length === 1 ? 'Stop' : "Stops"}</Text>
-              </View>
-            </View>
-            <View style={s.v17}>
-              <View>
-                <Text style={s.t14}>{String(orders)}</Text>
-              </View>
-              <View>
-                <Text style={s.t15}>{orders === 1 ? 'Order' : 'Orders'}</Text>
-              </View>
-            </View>
-            <View style={s.v17}>
-              <View>
-                <Text style={problems.length ? s.t18 : s.t14}>{String(problems.length)}</Text>
-              </View>
-              <View>
-                <Text style={s.t15}>{problems.length === 1 ? "Exception" : 'Exceptions'}</Text>
-              </View>
-            </View>
-          </View>
-          {vehicle ? (
-            <View style={s.v34}>
-              <View style={s.v23}>
-                <View style={s.v10}>
-                  <Text style={s.t20}>{"Logged"}</Text>
-                </View>
-                <View style={s.v10}>
-                  <Text style={s.t22}><Text style={s.t21}>{vehicle.id}</Text></Text>
-                </View>
-              </View>
-              <View style={s.v33}>
-                {pct !== null ? (
-                  <View style={[s.v32, x.first]}>
-                    <View style={s.v28}>
-                      <View style={s.v10}>
-                        <Text style={s.t24}>{"Fuel this week"}</Text>
-                      </View>
-                      <View style={s.v10}>
-                        <Text style={s.t25}>{`${used} / ${quota} L`}</Text>
-                      </View>
-                    </View>
-                    <View style={s.v31}>
-                      <View style={[s.v30, { width: `${pct}%` }]}>
-                        <Grad g={G0} style={s.v29} />
-                      </View>
-                    </View>
-                  </View>
-                ) : null}
-                {exText ? (
-                  <View style={pct !== null ? s.v27 : s.v26}>
-                    <View style={s.v10}>
-                      <Text style={s.t24}>{"Exception"}</Text>
-                    </View>
-                    <View style={s.v10}>
-                      <Text style={s.t25}>{exText}</Text>
-                    </View>
-                  </View>
-                ) : null}
-              </View>
-            </View>
-          ) : null}
-        </Scroll>
-        <View style={s.v46}>
-          <Tap
-            lk="L22"
-            style={s.v45}
-            onPress={async () => {
-              if (!v) return true; // prototype mode: just navigate
-              await finishDeliveredTrips(v.trips, v.stops);
-              if (network.get().online) await sync.flush().catch(() => undefined);
-              const left = claims ? queue.pending(claims.sub).length : 0;
-              if (left) showToast(`${plural(left, 'record')} stay on this phone · they send after you sign in`);
-              return signOutTo('dr-06-sign-in');
-            }}
-          >
-            <Grad g={G0} style={s.v43} />
-            <Icon xml={X4} width={22} height={22} style={s.v1} />
-            <Text style={s.t44}>{"Close shift"}</Text>
-          </Tap>
-        </View>
-      </View>
-    </Frame>
-  );
+  return <Dr28Body t={day} />;
 }
 
-const x = StyleSheet.create({ first: { borderTopWidth: 0 } });
-
-const X0 = "<svg viewBox=\"0 0 32 32\" width=\"36\" height=\"36\" fill=\"#000000\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"32\" height=\"32\" rx=\"8\" fill=\"#0369a1\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect><g transform=\"translate(7.36 7.36) scale(0.72)\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"><path d=\"m3 11 19-9-9 19-2-8-8-2z\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></g></svg>";
 const X1 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#047857\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"14\" height=\"14\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M20 6 9 17l-5-5\" fill=\"none\" stroke=\"#047857\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const X2 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#047857\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"28\" height=\"28\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M20 6 9 17l-5-5\" fill=\"none\" stroke=\"#047857\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const X4 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
@@ -224,3 +64,5 @@ const s = StyleSheet.create({
   v46: {"flexDirection":"column","alignItems":"stretch","rowGap":8,"columnGap":8,"flexShrink":0,"paddingTop":12,"paddingRight":16,"paddingBottom":6,"paddingLeft":16,"backgroundColor":"#f2f4f8"},
   v47: {"flexDirection":"column","alignItems":"stretch","flexGrow":1,"flexShrink":1,"flexBasis":"0%","backgroundColor":"#f2f4f8"},
 });
+
+const day: Dr28Theme = { bg: '#f2f4f8', X1, X2, X4, bar: G0, cta: G0, s };

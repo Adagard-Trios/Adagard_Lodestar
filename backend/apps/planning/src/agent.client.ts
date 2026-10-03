@@ -34,7 +34,8 @@ export const AGENT_FETCH = Symbol('AGENT_FETCH');
 @Injectable()
 export class AgentClient {
   private readonly logger = new Logger(AgentClient.name);
-  private readonly baseUrl = (process.env.AGENT_URL || 'http://agent:8000').replace(/\/$/, '');
+  // the agent's address comes from configuration (AGENT_URL), never from code
+  private readonly baseUrl = (process.env.AGENT_URL ?? '').replace(/\/$/, '');
 
   constructor(@Optional() @Inject(AGENT_FETCH) private readonly fetchImpl: typeof fetch = (input, init) => fetch(input, init)) {}
 
@@ -64,6 +65,7 @@ export class AgentClient {
 
   private async call<T>(method: string, path: string, authorization: string, body?: unknown): Promise<T> {
     if (!authorization) throw ODataError.forbidden('The planning agent needs the calling dispatcher’s token');
+    if (!this.baseUrl) throw new ODataError(503, 'ServiceUnavailable', 'The planning agent is not configured (AGENT_URL)');
     let res: Response;
     try {
       res = await this.fetchImpl(`${this.baseUrl}${path}`, {

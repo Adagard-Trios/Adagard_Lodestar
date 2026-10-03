@@ -1,7 +1,7 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // DR-01 Today's run (P4, phone)
 import { useEffect, useState } from 'react';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet, type TextStyle, type ViewStyle } from 'react-native';
 import { firstName } from '@/auth/claims';
 import { dayLabel, greeting, hm } from '@/lib/time';
 import { plural, titleCase } from '@/lodestar/live';
@@ -9,12 +9,30 @@ import { isUnsent, today, useClaims, useOnline, useOutbox, useRun } from '@/mode
 import { movedRun, useReleasedNotice, useRunMarks, useServerEvents } from '@/model/run';
 import { LATE_RISK_PCT } from '@/model/preferences';
 import { finishDeliveredTrips, startTrip, tripStatusOf } from '@/model/actions';
-import { setSettings } from '@/lib/settings';
+import { setSettings, type ScreenTheme } from '@/lib/settings';
 import { Frame, Grad, Icon, Scroll, Tap, openScreen, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L12":{"to":"dr-36-en-route-driving-mode","kind":"go"},"L41":{"to":"dr-15-route-overview","kind":"go"},"L243":{"to":"dr-24-settings-me","kind":"go"},"N1":{"to":"dr-21-records","kind":"nav"},"N2":{"to":"dr-23-dispatch-notices","kind":"nav"}}};
 
+/**
+ * Night and daylight differ in colour (frame, icon strokes, gradient, styles), in the route card's link to their own
+ * DR-15, in the theme the toggle switches to, and the night route card carries a map icon (X3 in v11) the daylight one has not.
+ */
+export type Dr01Theme = {
+  bg: string; nav: ScreenNav; route: string; toggle: ScreenTheme; cta: GradSpec[];
+  X1: string; X2: string; X3?: string; X4: string; X5: string; X6: string; X7: string; X8: string; X9: string; X10: string;
+  s: Omit<Sheet<typeof s>, 'v11'> & { v11?: ViewStyle };
+};
+/** A style sheet with the same keys as this one: tN are text styles, vN view styles. */
+type Sheet<T> = { [K in keyof T]: K extends `t${string}` ? TextStyle : ViewStyle };
+
 export default function ScreenDr01TodaySRun() {
+  return <Dr01Body t={night} />;
+}
+
+/** The one DR-01 body, rendered by the night screen and by the daylight one with their own theme. */
+export function Dr01Body({ t }: { t: Dr01Theme }) {
+  const { s, X1, X2, X3, X4, X5, X6, X7, X8, X9, X10 } = t;
   const claims = useClaims();
   const online = useOnline();
   const { view, updatedAt, fromCache, loading, error } = useRun();
@@ -50,7 +68,7 @@ export default function ScreenDr01TodaySRun() {
   const status = !claims ? 'Sign in to see your run' : view ? (view.isToday ? '' : `Last run · ${dayLabel(view.date)}`) : loading ? 'Loading your run…' : error ? 'No signal · nothing saved yet' : '';
   const inWindow = current ? (current.lateRiskPct ?? 0) < LATE_RISK_PCT : true;
   return (
-    <Frame bg="#070b16" nav={nav} style={s.v0}>
+    <Frame bg={t.bg} nav={t.nav} style={s.v0}>
       <View style={s.v55}>
         <View style={s.v8}>
           <Tap lk="L243" style={s.v2}>
@@ -63,7 +81,7 @@ export default function ScreenDr01TodaySRun() {
             <Icon xml={X1} width={14} height={14} style={s.v1} />
             <Text style={s.t5} numberOfLines={1}>{online ? (waiting.length ? `${waiting.length} to send` : 'Offline-ready') : `Offline · ${waiting.length} saved`}</Text>
           </View>
-          <Tap style={s.v7} to={null} onPress={() => void setSettings({ theme: 'day' })} testID="theme-toggle">
+          <Tap style={s.v7} to={null} onPress={() => void setSettings({ theme: t.toggle })} testID="theme-toggle">
             <Icon xml={X2} width={20} height={20} style={s.v1} />
           </Tap>
         </View>
@@ -78,10 +96,12 @@ export default function ScreenDr01TodaySRun() {
               </View>
             ) : null}
           </View>
-          <Tap lk="L41" style={s.v19}>
-            <View style={s.v11}>
-              <Icon xml={X3} width={20} height={20} style={s.v1} />
-            </View>
+          <Tap lk={t.route} style={s.v19}>
+            {X3 ? (
+              <View style={s.v11}>
+                <Icon xml={X3} width={20} height={20} style={s.v1} />
+              </View>
+            ) : null}
             <View>
               <Text style={s.t12}>{current ? `${current.stopSeq === stops[0]?.stopSeq ? 'First stop' : 'Next stop'} · ${current.outlet?.name ?? current.outletId}` : trip ? 'All stops delivered' : 'No stops yet'}</Text>
             </View>
@@ -182,7 +202,7 @@ export default function ScreenDr01TodaySRun() {
               return true;
             }}
           >
-            <Grad g={G0} style={s.v48} />
+            <Grad g={t.cta} style={s.v48} />
             <Icon xml={X7} width={22} height={22} style={s.v1} />
             <Text style={s.t49}>{trip && tripStatusOf(trip, items) === 'ENROUTE' ? 'Continue trip' : 'Start trip'}</Text>
           </Tap>
@@ -277,3 +297,5 @@ const s = StyleSheet.create({
   v54: {"flexDirection":"row","alignItems":"stretch","flexShrink":0,"paddingTop":8,"paddingRight":12,"paddingBottom":2,"paddingLeft":12,"backgroundColor":"#0b1122","borderTopWidth":1,"borderTopColor":"#1b2338"},
   v55: {"flexDirection":"column","alignItems":"stretch","flexGrow":1,"flexShrink":1,"flexBasis":"0%","backgroundColor":"#070b16"},
 });
+
+const night: Dr01Theme = { bg: '#070b16', nav, route: 'L41', toggle: 'day', cta: G0, X1, X2, X3, X4, X5, X6, X7, X8, X9, X10, s };

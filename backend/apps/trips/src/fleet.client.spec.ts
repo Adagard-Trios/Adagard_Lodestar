@@ -1,6 +1,8 @@
 import { Logger } from '@nestjs/common';
 import { ServiceTokenClient } from '@lodestar/security';
 import { FleetClient } from './fleet.client';
+// the client reads its address from configuration only
+process.env.FLEET_URL = process.env.FLEET_URL || 'http://fleet.test:3004';
 
 describe('FleetClient (brief item 12: fleet updates are never silently dropped)', () => {
   let warn: jest.SpyInstance;

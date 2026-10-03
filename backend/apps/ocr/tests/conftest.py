@@ -59,7 +59,8 @@ def make_token(rsa_key):
 
 def text_image(lines: list[str], fmt: str = "JPEG", size: int = 64) -> str:
     """A photo-like picture of known text (dark on light), base64."""
-    font = ImageFont.load_default(size=size)
+    # the bundled scalable font (Pillow >= 10.1), resized; font_variant keeps older analyzers' stubs happy
+    font = ImageFont.load_default().font_variant(size=size)
     img = Image.new("RGB", (900, 120 + 110 * len(lines)), (245, 245, 240))
     draw = ImageDraw.Draw(img)
     for i, line in enumerate(lines):

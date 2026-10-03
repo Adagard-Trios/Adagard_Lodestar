@@ -38,13 +38,13 @@ export class SecurityModule {
       options.auditSink ?? {
         provide: AUDIT_SINK,
         useFactory: (tokens: ServiceTokenClient) =>
-          new HttpAuditSink(process.env.AUDIT_URL || 'http://audit:3009', tokens),
+          new HttpAuditSink(process.env.AUDIT_URL ?? '', tokens),
         inject: [ServiceTokenClient],
       },
       {
         provide: NOTIFY,
         useFactory: (tokens: ServiceTokenClient) =>
-          new NotifyClient(process.env.NOTIFICATIONS_URL || 'http://notifications:3008', tokens),
+          new NotifyClient(process.env.NOTIFICATIONS_URL ?? '', tokens),
         inject: [ServiceTokenClient],
       },
       { provide: APP_GUARD, useClass: ZeroTrustGuard },

@@ -3,7 +3,7 @@
 // The day's run from the cached run and the outbox. Distance and fuel used per shift are not recorded
 // anywhere, and the next run date is not known until the plan arrives: those rows are left out.
 // "Fuel this week" is the vehicle's own counter (Vehicles usedLThisWeek / weeklyLFuel).
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet, type TextStyle, type ViewStyle } from 'react-native';
 import { hm } from '@/lib/time';
 import { plural, signOutTo } from '@/lodestar/live';
 import { finishDeliveredTrips } from '@/model/actions';
@@ -20,7 +20,18 @@ const nav: ScreenNav = {"links":{"L22":{"to":"dr-06-sign-in","kind":"nav"}}};
 
 type Fuel = Vehicle & { usedLThisWeek?: number | null; weeklyLFuel?: number | null };
 
+/** Night and daylight differ only in colour: the frame, the icon strokes, the gradients and the styles. */
+export type Dr28Theme = { bg: string; X1: string; X2: string; X4: string; bar: GradSpec[]; cta: GradSpec[]; s: Sheet<typeof s> };
+/** A style sheet with the same keys as this one: tN are text styles, vN view styles. */
+type Sheet<T> = { [K in keyof T]: K extends `t${string}` ? TextStyle : ViewStyle };
+
 export default function ScreenDr28EndOfShiftSummary() {
+  return <Dr28Body t={night} />;
+}
+
+/** The one DR-28 body, rendered by the night screen and by the daylight one with their own theme. */
+export function Dr28Body({ t }: { t: Dr28Theme }) {
+  const { s, X1, X2, X4 } = t;
   const claims = useClaims();
   const run = useRun();
   const { waiting } = useOutbox();
@@ -45,7 +56,7 @@ export default function ScreenDr28EndOfShiftSummary() {
   const heading = !claims ? 'Sign in to see your shift' : run.loading && !v ? 'Loading…' : done ? 'Shift done' : `${delivered.length} of ${plural(stops.length, 'stop')} done`;
   const depot = lastTrip ? depotName(lastTrip.depot) : '';
   return (
-    <Frame bg="#070b16" nav={nav} style={s.v0}>
+    <Frame bg={t.bg} nav={nav} style={s.v0}>
       <View style={s.v47}>
         <View style={s.v7}>
           <View style={s.v2}>
@@ -124,7 +135,7 @@ export default function ScreenDr28EndOfShiftSummary() {
                     </View>
                     <View style={s.v31}>
                       <View style={[s.v30, { width: `${pct}%` }]}>
-                        <Grad g={G0} style={s.v29} />
+                        <Grad g={t.bar} style={s.v29} />
                       </View>
                     </View>
                   </View>
@@ -156,7 +167,7 @@ export default function ScreenDr28EndOfShiftSummary() {
               return signOutTo('dr-06-sign-in');
             }}
           >
-            <Grad g={G1} style={s.v43} />
+            <Grad g={t.cta} style={s.v43} />
             <Icon xml={X4} width={22} height={22} style={s.v1} />
             <Text style={s.t44}>{"Close shift"}</Text>
           </Tap>
@@ -225,3 +236,5 @@ const s = StyleSheet.create({
   v46: {"flexDirection":"column","alignItems":"stretch","rowGap":8,"columnGap":8,"flexShrink":0,"paddingTop":12,"paddingRight":16,"paddingBottom":6,"paddingLeft":16,"backgroundColor":"#070b16"},
   v47: {"flexDirection":"column","alignItems":"stretch","flexGrow":1,"flexShrink":1,"flexBasis":"0%","backgroundColor":"#070b16"},
 });
+
+const night: Dr28Theme = { bg: '#070b16', X1, X2, X4, bar: G0, cta: G1, s };

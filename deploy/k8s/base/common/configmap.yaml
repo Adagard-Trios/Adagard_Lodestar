@@ -35,3 +35,5 @@ data:
   # names read by libs/security (HttpAuditSink) and planning (agent client)
   AUDIT_URL: http://audit.lodestar.svc.cluster.local:3009
   AGENT_URL: http://agent.lodestar.svc.cluster.local:8000
+  NOTIFICATIONS_URL: http://notifications.lodestar.svc.cluster.local:3008
+  FLEET_URL: http://fleet.lodestar.svc.cluster.local:3004

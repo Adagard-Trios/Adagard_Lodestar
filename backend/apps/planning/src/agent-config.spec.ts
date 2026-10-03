@@ -1,5 +1,7 @@
 import { ODataError } from '@lodestar/odata';
 import { AgentClient } from './agent.client';
+// the client reads its address from configuration only
+process.env.AGENT_URL = process.env.AGENT_URL || 'http://agent.test:8000';
 
 describe('AgentClient.config / AgentRuns AgentConfig (DSP-16, ADM-17)', () => {
   it('reads GET /config with the caller’s token', async () => {

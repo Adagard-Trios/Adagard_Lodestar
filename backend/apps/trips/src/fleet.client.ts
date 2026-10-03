@@ -11,7 +11,8 @@ const REQUEST_TIMEOUT_MS = 5_000;
 @Injectable()
 export class FleetClient {
   private readonly logger = new Logger(FleetClient.name);
-  private readonly baseUrl = (process.env.FLEET_URL || 'http://fleet:3004').replace(/\/$/, '');
+  // the fleet service's address comes from configuration (FLEET_URL), never from code
+  private readonly baseUrl = (process.env.FLEET_URL ?? '').replace(/\/$/, '');
 
   constructor(private readonly tokens: ServiceTokenClient) {}
 
@@ -27,6 +28,10 @@ export class FleetClient {
 
   private async post(vehicleId: string, action: string, body: unknown, what: string, tripId?: string): Promise<boolean> {
     const forTrip = tripId ? ` for trip ${tripId}` : '';
+    if (!this.baseUrl) {
+      this.logger.warn(`${what} skipped: FLEET_URL is not configured`);
+      return false;
+    }
     if (!this.tokens.configured) {
       this.logger.warn(`${what}${forTrip} skipped: no fleet service credentials configured (the vehicle record was not updated)`);
       return false;

@@ -37,6 +37,8 @@ x-service-env: &service-env
   OIDC_AUDIENCE: lodestar-api
   FIELD_CLIENT_ID: lodestar-field
   AUDIT_URL: http://audit:3009
+  NOTIFICATIONS_URL: http://notifications:3008
+  FLEET_URL: http://fleet:3004
   PUBLIC_BASE_URL: ${PUBLIC_ORIGIN:-https://localhost:8443}
 
 x-service: &service

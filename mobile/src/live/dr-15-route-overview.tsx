@@ -3,7 +3,7 @@
 // The run's trip in stop order from the cached run (works offline). Route distance, the road class chip and the
 // known signal-loss rows are not in the data the driver reads: left out. "Open in Google Maps" hands the stops
 // (coordinates, else addresses) to Google Maps.
-import { Linking, Text, View, StyleSheet } from 'react-native';
+import { Linking, Text, View, StyleSheet, type TextStyle, type ViewStyle } from 'react-native';
 import { hm } from '@/lib/time';
 import { titleCase } from '@/lodestar/live';
 import { useClaims, useRun } from '@/model/hooks';
@@ -30,7 +30,18 @@ function mapsUrl(stops: TripStop[]): string | null {
   return `https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${dest}${via ? `&waypoints=${via}` : ''}`;
 }
 
+/** Night and daylight differ in colour (frame, icon strokes, gradient, styles) and in the back link to their own DR-01. */
+export type Dr15Theme = { bg: string; nav: ScreenNav; back: string; X0: string; X1: string; X2: string; X4: string; cta: GradSpec[]; s: Sheet<typeof s> };
+/** A style sheet with the same keys as this one: tN are text styles, vN view styles. */
+type Sheet<T> = { [K in keyof T]: K extends `t${string}` ? TextStyle : ViewStyle };
+
 export default function ScreenDr15RouteOverview() {
+  return <Dr15Body t={night} />;
+}
+
+/** The one DR-15 body, rendered by the night screen and by the daylight one with their own theme. */
+export function Dr15Body({ t }: { t: Dr15Theme }) {
+  const { s, X0, X1, X2, X4 } = t;
   const claims = useClaims();
   const run = useRun();
   const v = run.view;
@@ -41,10 +52,10 @@ export default function ScreenDr15RouteOverview() {
   const url = mapsUrl(open);
   const empty = !claims ? 'Sign in to see your route' : run.loading && !v ? 'Loading…' : 'No trip today';
   return (
-    <Frame bg="#070b16" nav={nav} style={s.v0}>
+    <Frame bg={t.bg} nav={t.nav} style={s.v0}>
       <View style={s.v43}>
         <View style={s.v7}>
-          <Tap lk="L42" style={s.v2}>
+          <Tap lk={t.back} style={s.v2}>
             <Icon xml={X0} width={20} height={20} style={s.v1} />
           </Tap>
           <View style={s.v4}>
@@ -159,7 +170,7 @@ export default function ScreenDr15RouteOverview() {
         {url ? (
           <View style={s.v42}>
             <Tap style={s.v39} to={null} onPress={() => Linking.openURL(url)} testID="open-maps">
-              <Grad g={G0} style={s.v37} />
+              <Grad g={t.cta} style={s.v37} />
               <Icon xml={X4} width={22} height={22} style={s.v1} />
               <Text style={s.t38}>{"Open in Google Maps"}</Text>
             </Tap>
@@ -225,3 +236,5 @@ const s = StyleSheet.create({
   v42: {"flexDirection":"column","alignItems":"stretch","rowGap":8,"columnGap":8,"flexShrink":0,"paddingTop":12,"paddingRight":16,"paddingBottom":6,"paddingLeft":16,"backgroundColor":"#070b16"},
   v43: {"flexDirection":"column","alignItems":"stretch","flexGrow":1,"flexShrink":1,"flexBasis":"0%","backgroundColor":"#070b16"},
 });
+
+const night: Dr15Theme = { bg: '#070b16', nav, back: 'L42', X0, X1, X2, X4, cta: G0, s };

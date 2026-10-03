@@ -80,6 +80,10 @@ export class HttpAuditSink implements AuditSink {
   }
 
   private async send(event: AuditEvent): Promise<boolean> {
+    if (!this.auditUrl) {
+      this.logger.error(`Audit not configured (AUDIT_URL): ${event.action} by ${event.actor} → ${event.outcome}`);
+      return true;
+    }
     if (!this.tokens.configured) {
       this.logger.warn(`Audit (no service credentials configured): ${event.action} by ${event.actor} → ${event.outcome}`);
       return true;
