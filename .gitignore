@@ -37,3 +37,4 @@ backend/coverage-int/
 /.deployed-sha
 /.deploy-freeze
 tests/e2e/playwright-report/
+.scannerwork/

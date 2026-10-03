@@ -5,10 +5,11 @@ import { Text, View, StyleSheet, type TextStyle, type ViewStyle } from 'react-na
 import { firstName } from '@/auth/claims';
 import { dayLabel, greeting, hm } from '@/lib/time';
 import { plural, titleCase } from '@/lodestar/live';
-import { isUnsent, today, useClaims, useOnline, useOutbox, useRun } from '@/model/hooks';
+import { isUnsent, today, useClaims, useOnline, useOutbox, useRun, type RunView } from '@/model/hooks';
 import { movedRun, useReleasedNotice, useRunMarks, useServerEvents } from '@/model/run';
 import { LATE_RISK_PCT } from '@/model/preferences';
 import { finishDeliveredTrips, startTrip, tripStatusOf } from '@/model/actions';
+import type { Shortfall, TripStop } from '@/model/types';
 import { setSettings, type ScreenTheme } from '@/lib/settings';
 import { Frame, Grad, Icon, Scroll, Tap, openScreen, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
@@ -26,17 +27,66 @@ export type Dr01Theme = {
 /** A style sheet with the same keys as this one: tN are text styles, vN view styles. */
 type Sheet<T> = { [K in keyof T]: K extends `t${string}` ? TextStyle : ViewStyle };
 
+type Outbox = ReturnType<typeof useOutbox>;
+/** One outlet visit: its first row and every order row with the same stopSeq. */
+type StopGroup = { st: TripStop; rows: TripStop[] };
+type Themed = { t: Dr01Theme };
+
 export default function ScreenDr01TodaySRun() {
   return <Dr01Body t={night} />;
 }
 
 /** The one DR-01 body, rendered by the night screen and by the daylight one with their own theme. */
 export function Dr01Body({ t }: { t: Dr01Theme }) {
-  const { s, X1, X2, X3, X4, X5, X6, X7, X8, X9, X10 } = t;
+  const { s } = t;
   const claims = useClaims();
   const online = useOnline();
   const { view, updatedAt, fromCache, loading, error } = useRun();
   const { waiting, items } = useOutbox();
+  useRunHandoffs(view, items);
+  const trip = view?.trip ?? null;
+  const stops = view?.tripStops ?? [];
+  const groups = groupStops(stops);
+  const current = view?.current ?? null;
+  const shortfalls = trip?.loadRecord?.shortfalls ?? [];
+  const name = firstName(claims);
+  const status = runStatus(!!claims, view, loading, !!error);
+  return (
+    <Frame bg={t.bg} nav={t.nav} style={s.v0}>
+      <View style={s.v55}>
+        <RunHeader t={t} day={runDay(view)} chip={netChip(online, waiting.length)} />
+        <Scroll style={s.v4} contentStyle={s.v47}>
+          <View style={s.v10}>
+            <View>
+              <Text style={s.t9}>{name ? `${greeting()}, ${name}` : greeting()}</Text>
+            </View>
+            {status ? (
+              <View>
+                <Text style={s.t18} testID="run-status">{status}</Text>
+              </View>
+            ) : null}
+          </View>
+          <NextStopCard t={t} current={current} title={nextStopTitle(current, stops[0], !!trip)} />
+          <TripStops t={t} view={view} groups={groups} current={current} waiting={waiting} />
+          {shortfalls[0] ? <ShortfallCard t={t} first={shortfalls[0]} count={shortfalls.length} /> : null}
+          <View style={s.v46}>
+            <Icon xml={t.X6} width={20} height={20} style={s.v41} />
+            <View style={s.v43}>
+              <View>
+                <Text style={s.t45}>{savedText(waiting.length, updatedAt, fromCache)}</Text>
+              </View>
+            </View>
+          </View>
+        </Scroll>
+        <StartTripBar t={t} view={view} items={items} />
+        <RunTabs t={t} />
+      </View>
+    </Frame>
+  );
+}
+
+/** The dock releasing the van (DR-11) or the run moving to this phone (DR-32) opens their screen. */
+function useRunHandoffs(view: RunView | null, items: Outbox['items']) {
   const trip = view?.trip ?? null;
   // the dock releases the van while the run is open: the load handover (DR-11)
   const [since] = useState(() => new Date().toISOString());
@@ -54,175 +104,225 @@ export function Dr01Body({ t }: { t: Dr01Theme }) {
   useEffect(() => {
     if (movedTrip) openScreen('dr-32-run-moved-to-a-new-phone', { trip: movedTrip }, 'nav');
   }, [movedTrip]);
-  const stops = view?.tripStops ?? [];
-  // one stop per outlet visit: a stop can carry several orders (e.g. chilled + dry), stored as rows with the same stopSeq
-  const groups = stops.reduce<{ st: (typeof stops)[number]; rows: typeof stops }[]>((acc, st) => {
+}
+
+/** One stop per outlet visit: a stop can carry several orders (e.g. chilled + dry), stored as rows with the same stopSeq. */
+function groupStops(stops: TripStop[]): StopGroup[] {
+  return stops.reduce<StopGroup[]>((acc, st) => {
     const g = acc.find(x => x.st.stopSeq === st.stopSeq);
     if (g) g.rows.push(st); else acc.push({ st, rows: [st] });
     return acc;
   }, []);
-  const current = view?.current ?? null;
-  const shortfalls = trip?.loadRecord?.shortfalls ?? [];
-  const first = shortfalls[0];
-  const name = firstName(claims);
-  const status = !claims ? 'Sign in to see your run' : view ? (view.isToday ? '' : `Last run · ${dayLabel(view.date)}`) : loading ? 'Loading your run…' : error ? 'No signal · nothing saved yet' : '';
-  const inWindow = current ? (current.lateRiskPct ?? 0) < LATE_RISK_PCT : true;
+}
+
+function runStatus(signedIn: boolean, view: RunView | null, loading: boolean, failed: boolean): string {
+  if (!signedIn) return 'Sign in to see your run';
+  if (view) return view.isToday ? '' : `Last run · ${dayLabel(view.date)}`;
+  if (loading) return 'Loading your run…';
+  return failed ? 'No signal · nothing saved yet' : '';
+}
+
+function runDay(view: RunView | null): string {
+  if (!view) return dayLabel(today());
+  return `${dayLabel(view.date)}${view.trip ? ` · ${view.trip.vehicleId}` : ''}`;
+}
+
+function netChip(online: boolean, waiting: number): string {
+  if (!online) return `Offline · ${waiting} saved`;
+  return waiting ? `${waiting} to send` : 'Offline-ready';
+}
+
+function nextStopTitle(current: TripStop | null, first: TripStop | undefined, hasTrip: boolean): string {
+  if (current) return `${current.stopSeq === first?.stopSeq ? 'First stop' : 'Next stop'} · ${current.outlet?.name ?? current.outletId}`;
+  return hasTrip ? 'All stops delivered' : 'No stops yet';
+}
+
+function savedText(waiting: number, updatedAt: number | null | undefined, fromCache: boolean | undefined): string {
+  if (waiting) return `${plural(waiting, 'record')} waiting to send`;
+  if (updatedAt) return `Saved ${hm(new Date(updatedAt).toISOString())} · works without signal${fromCache ? ' (from this phone)' : ''}`;
+  return 'Opens without signal once loaded';
+}
+
+function stopState(unsent: boolean, delivered: boolean, units: number, orders: number): string {
+  if (unsent) return 'Saved on phone';
+  if (delivered) return 'Delivered';
+  return units ? `${units} units` : plural(orders, 'order');
+}
+
+function stopTime(st: TripStop, delivered: boolean): string {
+  if (delivered) return hm(st.leaveActual) || '✓';
+  return st.etaModel ? `~${hm(st.etaModel)}` : '—';
+}
+
+function RunHeader({ t, day, chip }: Themed & { day: string; chip: string }) {
+  const { s } = t;
   return (
-    <Frame bg={t.bg} nav={t.nav} style={s.v0}>
-      <View style={s.v55}>
-        <View style={s.v8}>
-          <Tap lk="L243" style={s.v2}>
-            <Icon xml={X0} width={36} height={36} style={s.v1} />
-          </Tap>
-          <View style={s.v4}>
-            <Text style={s.t3} testID="run-day">{view ? `${dayLabel(view.date)}${trip ? ` · ${trip.vehicleId}` : ''}` : dayLabel(today())}</Text>
-          </View>
-          <View style={s.v6} testID="net-chip">
-            <Icon xml={X1} width={14} height={14} style={s.v1} />
-            <Text style={s.t5} numberOfLines={1}>{online ? (waiting.length ? `${waiting.length} to send` : 'Offline-ready') : `Offline · ${waiting.length} saved`}</Text>
-          </View>
-          <Tap style={s.v7} to={null} onPress={() => void setSettings({ theme: t.toggle })} testID="theme-toggle">
-            <Icon xml={X2} width={20} height={20} style={s.v1} />
-          </Tap>
+    <View style={s.v8}>
+      <Tap lk="L243" style={s.v2}>
+        <Icon xml={X0} width={36} height={36} style={s.v1} />
+      </Tap>
+      <View style={s.v4}>
+        <Text style={s.t3} testID="run-day">{day}</Text>
+      </View>
+      <View style={s.v6} testID="net-chip">
+        <Icon xml={t.X1} width={14} height={14} style={s.v1} />
+        <Text style={s.t5} numberOfLines={1}>{chip}</Text>
+      </View>
+      <Tap style={s.v7} to={null} onPress={() => void setSettings({ theme: t.toggle })} testID="theme-toggle">
+        <Icon xml={t.X2} width={20} height={20} style={s.v1} />
+      </Tap>
+    </View>
+  );
+}
+
+function NextStopCard({ t, current, title }: Themed & { current: TripStop | null; title: string }) {
+  const { s, X3 } = t;
+  return (
+    <Tap lk={t.route} style={s.v19}>
+      {X3 ? (
+        <View style={s.v11}>
+          <Icon xml={X3} width={20} height={20} style={s.v1} />
         </View>
-        <Scroll style={s.v4} contentStyle={s.v47}>
-          <View style={s.v10}>
-            <View>
-              <Text style={s.t9}>{name ? `${greeting()}, ${name}` : greeting()}</Text>
-            </View>
-            {status ? (
-              <View>
-                <Text style={s.t18} testID="run-status">{status}</Text>
-              </View>
-            ) : null}
-          </View>
-          <Tap lk={t.route} style={s.v19}>
-            {X3 ? (
-              <View style={s.v11}>
-                <Icon xml={X3} width={20} height={20} style={s.v1} />
-              </View>
-            ) : null}
-            <View>
-              <Text style={s.t12}>{current ? `${current.stopSeq === stops[0]?.stopSeq ? 'First stop' : 'Next stop'} · ${current.outlet?.name ?? current.outletId}` : trip ? 'All stops delivered' : 'No stops yet'}</Text>
-            </View>
-            <View style={s.v17}>
-              <View style={s.v15}>
-                <Text style={s.t14}>{current?.etaModel ? `~${hm(current.etaModel)}` : '—'}<Text style={s.t13}>{"ETA"}</Text></Text>
-              </View>
-              {current ? (
-                <View style={s.v6}>
-                  <View style={s.v16} />
-                  <Text style={s.t5} numberOfLines={1}>{inWindow ? 'In window' : `Late risk ${current.lateRiskPct}%`}</Text>
-                </View>
-              ) : null}
-            </View>
-            <View>
-              <Text style={s.t18}>{current ? `Plan ${hm(current.etaPlan) || '—'} · model ~${hm(current.etaModel) || '—'}` : ' '}</Text>
-            </View>
-          </Tap>
-          <View style={s.v40}>
-            <View style={s.v22}>
-              <View style={s.v15}>
-                <Text style={s.t20}>{trip ? `Trip ${trip.tripNumber} · ${titleCase(trip.brand)} · ${trip.district}` : 'Trip'}</Text>
-              </View>
-              <View style={s.v15}>
-                <Text style={s.t21}>{trip ? `${plural(groups.length, 'stop')}${(view?.trips.length ?? 0) > 1 ? ` · ${plural(view!.trips.length, 'trip')}` : ''}` : ''}</Text>
-              </View>
-            </View>
-            <View style={s.v39}>
-              {groups.map(({ st, rows }, i) => {
-                const isCurrent = st.stopSeq === current?.stopSeq;
-                const delivered = rows.every(r => r.status === 'DELIVERED');
-                const unsent = rows.some(r => isUnsent(waiting, r.id));
-                const units = rows.reduce((n, r) => n + (r.order?.units ?? 0), 0);
-                return (
-                  <Tap key={st.id} style={i === 0 ? s.v35 : s.v38} to={{ to: 'dr-02-stop-arrival', params: { stop: st.id } }} testID={`stop-${st.stopSeq}`}>
-                    <View style={isCurrent ? s.v24 : s.v37}>
-                      <Text style={isCurrent ? s.t23 : s.t36}>{delivered ? '✓' : String(st.stopSeq)}</Text>
-                    </View>
-                    <View style={s.v31}>
-                      <View>
-                        <Text style={s.t25}>{st.outlet?.name ?? st.outletId}</Text>
-                      </View>
-                      <View style={s.v30}>
-                        <View style={s.v15}>
-                          <Text style={s.t26}>{st.outletId}</Text>
-                        </View>
-                        <View style={s.v27} />
-                        <View style={s.v29}>
-                          <Icon xml={X4} width={14} height={14} style={s.v1} />
-                          <Text style={s.t28} numberOfLines={1} testID={`stop-${st.stopSeq}-state`}>{unsent ? 'Saved on phone' : delivered ? 'Delivered' : units ? `${units} units` : plural(rows.length, 'order')}</Text>
-                        </View>
-                      </View>
-                    </View>
-                    <View style={s.v34}>
-                      <View>
-                        <Text style={s.t32}>{delivered ? hm(st.leaveActual) || '✓' : st.etaModel ? `~${hm(st.etaModel)}` : '—'}</Text>
-                      </View>
-                      <View>
-                        <Text style={s.t33}>{st.outlet ? `${st.outlet.windowOpen}–${st.outlet.windowClose}` : ''}</Text>
-                      </View>
-                    </View>
-                  </Tap>
-                );
-              })}
-            </View>
-          </View>
-          {first ? (
-            <View style={s.v44}>
-              <Icon xml={X5} width={20} height={20} style={s.v41} />
-              <View style={s.v43}>
-                <View>
-                  <Text style={s.t42}>{`${Math.max(0, first.qtyOrdered - first.qtyLoaded)} ${first.item} short${shortfalls.length > 1 ? ` · +${shortfalls.length - 1} more` : ''}`}</Text>
-                </View>
-                <View>
-                  <Text style={s.t18}>{first.reason || 'Flagged at loading'}</Text>
-                </View>
-              </View>
-            </View>
-          ) : null}
-          <View style={s.v46}>
-            <Icon xml={X6} width={20} height={20} style={s.v41} />
-            <View style={s.v43}>
-              <View>
-                <Text style={s.t45}>{waiting.length ? `${plural(waiting.length, 'record')} waiting to send` : updatedAt ? `Saved ${hm(new Date(updatedAt).toISOString())} · works without signal${fromCache ? ' (from this phone)' : ''}` : 'Opens without signal once loaded'}</Text>
-              </View>
-            </View>
-          </View>
-        </Scroll>
-        <View style={s.v51}>
-          <Tap
-            lk="L12"
-            style={s.v50}
-            onPress={async () => {
-              if (!trip || !view) return true; // prototype mode: just navigate
-              // the trips before this one are finished (Trip 2 starts after Trip 1), then this one is en route
-              await finishDeliveredTrips(view.trips.filter(t => t.tripNumber < trip.tripNumber), view.stops);
-              await startTrip(trip);
-              return true;
-            }}
-          >
-            <Grad g={t.cta} style={s.v48} />
-            <Icon xml={X7} width={22} height={22} style={s.v1} />
-            <Text style={s.t49}>{trip && tripStatusOf(trip, items) === 'ENROUTE' ? 'Continue trip' : 'Start trip'}</Text>
-          </Tap>
+      ) : null}
+      <View>
+        <Text style={s.t12}>{title}</Text>
+      </View>
+      <View style={s.v17}>
+        <View style={s.v15}>
+          <Text style={s.t14}>{current?.etaModel ? `~${hm(current.etaModel)}` : '—'}<Text style={s.t13}>{"ETA"}</Text></Text>
         </View>
-        <View style={s.v54}>
-          <View style={s.v53}>
-            <Icon xml={X8} width={24} height={24} style={s.v1} />
-            <Text style={s.t52}>{"Run"}</Text>
+        {current ? (
+          <View style={s.v6}>
+            <View style={s.v16} />
+            <Text style={s.t5} numberOfLines={1}>{(current.lateRiskPct ?? 0) < LATE_RISK_PCT ? 'In window' : `Late risk ${current.lateRiskPct}%`}</Text>
           </View>
-          <Tap lk="N1" style={s.v53}>
-            <Icon xml={X9} width={24} height={24} style={s.v1} />
-            <Text style={s.t21}>{"Records"}</Text>
-          </Tap>
-          <Tap lk="N2" style={s.v53}>
-            <Icon xml={X10} width={24} height={24} style={s.v1} />
-            <Text style={s.t21}>{"Dispatch"}</Text>
-          </Tap>
+        ) : null}
+      </View>
+      <View>
+        <Text style={s.t18}>{current ? `Plan ${hm(current.etaPlan) || '—'} · model ~${hm(current.etaModel) || '—'}` : ' '}</Text>
+      </View>
+    </Tap>
+  );
+}
+
+function TripStops({ t, view, groups, current, waiting }: Themed & { view: RunView | null; groups: StopGroup[]; current: TripStop | null; waiting: Outbox['waiting'] }) {
+  const { s } = t;
+  const trip = view?.trip ?? null;
+  const trips = view?.trips.length ?? 0;
+  return (
+    <View style={s.v40}>
+      <View style={s.v22}>
+        <View style={s.v15}>
+          <Text style={s.t20}>{trip ? `Trip ${trip.tripNumber} · ${titleCase(trip.brand)} · ${trip.district}` : 'Trip'}</Text>
+        </View>
+        <View style={s.v15}>
+          <Text style={s.t21}>{trip ? `${plural(groups.length, 'stop')}${trips > 1 ? ` · ${plural(trips, 'trip')}` : ''}` : ''}</Text>
         </View>
       </View>
-    </Frame>
+      <View style={s.v39}>
+        {groups.map((g, i) => (
+          <StopRow key={g.st.id} t={t} group={g} first={i === 0} isCurrent={g.st.stopSeq === current?.stopSeq} waiting={waiting} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function StopRow({ t, group: { st, rows }, first, isCurrent, waiting }: Themed & { group: StopGroup; first: boolean; isCurrent: boolean; waiting: Outbox['waiting'] }) {
+  const { s } = t;
+  const delivered = rows.every(r => r.status === 'DELIVERED');
+  const unsent = rows.some(r => isUnsent(waiting, r.id));
+  const units = rows.reduce((n, r) => n + (r.order?.units ?? 0), 0);
+  return (
+    <Tap style={first ? s.v35 : s.v38} to={{ to: 'dr-02-stop-arrival', params: { stop: st.id } }} testID={`stop-${st.stopSeq}`}>
+      <View style={isCurrent ? s.v24 : s.v37}>
+        <Text style={isCurrent ? s.t23 : s.t36}>{delivered ? '✓' : String(st.stopSeq)}</Text>
+      </View>
+      <View style={s.v31}>
+        <View>
+          <Text style={s.t25}>{st.outlet?.name ?? st.outletId}</Text>
+        </View>
+        <View style={s.v30}>
+          <View style={s.v15}>
+            <Text style={s.t26}>{st.outletId}</Text>
+          </View>
+          <View style={s.v27} />
+          <View style={s.v29}>
+            <Icon xml={t.X4} width={14} height={14} style={s.v1} />
+            <Text style={s.t28} numberOfLines={1} testID={`stop-${st.stopSeq}-state`}>{stopState(unsent, delivered, units, rows.length)}</Text>
+          </View>
+        </View>
+      </View>
+      <View style={s.v34}>
+        <View>
+          <Text style={s.t32}>{stopTime(st, delivered)}</Text>
+        </View>
+        <View>
+          <Text style={s.t33}>{st.outlet ? `${st.outlet.windowOpen}–${st.outlet.windowClose}` : ''}</Text>
+        </View>
+      </View>
+    </Tap>
+  );
+}
+
+function ShortfallCard({ t, first, count }: Themed & { first: Shortfall; count: number }) {
+  const { s } = t;
+  return (
+    <View style={s.v44}>
+      <Icon xml={t.X5} width={20} height={20} style={s.v41} />
+      <View style={s.v43}>
+        <View>
+          <Text style={s.t42}>{`${Math.max(0, first.qtyOrdered - first.qtyLoaded)} ${first.item} short${count > 1 ? ` · +${count - 1} more` : ''}`}</Text>
+        </View>
+        <View>
+          <Text style={s.t18}>{first.reason || 'Flagged at loading'}</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function StartTripBar({ t, view, items }: Themed & { view: RunView | null; items: Outbox['items'] }) {
+  const { s } = t;
+  const trip = view?.trip ?? null;
+  return (
+    <View style={s.v51}>
+      <Tap
+        lk="L12"
+        style={s.v50}
+        onPress={async () => {
+          if (!trip || !view) return true; // prototype mode: just navigate
+          // the trips before this one are finished (Trip 2 starts after Trip 1), then this one is en route
+          await finishDeliveredTrips(view.trips.filter(x => x.tripNumber < trip.tripNumber), view.stops);
+          await startTrip(trip);
+          return true;
+        }}
+      >
+        <Grad g={t.cta} style={s.v48} />
+        <Icon xml={t.X7} width={22} height={22} style={s.v1} />
+        <Text style={s.t49}>{trip && tripStatusOf(trip, items) === 'ENROUTE' ? 'Continue trip' : 'Start trip'}</Text>
+      </Tap>
+    </View>
+  );
+}
+
+function RunTabs({ t }: Themed) {
+  const { s } = t;
+  return (
+    <View style={s.v54}>
+      <View style={s.v53}>
+        <Icon xml={t.X8} width={24} height={24} style={s.v1} />
+        <Text style={s.t52}>{"Run"}</Text>
+      </View>
+      <Tap lk="N1" style={s.v53}>
+        <Icon xml={t.X9} width={24} height={24} style={s.v1} />
+        <Text style={s.t21}>{"Records"}</Text>
+      </Tap>
+      <Tap lk="N2" style={s.v53}>
+        <Icon xml={t.X10} width={24} height={24} style={s.v1} />
+        <Text style={s.t21}>{"Dispatch"}</Text>
+      </Tap>
+    </View>
   );
 }
 
@@ -298,4 +398,4 @@ const s = StyleSheet.create({
   v55: {"flexDirection":"column","alignItems":"stretch","flexGrow":1,"flexShrink":1,"flexBasis":"0%","backgroundColor":"#070b16"},
 });
 
-const night: Dr01Theme = { bg: '#070b16', nav, route: 'L41', toggle: 'day', cta: G0, X1, X2, X3, X4, X5, X6, X7, X8, X9, X10, s };
+export const night: Dr01Theme = { bg: '#070b16', nav, route: 'L41', toggle: 'day', cta: G0, X1, X2, X3, X4, X5, X6, X7, X8, X9, X10, s };

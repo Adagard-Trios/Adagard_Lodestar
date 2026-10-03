@@ -80,26 +80,40 @@ export class AgentClient {
       });
     } catch (err) {
       this.logger.warn(`Agent ${method} ${path} failed: ${(err as Error).message}`);
-      if ((err as Error).name === 'TimeoutError') {
-        throw new ODataError(504, 'AgentTimeout', `The planning agent did not answer within ${AGENT_TIMEOUT_MS / 1000} s; the draft may still be running, try again in a moment`);
-      }
-      throw new ODataError(503, 'ServiceUnavailable', 'The planning agent is not reachable');
+      throw transportError(err as Error);
     }
     if (res.ok) return (await res.json()) as T;
-
-    const detail = await res.text().catch(() => '');
-    let message = detail.slice(0, 300);
-    try {
-      const parsed = JSON.parse(detail);
-      message = parsed?.error?.message ?? parsed?.detail ?? message;
-    } catch {
-      /* not JSON */
-    }
-    if (res.status === 401 || res.status === 403) throw new ODataError(res.status, res.status === 401 ? 'Unauthorized' : 'Forbidden', `Planning agent: ${message || 'access denied'}`);
-    if (res.status === 404) throw ODataError.notFound('The planning agent does not know this run');
-    if (res.status === 409 || res.status === 400 || res.status === 422) {
-      throw ODataError.conflict(`The planning agent rejected the request${message ? `: ${message}` : ''}`);
-    }
-    throw new ODataError(502, 'BadGateway', `The planning agent answered HTTP ${res.status}`);
+    throw responseError(res.status, await res.text().catch(() => ''));
   }
+}
+
+/** Maps a failed fetch (no HTTP answer) to the OData error the gateway returns. */
+function transportError(err: Error): ODataError {
+  if (err.name === 'TimeoutError') {
+    return new ODataError(504, 'AgentTimeout', `The planning agent did not answer within ${AGENT_TIMEOUT_MS / 1000} s; the draft may still be running, try again in a moment`);
+  }
+  return new ODataError(503, 'ServiceUnavailable', 'The planning agent is not reachable');
+}
+
+/** The agent's own error message from a response body (JSON error/detail, else the raw text). */
+function agentMessage(detail: string): string {
+  let message = detail.slice(0, 300);
+  try {
+    const parsed = JSON.parse(detail);
+    message = parsed?.error?.message ?? parsed?.detail ?? message;
+  } catch {
+    /* not JSON */
+  }
+  return message;
+}
+
+/** Maps a non-2xx agent response to the OData error the gateway returns. */
+function responseError(status: number, detail: string): ODataError {
+  const message = agentMessage(detail);
+  if (status === 401 || status === 403) return new ODataError(status, status === 401 ? 'Unauthorized' : 'Forbidden', `Planning agent: ${message || 'access denied'}`);
+  if (status === 404) return ODataError.notFound('The planning agent does not know this run');
+  if (status === 409 || status === 400 || status === 422) {
+    return ODataError.conflict(`The planning agent rejected the request${message ? `: ${message}` : ''}`);
+  }
+  return new ODataError(502, 'BadGateway', `The planning agent answered HTTP ${status}`);
 }

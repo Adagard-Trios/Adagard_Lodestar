@@ -8,7 +8,7 @@ import { hm } from '@/lib/time';
 import { titleCase } from '@/lodestar/live';
 import { useClaims, useRun } from '@/model/hooks';
 import { depotName } from '@/model/plan';
-import type { Outlet, TripStop } from '@/model/types';
+import type { Outlet, Trip, TripStop } from '@/model/types';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L42":{"to":"dr-01-today-s-run","kind":"go"}}};
@@ -41,7 +41,7 @@ export default function ScreenDr15RouteOverview() {
 
 /** The one DR-15 body, rendered by the night screen and by the daylight one with their own theme. */
 export function Dr15Body({ t }: { t: Dr15Theme }) {
-  const { s, X0, X1, X2, X4 } = t;
+  const { s, X0, X1 } = t;
   const claims = useClaims();
   const run = useRun();
   const v = run.view;
@@ -50,7 +50,7 @@ export function Dr15Body({ t }: { t: Dr15Theme }) {
   const open = stops.filter(st => st.status !== 'DELIVERED');
   const first = open[0] ?? null;
   const url = mapsUrl(open);
-  const empty = !claims ? 'Sign in to see your route' : run.loading && !v ? 'Loading…' : 'No trip today';
+  const empty = emptyText(!!claims, run.loading && !v);
   return (
     <Frame bg={t.bg} nav={t.nav} style={s.v0}>
       <View style={s.v43}>
@@ -75,112 +75,141 @@ export function Dr15Body({ t }: { t: Dr15Theme }) {
             </View>
             {first?.etaModel ? (
               <View>
-                <Text style={s.t16}>{[first.etaPlan ? `Plan ${hm(first.etaPlan)}` : '', `model ~${hm(first.etaModel)}`].filter(Boolean).join(' · ')}</Text>
+                <Text style={s.t16}>{etaLine(first)}</Text>
               </View>
             ) : null}
           </View>
-          {trip ? (
-            <View style={s.v35}>
-              <View style={s.v34}>
-                <View style={s.v27}>
-                  <View style={s.v20}>
-                    <View style={s.v18}>
-                      <Icon xml={X2} width={17} height={17} style={s.v1} />
-                    </View>
-                    <View style={s.v19} />
-                  </View>
-                  <View style={s.v23}>
-                    <View>
-                      <Text style={s.t21}>{`${depotName(trip.depot)}${trip.bay ? ` · Bay ${trip.bay}` : ''}`}</Text>
-                    </View>
-                  </View>
-                  {trip.departTime ? (
-                    <View style={s.v26}>
-                      <View>
-                        <Text style={s.t24}>{hm(trip.departTime)}</Text>
-                      </View>
-                      <View>
-                        <Text style={s.t25}>{"leave"}</Text>
-                      </View>
-                    </View>
-                  ) : null}
-                </View>
-                {stops.map(st => {
-                  const o = st.outlet;
-                  const done = st.status === 'DELIVERED';
-                  const isNext = st.id === first?.id;
-                  const time = done ? hm(st.arrivalActual ?? st.leaveActual) : st.etaModel ? `~${hm(st.etaModel)}` : '';
-                  return (
-                    <View key={st.id} style={s.v27} testID={`route-stop-${st.stopSeq}`}>
-                      <View style={s.v20}>
-                        <View style={isNext ? s.v31 : s.v18}>
-                          <Text style={isNext ? s.t30 : s.t33}>{String(st.stopSeq)}</Text>
-                        </View>
-                        <View style={s.v29} />
-                      </View>
-                      <View style={s.v23}>
-                        <View>
-                          <Text style={s.t21}>{`${o?.name ?? st.outletId} · `}<Text style={s.t32}>{st.outletId}</Text></Text>
-                        </View>
-                        {o ? (
-                          <View>
-                            <Text style={s.t22}>{[o.dockType ? `${titleCase(o.dockType)} dock` : '', `${o.windowOpen}–${o.windowClose}`].filter(Boolean).join(' · ')}</Text>
-                          </View>
-                        ) : null}
-                      </View>
-                      {time ? (
-                        <View style={s.v26}>
-                          <View>
-                            <Text style={s.t24}>{time}</Text>
-                          </View>
-                          <View>
-                            <Text style={s.t25}>{done ? 'arrived' : 'ETA'}</Text>
-                          </View>
-                        </View>
-                      ) : null}
-                    </View>
-                  );
-                })}
-                <View style={s.v27}>
-                  <View style={s.v20}>
-                    <View style={s.v18}>
-                      <Icon xml={X2} width={17} height={17} style={s.v1} />
-                    </View>
-                  </View>
-                  <View style={s.v23}>
-                    <View>
-                      <Text style={s.t21}>{`Back to ${depotName(trip.depot)}`}</Text>
-                    </View>
-                  </View>
-                  {trip.returnTime ? (
-                    <View style={s.v26}>
-                      <View>
-                        <Text style={s.t24}>{hm(trip.returnTime)}</Text>
-                      </View>
-                      <View>
-                        <Text style={s.t25}>{"about"}</Text>
-                      </View>
-                    </View>
-                  ) : null}
-                </View>
+          {trip ? <RouteCard t={t} trip={trip} stops={stops} nextId={first?.id} /> : null}
+        </Scroll>
+        {url ? <OpenMapsBar t={t} url={url} /> : null}
+      </View>
+    </Frame>
+  );
+}
+
+function emptyText(signedIn: boolean, loading: boolean): string {
+  if (!signedIn) return 'Sign in to see your route';
+  return loading ? 'Loading…' : 'No trip today';
+}
+
+/** The first open stop's plan and model ETA. */
+function etaLine(first: TripStop): string {
+  return [first.etaPlan ? `Plan ${hm(first.etaPlan)}` : '', `model ~${hm(first.etaModel)}`].filter(Boolean).join(' · ');
+}
+
+/** Arrival time of a delivered stop, else its model ETA. */
+function stopTime(st: TripStop, done: boolean): string {
+  if (done) return hm(st.arrivalActual ?? st.leaveActual);
+  return st.etaModel ? `~${hm(st.etaModel)}` : '';
+}
+
+/** The trip card: the depot, every stop in order, and the way back. */
+function RouteCard({ t, trip, stops, nextId }: { t: Dr15Theme; trip: Trip; stops: TripStop[]; nextId: string | undefined }) {
+  const { s, X2 } = t;
+  return (
+    <View style={s.v35}>
+      <View style={s.v34}>
+        <View style={s.v27}>
+          <View style={s.v20}>
+            <View style={s.v18}>
+              <Icon xml={X2} width={17} height={17} style={s.v1} />
+            </View>
+            <View style={s.v19} />
+          </View>
+          <View style={s.v23}>
+            <View>
+              <Text style={s.t21}>{`${depotName(trip.depot)}${trip.bay ? ` · Bay ${trip.bay}` : ''}`}</Text>
+            </View>
+          </View>
+          {trip.departTime ? (
+            <View style={s.v26}>
+              <View>
+                <Text style={s.t24}>{hm(trip.departTime)}</Text>
+              </View>
+              <View>
+                <Text style={s.t25}>{"leave"}</Text>
               </View>
             </View>
           ) : null}
-        </Scroll>
-        {url ? (
-          <View style={s.v42}>
-            <Tap style={s.v39} to={null} onPress={() => Linking.openURL(url)} testID="open-maps">
-              <Grad g={t.cta} style={s.v37} />
-              <Icon xml={X4} width={22} height={22} style={s.v1} />
-              <Text style={s.t38}>{"Open in Google Maps"}</Text>
-            </Tap>
-            <View style={s.v41}>
-              <Text style={s.t40}>{"Turn-by-turn runs in Google Maps. Your stops stay here."}</Text>
+        </View>
+        {stops.map(st => <RouteStopRow key={st.id} t={t} st={st} isNext={st.id === nextId} />)}
+        <View style={s.v27}>
+          <View style={s.v20}>
+            <View style={s.v18}>
+              <Icon xml={X2} width={17} height={17} style={s.v1} />
             </View>
+          </View>
+          <View style={s.v23}>
+            <View>
+              <Text style={s.t21}>{`Back to ${depotName(trip.depot)}`}</Text>
+            </View>
+          </View>
+          {trip.returnTime ? (
+            <View style={s.v26}>
+              <View>
+                <Text style={s.t24}>{hm(trip.returnTime)}</Text>
+              </View>
+              <View>
+                <Text style={s.t25}>{"about"}</Text>
+              </View>
+            </View>
+          ) : null}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function RouteStopRow({ t, st, isNext }: { t: Dr15Theme; st: TripStop; isNext: boolean }) {
+  const { s } = t;
+  const o = st.outlet;
+  const done = st.status === 'DELIVERED';
+  const time = stopTime(st, done);
+  return (
+    <View style={s.v27} testID={`route-stop-${st.stopSeq}`}>
+      <View style={s.v20}>
+        <View style={isNext ? s.v31 : s.v18}>
+          <Text style={isNext ? s.t30 : s.t33}>{String(st.stopSeq)}</Text>
+        </View>
+        <View style={s.v29} />
+      </View>
+      <View style={s.v23}>
+        <View>
+          <Text style={s.t21}>{`${o?.name ?? st.outletId} · `}<Text style={s.t32}>{st.outletId}</Text></Text>
+        </View>
+        {o ? (
+          <View>
+            <Text style={s.t22}>{[o.dockType ? `${titleCase(o.dockType)} dock` : '', `${o.windowOpen}–${o.windowClose}`].filter(Boolean).join(' · ')}</Text>
           </View>
         ) : null}
       </View>
-    </Frame>
+      {time ? (
+        <View style={s.v26}>
+          <View>
+            <Text style={s.t24}>{time}</Text>
+          </View>
+          <View>
+            <Text style={s.t25}>{done ? 'arrived' : 'ETA'}</Text>
+          </View>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function OpenMapsBar({ t, url }: { t: Dr15Theme; url: string }) {
+  const { s } = t;
+  return (
+    <View style={s.v42}>
+      <Tap style={s.v39} to={null} onPress={() => Linking.openURL(url)} testID="open-maps">
+        <Grad g={t.cta} style={s.v37} />
+        <Icon xml={t.X4} width={22} height={22} style={s.v1} />
+        <Text style={s.t38}>{"Open in Google Maps"}</Text>
+      </Tap>
+      <View style={s.v41}>
+        <Text style={s.t40}>{"Turn-by-turn runs in Google Maps. Your stops stay here."}</Text>
+      </View>
+    </View>
   );
 }
 
@@ -237,4 +266,4 @@ const s = StyleSheet.create({
   v43: {"flexDirection":"column","alignItems":"stretch","flexGrow":1,"flexShrink":1,"flexBasis":"0%","backgroundColor":"#070b16"},
 });
 
-const night: Dr15Theme = { bg: '#070b16', nav, back: 'L42', X0, X1, X2, X4, cta: G0, s };
+export const night: Dr15Theme = { bg: '#070b16', nav, back: 'L42', X0, X1, X2, X4, cta: G0, s };
