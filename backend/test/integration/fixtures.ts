@@ -33,7 +33,15 @@ export const CLAIMS: Record<string, TokenClaims> = {
 };
 
 export async function seedReference(prisma: PrismaClient): Promise<void> {
-  const outlet = (id: string, depot: 'KANDY' | 'PELIYAGODA', district: string) => ({
+  // outlets reference the depot registry (Outlet_depot_fkey); a reset database has none
+  await prisma.depot.createMany({
+    data: [
+      { code: 'PELIYAGODA', name: 'Peliyagoda DC', district: 'Gampaha' },
+      { code: 'KANDY', name: 'Kandy Hub', district: 'Kandy' },
+    ],
+    skipDuplicates: true,
+  });
+  const outlet =(id: string, depot: 'KANDY' | 'PELIYAGODA', district: string) => ({
     id, name: `Integration outlet ${id}`, brand: 'FRESH' as const, district, depot,
     dockType: 'REAR_DOCK' as const, parking: 'NORMAL' as const, windowOpen: '05:00', windowClose: '09:00',
   });
