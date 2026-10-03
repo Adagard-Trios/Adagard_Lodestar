@@ -7,7 +7,7 @@ One Postgres database with one schema per service; a service reads and writes on
 | Schema (owning service) | Tables |
 |---|---|
 | `auth` | User, Device |
-| `outlets` | Outlet, Calendar, DistrictTravel, DataImport, ServiceAllowance |
+| `outlets` | Depot, Outlet, Calendar, DistrictTravel, DataImport, ServiceAllowance |
 | `fleet` | Vehicle |
 | `orders` | Order, OrderLineItem, OrdersIdempotencyKey |
 | `trips` | Trip, TripStop, POD, LoadRecord, TripsIdempotencyKey |
@@ -26,7 +26,7 @@ erDiagram
     string name
     string passwordHash
     Role role
-    Depot depot
+    string depot
     string outletId FK
     string vehicleId
     string phone
@@ -36,12 +36,24 @@ erDiagram
     datetime createdAt
     datetime updatedAt
   }
+  Depot {
+    string code PK
+    string name
+    string address
+    string district
+    float lat
+    float lng
+    string phone
+    bool isActive
+    datetime createdAt
+    datetime updatedAt
+  }
   Outlet {
     string id PK
     string name
     Brand brand
     string district
-    Depot depot
+    string depot FK
     DockType dockType
     ParkingType parking
     string windowOpen
@@ -56,7 +68,7 @@ erDiagram
   }
   Vehicle {
     string id PK
-    Depot depot
+    string depot
     VehicleType type
     TempClass tempClass
     float capacityKg
@@ -109,7 +121,7 @@ erDiagram
     string id PK
     string vehicleId FK
     string driverId FK
-    Depot depot
+    string depot
     datetime runDate
     Brand brand
     string district
@@ -222,7 +234,7 @@ erDiagram
   }
   DistrictTravel {
     string district PK
-    Depot depot
+    string depot FK
     string roadClass
     int depotToDistMin
     int interStopMin
@@ -252,7 +264,7 @@ erDiagram
   }
   Plan {
     string id PK
-    Depot depot
+    string depot
     datetime runDate
     int version
     PlanStatus status
@@ -270,7 +282,7 @@ erDiagram
   }
   AgentRun {
     string id PK
-    Depot depot
+    string depot
     datetime runDate
     string status
     string requestedBy
@@ -333,6 +345,7 @@ erDiagram
     string hash UK
   }
   Outlet |o--o{ User : "outlet"
+  Depot ||--o{ Outlet : "depotRef"
   Outlet ||--o{ Order : "outlet"
   Order ||--o{ OrderLineItem : "order"
   Vehicle ||--o{ Trip : "vehicle"
@@ -351,5 +364,6 @@ erDiagram
   Plan |o--o{ DeferralLog : "plan"
   User ||--o{ Notification : "recipient"
   Trip |o--o{ Notification : "trip"
+  Depot ||--o{ DistrictTravel : "depotRef"
   User ||--o{ Device : "user"
 ```
