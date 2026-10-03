@@ -1,27 +1,17 @@
-// Sign-in with Keycloak: authorization code + PKCE (S256) through expo-auth-session, for the public
-// `lodestar-field` client. Native: the system browser returns to lodestar://auth/callback.
-// Web: a popup returns to <origin><basePath>/auth/callback (/field/auth/callback behind the gateway), which hands the result back (src/app/auth/callback.tsx).
-import { useMemo, useState } from 'react';
-import { Platform, useWindowDimensions } from 'react-native';
-import * as AuthSession from 'expo-auth-session';
+// Sign-in on the field app's own designed screens (no Keycloak page): phone + SMS code (SM-05/06, DR-06/07),
+// staff ID + PIN (LD-06), posted straight to the token endpoint (direct.ts, direct grant on `lodestar-field`).
+// The tokens are stored and refreshed by the Session exactly as before; then the role's first screen opens.
+import { useState } from 'react';
+import { useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
-import { APP_SCHEME, basePath, CALLBACK_PATH, clientId } from '@/lib/config';
 import { session } from '@/model/platform';
+import { openScreen } from '@/lodestar/runtime';
 import type { Claims } from './claims';
 import { enrollment } from './device-access';
-import { discovery } from './oidc';
-import { faceOf, homeFor, type Face } from './roles';
+import { codeSent, directGrant, phoneSignIn, type DirectResult } from './direct';
+import { faceOf, homeFor, SIGN_IN, type Face } from './roles';
 import { onboardingSeen } from '@/lib/settings';
 import { checkVersion, UPDATE_SCREEN, versionState } from '@/lib/version';
-
-const DISCOVERY = discovery();
-
-export function redirectUri(): string {
-  // makeRedirectUri builds web URLs from the origin only, so the export's base path is added here.
-  const base = Platform.OS === 'web' ? basePath().replace(/^\/+/, '') : '';
-  const path = base ? `${base}/${CALLBACK_PATH}` : CALLBACK_PATH;
-  return AuthSession.makeRedirectUri({ scheme: APP_SCHEME, path });
-}
 
 /**
  * Opens the role's first screen (or the "can't sign in" screen for a role without a field face) once the
@@ -62,49 +52,58 @@ async function firstScreen(claims: Claims, home: string): Promise<string> {
   return home;
 }
 
-export function useSignIn() {
+/**
+ * "Sign in" on the help and session screens (DR-29, LD-24, SM-31, SM-33, DSP-37, …): back to the face's own
+ * designed sign-in screen (the face of the screen, else the last signed-in face, else Store).
+ */
+export function useSignIn(face?: Face) {
+  async function signIn(): Promise<false> {
+    const f = face ?? session.state.get().face ?? 'store';
+    openScreen(SIGN_IN[f], undefined, 'nav');
+    return false;
+  }
+  return { ready: true, busy: false, signIn };
+}
+
+/** Posts sign-in steps; tokens → stored session → the role's first screen. */
+export function useDirectSignIn(face: Face) {
   const { width } = useWindowDimensions();
-  const redirect = useMemo(() => redirectUri(), []);
-  const [request, , promptAsync] = AuthSession.useAuthRequest(
-    {
-      clientId: clientId(),
-      redirectUri: redirect,
-      responseType: AuthSession.ResponseType.Code,
-      usePKCE: true,
-      scopes: ['openid'],
-      // shared phones and tablets: always ask who is signing in
-      prompt: AuthSession.Prompt.Login,
-    },
-    DISCOVERY,
-  );
   const [busy, setBusy] = useState(false);
 
-  /** Opens the Keycloak login; on success stores the tokens and routes by role. Returns false to stay. */
-  async function signIn(): Promise<false> {
-    if (!request || busy) return false;
+  async function submit(params: Record<string, string | undefined>): Promise<DirectResult> {
     setBusy(true);
     try {
-      const result = await promptAsync();
-      if (result.type === 'error') session.fail(result.error?.description ?? result.error?.message ?? 'Sign-in failed');
-      if (result.type !== 'success' || !result.params.code) return false;
-      const tokens = await AuthSession.exchangeCodeAsync(
-        { clientId: clientId(), code: result.params.code, redirectUri: redirect, extraParams: request.codeVerifier ? { code_verifier: request.codeVerifier } : undefined },
-        DISCOVERY,
-      );
-      const claims = await session.signIn({
-        access_token: tokens.accessToken,
-        refresh_token: tokens.refreshToken,
-        id_token: tokens.idToken,
-        expires_in: tokens.expiresIn,
-      });
-      goHome(claims, width);
+      const r = await directGrant(params);
+      if (r.ok) {
+        const claims = await session.signIn(r.tokens);
+        phoneSignIn.set({ face: null, digits: '', step: null, sentAt: null, resendAt: null });
+        await enterApp(claims, width);
+      }
+      return r;
     } catch (e) {
-      session.fail((e as Error)?.message ?? 'Sign-in failed');
+      return { ok: false, error: 'failed', description: (e as Error)?.message || 'Sign-in failed', status: 0 };
     } finally {
       setBusy(false);
     }
-    return false;
   }
 
-  return { ready: !!request, busy, signIn };
+  /** Asks for a code for `digits` (the local number after +94); remembers the answer for the code screen. */
+  async function sendCode(digits: string, channel?: 'voice'): Promise<DirectResult> {
+    const r = await submit({ phone: `+94${digits.replace(/^0/, '')}`, channel });
+    if (!r.ok && codeSent(r)) {
+      const now = Date.now();
+      phoneSignIn.set({ face, digits, step: r, sentAt: now, resendAt: now + (r.resendIn ?? 30) * 1000 });
+    } else if (!r.ok && r.retryAfter) {
+      phoneSignIn.set(p => ({ ...p, face, digits, resendAt: Date.now() + r.retryAfter! * 1000 }));
+    }
+    return r;
+  }
+
+  /** Checks the code sent to the number on file in phoneSignIn. */
+  async function verifyCode(code: string): Promise<DirectResult> {
+    const p = phoneSignIn.get();
+    return submit({ phone: `+94${p.digits.replace(/^0/, '')}`, code });
+  }
+
+  return { busy, submit, sendCode, verifyCode };
 }

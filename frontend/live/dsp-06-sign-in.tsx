@@ -1,18 +1,47 @@
 'use client';
 // DSP-06 Sign in · desktop, live. Markup and classes from the generated design (frontend/screens/dsp-06-sign-in.tsx).
+// The work email (and its password) post straight to the token endpoint (lib/auth/direct.ts); the realm's
+// "lodestar direct grant" flow then asks for the second step, which "Continue" (L144) opens on DSP-07: the
+// authenticator-app code, or a code sent to the on-call phone. "Sign in with Waypoint single sign-on" keeps the
+// redirect sign-in as the secondary path. The password field is the one addition to the drawn screen: the
+// design's step 1 needs it ("Step 2 of 2" follows) and it uses the same dx-field/dx-input look.
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { Ic } from '@/components/live/icons';
-import { useSignInEntry } from '@/components/live/SignInEntry';
 import Btn from '@/components/live/Btn';
 import { useDepots } from '@/components/live/depots';
+import { needsCode, pendingPassword } from '@/lib/auth/direct';
+import { bareInput, remembered, SignInMessage, useDirectSignIn } from '@/components/live/DirectSignIn';
 
-/**
- * Keycloak hosts the sign-in form; this screen is the entry point to it. "Continue" (the design's L144 to DSP-07)
- * opens Keycloak, which asks for the 2-step code itself when the account has an authenticator; DSP-07 shows the status.
- */
+export const DSP07 = '/plan/dsp-07-2-step-verification';
+
 export default function LiveDsp06SignIn() {
   // Depot names come from the registry once signed in; before sign-in none are shown (never a made-up list).
   const { active: depotList } = useDepots();
-  const entry = useSignInEntry('plan');
+  const flow = useDirectSignIn('plan');
+  const router = useRouter();
+  const [email, setEmail] = useState(() => remembered.get('plan.email') ?? '');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+
+  const go = async () => {
+    setError(null);
+    if (!email.trim() || !password) {
+      setError(!email.trim() ? 'Enter your work email.' : 'Enter your password.');
+      return;
+    }
+    const r = await flow.submit({ username: email.trim(), password });
+    if (r.ok) return;
+    if (needsCode(r)) {
+      pendingPassword.set({ username: email.trim(), password, step: r, at: Date.now(), returnTo: flow.returnTo });
+      setPassword('');
+      router.push(flow.returnTo ? `${DSP07}?returnTo=${encodeURIComponent(flow.returnTo)}` : DSP07);
+      return;
+    }
+    setError(r.description);
+  };
+
   return (
     <div className="frame frame--desktop mode-dispatcher" data-name="DSP-06 Sign in · desktop">
       <div className="dx-auth">
@@ -66,24 +95,39 @@ export default function LiveDsp06SignIn() {
           </div>
         </div>
         <div className="dx-auth__main">
-          <div className="dx-auth__card">
+          <form className="dx-auth__card" onSubmit={e => { e.preventDefault(); void go(); }} noValidate>
             <div className="vstack" style={{"gap": "8px"}}>
               <span className="d-eyebrow">{"Waypoint Group · Lodestar Plan"}</span>
               <div className="dx-h1xl">{"Sign in to plan the run"}</div>
               <span className="dx-t14">{"Use your work email. Dispatchers and depot leads only."}</span>
             </div>
-            <div className="dx-inset dx-inset--brand" style={{"flexDirection": "row", "alignItems": "flex-start", "gap": "12px", "padding": "14px 16px"}}>
-              <Ic n="key" />
-              <span className="dx-t14" style={{"fontSize": "13.5px"}}>
-                <b>{"Waypoint single sign-on."}</b>
-                {" You enter your work email and password on the Waypoint sign-in page, then come straight back to the plan."}
-              </span>
+            <div className="dx-field">
+              <label className="dx-label" htmlFor="dsp06-email">{"Work email"}</label>
+              <div className="dx-input dx-input--focus">
+                <Ic n="mail" />
+                <input id="dsp06-email" data-testid="email-input" type="email" autoComplete="username" placeholder="name@waypoint.lk"
+                  style={bareInput} value={email} onChange={e => setEmail(e.target.value)} />
+              </div>
             </div>
-            <Btn as="div" className="dx-bigbtn" testId="sign-in" lk="L144" busy={entry.busy} disabled={entry.loading} onClick={entry.start}>
-              {entry.label}<Ic n="arrow-right" />
+            <div className="dx-field">
+              <label className="dx-label" htmlFor="dsp06-password">{"Password"}</label>
+              <div className="dx-input">
+                <Ic n="lock" />
+                <input id="dsp06-password" data-testid="password-input" type="password" autoComplete="current-password"
+                  style={bareInput} value={password} onChange={e => setPassword(e.target.value)} />
+              </div>
+            </div>
+            <SignInMessage text={error} />
+            <Btn as="div" className="dx-bigbtn" testId="sign-in" lk="L144" busy={flow.busy} onClick={() => void go()}>
+              {flow.busy ? 'Checking…' : 'Continue'}<Ic n="arrow-right" />
+            </Btn>
+            <button type="submit" hidden aria-hidden tabIndex={-1} />
+            <div className="dx-or"><i />{"or"}<i /></div>
+            <Btn as="div" className="dx-bigbtn dx-bigbtn--sec" testId="sso" onClick={flow.sso}>
+              <Ic n="key" />{"Sign in with Waypoint single sign-on"}
             </Btn>
             <div className="between dx-t13"><span data-lk="L145">{"Trouble signing in? Call the Peliyagoda IT desk."}</span></div>
-          </div>
+          </form>
         </div>
       </div>
     </div>

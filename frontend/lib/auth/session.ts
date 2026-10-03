@@ -98,9 +98,27 @@ export function returnPath(returnTo: unknown, roles: readonly string[]): string 
   return landingFor(roles);
 }
 
+/** Each face's own designed sign-in screen (no Keycloak login page on the normal sign-in path). */
+export const SIGN_IN_SCREEN: Record<Face, string> = {
+  plan: '/plan/dsp-06-sign-in',
+  store: '/store/sm-26-sign-in',
+  admin: '/admin/adm-01-sign-in',
+};
+
+/**
+ * Where to sign in for `returnTo`: the sign-in screen of the face it belongs to, carrying it as ?returnTo=. A path
+ * outside every face (or none) goes to the start page, which links each role to its own sign-in screen.
+ */
+export function signInPath(returnTo?: string | null): string {
+  const face = returnTo ? faceOfPath(returnTo) : null;
+  if (!face) return '/';
+  const back = returnTo && !isEntryPath(returnTo) && returnTo !== `/${face}` ? `?returnTo=${encodeURIComponent(returnTo)}` : '';
+  return `${SIGN_IN_SCREEN[face]}${back}`;
+}
+
 /** Sign-in and other pre-authentication screens, which stay reachable without a session. */
 export const ENTRY_SCREENS: Record<Face, string[]> = {
-  plan: ['dsp-06-sign-in', 'dsp-34-reset-access', 'dsp-35-session-expired'],
+  plan: ['dsp-06-sign-in', 'dsp-07-2-step-verification', 'dsp-34-reset-access', 'dsp-35-session-expired'],
   store: ['sm-26-sign-in', 'sm-35-reset-access', 'sm-36-service-unavailable'],
   admin: ['adm-01-sign-in'],
 };
@@ -156,3 +174,10 @@ export function forgetEndedSession() {
 
 /** The screen a face shows when its session ended, if it has one (only Lodestar Plan designs it: DSP-35). */
 export const SESSION_ENDED_SCREEN: Partial<Record<Face, string>> = { plan: '/plan/dsp-35-session-expired' };
+
+/** The field-app page for a loader or driver (their role's sign-in there), or the field app's start otherwise. */
+export function fieldAppFor(roles: readonly string[]): string {
+  if (roles.includes('loader')) return '/field/s/ld-06-sign-in';
+  if (roles.includes('driver')) return '/field/s/dr-06-sign-in';
+  return '/field/';
+}

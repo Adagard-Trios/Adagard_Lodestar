@@ -1,12 +1,44 @@
 'use client';
 // ADM-01 Sign in · desktop, live. Markup and classes from the generated design (frontend/screens/adm-01-sign-in.tsx).
+// "Continue with Waypoint single sign-on" (L284) keeps Keycloak's redirect sign-in. "Or use your work email": the
+// email and password post straight to the token endpoint (lib/auth/direct.ts) and the realm's direct-grant flow
+// asks for the second step the design announces ("There is no way to skip it"): the authenticator code, or a
+// code sent to the admin's work phone. That step replaces the card in place (ADM has no screen of its own for it;
+// it uses DSP-07's markup, components/live/TwoStep.tsx). Additions to the drawn card: the password field and a
+// "Continue" button for the email path, in the card's own dx-field / dx-bigbtn--sec look.
+import { useState } from 'react';
 import { Ic } from '@/components/live/icons';
-import { useSignInEntry } from '@/components/live/SignInEntry';
 import Btn from '@/components/live/Btn';
+import { needsCode, pendingPassword, type PendingPassword } from '@/lib/auth/direct';
+import { bareInput, remembered, SignInMessage, useDirectSignIn } from '@/components/live/DirectSignIn';
+import { TwoStepCard } from '@/components/live/TwoStep';
 
-/** Keycloak hosts the sign-in form; this screen is the entry point to it. */
 export default function LiveAdm01SignIn() {
-  const entry = useSignInEntry('admin');
+  const flow = useDirectSignIn('admin');
+  const [email, setEmail] = useState(() => remembered.get('admin.email') ?? '');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState<PendingPassword | null>(null);
+
+
+  const go = async () => {
+    setError(null);
+    if (!email.trim() || !password) {
+      setError(!email.trim() ? 'Enter your work email.' : 'Enter your password.');
+      return;
+    }
+    const r = await flow.submit({ username: email.trim(), password });
+    if (r.ok) return;
+    if (needsCode(r)) {
+      const p = { username: email.trim(), password, step: r, at: Date.now(), returnTo: flow.returnTo };
+      pendingPassword.set(p);
+      setPending(p);
+      setPassword('');
+      return;
+    }
+    setError(r.description);
+  };
+
   return (
     <div className="frame frame--desktop mode-dispatcher" data-name="ADM-01 Sign in · desktop">
       <div className="dx-auth">
@@ -86,7 +118,10 @@ export default function LiveAdm01SignIn() {
           </div>
         </div>
         <div className="dx-auth__main">
-          <div className="dx-auth__card">
+          {pending ? (
+            <TwoStepCard pending={pending} flow={flow} rememberKey="admin.email" onRestart={() => { pendingPassword.clear(); setPending(null); }} />
+          ) : (
+          <form className="dx-auth__card" onSubmit={e => { e.preventDefault(); void go(); }} noValidate>
             <div className="vstack" style={{"gap": "8px"}}>
               <span className="d-eyebrow">{"Waypoint Group · Lodestar Admin"}</span>
               <div className="dx-h1xl">{"Sign in to the admin console"}</div>
@@ -94,9 +129,31 @@ export default function LiveAdm01SignIn() {
                 {"For operations systems admins only. Dispatchers, loaders, drivers and store staff sign in to their own app."}
               </span>
             </div>
-            <Btn as="div" className="dx-bigbtn" testId="sign-in" busy={entry.busy} disabled={entry.loading} onClick={entry.start}>
-              <Ic n="key" />{entry.label}
+            <Btn as="div" className="dx-bigbtn" lk="L284" testId="sso" onClick={flow.sso}>
+              <Ic n="key" />{"Continue with Waypoint single sign-on"}
             </Btn>
+            <div className="dx-or"><i />{"or use your work email"}<i /></div>
+            <div className="dx-field">
+              <label className="dx-label" htmlFor="adm01-email">{"Work email"}</label>
+              <div className="dx-input dx-input--focus">
+                <Ic n="mail" />
+                <input id="adm01-email" data-testid="email-input" type="email" autoComplete="username" placeholder="name@waypoint.lk"
+                  style={bareInput} value={email} onChange={e => setEmail(e.target.value)} />
+              </div>
+            </div>
+            <div className="dx-field">
+              <label className="dx-label" htmlFor="adm01-password">{"Password"}</label>
+              <div className="dx-input">
+                <Ic n="lock" />
+                <input id="adm01-password" data-testid="password-input" type="password" autoComplete="current-password"
+                  style={bareInput} value={password} onChange={e => setPassword(e.target.value)} />
+              </div>
+            </div>
+            <SignInMessage text={error} />
+            <Btn as="div" className="dx-bigbtn dx-bigbtn--sec" testId="sign-in" busy={flow.busy} onClick={() => void go()}>
+              {flow.busy ? 'Checking…' : 'Continue'}<Ic n="arrow-right" />
+            </Btn>
+            <button type="submit" hidden aria-hidden tabIndex={-1} />
             <div className="dx-inset dx-inset--brand" style={{"flexDirection": "row", "alignItems": "flex-start", "gap": "12px", "padding": "14px 16px"}}>
               <svg className="ic" viewBox="0 0 24 24" style={{"width": "20px", "height": "20px", "color": "var(--brand-600)", "flexShrink": "0", "marginTop": "1px"}}>
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -108,7 +165,8 @@ export default function LiveAdm01SignIn() {
               </span>
             </div>
             <div className="between dx-t13"><span>{"Lost your security key? Call the Peliyagoda IT desk."}</span></div>
-          </div>
+          </form>
+          )}
         </div>
       </div>
     </div>

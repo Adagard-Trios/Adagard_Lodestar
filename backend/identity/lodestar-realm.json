@@ -590,7 +590,7 @@
       "bearerOnly": false,
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": false,
+      "directAccessGrantsEnabled": true,
       "serviceAccountsEnabled": false,
       "frontchannelLogout": true,
       "fullScopeAllowed": true,
@@ -628,7 +628,7 @@
       "bearerOnly": false,
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": false,
+      "directAccessGrantsEnabled": true,
       "serviceAccountsEnabled": false,
       "frontchannelLogout": true,
       "fullScopeAllowed": true,
@@ -1009,6 +1009,9 @@
         ],
         "device_id": [
           "DEV-FR-01"
+        ],
+        "phone": [
+          "+94774567890"
         ]
       },
       "credentials": [
@@ -1038,6 +1041,9 @@
         ],
         "device_id": [
           "DEV-NP-01"
+        ],
+        "phone": [
+          "+94771234567"
         ]
       },
       "credentials": [
@@ -1066,6 +1072,12 @@
         ],
         "device_id": [
           "DEV-KJ-01"
+        ],
+        "phone": [
+          "+94772345678"
+        ],
+        "staff_id": [
+          "KDY-0427"
         ]
       },
       "credentials": [
@@ -1097,6 +1109,9 @@
         ],
         "device_id": [
           "DEV-RB-01"
+        ],
+        "phone": [
+          "+94773456789"
         ]
       },
       "credentials": [
@@ -1119,7 +1134,11 @@
       "lastName": "Admin",
       "enabled": true,
       "emailVerified": true,
-      "attributes": {},
+      "attributes": {
+        "phone": [
+          "${LODESTAR_ADMIN_PHONE:+94770000001}"
+        ]
+      },
       "credentials": [
         {
           "type": "password",

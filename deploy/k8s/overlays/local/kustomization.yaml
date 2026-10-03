@@ -83,6 +83,9 @@ images:
 - name: lodestar/migrate
   newName: lodestar-migrate
   newTag: latest
+- name: lodestar/identity
+  newName: lodestar-identity
+  newTag: latest
 
 configMapGenerator:
 - name: lodestar-realm

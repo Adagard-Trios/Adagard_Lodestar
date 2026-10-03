@@ -1,16 +1,73 @@
 'use client';
 // SM-26 Sign in · desktop, live. Markup and classes from the generated design (frontend/screens/sm-26-sign-in.tsx).
+// As designed: phone number + 6-digit code from SMS, posted straight to the token endpoint (lib/auth/direct.ts,
+// the realm's "lodestar direct grant" flow). "Remember this counter PC" keeps the number on this computer for 30 days.
+import { useRef, useState } from 'react';
 import { Ic } from '@/components/live/icons';
 import { CUTOFF_LABEL } from '@/lib/workday';
-import { useSignInEntry } from '@/components/live/SignInEntry';
 import Btn from '@/components/live/Btn';
 import { resetOptions } from '@/lib/auth/reset';
+import { clock, localNumber, needsCode, type SignInStep } from '@/lib/auth/direct';
+import { bareInput, CodeInput, DemoCode, remembered, SignInMessage, useCountdown, useDirectSignIn } from '@/components/live/DirectSignIn';
 
-/** Keycloak hosts the sign-in form; this screen is the entry point to it. */
 export default function LiveSm26SignIn() {
-  const entry = useSignInEntry('store');
+  const flow = useDirectSignIn('store');
   // Lodestar keeps no depot phone numbers: the configured support line (NEXT_PUBLIC_SUPPORT_PHONE) when set.
   const { supportPhone } = resetOptions();
+  const [phone, setPhone] = useState(() => remembered.get('store.phone') ?? '');
+  const [code, setCode] = useState('');
+  const [remember, setRemember] = useState(() => Boolean(remembered.get('store.phone')));
+  const [step, setStep] = useState<SignInStep | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [resendAt, setResendAt] = useState<number | null>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
+  const left = useCountdown(resendAt);
+  const sent = step?.error === 'code_sent';
+
+
+  const send = async () => {
+    setError(null);
+    if (!phone.trim()) {
+      setError('Enter your mobile number.');
+      phoneRef.current?.focus();
+      return;
+    }
+    const r = await flow.submit({ phone });
+    if (r.ok) return;
+    if (needsCode(r)) {
+      setStep(r);
+      setCode('');
+      setResendAt(Date.now() + (r.resendIn ?? 30) * 1000);
+    } else {
+      setError(r.description);
+      if (r.retryAfter) setResendAt(Date.now() + r.retryAfter * 1000);
+    }
+  };
+
+  const verify = async (value = code) => {
+    if (!sent) return send();
+    if (value.length !== 6) {
+      setError('Enter the 6-digit code from the SMS.');
+      return;
+    }
+    setError(null);
+    remembered.set('store.phone', remember ? phone : null);
+    const r = await flow.submit({ phone, code: value });
+    if (!r.ok) {
+      setError(r.description);
+      setCode('');
+      if (r.error === 'code_expired' || r.error === 'code_locked') setStep(null);
+    }
+  };
+
+  const change = () => {
+    setStep(null);
+    setCode('');
+    setError(null);
+    setResendAt(null);
+    phoneRef.current?.focus();
+  };
+
   return (
     <div className="frame frame--desktop mode-store" data-name="SM-26 Sign in · desktop">
       <div className="sx-dauth">
@@ -64,19 +121,61 @@ export default function LiveSm26SignIn() {
           </svg>
         </div>
         <div className="sx-dauth__form">
-          <div className="sx-dcard">
+          <form className="sx-dcard" onSubmit={e => { e.preventDefault(); void verify(); }} noValidate>
             <div className="vstack" style={{"gap": "6px"}}>
               <span className="d-h1" style={{"fontSize": "30px"}}>{"Sign in"}</span>
               <span className="d-sub" style={{"fontSize": "15px"}}>{"For store managers and receiving staff of Waypoint outlets."}</span>
             </div>
             <div className="sx-field">
-              <span className="sx-field__l">{"Waypoint sign-in"}</span>
-              <span className="d-sub" style={{"fontSize": "15px"}}>
-                {"You sign in on the Waypoint sign-in page with your outlet account, then come straight back to your store desk."}
-              </span>
+              <div className="between">
+                <label className="sx-field__l" htmlFor="sm26-phone">{"Phone number"}</label>
+                {sent && <Btn className="sx-link" style={{"fontSize": "13px"}} onClick={change} testId="change-phone">{"Change"}</Btn>}
+              </div>
+              <div className={`sx-field__box${sent ? '' : ' is-focus'}`} style={{"height": "54px"}}>
+                <span className="sx-field__pre"><small>{"LK"}</small>{"+94"}</span>
+                <input
+                  id="sm26-phone"
+                  ref={phoneRef}
+                  className="sx-field__v"
+                  style={{ ...bareInput, "fontSize": "19px" }}
+                  data-testid="phone-input"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel-national"
+                  placeholder="77 123 4567"
+                  value={sent ? localNumber(phone) : phone}
+                  readOnly={sent}
+                  onChange={e => setPhone(e.target.value)}
+                />
+              </div>
             </div>
-            <Btn className="d-btn d-btn--primary sx-dbtn-xl" testId="sign-in" busy={entry.busy} disabled={entry.loading} onClick={entry.start}>
-              {entry.label}<Ic n="arrow-right" />
+            <div className="sx-field">
+              <div className="between">
+                <span className="sx-field__l">{"6-digit code from SMS"}</span>
+                {left > 0
+                  ? <span style={{"fontSize": "13px", "color": "var(--text-3)"}}>{`Resend in ${clock(left)}`}</span>
+                  : <Btn className="sx-link" style={{"fontSize": "13px"}} onClick={() => void send()} disabled={flow.busy} testId="send-code">{sent ? 'Resend code' : 'Send code'}</Btn>}
+              </div>
+              <CodeInput
+                value={code}
+                onChange={setCode}
+                onComplete={v => void verify(v)}
+                autoFocus={sent}
+                render={(chars, focus) => (
+                  <div className="sx-otp">
+                    {chars.map((c, i) => <div key={i} className={`sx-otp__c${i === focus ? ' is-focus' : ''}`} style={{"height": "56px"}}>{c}</div>)}
+                  </div>
+                )}
+              />
+              <DemoCode code={step?.demoCode} />
+            </div>
+            <SignInMessage text={error} />
+            <div className="sx-check" role="checkbox" aria-checked={remember} tabIndex={0} style={{ cursor: 'pointer' }}
+              onClick={() => setRemember(r => !r)} onKeyDown={e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setRemember(r => !r); } }}>
+              <i style={remember ? undefined : { background: '#FFFFFF', boxShadow: 'inset 0 0 0 1.5px var(--line-strong)' }}><Ic n="check" /></i>{"Remember this counter PC for 30 days"}
+            </div>
+            <Btn className="d-btn d-btn--primary sx-dbtn-xl" lk="L122" testId="sign-in" busy={flow.busy} onClick={() => void verify()}>
+              {flow.busy ? (sent ? 'Signing in…' : 'Sending code…') : 'Sign in'}<Ic n="arrow-right" />
             </Btn>
             <div className="sx-divider" />
             <div className="sx-help" data-lk="L123">
@@ -85,7 +184,7 @@ export default function LiveSm26SignIn() {
               </svg>
               {supportPhone ? `Trouble signing in? Call ${supportPhone}` : 'Trouble signing in? Get sign-in help'}
             </div>
-          </div>
+          </form>
         </div>
       </div>
     </div>

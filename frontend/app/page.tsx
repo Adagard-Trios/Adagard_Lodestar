@@ -26,13 +26,13 @@ type Role = {
 const ROLES: Role[] = [
   {
     key: "store", face: "Lodestar Store", role: "Store manager", text: "Place tomorrow's order before 4 PM, follow the arrival time, confirm what arrived.",
-    href: "/store", persona: "fathima", color: "#047857", device: "Desktop or phone",
+    href: "/store/sm-26-sign-in", persona: "fathima", color: "#047857", device: "Desktop or phone",
     icon: <><path d="M3 9l1.5-5h15L21 9" /><path d="M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z" /><path d="M5 13v8h14v-8M10 21v-5h4v5" /></>,
     also: { label: "Phone app", href: "/field/s/sm-05-sign-in" },
   },
   {
     key: "plan", face: "Lodestar Plan", role: "Dispatcher", text: "Allocate orders to vehicles and trips with the planning agent, explain every deferral, watch the run live.",
-    href: "/plan", persona: "nilanthi", color: "#3B4CCA", device: "Planning office",
+    href: "/plan/dsp-06-sign-in", persona: "nilanthi", color: "#3B4CCA", device: "Planning office",
     icon: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>,
   },
   {
@@ -49,7 +49,7 @@ const ROLES: Role[] = [
 
 const ADMIN: Role = {
   key: "admin", face: "Lodestar Admin", role: "Admin", text: "People, phones, outlets, vehicles, data imports and the audit log.",
-  href: "/admin", persona: "admin", color: "#334155", device: "Head office",
+  href: "/admin/adm-01-sign-in", persona: "admin", color: "#334155", device: "Head office",
   icon: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="m9 12 2 2 4-4" /></>,
 };
 

@@ -67,7 +67,8 @@ spec:
           type: RuntimeDefault
       containers:
       - name: identity
-        image: quay.io/keycloak/keycloak:26.0
+        image: lodestar/identity   # quay.io/keycloak/keycloak:26.0 + backend/identity/extension
+        imagePullPolicy: IfNotPresent
         args: [start-dev, --import-realm]
         ports:
         - name: http
@@ -95,6 +96,14 @@ spec:
           value: 'true'
         - name: KC_BOOTSTRAP_ADMIN_USERNAME
           value: admin
+        # Lodestar sign-in extension: codes logged and shown by the app (demo). For real SMS set SMS_PROVIDER twilio or
+        # notifylk here (env beats envFrom) and its keys in identity-secrets
+        - name: SMS_PROVIDER
+          value: log
+        - name: DEMO_SHOW_CODES
+          value: 'true'
+        - name: LODESTAR_DEMO_PIN
+          value: '2468'
         envFrom:
         - secretRef:
             name: identity-secrets

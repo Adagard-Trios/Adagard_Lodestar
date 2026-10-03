@@ -18,6 +18,8 @@ export interface UserManagerLike {
   signinSilent(): Promise<User | null>;
   signoutRedirect(args?: { id_token_hint?: string; post_logout_redirect_uri?: string }): Promise<void>;
   removeUser(): Promise<void>;
+  /** Stores a user signed in on a designed screen (direct grant); renewal then works as for the redirect flow. */
+  storeUser(user: User | null): Promise<void>;
   events: {
     addUserLoaded(cb: (user: User) => void): () => void;
     addUserUnloaded(cb: () => void): () => void;

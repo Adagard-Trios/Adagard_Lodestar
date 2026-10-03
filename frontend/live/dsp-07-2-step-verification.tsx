@@ -1,11 +1,15 @@
 'use client';
 // DSP-07 2-step verification, live. Markup and classes from the generated design (frontend/screens/dsp-07-2-step-verification.tsx).
-// Keycloak owns 2-step verification: when an account has an authenticator app, Keycloak asks for the 6-digit code
-// on its own sign-in page after the password (DSP-06 "Continue"), so Lodestar never sees or checks a code. This
-// screen shows the signed-in user's status (Users/Lodestar.MyTwoFactor: authenticator set up or not, from the
-// identity admin API) and opens Keycloak's account console, "Signing in", to set one up or replace it.
-// "Continue to Lodestar Plan" goes to Today (the design's L146). Not drawn: the code boxes, "Trust this office
-// computer" and "Send the code by SMS" (Keycloak's own page does this; the realm has no SMS authenticator).
+// Step 2 of the designed sign-in (DSP-06 "Continue", L144): the 6-digit code from the authenticator app, or the
+// code sent to the on-call phone ("Send the code by SMS instead", 30 s), checked by the realm's direct-grant flow
+// (components/live/TwoStep.tsx). Opened without a pending step 1: a signed-in user sees their 2-step status (from
+// the identity admin API, Users/Lodestar.MyTwoFactor) with a link to Keycloak's account console; anyone else goes
+// back to DSP-06.
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { pendingPassword } from '@/lib/auth/direct';
+import { useDirectSignIn } from '@/components/live/DirectSignIn';
+import { TwoStepCard } from '@/components/live/TwoStep';
 import Btn from '@/components/live/Btn';
 import { Ic } from '@/components/live/icons';
 import { useTwoFactor } from '@/components/live/settings-data';
@@ -23,8 +27,14 @@ export function accountSecurityUrl(authority: string): string {
 export default function LiveDsp072StepVerification() {
   // Depot names come from the registry once signed in; before sign-in none are shown (never a made-up list).
   const { active: depotList } = useDepots();
-  const { session } = useAuth();
-  const tf = useTwoFactor();
+  const { session, status: authStatus } = useAuth();
+  const flow = useDirectSignIn('plan');
+  const router = useRouter();
+  const [pending] = useState(() => pendingPassword.get());
+  const tf = useTwoFactor(!pending && authStatus === 'authenticated');
+  useEffect(() => {
+    if (!pending && authStatus === 'anonymous') router.replace(flow.returnTo ? `/plan/dsp-06-sign-in?returnTo=${encodeURIComponent(flow.returnTo)}` : '/plan/dsp-06-sign-in');
+  }, [authStatus, flow.returnTo, pending, router]);
   const s = tf.data;
   const open = () => window.open(accountSecurityUrl(runtimeConfig().authority), '_blank', 'noopener');
   const status = !s ? null : !s.available ? 'unknown' : s.enabled ? 'on' : s.setupRequired ? 'required' : 'off';
@@ -47,6 +57,9 @@ export default function LiveDsp072StepVerification() {
           </div>
         </div>
         <div className="dx-auth__main">
+          {pending ? (
+            <TwoStepCard pending={pending} flow={flow} rememberKey="plan.email" onRestart={() => router.replace('/plan/dsp-06-sign-in')} />
+          ) : (
           <div className="dx-auth__card" data-testid="two-factor">
             <div className="hstack" style={{ gap: '10px' }}>
               <span className="dx-lead"><Ic n="shield-check" /></span>
@@ -80,6 +93,7 @@ export default function LiveDsp072StepVerification() {
               <span className="t-3">{"· opens Waypoint sign-in"}</span>
             </div>
           </div>
+          )}
         </div>
       </div>
     </div>

@@ -24,9 +24,9 @@ LODESTAR_KUBECONFIG="${LODESTAR_KUBECONFIG:-${HOME}/.kube/kind-${CLUSTER_NAME}.y
 KEDA_VERSION="${KEDA_VERSION:-2.17.2}"
 
 # Images built by `docker compose build` (compose project `lodestar`).
-APP_IMAGES=(auth orders planning fleet outlets trips sync notifications audit agent frontend mobile-web gateway migrate)
+APP_IMAGES=(auth orders planning fleet outlets trips sync notifications audit agent frontend mobile-web gateway migrate identity)
 # Third-party images; loaded from the local Docker cache when present (saves pulls).
-INFRA_IMAGES=(postgres:16-alpine redis:7-alpine quay.io/keycloak/keycloak:26.0)
+INFRA_IMAGES=(postgres:16-alpine redis:7-alpine)
 
 log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33mWARN:\033[0m %s\n' "$*" >&2; }

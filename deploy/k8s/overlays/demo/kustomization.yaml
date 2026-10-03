@@ -33,6 +33,9 @@ images:
 - name: lodestar-gateway
   newName: ghcr.io/adagard-trios/lodestar-gateway
   newTag: b9e0d31e2e6a4ab761ff0f75ca2c7992aa8c6799
+- name: lodestar-identity
+  newName: ghcr.io/adagard-trios/lodestar-identity
+  newTag: b9e0d31e2e6a4ab761ff0f75ca2c7992aa8c6799
 - name: lodestar-migrate
   newName: ghcr.io/adagard-trios/lodestar-migrate
   newTag: b9e0d31e2e6a4ab761ff0f75ca2c7992aa8c6799

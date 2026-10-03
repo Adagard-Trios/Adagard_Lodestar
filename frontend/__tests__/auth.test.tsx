@@ -2,7 +2,7 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import type { User } from 'oidc-client-ts';
 import { AuthProvider, useAuth } from '@/lib/auth/AuthProvider';
 import type { UserManagerLike } from '@/lib/auth/oidc';
-import { canUseFace, decodeJwt, faceFor, isEntryPath, landingFor, returnPath, rolesOf, sessionFrom } from '@/lib/auth/session';
+import { canUseFace, decodeJwt, faceFor, fieldAppFor, isEntryPath, landingFor, returnPath, rolesOf, sessionFrom } from '@/lib/auth/session';
 import FaceGate, { decideGate } from '@/components/live/FaceGate';
 import { resolveConfig } from '@/lib/config';
 import { AuthTestContext } from '@/lib/auth/AuthProvider';
@@ -54,6 +54,14 @@ describe('role landing', () => {
     [[], '/no-access'],
   ])('%j lands on %s', (roles, path) => {
     expect(landingFor(roles)).toBe(path);
+  });
+
+  it.each([
+    [['loader'], '/field/s/ld-06-sign-in'],
+    [['driver'], '/field/s/dr-06-sign-in'],
+    [[], '/field/'],
+  ])('%j without a desk role is sent to %s in the field app', (roles, path) => {
+    expect(fieldAppFor(roles)).toBe(path);
   });
 
   it('maps faces to roles', () => {
@@ -164,6 +172,7 @@ describe('AuthProvider (oidc-client-ts)', () => {
       signinSilent: jest.fn(async () => fakeUser({ access_token: jwt({ sub: 'u1', realm_access: { roles: ['admin'] }, n: 2 }) })),
       signoutRedirect: jest.fn(async () => undefined),
       removeUser: jest.fn(async () => undefined),
+      storeUser: jest.fn(async () => undefined),
       events: { addUserLoaded: jest.fn(() => () => undefined), addUserUnloaded: jest.fn(() => () => undefined), addSilentRenewError: jest.fn(() => () => undefined) },
     } satisfies UserManagerLike;
   }
@@ -185,12 +194,30 @@ describe('AuthProvider (oidc-client-ts)', () => {
     expect(await screen.findByText('anonymous:-')).toBeInTheDocument();
   });
 
-  it('starts the code + PKCE redirect with where to come back to', async () => {
+  it('keeps the code + PKCE redirect for the single sign-on buttons', async () => {
     const m = fakeManager(null);
     render(<AuthProvider manager={m}><Probe /></AuthProvider>);
     await screen.findByText('anonymous:-');
-    await act(() => api.login('/plan/dsp-01-cutoff-queue'));
+    await act(() => api.loginSso!('/plan/dsp-01-cutoff-queue'));
     expect(m.signinRedirect).toHaveBeenCalledWith({ state: { returnTo: '/plan/dsp-01-cutoff-queue' } });
+  });
+
+  it('stores tokens from a designed sign-in screen like the callback does and returns the landing path', async () => {
+    const m = fakeManager(null);
+    render(<AuthProvider manager={m}><Probe /></AuthProvider>);
+    await screen.findByText('anonymous:-');
+    const access = jwt({ sub: 'u9', name: 'Nila Plan', realm_access: { roles: ['dispatcher'] }, exp: Math.floor(Date.now() / 1000) + 300 });
+    const idToken = jwt({ sub: 'u9', name: 'Nila Plan' });
+    let next = '';
+    await act(async () => {
+      next = await api.acceptTokens!({ access_token: access, refresh_token: 'rt-1', id_token: idToken, expires_in: 300, token_type: 'Bearer' }, '/plan/dsp-02-plan-board');
+    });
+    expect(m.storeUser).toHaveBeenCalledTimes(1);
+    const stored = (m.storeUser as jest.Mock).mock.calls[0][0];
+    expect(stored.refresh_token).toBe('rt-1');
+    expect(stored.profile.sub).toBe('u9');
+    expect(next).toBe('/plan/dsp-02-plan-board');
+    expect(await screen.findByText('authenticated:Nila Plan')).toBeInTheDocument();
   });
 
   it('completes the callback once and returns the landing path', async () => {

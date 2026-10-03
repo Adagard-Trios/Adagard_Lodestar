@@ -4,7 +4,7 @@
 //   field (driver, loader, store phone): 390×844 on /field/, signed in through the app's Keycloak popup, with the
 //   browser clock set to the run date (the field app's "today" is the phone's clock: mobile/src/model/hooks.ts).
 import { expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
-import { loginViaUi } from './auth';
+import { fieldSignIn, loginViaUi } from './auth';
 import { PERSONAS, WEB_URL, type PersonaKey } from './env';
 import { expectStatus, type OData } from './fixtures';
 
@@ -120,17 +120,9 @@ export async function fieldPage(browser: Browser, who: PersonaKey, signInScreen:
   return { context, page };
 }
 
-/** Taps a field control that opens the Keycloak sign-in window, and signs in there as `who`. */
-export async function signInFrom(page: Page, button: string, who: PersonaKey) {
-  const cta = onScreen(page, button);
-  await expect(cta).toBeEnabled({ timeout: 30_000 });
-  // the PKCE request is prepared after the screen renders: tap again only if no window opened
-  let popup: Page | undefined;
-  for (let i = 0; i < 3 && !popup; i++) {
-    [popup] = await Promise.all([page.context().waitForEvent('page', { timeout: 20_000 }).catch(() => undefined), cta.click()]);
-  }
-  if (!popup) throw new Error('the sign-in window did not open');
-  await signInPopup(popup, who);
+/** Signs in as `who` on the field app's designed sign-in screen (`button` is kept for callers; the screen decides). */
+export async function signInFrom(page: Page, _button: string, who: PersonaKey) {
+  await fieldSignIn(page, who);
 }
 
 /** Completes Keycloak's form in the app's sign-in popup (a returning user is only asked for the password). */

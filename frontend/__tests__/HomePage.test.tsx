@@ -27,11 +27,11 @@ describe('Start page · pick a role', () => {
   });
 
   it.each([
-    ['Store manager', '/store', 'fathima'],
-    ['Dispatcher', '/plan', 'nilanthi'],
+    ['Store manager', '/store/sm-26-sign-in', 'fathima'],
+    ['Dispatcher', '/plan/dsp-06-sign-in', 'nilanthi'],
     ['Loader', '/field/s/ld-06-sign-in', 'kasun'],
     ['Driver', '/field/s/dr-06-sign-in', 'ruwan'],
-    ['Admin', '/admin', 'admin'],
+    ['Admin', '/admin/adm-01-sign-in', 'admin'],
   ])('offers the %s app at %s, signed in as %s', (role, href, persona) => {
     render(<Home />);
     const link = screen.getByRole('link', { name: new RegExp(`^${role}:`) });

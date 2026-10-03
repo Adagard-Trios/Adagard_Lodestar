@@ -27,7 +27,7 @@ done
 # the competition CSVs are optional on the VM (copied by hand into ./data, never baked into an image)
 mkdir -p data
 if [ -n "$(env_val REGISTRY)" ] && [ -n "$(env_val TAG)" ]; then
-  # the 14 images CI pushed (deploy/ci/compose.images.yml): nothing is compiled on the VM
+  # the 15 images CI pushed (deploy/ci/compose.images.yml): nothing is compiled on the VM
   compose+=(-f deploy/ci/compose.images.yml)
   "${compose[@]}" pull --quiet
   "${compose[@]}" up -d --no-build --remove-orphans

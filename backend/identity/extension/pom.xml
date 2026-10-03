@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lodestar's Keycloak extension: the designed sign-in screens post straight to the token endpoint (direct grant)
+     and this flow checks phone + SMS code, staff ID + PIN, or email + password with a second step. -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>lk.waypoint.lodestar</groupId>
+  <artifactId>lodestar-keycloak-signin</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+
+  <properties>
+    <keycloak.version>26.0.7</keycloak.version>
+    <maven.compiler.release>17</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <dependencies>
+    <!-- all provided by the Keycloak server at runtime -->
+    <dependency><groupId>org.keycloak</groupId><artifactId>keycloak-core</artifactId><version>${keycloak.version}</version><scope>provided</scope></dependency>
+    <dependency><groupId>org.keycloak</groupId><artifactId>keycloak-server-spi</artifactId><version>${keycloak.version}</version><scope>provided</scope></dependency>
+    <dependency><groupId>org.keycloak</groupId><artifactId>keycloak-server-spi-private</artifactId><version>${keycloak.version}</version><scope>provided</scope></dependency>
+    <dependency><groupId>org.keycloak</groupId><artifactId>keycloak-services</artifactId><version>${keycloak.version}</version><scope>provided</scope></dependency>
+    <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>5.10.2</version><scope>test</scope></dependency>
+  </dependencies>
+
+  <build>
+    <finalName>lodestar-keycloak-signin</finalName>
+    <plugins>
+      <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.2.5</version></plugin>
+    </plugins>
+  </build>
+</project>

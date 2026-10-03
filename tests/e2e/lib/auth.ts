@@ -125,14 +125,61 @@ export async function expiredToken(ctx?: APIRequestContext): Promise<{ token: st
   return { token: tamper(fresh, { exp: past, iat: past - 300 }), genuine: false };
 }
 
-/** Sign in through the Keycloak hosted login page (UI flows). Assumes the app redirects to Keycloak. */
+/** The personas' mobile numbers (backend/prisma/scenario.ts; realm `phone` attributes). Override: E2E_PHONE_<USERNAME>. */
+const PHONES: Record<string, string> = { fathima: '774567890', nilanthi: '771234567', kasun: '772345678', ruwan: '773456789' };
+export const phoneOf = (username: string) => process.env[`E2E_PHONE_${username.toUpperCase()}`]?.trim() || PHONES[username] || '';
+/** The loader's staff ID and Dock PIN (realm `staff_id`, LODESTAR_DEMO_PIN). */
+export const STAFF_ID = process.env.E2E_STAFF_ID?.trim() || 'KDY-0427';
+export const DOCK_PIN = process.env.E2E_DOCK_PIN?.trim() || '2468';
+
+/**
+ * Sign in on the face's designed sign-in screen (the app sends anonymous visits there): SM-26 phone + SMS code,
+ * DSP-06 → DSP-07 or ADM-01 email + password + code. The code is read from the demo display (DEMO_SHOW_CODES=true).
+ * On Keycloak's hosted page (the single sign-on path) the hosted form is filled instead.
+ */
 export async function loginViaUi(page: Page, who: PersonaKey | Persona) {
   const p = typeof who === 'string' ? PERSONAS[who] : who;
-  await page.waitForURL(/\/realms\/.+\/protocol\/openid-connect\/auth|\/login-actions\//, { timeout: 30_000 });
-  await page.locator('#username').fill(p.username);
-  await page.locator('#password').fill(p.password);
-  await page.locator('#kc-login').click();
-  await expect(page).not.toHaveURL(/\/realms\//, { timeout: 30_000 });
+  await page.waitForURL(/sign-in|\/realms\/.+\/protocol\/openid-connect\/auth|\/login-actions\//, { timeout: 30_000 });
+  if (/\/realms\//.test(page.url())) {
+    await page.locator('#username').fill(p.username);
+    await page.locator('#password').fill(p.password);
+    await page.locator('#kc-login').click();
+    await expect(page).not.toHaveURL(/\/realms\//, { timeout: 30_000 });
+    return;
+  }
+  if (/sm-26-sign-in/.test(page.url())) {
+    await page.getByTestId('phone-input').fill(phoneOf(p.username));
+    await page.getByTestId('sign-in').click();
+  } else {
+    await page.getByTestId('email-input').fill(p.username.includes('@') ? p.username : `${p.username}@waypoint.lk`);
+    await page.getByTestId('password-input').fill(p.password);
+    await page.getByTestId('sign-in').click();
+  }
+  const code = await page.getByTestId('demo-code').getAttribute('data-code', { timeout: 30_000 });
+  if (!code) throw new Error('no demo code shown: run the stack with DEMO_SHOW_CODES=true');
+  await page.getByTestId('code-input').fill(code);
+  await expect(page).not.toHaveURL(/sign-in|2-step-verification/, { timeout: 30_000 });
+}
+
+/** The visible keypad key (screens below in the router stack stay mounted). */
+const key = (page: Page, d: string) => page.locator(`[data-testid="key-${d}"]:visible`).first().click();
+
+/** Sign in on a field app's designed screen: Dock staff ID + PIN (LD-06), else phone + SMS code (SM-05/06, DR-06/07). */
+export async function fieldSignIn(page: Page, who: PersonaKey | Persona) {
+  const p = typeof who === 'string' ? PERSONAS[who] : who;
+  await page.waitForURL(/\/field\/s\/(sm-05|dr-06|ld-06)/, { timeout: 30_000 });
+  if (/ld-06/.test(page.url())) {
+    await page.getByTestId('staff-id-input').fill(p.username === 'kasun' ? STAFF_ID : p.username);
+    for (const d of DOCK_PIN) await key(page, d);
+  } else {
+    for (const d of phoneOf(p.username)) await key(page, d);
+    await page.getByTestId(/sm-05/.test(page.url()) ? 'lk-L68' : 'lk-L229').click();
+    const demo = page.locator('[data-testid="demo-code"]:visible').first();
+    await expect(demo).toContainText(/\d{6}/, { timeout: 30_000 });
+    const code = /(\d{6})/.exec((await demo.textContent()) ?? '')![1];
+    for (const d of code) await key(page, d);
+  }
+  await expect(page).not.toHaveURL(/sign-in|verify-code/, { timeout: 30_000 });
 }
 
 export const bearer = (token: string) => ({ Authorization: `Bearer ${token}` });

@@ -4,7 +4,6 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { AdminSide, adminChanged } from '@/components/live/chrome';
 import ScreenShell from '@/components/ScreenShell';
-import AdminSignIn from '@/live/adm-01-sign-in';
 import Overview from '@/live/adm-02-overview';
 import People from '@/live/adm-03-people-and-roles';
 import AddPerson from '@/live/adm-04-add-or-edit-person';
@@ -47,31 +46,7 @@ afterEach(unfreeze);
 
 // ------------------------------------------------------------------------------------------------ ADM-01
 
-describe('ADM-01 Sign in', () => {
-  it('starts the Keycloak login for the admin face', async () => {
-    const view = renderLive(<AdminSignIn />, { session: null, handler: () => page([]) });
-    fireEvent.click(screen.getByTestId('sign-in'));
-    await waitFor(() => expect(view.auth.login).toHaveBeenCalledWith('/admin'));
-    expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument();
-  });
-
-  it('a signed-in admin continues to the admin face', () => {
-    renderLive(<AdminSignIn />, { ...admin, handler: () => page([]) });
-    expect(screen.getByTestId('sign-in')).toHaveTextContent('Continue as Ada Admin');
-    fireEvent.click(screen.getByTestId('sign-in'));
-    expect(router.push).toHaveBeenCalledWith('/admin');
-  });
-
-  // DEFECT: when Keycloak cannot be reached ADM-01 goes back to "Continue to sign in" with no feedback; the shared
-  // hook reports "Sign-in unavailable, try again" (as SM-26 shows), but adm-01-sign-in.tsx:98 ignores its label.
-  it('says so when the sign-in service cannot be reached', async () => {
-    const view = renderLive(<AdminSignIn />, { session: null, handler: () => page([]) });
-    (view.auth.login as jest.Mock).mockRejectedValueOnce(new Error('offline'));
-    fireEvent.click(screen.getByTestId('sign-in'));
-    await waitFor(() => expect(view.auth.login).toHaveBeenCalled());
-    expect(await screen.findByText('Sign-in unavailable, try again')).toBeInTheDocument();
-  });
-});
+// ADM-01: the designed sign-in form (direct grant) is covered in sign-in-screens.test.tsx.
 
 // ------------------------------------------------------------------------------------------------ ADM-02
 

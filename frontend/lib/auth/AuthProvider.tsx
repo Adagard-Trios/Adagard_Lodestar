@@ -1,11 +1,15 @@
 'use client';
 // Sign-in state for the whole site. Wraps oidc-client-ts and exposes what the app needs: the session (who, which
 // roles and claims), login/logout, and a fresh access token for API and WebSocket calls.
+// Signing in happens on each face's own designed screen (SM-26, DSP-06/07, ADM-01), which posts to the token
+// endpoint (lib/auth/direct.ts) and hands the tokens to acceptTokens(); they are stored and renewed exactly like
+// the tokens of the redirect flow, which stays only behind the screens' "single sign-on" buttons (loginSso).
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { User } from 'oidc-client-ts';
+import { User } from 'oidc-client-ts';
 import { runtimeConfig } from '../config';
 import { createUserManager, type UserManagerLike } from './oidc';
-import { forgetEndedSession, rememberEndedSession, returnPath, sessionFrom, type Session } from './session';
+import type { TokenResponse } from './direct';
+import { decodeJwt, forgetEndedSession, rememberEndedSession, returnPath, sessionFrom, signInPath, type Session } from './session';
 
 export type AuthStatus = 'loading' | 'anonymous' | 'authenticated';
 
@@ -13,10 +17,14 @@ export interface AuthApi {
   status: AuthStatus;
   session: Session | null;
   /**
-   * Starts the Keycloak login. `returnTo` is a local path to come back to after sign-in; `prompt: 'login'` asks
-   * for the credentials again even when Keycloak still knows the user ("Use another account").
+   * Sends the user to sign in: the designed sign-in screen of the face `returnTo` belongs to (it comes back there
+   * afterwards). `prompt` is accepted for callers of the redirect flow and ignored (the screens always ask).
    */
   login(returnTo?: string, opts?: { prompt?: 'login' }): Promise<void>;
+  /** Keycloak's redirect sign-in: only the screens' "Waypoint single sign-on" buttons use it. */
+  loginSso?(returnTo?: string, opts?: { prompt?: 'login' }): Promise<void>;
+  /** Stores tokens a designed sign-in screen obtained (direct grant) and returns where to go next. */
+  acceptTokens?(tokens: TokenResponse, returnTo?: string | null): Promise<string>;
   logout(): Promise<void>;
   /** A valid access token (renewed first if it is about to expire), or null when signed out. */
   getAccessToken(): Promise<string | null>;
@@ -139,9 +147,31 @@ export function AuthProvider({ children, manager }: { children: ReactNode; manag
     await endSession(user);
   }, [endSession, mgr]);
 
-  const login = useCallback(async (returnTo?: string, opts?: { prompt?: 'login' }) => {
+  const loginSso = useCallback(async (returnTo?: string, opts?: { prompt?: 'login' }) => {
     await mgr().signinRedirect({ state: { returnTo: returnTo ?? null }, ...(opts?.prompt ? { prompt: opts.prompt } : {}) });
   }, [mgr]);
+
+  const login = useCallback(async (returnTo?: string) => {
+    window.location.assign(signInPath(returnTo));
+  }, []);
+
+  const acceptTokens = useCallback(async (tokens: TokenResponse, returnTo?: string | null) => {
+    const profile = (decodeJwt(tokens.id_token) ?? decodeJwt(tokens.access_token) ?? {}) as Record<string, unknown>;
+    const user = new User({
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      id_token: tokens.id_token,
+      token_type: tokens.token_type ?? 'Bearer',
+      scope: tokens.scope,
+      session_state: tokens.session_state ?? null,
+      profile: profile as User['profile'],
+      expires_at: Math.floor(Date.now() / 1000) + (tokens.expires_in ?? 300),
+    });
+    await mgr().storeUser(user);
+    apply(user);
+    const s = toSession(user);
+    return returnPath(returnTo, s?.roles ?? []);
+  }, [apply, mgr]);
 
   const logout = useCallback(async () => {
     const m = mgr();
@@ -167,8 +197,8 @@ export function AuthProvider({ children, manager }: { children: ReactNode; manag
   }, [apply, mgr]);
 
   const api = useMemo<AuthApi>(
-    () => ({ status, session, login, logout, getAccessToken, renew, completeLogin, expired, expire }),
-    [status, session, login, logout, getAccessToken, renew, completeLogin, expired, expire],
+    () => ({ status, session, login, loginSso, acceptTokens, logout, getAccessToken, renew, completeLogin, expired, expire }),
+    [status, session, login, loginSso, acceptTokens, logout, getAccessToken, renew, completeLogin, expired, expire],
   );
   return <AuthContext.Provider value={api}>{children}</AuthContext.Provider>;
 }
