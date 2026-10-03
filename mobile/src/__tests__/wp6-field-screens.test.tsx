@@ -297,6 +297,8 @@ describe('Plan phone', () => {
     expect((await screen.findByTestId('plans-running')).props.children).toBe('1 plan running');
     expect(await screen.findByText('1/2')).toBeTruthy();
     expect(await screen.findByText('CAP-REEFER · score 22 · store told')).toBeTruthy();
+    // the next run's cut-off comes from the order cut-off rule (16:00 Colombo the day before)
+    expect(await screen.findByText(/closes 4:00 PM$/)).toBeTruthy();
     await fireEvent.press(screen.getByTestId('plan-KANDY'));
     expect(push).toHaveBeenCalledWith(opened('dsp-29-live-routes'));
   });

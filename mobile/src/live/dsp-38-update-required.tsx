@@ -3,7 +3,7 @@
 import { Text, View, StyleSheet } from 'react-native';
 import { applyUpdate, useVersion } from '@/lib/version';
 import { hm } from '@/lib/time';
-import { titleCase } from '@/lodestar/live';
+import { openDesktop, titleCase } from '@/lodestar/live';
 import { useReviewPlans } from '@/model/plan';
 import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
@@ -93,9 +93,9 @@ export default function ScreenDsp38UpdateRequired() {
             <Icon xml={X4} width={22} height={22} style={s.v1} />
             <Text style={s.t22}>{"Update now"}</Text>
           </Tap>
-          <View style={s.v25}>
+          <Tap style={s.v25} onPress={() => openDesktop('dsp-12-approve-and-go-live')} testID="approve-on-desktop">
             <Text style={s.t24}>{"Approve on desktop instead"}</Text>
-          </View>
+          </Tap>
         </View>
       </View>
     </Frame>

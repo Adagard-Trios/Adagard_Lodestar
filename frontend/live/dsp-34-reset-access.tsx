@@ -91,8 +91,8 @@ export default function LiveDsp34ResetAccess() {
               <div className="hstack" style={{ gap: '12px', alignItems: 'flex-start' }}>
                 <span className="dx-lead"><Ic n="headset" /></span>
                 <div className="vstack" style={{ gap: '1px', flex: '1', minWidth: '0' }}>
-                  <b style={{ fontSize: '15px' }}>{"Call the Peliyagoda IT desk"}</b>
-                  <span className="dx-t13">{opts.supportPhone ? `${opts.supportPhone} · locked accounts, new phones` : 'Open 24 hours · locked accounts, new phones'}</span>
+                  <b style={{ fontSize: '15px' }}>{"Call the IT desk"}</b>
+                  <span className="dx-t13">{opts.supportPhone ? `${opts.supportPhone} · locked accounts, new phones` : 'Locked accounts, new phones'}</span>
                 </div>
                 {opts.supportPhone && (
                   <a className="x-link" style={{ marginTop: '9px' }} href={`tel:${opts.supportPhone.replace(/\s+/g, '')}`} onClick={e => e.stopPropagation()}>{"Call"}</a>

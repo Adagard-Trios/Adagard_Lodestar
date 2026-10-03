@@ -91,7 +91,8 @@ export default function LiveDsp20Settings() {
   const setDraft = (next: Preferences | ((d: Preferences | null) => Preferences)) =>
     setEdit(e => (typeof next === 'function' ? next(e ?? prefs.data ?? null) : next));
   const alerts: Required<AlertRules> = { ...DEFAULT_ALERTS, ...(draft?.alerts ?? {}) } as Required<AlertRules>;
-  const onCall = { from: '03:00', to: '07:00', ...(draft?.onCall ?? {}) };
+  // on-call hours are only what the dispatcher saved (MyPreferences); none set = empty, as on the phone (DSP-33)
+  const onCall = { from: '', to: '', ...(draft?.onCall ?? {}) };
   const setAlert = <K extends keyof AlertRules>(k: K, v: Partial<NonNullable<AlertRules[K]>>) =>
     setDraft(d => ({ ...(d ?? {}), alerts: { ...DEFAULT_ALERTS, ...(d?.alerts ?? {}), [k]: { ...DEFAULT_ALERTS[k], ...(d?.alerts?.[k] ?? {}), ...v } } }));
   const dirty = edit !== null && JSON.stringify(edit) !== JSON.stringify(prefs.data ?? {});
@@ -111,7 +112,7 @@ export default function LiveDsp20Settings() {
 
   const c = config.data;
   const freshStart = c ? toMin(c.firstDeparture) : null;
-  const save = () => void prefs.save.run({ alerts: draft?.alerts ?? DEFAULT_ALERTS, onCall })
+  const save = () => void prefs.save.run({ alerts: draft?.alerts ?? DEFAULT_ALERTS, ...(onCall.from && onCall.to ? { onCall } : {}) })
     .then(r => { if (r) { setEdit(null); router.push('/plan/dsp-08-today-overview'); } });
 
   return (

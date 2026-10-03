@@ -2,20 +2,21 @@
 // DSP-15 Late-risk explainer, live. Markup and classes from the generated design (frontend/screens/dsp-15-late-risk-explainer.tsx).
 // The stop is the order the dispatcher opened (useFocusId('order') or ?id=), else the run date's riskiest stop not
 // yet delivered (DSP-04's map legend opens this screen). Data: Trips of the run date with their stops (etaPlan,
-// etaModel and its band, lateRiskPct), the stop's outlet (window close), order (m³, chilled), the district's road
-// class (DistrictTravel) and the run date's monsoon flag (Calendar).
-// "What moves the number" re-derives the figure the way the planning service's lateness model (EtaService) sets
-// it: a base rate by road class, monsoon and planned hour (the hill-road base comes from 51 monsoon runs, 20% late
-// before 6 AM), +30 points when the model ETA is within 30 minutes of the window close (capped at 95), and any
-// change made on the road since (TripStops UpdateLateRisk) as the remainder. The live board behind the drawer is a
-// plain backdrop; the close button returns to DSP-04. "Hold space" opens the provisional deferral (DSP-A1b, the
-// design's L58); the model line opens DSP-16 (L59). Not drawn: "Warn <outlet>" has no link in the design.
+// etaModel and its band, lateRiskPct), the stop's outlet (window close) and order (m³, chilled).
+// "What moves the number" comes from the planning service's lateness model (GET Plans/Lodestar.LateRiskExplain:
+// EtaService splits the stored figure into the base rate by road class, monsoon and planned hour, the +30 points
+// when the model ETA is within 30 minutes of the window close, and any change made on the road since). The live
+// board behind the drawer is a plain backdrop; the close button returns to DSP-04. "Hold space" opens the
+// provisional deferral (DSP-A1b, the design's L58); the model line opens DSP-16 (L59). "Warn <outlet>" sends the
+// outlet's store manager a notice (Notifications/Lodestar.Send).
 import { useMemo } from 'react';
+import { useScreenNav } from '@/components/ScreenShell';
+import Btn from '@/components/live/Btn';
 import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
-import { usePlanScope } from '@/components/live/plan-data';
+import { useLateRiskExplain, useMessageStore, usePlanScope } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
-import { dayFilter, fmtClock, fmtNum, isoDay, LATE_RISK_HIGH_PCT, LATE_RISK_PCT, TIME_ZONE } from '@/lib/format';
+import { fmtClock, fmtNum, isoDay, LATE_RISK_HIGH_PCT, LATE_RISK_PCT, TIME_ZONE } from '@/lib/format';
 import { useEntity, useQuery } from '@/lib/odata/hooks';
 import type { Order, Outlet, Trip, TripStop } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
@@ -28,38 +29,8 @@ function colombo(v: string): { hour: number; min: number } {
 const toMin = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + (m || 0); };
 const clock = (min: number) => `${Math.floor(min / 60)}:${String(min % 60).padStart(2, '0')}`;
 
-export interface RiskPart { label: string; detail: string; value: number }
-
-/** The planning service's lateness model (backend/apps/planning/src/eta.service.ts), as parts that add up. */
-export function explainRisk(input: { roadClass: string | null; monsoon: boolean; plannedHour: number; modelMin: number | null; windowCloseMin: number; actual: number }): { parts: RiskPart[]; base: number } {
-  const { roadClass, monsoon, plannedHour } = input;
-  let base = 5;
-  let detail = `${roadClass ?? 'Unknown'} road, ${monsoon ? 'monsoon' : 'dry season'}`;
-  if (roadClass === 'hill' && monsoon) {
-    base = plannedHour < 6 ? 20 : 53;
-    const speed = plannedHour <= 5 ? 64 : plannedHour <= 6 ? 58 : 48;
-    detail = `Monsoon hill road, planned ${plannedHour < 6 ? 'before' : 'after'} 6 AM · 51 runs · speed index ${speed}`;
-  } else if (roadClass === 'urban') base = 8;
-  else if (roadClass === 'suburban') base = 12;
-  const near = input.modelMin !== null && input.modelMin > input.windowCloseMin - 30;
-  const planned = near ? Math.min(base + 30, 95) : base;
-  const parts: RiskPart[] = [
-    { label: 'Base rate', detail, value: base },
-    {
-      label: 'Arrival near the window close',
-      detail: input.modelMin === null ? 'No model ETA yet' : near ? `Model ETA ${clock(input.modelMin)} is within 30 min of ${clock(input.windowCloseMin)}` : `Model ETA ${clock(input.modelMin)}, more than 30 min before ${clock(input.windowCloseMin)}`,
-      value: planned - base,
-    },
-    {
-      label: 'Updates on the road',
-      detail: input.actual === planned ? 'No change since the plan' : 'Re-estimated since the plan (driver position, ETA updates)',
-      value: input.actual - planned,
-    },
-  ];
-  return { parts, base };
-}
-
 export default function LiveDsp15LateRiskExplainer() {
+  const nav = useScreenNav();
   const { runDate, tripsFilter } = usePlanScope();
   const [focusOrder] = useFocusId('order');
   const trips = useQuery<Trip[]>(tripsFilter ? `dsp15:${tripsFilter}` : null, c => c.all<Trip>('Trips', { filter: tripsFilter, expand: 'stops,vehicle' }));
@@ -75,20 +46,18 @@ export default function LiveDsp15LateRiskExplainer() {
   const t: Trip | undefined = picked?.t;
   const outlet = useEntity<Outlet>('Outlets', s?.outletId ?? null);
   const order = useEntity<Order>('Orders', s?.orderId ?? null, { select: 'id,m3,units,tempClass' });
-  const road = useQuery<string | null>(outlet.data ? `dsp15-road:${outlet.data.district}` : null, async c =>
-    (await c.list<{ roadClass: string }>('DistrictTravel', { filter: `district eq '${outlet.data!.district.replace(/'/g, "''")}'`, top: 1, select: 'roadClass' })).value[0]?.roadClass ?? null,
-  );
-  const monsoon = useQuery<boolean>(runDate ? `dsp15-monsoon:${runDate}` : null, async c =>
-    ((await c.list<{ monsoon: number }>('Calendar', { filter: dayFilter('date', runDate!), top: 1, select: 'monsoon' })).value[0]?.monsoon ?? 0) > 0,
-  );
+  const explain = useLateRiskExplain(s?.id);
+  const warn = useMessageStore(names => nav.notify(`Sent to ${names}`));
 
   const o = outlet.data;
   const risk = s?.lateRiskPct ?? null;
   const planMin = s?.etaPlan ? colombo(s.etaPlan) : null;
   const modelMin = s?.etaModel ? colombo(s.etaModel).min : null;
   const closeMin = o ? toMin(o.windowClose) : null;
-  const ready = s && o && road.data !== undefined && monsoon.data !== undefined && planMin && closeMin !== null && risk !== null;
-  const ex = ready ? explainRisk({ roadClass: road.data ?? null, monsoon: !!monsoon.data, plannedHour: planMin!.hour, modelMin, windowCloseMin: closeMin!, actual: risk! }) : null;
+  const ex = explain.data?.parts.length ? explain.data : null;
+  const road = explain.data?.roadClass ?? null;
+  const monsoon = Boolean(explain.data?.monsoon);
+  const warnText = s ? `Delivery to ${o?.name ?? s.outletId} may be late: model ETA ${s.etaModel ? `~${fmtClock(s.etaModel)}` : 'not known yet'}${o ? `, receiving closes ${o.windowClose}` : ''}${risk !== null ? ` (late risk ${risk}%)` : ''}.` : '';
 
   // Arrival axis: 30-minute ticks around the plan, the band and the window close.
   const early = s?.etaModelBandEarly ? colombo(s.etaModelBandEarly).min : modelMin;
@@ -123,7 +92,7 @@ export default function LiveDsp15LateRiskExplainer() {
           <span className="dx-close" data-lk="C"><Ic n="x" /></span>
         </div>
         <div className="dx-drawer__body">
-          <ErrorBanner error={trips.error ?? outlet.error ?? road.error ?? monsoon.error} onRetry={trips.refresh} />
+          <ErrorBanner error={trips.error ?? outlet.error ?? explain.error ?? warn.error} onRetry={() => { void trips.refresh(); void explain.refresh(); }} />
           {!trips.data && !trips.error && <Skeleton rows={5} />}
           {trips.data && !s && <Empty title="No stops on this run" text="The late-risk figure appears once a plan is live." icon="clock" />}
           {s && (
@@ -135,12 +104,13 @@ export default function LiveDsp15LateRiskExplainer() {
                 </div>
                 <div className="vstack" style={{ gap: '6px', flex: '1', paddingBottom: '6px' }}>
                   <span className="dx-t14">{ex && ex.parts[2].value !== 0 ? <>{"Planned at "}<b>{`${risk! - ex.parts[2].value}%`}</b>{"."}</> : 'Unchanged since the plan.'}{o ? ` Late means missing the ${o.windowClose} window.` : ''}</span>
-                  <span className="dx-t14">{"Model ETA "}<b>{s.etaModel ? `~${fmtClock(s.etaModel)}` : '—'}</b>{` · plan ${s.etaPlan ? fmtClock(s.etaPlan) : '—'}${road.data ? ` (${monsoon.data ? 'monsoon ' : ''}${road.data} road)` : ''}.`}</span>
+                  <span className="dx-t14">{"Model ETA "}<b>{s.etaModel ? `~${fmtClock(s.etaModel)}` : '—'}</b>{` · plan ${s.etaPlan ? fmtClock(s.etaPlan) : '—'}${road ? ` (${monsoon ? 'monsoon ' : ''}${road} road)` : ''}.`}</span>
                 </div>
               </div>
               <div className="vstack" style={{ gap: '2px' }}>
                 <div className="dx-sech" style={{ marginBottom: '4px' }}><b>{"What moves the number"}</b><span className="spacer" />{"percentage points"}</div>
-                {!ex && <Skeleton rows={3} label="Reading the road class and calendar…" />}
+                {!ex && !explain.data && !explain.error && <Skeleton rows={3} label="Reading the lateness model…" />}
+                {explain.data && !ex && <span className="dx-t13">{"No breakdown yet: the stop has no planned arrival or late-risk figure."}</span>}
                 {ex?.parts.map((p, i) => {
                   const left = p.value >= 0 ? cum : cum + p.value;
                   cum += p.value;
@@ -179,7 +149,7 @@ export default function LiveDsp15LateRiskExplainer() {
                   <span className="dx-t14">
                     {ex.parts[2].value > 0
                       ? <><b>{`Rising because of what the road reported since the plan (+${ex.parts[2].value}).`}</b>{" The planned part comes from the road class, the monsoon flag and the planned hour."}</>
-                      : <><b>{"This is the planned figure."}</b>{` It comes from the ${road.data ?? ''} road class, ${monsoon.data ? 'the monsoon flag' : 'a dry day'} and the planned hour; it changes when the van reports a new ETA.`}</>}
+                      : <><b>{"This is the planned figure."}</b>{` It comes from the ${road ?? ''} road class, ${monsoon ? 'the monsoon flag' : 'a dry day'} and the planned hour; it changes when the van reports a new ETA.`}</>}
                   </span>
                 </div>
               )}
@@ -200,7 +170,7 @@ export default function LiveDsp15LateRiskExplainer() {
         <div className="dx-drawer__foot">
           <span className="dx-t13" data-lk="L59">{`Lateness model · advisory${runDate ? ` · run ${isoDay(runDate)}` : ''}`}</span>
           <span className="spacer" />
-          <span className="d-btn"><Ic n="send" />{`Warn ${s?.outletId ?? 'the store'}`}</span>
+          <Btn className="d-btn" testId="warn-store" busy={warn.pending} disabled={!s} onClick={() => void warn.run({ outletId: s!.outletId, text: warnText, tripId: t?.id })}><Ic n="send" />{`Warn ${s?.outletId ?? 'the store'}`}</Btn>
           <span className="d-btn d-btn--primary" data-lk="L58"><Ic n="truck" />{"Hold space on a later run"}</span>
         </div>
       </div>

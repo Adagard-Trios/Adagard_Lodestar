@@ -9,7 +9,7 @@ import ImportFailed, { rejectedCsv } from '@/live/adm-15-import-check-failed';
 import AuditLog from '@/live/adm-16-audit-log';
 import Guardrails from '@/live/adm-17-planning-agent-guardrails';
 import TwoStep, { accountSecurityUrl } from '@/live/dsp-07-2-step-verification';
-import LateRisk, { explainRisk } from '@/live/dsp-15-late-risk-explainer';
+import LateRisk from '@/live/dsp-15-late-risk-explainer';
 import Models from '@/live/dsp-16-models-and-fallbacks';
 import PlanSettings from '@/live/dsp-20-settings';
 import StoreSettings from '@/live/sm-30-settings';
@@ -112,6 +112,23 @@ describe('DSP-20 Settings', () => {
     await waitFor(() => expect(router.push).toHaveBeenCalledWith('/plan/dsp-08-today-overview'));
     const save = view.calls.find(c => c.path.includes('SaveMyPreferences'))!;
     expect((save.body as SaveBody).preferences.alerts.vehicleFault).toEqual({ push: true, sms: false });
+    // no on-call hours were set, so none are invented and saved
+    expect(save.body).not.toHaveProperty('preferences.onCall');
+    expect(screen.getByLabelText('On call from')).toHaveValue('');
+  });
+
+  it('shows and saves the on-call hours the dispatcher has saved', async () => {
+    const view = renderLive(<PlanSettings />, {
+      handler: req => req.path.includes('SaveMyPreferences') ? { value: (req.body as { preferences: unknown }).preferences }
+        : req.path.includes('MyPreferences') ? { value: { onCall: { from: '22:00', to: '06:00' } } }
+          : req.path.includes('AgentConfig') ? { value: CONFIG } : fallback(req),
+    });
+    expect(await screen.findByLabelText('On call from')).toHaveValue('22:00');
+    fireEvent.change(screen.getByLabelText('On call to'), { target: { value: '05:30' } });
+    fireEvent.click(screen.getByText('Save changes'));
+    await waitFor(() => expect(view.calls.some(c => c.path.includes('SaveMyPreferences'))).toBe(true));
+    const save = view.calls.find(c => c.path.includes('SaveMyPreferences'))!;
+    expect((save.body as { preferences: { onCall: unknown } }).preferences.onCall).toEqual({ from: '22:00', to: '05:30' });
   });
 });
 
@@ -125,25 +142,36 @@ describe('DSP-07 2-step verification', () => {
 });
 
 describe('DSP-15 Late-risk explainer', () => {
-  it('adds up to the stored figure the way the planning service sets it', () => {
-    const { parts } = explainRisk({ roadClass: 'hill', monsoon: true, plannedHour: 5, modelMin: 7 * 60 + 28, windowCloseMin: 7 * 60 + 45, actual: 61 });
-    expect(parts.map(p => p.value)).toEqual([20, 30, 11]);
-    expect(parts.reduce((s, p) => s + p.value, 0)).toBe(61);
-  });
+  const EXPLAIN = {
+    stopId: 's2', depot: 'KANDY', roadClass: 'hill', monsoon: true, plannedHour: 5, windowClose: '07:45', lateRiskPct: 61, planned: 50, base: 20,
+    parts: [
+      { key: 'base', label: 'Base rate', detail: 'Monsoon hill road, planned before 6 AM', value: 20 },
+      { key: 'window', label: 'Arrival near the window close', detail: 'Model ETA 7:28 is within 30 min of 7:45', value: 30 },
+      { key: 'road', label: 'Updates on the road', detail: 'Re-estimated since the plan', value: 11 },
+    ],
+  };
 
-  it('explains the riskiest open stop of the run', async () => {
-    renderLive(<LateRisk />, {
-      handler: req => req.path === 'Plans' ? page([{ runDate: '2026-04-07T00:00:00.000Z' }])
+  it('explains the riskiest open stop of the run with the planning service breakdown, and warns the store', async () => {
+    const view = renderLive(<LateRisk />, {
+      handler: req => req.path.includes('Lodestar.LateRiskExplain') ? { value: EXPLAIN }
+        : req.path === 'Users' ? page([{ id: 'u-fm', name: 'Fathima' }])
+          : req.path.includes('Lodestar.Send') ? { id: 'n1' }
+            : req.path === 'Plans' ? page([{ runDate: '2026-04-07T00:00:00.000Z' }])
         : req.path === 'Trips' ? page([{ id: 't1', vehicleId: 'VEH057', tripNumber: 1, depot: 'KANDY', stops: [
           { id: 's1', orderId: 'o1', outletId: 'OUT106', stopSeq: 1, status: 'ENROUTE', lateRiskPct: 12, etaPlan: '2026-04-07T00:01:00Z', etaModel: '2026-04-07T01:05:00Z' },
           { id: 's2', orderId: 'o2', outletId: 'OUT108', stopSeq: 2, status: 'ENROUTE', lateRiskPct: 61, etaPlan: '2026-04-06T23:31:00Z', etaModel: '2026-04-07T01:58:00Z', etaModelBandEarly: '2026-04-07T01:40:00Z', etaModelBandLate: '2026-04-07T02:15:00Z' },
         ] }])
           : req.path.startsWith("Outlets('OUT108')") ? { id: 'OUT108', name: 'Waypoint Fresh Hawa Eliya', district: 'Nuwara Eliya', windowOpen: '05:30', windowClose: '07:45' }
-            : req.path === 'DistrictTravel' ? page([{ roadClass: 'hill' }])
-              : req.path === 'Calendar' ? page([{ monsoon: 1 }]) : fallback(req),
+            : fallback(req),
     });
     expect(await screen.findByText('Why OUT108 reads 61%')).toBeInTheDocument();
     expect(await screen.findByText('Base rate')).toBeInTheDocument();
+    expect(screen.getByText('+11')).toBeInTheDocument();
+    expect(view.calls.some(c => c.path.includes("Lodestar.LateRiskExplain(stopId='s2')"))).toBe(true);
+    fireEvent.click(screen.getByTestId('warn-store'));
+    await waitFor(() => expect(view.calls.some(c => c.path.includes('Lodestar.Send'))).toBe(true));
+    const send = view.calls.find(c => c.path.includes('Lodestar.Send'))!;
+    expect(send.body).toMatchObject({ recipientId: 'u-fm', type: 'DISPATCH_NOTICE', outletId: 'OUT108' });
   });
 });
 

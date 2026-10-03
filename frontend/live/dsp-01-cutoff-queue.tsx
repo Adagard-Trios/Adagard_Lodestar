@@ -15,7 +15,7 @@ import { Empty, ErrorBanner, Skeleton, Spinner } from '@/components/live/states'
 import { BRAND_LETTER, dayFilter, DEPOT_NAME, fmtNum, fmtRunDate, title } from '@/lib/format';
 import { useEntitySet, useQuery } from '@/lib/odata/hooks';
 import type { Order, Vehicle } from '@/lib/odata/types';
-import { depotFilter, useAgentRunId, useFocusId } from '@/lib/workday';
+import { CUTOFF_LABEL, depotFilter, useAgentRunId, useFocusId } from '@/lib/workday';
 
 type Chip = 'all' | 'chilled' | 'van' | 'mall' | 'flagged';
 const CHIP_FILTER: Record<Chip, string | undefined> = {
@@ -131,7 +131,7 @@ export default function LiveDsp01CutoffQueue() {
           <div className="d-head">
             <div className="d-head__txt">
               <div className="d-eyebrow">
-                {"Orders closed 4:00 PM"}
+                {`Orders closed ${CUTOFF_LABEL}`}
                 <span className="m-sep" />
                 {active.map(d => DEPOT_NAME[d] ?? d).join(' + ')}
               </div>

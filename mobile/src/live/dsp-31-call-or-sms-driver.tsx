@@ -6,7 +6,7 @@ import { firstName } from '@/auth/claims';
 import { hm } from '@/lib/time';
 import { titleCase } from '@/lodestar/live';
 import { useClaims, useVehicle } from '@/model/hooks';
-import { useSignalLost, minutesOfBudget, useAgentConfig } from '@/model/plan';
+import { useSignalLost, minutesOfBudget, useAgentConfig, useDepotDesk } from '@/model/plan';
 import { useQuery } from '@/model/query';
 import type { Trip } from '@/model/types';
 import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
@@ -53,6 +53,11 @@ export default function ScreenDsp31CallOrSmsDriver() {
   const driverId = driverRef?.id ?? null;
   const contact = useQuery<DriverContact>(driverId ? `user.${driverId}` : null, c => c.get<DriverContact>('Users', driverId!, { select: ['id', 'name', 'phone'] }), { persist: true });
   const phone = contact.data?.phone?.trim() || null;
+  // "Call depot desk": someone else on the depot's desk with a phone, from the user directory
+  const depot = trip?.depot ?? vehicle?.depot ?? claims?.depots[0] ?? null;
+  const desk = useDepotDesk(depot, claims?.sub);
+  const deskPhone = desk.data?.phone?.trim() || null;
+  const deskLine = deskPhone ? `${desk.data!.name} · ${masked(deskPhone)}` : desk.loading ? 'Looking up the number…' : 'No desk number on file';
   const back = id ? { to: 'dsp-30-vehicle-detail', params: { vehicle: id } } : undefined;
 
   const me = firstName(claims);
@@ -222,16 +227,16 @@ export default function ScreenDsp31CallOrSmsDriver() {
             </View>
             <Icon xml={X5} width={18} height={18} style={s.v1} />
           </Tap>
-          <View style={[s.v28, { opacity: 0.5 }]}>
+          <Tap style={s.v28} to={null} disabled={!deskPhone} onPress={() => (deskPhone ? open(`tel:${deskPhone}`) : false)} testID="call-desk">
             <View style={s.v46}>
               <Icon xml={X6} width={21} height={21} style={s.v1} />
             </View>
             <View style={s.v24}>
               <View>
-                <Text style={s.t22}>{`Call ${titleCase(trip?.depot ?? vehicle?.depot ?? claims?.depots[0] ?? '') || 'depot'} desk`}</Text>
+                <Text style={s.t22}>{`Call ${titleCase(depot) || 'depot'} desk`}</Text>
               </View>
               <View>
-                <Text style={s.t23}>{"No desk number on file"}</Text>
+                <Text style={s.t23} testID="desk-line">{deskLine}</Text>
               </View>
             </View>
             <View style={s.v26}>
@@ -240,7 +245,7 @@ export default function ScreenDsp31CallOrSmsDriver() {
               </View>
             </View>
             <Icon xml={X5} width={18} height={18} style={s.v1} />
-          </View>
+          </Tap>
         </View>
         <View style={s.v33}>
           <View style={s.v20}>

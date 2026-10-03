@@ -6,6 +6,7 @@
 import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { usePlanScope } from '@/components/live/plan-data';
+import { useAgentConfig } from '@/components/live/settings-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { DEPOT_NAME, fmtDay, fmtNum, fmtRunDate, pct, title } from '@/lib/format';
 import { useEntity, useQuery } from '@/lib/odata/hooks';
@@ -34,6 +35,8 @@ export default function LiveDsp18OutletProfile() {
   const travel = useQuery<{ depotToDistMin: number; roadClass: string } | null>(o ? `travel:${o.district}` : null, c =>
     c.get<{ depotToDistMin: number; roadClass: string }>('DistrictTravel', o!.district).catch(() => null));
 
+  // the protected threshold is the planner's own (AgentConfig limits), not a number kept on this screen
+  const protectedScore = useAgentConfig().data?.limits?.protectedScore;
   const list = orders.data ?? [];
   const upcoming = [...list].reverse().find(x => (!runDate || x.runDate.slice(0, 10) >= runDate) && !['DELIVERED', 'CANCELLED'].includes(x.status)) ?? list[0];
   const record = list.slice(0, 12).reverse();
@@ -41,7 +44,7 @@ export default function LiveDsp18OutletProfile() {
   const onTime = stops.filter(s => !s!.etaModelBandLate || new Date(s!.arrivalActual!) <= new Date(s!.etaModelBandLate)).length;
   const chilled = list.filter(x => x.tempClass === 'CHILLED');
   const typical = chilled.length ? chilled.reduce((s, x) => s + x.m3, 0) / chilled.length : 0;
-  const protectedNext = upcoming && (upcoming.deferredYesterday || (upcoming.deferralScore ?? 0) >= 91);
+  const protectedNext = upcoming && (upcoming.deferredYesterday || (protectedScore !== undefined && (upcoming.deferralScore ?? 0) >= protectedScore));
 
   return (
     <div className="frame frame--desktop mode-dispatcher" data-name="DSP-18 Outlet profile · desktop">
@@ -72,12 +75,12 @@ export default function LiveDsp18OutletProfile() {
                   <div className="dx-display">{protectedNext ? 'Protected' : 'Normal'}<small>for {upcoming ? fmtRunDate(upcoming.runDate) : 'the next run'}</small></div>
                   <div className="dx-hero__m">
                     {protectedNext
-                      ? <>Deferred on the previous run. Score <b>{upcoming?.deferralScore ?? '91+'}</b>, so the planning agent won&apos;t propose it and deferring again needs a manager&apos;s reason.</>
+                      ? <>Deferred on the previous run. Score <b>{upcoming?.deferralScore ?? '—'}</b>, so the planning agent won&apos;t propose it and deferring again needs a manager&apos;s reason.</>
                       : <>Not deferred on the previous run. The planner may rank it if capacity is short.</>}
                   </div>
                   <div className="dx-stats">
                     <div className="dx-stat" style={{ borderColor: 'rgba(255,255,255,.12)' }}><b>{upcoming?.deferredYesterday ? 'yes' : 'no'}</b><span style={{ color: '#B9C0E6' }}>{"deferred yesterday"}</span></div>
-                    <div className="dx-stat" style={{ borderColor: 'rgba(255,255,255,.12)' }}><b>{upcoming?.daysSince ?? 0}</b><span style={{ color: '#B9C0E6' }}>{"days since served"}</span></div>
+                    <div className="dx-stat" style={{ borderColor: 'rgba(255,255,255,.12)' }}><b>{upcoming?.daysSince ?? '—'}</b><span style={{ color: '#B9C0E6' }}>{"days since served"}</span></div>
                     <div className="dx-stat" style={{ borderColor: 'rgba(255,255,255,.12)' }}><b>{upcoming?.deferralScore ?? '—'}</b><span style={{ color: '#B9C0E6' }}>{"deferral score"}</span></div>
                   </div>
                 </div>

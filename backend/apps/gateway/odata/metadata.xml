@@ -591,6 +591,11 @@
         <Parameter Name="depot" Type="Lodestar.Depot" Nullable="false"/>
         <ReturnType Type="Edm.Untyped"/>
       </Function>
+      <Function Name="LateRiskExplain" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.Plan)" Nullable="false"/>
+        <Parameter Name="stopId" Type="Edm.String" Nullable="false"/>
+        <ReturnType Type="Edm.Untyped"/>
+      </Function>
       <Action Name="Confirm" IsBound="true">
         <Parameter Name="bindingParameter" Type="Lodestar.DeferralLog" Nullable="false"/>
         <Parameter Name="notes" Type="Edm.String"/>

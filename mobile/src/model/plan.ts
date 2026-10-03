@@ -2,7 +2,7 @@
 // built from Notifications, Plans, the day's trips and the live socket notices.
 import { useEffect, useMemo, useRef } from 'react';
 import { useStore } from '@/lib/store';
-import { inList, key, type ODataClient } from '@/lib/odata';
+import { inList, key, lit, type ODataClient } from '@/lib/odata';
 import { addDays, dayFilter, dayLabel, hm } from '@/lib/time';
 import { titleCase } from '@/lodestar/live';
 import { notices, type Notice } from '@/realtime/notices';
@@ -543,4 +543,71 @@ export function usePlansBoard() {
       queue.refresh();
     },
   };
+}
+
+// ---------------------------------------------------------------- directory contacts (DSP-30, DSP-31)
+
+export type Contact = { id: string; name: string; phone?: string | null; outletId?: string | null; role?: string };
+
+/** The active store managers of these outlets (name, phone), from the user directory, kept for offline use. */
+export function useStoreManagers(outletIds: string[]) {
+  const ids = [...new Set(outletIds.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  return useQuery<Contact[]>(
+    ids.length ? `managers.${ids.join(',')}` : null,
+    c => c.all<Contact>('Users', { filter: `role eq 'STORE_MANAGER' and isActive eq true and ${inList('outletId', ids)}`, select: ['id', 'name', 'outletId', 'phone'] }),
+    { persist: true },
+  );
+}
+
+/**
+ * "Call depot desk": someone else on the depot's desk with a phone on file (another dispatcher first, else a
+ * loader of that depot), from the user directory. Null when nobody is on file.
+ */
+export function useDepotDesk(depot: string | null | undefined, me: string | null | undefined) {
+  return useQuery<Contact | null>(
+    depot ? `desk.${depot}` : null,
+    async c => {
+      const rows = await c.all<Contact>('Users', {
+        filter: `depot eq ${lit(depot!)} and isActive eq true and (role eq 'DISPATCHER' or role eq 'LOADER')`,
+        select: ['id', 'name', 'phone', 'role'],
+        orderby: 'name',
+      });
+      const withPhone = rows.filter(r => r.id !== me && r.phone?.trim());
+      return withPhone.find(r => r.role === 'DISPATCHER') ?? withPhone[0] ?? null;
+    },
+    { persist: true },
+  );
+}
+
+/**
+ * "Warn stores: possible delay": a Lodestar notice (Notifications/Lodestar.Send) to the store manager of every
+ * stop of the trip not yet delivered. Resolves with the number of stores told.
+ */
+export async function warnStores(
+  trip: Pick<Trip, 'id' | 'vehicleId'>,
+  stops: Pick<TripStop, 'outletId' | 'orderId' | 'status'>[],
+  managers: Contact[],
+  c: ODataClient = client,
+): Promise<number> {
+  const open = stops.filter(s => s.status !== 'DELIVERED');
+  let told = 0;
+  for (const m of managers) {
+    const s = open.find(x => x.outletId === m.outletId);
+    if (!s) continue;
+    await c.action('Notifications/Lodestar.Send', {
+      recipientId: m.id,
+      type: 'DISPATCH_NOTICE',
+      tripId: trip.id,
+      outletId: s.outletId,
+      payload: {
+        title: 'Order may arrive late',
+        message: 'Your delivery may be late today. This is not a cancellation.',
+        orderId: s.orderId,
+        outletId: s.outletId,
+        vehicleId: trip.vehicleId,
+      },
+    });
+    told++;
+  }
+  return told;
 }

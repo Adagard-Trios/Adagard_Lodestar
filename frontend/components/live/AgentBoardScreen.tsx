@@ -37,7 +37,7 @@ export default function AgentBoardScreen({ name, mode }: { name: string; mode: '
               </div>
               <div className="d-h1">Plan for {scope.runDate ? fmtRunDate(scope.runDate) : '…'}</div>
             </div>
-            <span className="d-btn ag-btn-on"><Ic n="sparkle-plus" />{"Ask the agent"}</span>
+            <span className="d-btn ag-btn-on" data-lk={mode === 'proposal' ? 'L160' : undefined}><Ic n="sparkle-plus" />{"Ask the agent"}</span>
             <Btn className={`d-btn${waiting ? '' : ' d-btn--disabled'}`} disabled={!waiting} onClick={() => router.push('/plan/dsp-12-approve-and-go-live')}><Ic n="lock" />{"Approve & go live"}</Btn>
             <Btn className="d-btn d-btn--primary" onClick={() => router.push('/plan/dsp-03-deferral-decision')}><Ic n="history" />Review deferrals{deferrals.length ? ` (${deferrals.length})` : ''}</Btn>
           </div>

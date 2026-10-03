@@ -10,11 +10,11 @@ import { useScreenNav } from '@/components/ScreenShell';
 import Btn from '@/components/live/Btn';
 import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
-import { p5Link, usePlanScope, useExceptions, type ExceptionItem } from '@/components/live/plan-data';
+import { p5Link, useMessageStore, usePlanScope, useExceptions, type ExceptionItem } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { DEPOT_NAME, fmtClock, fmtRunDate, fmtTime, LATE_RISK_PCT } from '@/lib/format';
 import { useAction, useEntity, useQuery } from '@/lib/odata/hooks';
-import type { Notification, Outlet, Trip, User } from '@/lib/odata/types';
+import type { Notification, Outlet, Trip } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
 
 type Tab = 'open' | 'resolved' | 'all';
@@ -55,17 +55,7 @@ export default function LiveDsp13ExceptionsInbox() {
   const markRead = useAction<string, unknown>((c, id) => c.action('Notifications', id, 'MarkRead'), {
     onSuccess: () => { void open.refresh(); void resolved.refresh(); },
   });
-  const sendToStore = useAction<{ outletId: string; text: string; tripId?: string }, string>(async (c, p) => {
-    const managers = await c.list<User>('Users', { filter: `outletId eq '${p.outletId}' and role eq 'STORE_MANAGER' and isActive eq true`, select: 'id,name', top: 5 });
-    if (!managers.value.length) throw new Error(`No active store manager is registered for ${p.outletId}`);
-    for (const m of managers.value) {
-      await c.action('Notifications', null, 'Send', {
-        recipientId: m.id, type: 'DISPATCH_NOTICE', outletId: p.outletId, tripId: p.tripId,
-        payload: { message: p.text, outletId: p.outletId, from: 'dispatch' },
-      });
-    }
-    return managers.value.map(m => m.name).join(', ');
-  }, { onSuccess: names => { nav.notify(`Sent to ${names}`); setMessage(''); nav.go('L164'); } });
+  const sendToStore = useMessageStore(names => { nav.notify(`Sent to ${names}`); setMessage(''); nav.go('L164'); });
 
   const counts = { open: open.data?.length ?? 0, resolved: resolved.data?.length ?? 0 };
   const showOpen = tab !== 'resolved';
@@ -127,6 +117,7 @@ export default function LiveDsp13ExceptionsInbox() {
                 </div>
               ))}
               {showDone && <div className="dx-grp">{"Resolved today"}</div>}
+              {showDone && !resolved.data && !resolved.error && <Skeleton rows={2} />}
               {showDone && resolved.data && doneItems.length === 0 && <span className="dx-t13" style={{ padding: '8px 16px' }}>Nothing resolved yet today.</span>}
               {showDone && doneItems.map(n => (
                 <div key={n.id} className="dx-lrow">

@@ -14,10 +14,10 @@ import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { usePlanScope } from '@/components/live/plan-data';
 import { Empty, ErrorBanner } from '@/components/live/states';
-import { addDays, DEPOT_NAME, fmtNum, fmtRunDate, fmtTime, isoDay } from '@/lib/format';
+import { DEPOT_NAME, fmtNum, fmtRunDate, fmtTime, isoDay } from '@/lib/format';
 import { useAction, useQuery } from '@/lib/odata/hooks';
 import type { Order, Outlet, TempClass } from '@/lib/odata/types';
-import { depotFilter } from '@/lib/workday';
+import { CUTOFF_LABEL, cutoffFor, depotFilter } from '@/lib/workday';
 
 interface Line {
   key: number;
@@ -30,9 +30,6 @@ interface Line {
 const DEFAULT_M3_PER_KG = 0.0045;
 const DOCK: Record<string, string> = { REAR_DOCK: 'rear dock', STREET: 'street', MALL_BAY: 'mall bay' };
 const PARKING: Record<string, string> = { NORMAL: 'normal access', VAN_ONLY: 'van_only access', MALL_DOCK: 'mall dock access' };
-
-/** Orders for a run close at 4:00 PM (Asia/Colombo, UTC+05:30) the day before. */
-const cutoffFor = (runDate: string) => new Date(`${addDays(runDate, -1)}T16:00:00+05:30`);
 
 const blank = (l: Line) => !l.name.trim() && !l.qty.trim() && !l.kg.trim();
 const lineOk = (l: Line) => Boolean(l.name.trim()) && Number.isInteger(Number(l.qty)) && Number(l.qty) > 0 && l.kg.trim() !== '' && Number(l.kg) >= 0;
@@ -136,7 +133,7 @@ export default function LiveDsp10LogPhoneOrder() {
         <div className="d-main">
           <div className="d-head">
             <div className="d-head__txt">
-              <div className="d-eyebrow">{late ? 'Orders closed 4:00 PM' : 'Orders close 4:00 PM'}<span className="m-sep" />{active.map(d => DEPOT_NAME[d] ?? d).join(' + ')}</div>
+              <div className="d-eyebrow">{`Orders ${late ? 'closed' : 'close'} ${CUTOFF_LABEL}`}<span className="m-sep" />{active.map(d => DEPOT_NAME[d] ?? d).join(' + ')}</div>
               <div className="d-h1">Cutoff queue for {runDate ? fmtRunDate(runDate) : '…'}</div>
             </div>
           </div>
@@ -176,7 +173,7 @@ export default function LiveDsp10LogPhoneOrder() {
             <div className="dx-field" style={{ flex: '1' }}>
               <span className="dx-label">{"Run"}</span>
               <div className="dx-input"><Ic n="calendar" /><span data-testid="run-date">{runDate ? fmtRunDate(runDate) : '…'}</span></div>
-              <span className="dx-t13">{"Set by the 4:00 PM cutoff"}</span>
+              <span className="dx-t13">{`Set by the ${CUTOFF_LABEL} cutoff`}</span>
             </div>
           </div>
           <div className="hstack" style={{ gap: '14px', alignItems: 'flex-start' }}>

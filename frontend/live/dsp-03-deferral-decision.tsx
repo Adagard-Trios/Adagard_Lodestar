@@ -136,7 +136,7 @@ export default function LiveDsp03DeferralDecision() {
                         : <span className="m-tag"><span className="dot" />Ambient {fmtNum(o?.m3, 1)} m³</span>}
                       {prot && <><span className="m-sep" />{"deferred yesterday"}</>}
                       <span className="m-sep" />
-                      {`days since ${o?.daysSince ?? 0}`}
+                      {`days since ${o?.daysSince ?? '—'}`}
                     </div>
                     <div className="x-sbar"><div style={{ width: `${Math.min(100, r.score)}%`, background: r.score >= 91 ? 'var(--st-exception-fg)' : 'var(--star-500)' }} /></div>
                     <div className="hstack" style={{ gap: '8px' }}>

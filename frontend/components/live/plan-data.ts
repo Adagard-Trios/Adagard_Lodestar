@@ -8,6 +8,8 @@ import { useEffect, useRef } from 'react';
 import { useAction, useEntity, useQuery } from '@/lib/odata/hooks';
 import type { AgentRun, AgentRunDetail, Notification, OfflineEvent, Order, TripStop } from '@/lib/odata/types';
 import { colomboDay, cutoffFor, depotFilter, useAgentRunId, useDepot, useRunDate } from '@/lib/workday';
+import { valueOf } from '@/lib/odata/client';
+import type { User } from '@/lib/odata/types';
 
 export function usePlanScope() {
   const { runDate, loading, error, none } = useRunDate('Plans');
@@ -281,4 +283,53 @@ export function infeasibility(run: AgentRun | null | undefined): Infeasibility |
     shortM3: Math.max(0, Math.round((demandM3 - capacityM3) * 10) / 10),
     vehiclesDown: Array.isArray(cs.vehiclesDown) ? cs.vehiclesDown : [],
   };
+}
+
+/**
+ * Sends a dispatcher's message to the store manager(s) of an outlet (Notifications/Lodestar.Send, DISPATCH_NOTICE):
+ * DSP-13 "Message store", DSP-15 "Warn <outlet>". Resolves to the names it reached; fails when the outlet has no
+ * active store manager.
+ */
+export function useMessageStore(onSent?: (names: string) => void) {
+  return useAction<{ outletId: string; text: string; tripId?: string }, string>(async (c, p) => {
+    const managers = await c.list<User>('Users', { filter: `outletId eq '${p.outletId}' and role eq 'STORE_MANAGER' and isActive eq true`, select: 'id,name', top: 5 });
+    if (!managers.value.length) throw new Error(`No active store manager is registered for ${p.outletId}`);
+    for (const m of managers.value) {
+      await c.action('Notifications', null, 'Send', {
+        recipientId: m.id, type: 'DISPATCH_NOTICE', outletId: p.outletId, tripId: p.tripId,
+        payload: { message: p.text, outletId: p.outletId, from: 'dispatch' },
+      });
+    }
+    return managers.value.map(m => m.name).join(', ');
+  }, { onSuccess: names => onSent?.(names) });
+}
+
+/** One part of a stop's late risk (planning's EtaService), as Plans/Lodestar.LateRiskExplain returns it. */
+export interface LateRiskPart {
+  key: 'base' | 'window' | 'road';
+  label: string;
+  detail: string;
+  value: number;
+}
+
+export interface LateRiskExplain {
+  stopId: string;
+  depot: string;
+  roadClass: string | null;
+  monsoon: boolean;
+  plannedHour: number | null;
+  windowClose: string;
+  lateRiskPct: number | null;
+  /** The figure the plan set (base + window); null without a planned arrival. */
+  planned: number | null;
+  base: number | null;
+  /** Base rate, arrival near the window close, updates on the road: they add up to lateRiskPct. */
+  parts: LateRiskPart[];
+}
+
+/** DSP-15: a stop's late risk as the planning service explains it (GET Plans/Lodestar.LateRiskExplain(stopId=…)). */
+export function useLateRiskExplain(stopId: string | null | undefined) {
+  return useQuery<LateRiskExplain>(stopId ? `late-risk-explain:${stopId}` : null, async c =>
+    valueOf<LateRiskExplain>(await c.fn('Plans', null, 'LateRiskExplain', { stopId: stopId! })),
+  { refreshOn: ['eta_update'] });
 }

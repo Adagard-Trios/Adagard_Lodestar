@@ -64,6 +64,8 @@ export default function LiveDsp12ApproveAndGoLive() {
   const total = useCount('Orders', ordersFilter ? `${ordersFilter} and status ne 'CANCELLED'` : null);
   const deferralFilter = runDate ? [dayFilter('order/runDate', runDate), "status in ('SUGGESTED','CONFIRMED')", depotFilter('order/outlet/depot', active)].filter(Boolean).join(' and ') : null;
   const deferred = useCount('Deferrals', deferralFilter);
+  // protected outlets (deferred on the previous run) must never be deferred again
+  const protectedDeferred = useCount('Deferrals', deferralFilter ? `${deferralFilter} and order/deferredYesterday eq true` : null);
   const [note, setNote] = useState('');
   const [done, setDone] = useState<string | null>(null);
   const violations = (draft ? draft.detail?.violations : pending?.summary?.violations) ?? [];
@@ -161,7 +163,7 @@ export default function LiveDsp12ApproveAndGoLive() {
               <div className="hstack" style={{ gap: '14px', alignItems: 'stretch' }}>
                 <Who icon="box" title="Docks" sub="Loaders, Lodestar Dock" items={[`Load sheets for ${vehicles} vehicles`, `Loading order by departure${firstDepart ? `, first at ${fmtClock(firstDepart)}` : ''}`, 'Chilled lines marked for reefers only']} />
                 <Who icon="truck" title="Drivers" sub="Lodestar Run" items={[`${board.cards.length} trips download and work offline`, 'Stops in sequence with windows and access notes', 'Seal and reefer checks before departure']} />
-                <Who icon="store" title="Stores" sub="Lodestar Store" items={['Arrival window for every order', `${deferred ?? 0} deferred outlets told why and the new date`]} />
+                <Who icon="store" title="Stores" sub="Lodestar Store" items={['Arrival window for every order', `${deferred ?? '…'} deferred outlets told why and the new date`]} />
               </div>
               <div className="hstack" style={{ gap: '24px', alignItems: 'flex-start' }}>
                 <div className="vstack" style={{ gap: '0', flex: '1', minWidth: '0' }}>
@@ -171,9 +173,9 @@ export default function LiveDsp12ApproveAndGoLive() {
                   ) : (
                     <Check label={violations.length ? `${violations.length} rule violation(s) in the plan` : 'Plan checked by the planner'} value={pending ? title(pending.source) : ''} ok={!violations.length} />
                   )}
-                  <Check label="Deferrals with a reason code" value={`${deferred ?? 0}`} />
+                  <Check label="Deferrals with a reason code" value={`${deferred ?? '…'}`} />
                   <Check label="Orders to review" value={review.length ? `${review.length} open` : 'none'} ok={!review.length} />
-                  <Check label="Protected outlets kept" value="never deferred" />
+                  <Check label="Protected outlets kept" value={protectedDeferred === undefined ? '…' : protectedDeferred ? `${protectedDeferred} deferred` : 'never deferred'} ok={!protectedDeferred} />
                   {violations.length > 0 && (
                     <ul className="dx-t14" data-testid="violations" style={{ margin: '6px 0 0', paddingLeft: '18px' }}>
                       {violations.map((v, i) => {

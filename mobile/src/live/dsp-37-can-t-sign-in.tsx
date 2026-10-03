@@ -1,7 +1,7 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // DSP-37 Can't sign in · phone (P2, phone)
 import { Text, View, StyleSheet } from 'react-native';
-import { useAccessProblem, useDeviceId, useSignIn } from '@/lodestar/live';
+import { desktopUrl, openDesktop, useAccessProblem, useDeviceId, useSignIn } from '@/lodestar/live';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L63":{"app":"Lodestar Plan (desktop)","screen":"DSP-06 Sign in"},"L184":{"to":"dsp-26-sign-in","kind":"go"},"B":{"to":"dsp-26-sign-in","kind":"back"}}};
@@ -72,7 +72,7 @@ export default function ScreenDsp37CanTSignIn() {
                 </View>
                 <Icon xml={X3} width={20} height={20} style={s.v1} />
               </View>
-              <Tap lk="L63" style={s.v24}>
+              <Tap lk="L63" style={s.v24} to={null} onPress={() => openDesktop('dsp-06-sign-in')}>
                 <View style={s.v19}>
                   <Icon xml={X4} width={21} height={21} style={s.v1} />
                 </View>
@@ -81,7 +81,7 @@ export default function ScreenDsp37CanTSignIn() {
                     <Text style={s.t20}>{"Use the desktop instead"}</Text>
                   </View>
                   <View>
-                    <Text style={s.t21}>{"plan.lodestar.waypoint.lk, if you are at the office"}</Text>
+                    <Text style={s.t21}>{`${desktopUrl().replace(/^https?:\/\//, '')}, if you are at the office`}</Text>
                   </View>
                 </View>
                 <Icon xml={X3} width={20} height={20} style={s.v1} />
@@ -109,9 +109,9 @@ export default function ScreenDsp37CanTSignIn() {
             <Icon xml={X6} width={22} height={22} style={s.v1} />
             <Text style={s.t30}>{busy ? "Signing in…" : "Sign in again"}</Text>
           </Tap>
-          <View style={s.v33}>
+          <Tap lk="B" style={s.v33} testID="back-to-sign-in">
             <Text style={s.t32}>{"Back to sign in"}</Text>
-          </View>
+          </Tap>
         </View>
       </View>
     </Frame>

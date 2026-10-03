@@ -1,12 +1,13 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // DSP-30 Vehicle detail · phone (P2, phone)
+import { useState } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { hm } from '@/lib/time';
 import { titleCase } from '@/lodestar/live';
-import { useClaims, useVehicle } from '@/model/hooks';
-import { useSignalLost, minutesOfBudget, useAgentConfig } from '@/model/plan';
+import { useClaims, useOnline, useVehicle } from '@/model/hooks';
+import { useSignalLost, minutesOfBudget, useAgentConfig, useStoreManagers, warnStores } from '@/model/plan';
 import type { Trip } from '@/model/types';
-import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L62":{"to":"dsp-31-call-or-sms-driver","kind":"go"},"B":{"to":"dsp-29-live-routes","kind":"back"}}};
 
@@ -26,6 +27,25 @@ export default function ScreenDsp30VehicleDetail() {
   const done = tripStops.filter(x => x.status === 'DELIVERED').length;
   const next = tripStops.find(x => x.status !== 'DELIVERED') ?? null;
   const lostAt = id ? lost.get(id) : undefined;
+  // "Warn stores": the store managers of the trip's stops not yet delivered, from the user directory
+  const online = useOnline();
+  const openStops = tripStops.filter(x => x.status !== 'DELIVERED');
+  const managers = useStoreManagers(openStops.map(x => x.outletId));
+  const [warned, setWarned] = useState<string | null>(null);
+  const [warning, setWarning] = useState(false);
+  const warn = async () => {
+    if (!trip || !managers.data?.length) return false;
+    if (!online) throw new Error('Warning stores needs signal');
+    setWarning(true);
+    try {
+      const n = await warnStores(trip, openStops, managers.data);
+      setWarned(hm(new Date().toISOString()));
+      showToast(`${n} store${n === 1 ? '' : 's'} warned: possible delay`);
+      return false;
+    } finally {
+      setWarning(false);
+    }
+  };
 
   const kind = vehicle ? `${vehicle.tempClass === 'CHILLED' ? 'Reefer' : 'Ambient'} ${vehicle.type.toLowerCase()}` : '';
   const lead = !claims ? 'Sign in to see this vehicle' : vehicle ? `${kind} · ${driver ?? 'no driver yet'}` : loading ? 'Loading…' : error ? 'No signal · nothing saved yet' : 'Loading…';
@@ -171,9 +191,9 @@ export default function ScreenDsp30VehicleDetail() {
             <Icon xml={X3} width={22} height={22} style={s.v1} />
             <Text style={s.t36}>{driver ? `Call or SMS ${driver.split(' ')[0]}` : "Call or SMS driver"}</Text>
           </Tap>
-          <View style={s.v39}>
-            <Text style={s.t38}>{"Warn stores: possible delay"}</Text>
-          </View>
+          <Tap style={s.v39} onPress={warn} disabled={warning || !managers.data?.length} testID="warn-stores">
+            <Text style={s.t38}>{warning ? "Warning stores…" : warned ? `Stores warned ${warned}` : "Warn stores: possible delay"}</Text>
+          </Tap>
         </View>
       </View>
     </Frame>

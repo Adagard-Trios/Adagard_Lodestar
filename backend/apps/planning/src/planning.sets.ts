@@ -6,6 +6,7 @@ import {
 import { AUDIT_SINK, AuditSink, canAccessDepot, Principal, Roles, serviceName } from '@lodestar/security';
 import { Depot, DeferralStatus, PlanSource, PlanStatus } from '@prisma/client';
 import { AgentClient, AgentRunSnapshot } from './agent.client';
+import { EtaService } from './eta.service';
 import { dayRange, OPEN_PLAN_STATUSES, overrideReasonRequired, PlanningService, planViolations } from './planning.service';
 
 function assertDepot(p: Principal, depot: string) {
@@ -31,6 +32,7 @@ export class PlansSet extends ODataEntitySet {
   constructor(
     prisma: PrismaService,
     private readonly planning: PlanningService,
+    private readonly eta: EtaService,
   ) {
     super(prisma);
   }
@@ -114,6 +116,21 @@ export class PlansSet extends ODataEntitySet {
   capacityOutlook(ctx: OperationContext) {
     assertDepot(ctx.principal, ctx.params.depot);
     return this.planning.getCapacityOutlook(ctx.params.depot as Depot);
+  }
+
+  /** GET Plans/Lodestar.LateRiskExplain(stopId='…') — DSP-15: a stop's late risk as parts that add up. */
+  @ODataFunction({
+    name: 'LateRiskExplain',
+    binding: 'collection',
+    roles: [Roles.Dispatcher, Roles.Admin],
+    params: { stopId: { type: 'Edm.String', required: true } },
+    returns: 'Edm.Untyped',
+  })
+  async lateRiskExplain(ctx: OperationContext) {
+    const out = await this.eta.explainStop(String(ctx.params.stopId));
+    if (!out) throw ODataError.notFound(`Trip stop ${ctx.params.stopId} not found`, 'stopId');
+    assertDepot(ctx.principal, out.depot);
+    return out;
   }
 }
 

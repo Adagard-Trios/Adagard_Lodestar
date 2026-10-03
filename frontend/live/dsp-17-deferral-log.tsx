@@ -10,7 +10,7 @@ import { usePlanScope } from '@/components/live/plan-data';
 import { Empty, ErrorBanner, Skeleton, Spinner } from '@/components/live/states';
 import { BRAND_LETTER, DEPOT_NAME, dayFilter, daysAgo, fmtDayTime, fmtRunDate } from '@/lib/format';
 import { useEntitySet, useQuery } from '@/lib/odata/hooks';
-import type { Deferral, Outlet } from '@/lib/odata/types';
+import type { Deferral, Outlet, User } from '@/lib/odata/types';
 import { depotFilter, useFocusId } from '@/lib/workday';
 
 type Chip = 'ALL' | 'CAP_REEFER' | 'CAP_TIME' | 'ACCESS' | 'OTHER';
@@ -51,6 +51,12 @@ export default function LiveDsp17DeferralLog() {
   const outlets = useQuery<Map<string, Outlet>>(ids.length ? `log-outlets:${ids.join(',')}` : null, async c => {
     const rows = await c.all<Outlet>('Outlets', { filter: `id in (${ids.map(i => `'${i}'`).join(',')})`, select: 'id,name,district,brand,parking' });
     return new Map(rows.map(o => [o.id, o]));
+  });
+  // who decided each row (Users directory), so the log names the dispatcher instead of "a dispatcher"
+  const deciders = [...new Set((log.data ?? []).map(d => d.resolvedBy).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b))) as string[];
+  const people = useQuery<Map<string, string>>(deciders.length ? `log-deciders:${deciders.join(',')}` : null, async c => {
+    const rows = await c.all<User>('Users', { filter: `id in (${deciders.map(i => `'${i}'`).join(',')})`, select: 'id,name' });
+    return new Map(rows.map(u => [u.id, u.name]));
   });
   const reasons = useQuery<Deferral[]>(`log-reasons:${base}`, c => c.all<Deferral>('Deferrals', { filter: base, select: 'id,reason,status', expand: 'order($select=deferredYesterday)' }));
   const forRun = useCount('Deferrals', runDate ? [dayFilter('order/runDate', runDate), "status ne 'DISMISSED'", depotFilter('order/outlet/depot', active)].filter(Boolean).join(' and ') : null);
@@ -136,7 +142,7 @@ export default function LiveDsp17DeferralLog() {
                   <span className="dx-td" style={{ width: '110px' }}><span className="id">{d.orderId}</span></span>
                   <span className="dx-td" style={{ width: '204px' }}>
                     <span className="hstack" style={{ gap: '10px' }}>
-                      <span className={`bb bb--${(o?.brand ?? 'FRESH').toLowerCase()} dx-bb`}>{BRAND_LETTER[o?.brand ?? 'FRESH']}</span>
+                      {o?.brand && <span className={`bb bb--${o.brand.toLowerCase()} dx-bb`}>{BRAND_LETTER[o.brand] ?? o.brand[0]}</span>}
                       <span className="dx-td2"><b>{outlet?.name ?? o?.outletId}</b><span><span className="id">{o?.outletId}</span> · {outlet?.district}{outlet?.parking === 'VAN_ONLY' ? ' · van_only' : ''}</span></span>
                     </span>
                   </span>
@@ -145,7 +151,7 @@ export default function LiveDsp17DeferralLog() {
                   <span className="dx-td" style={{ width: '232px' }}>
                     <span className="dx-td2">
                       <b>{d.status === 'SUGGESTED' ? 'Suggested by the planner' : d.status === 'CONFIRMED' ? 'Confirmed' : d.status === 'REVERSED' ? 'Reversed' : 'Dismissed'}</b>
-                      <span>{d.resolvedBy ? 'by a dispatcher' : 'not decided yet'} · {fmtDayTime(d.confirmedAt ?? d.updatedAt ?? d.createdAt)}</span>
+                      <span>{d.resolvedBy ? `by ${people.data?.get(d.resolvedBy) ?? 'a dispatcher'}` : 'not decided yet'} · {fmtDayTime(d.confirmedAt ?? d.updatedAt ?? d.createdAt)}</span>
                     </span>
                   </span>
                   <span className="dx-td" style={{ flex: '1', minWidth: '0' }}><Next d={d} /></span>

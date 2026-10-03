@@ -1,5 +1,5 @@
 import { runDateRange } from '@lodestar/platform';
-import { EtaService } from './eta.service';
+import { EtaService, explainLateRisk } from './eta.service';
 import { CapacityService } from './capacity.service';
 import { dayRange } from './planning.service';
 
@@ -52,5 +52,45 @@ describe('EtaService in Asia/Colombo time', () => {
     const firstWhere = prisma.calendar.findMany.mock.calls[0][0].where.date;
     expect(firstWhere.gte.toISOString()).toBe('2026-04-06T00:00:00.000Z');
     expect(firstWhere.lt.toISOString()).toBe('2026-04-13T00:00:00.000Z');
+  });
+});
+
+/** DSP-15: the late-risk parts add up to the stored figure, the same way computeModelEta sets it. */
+describe('explainLateRisk', () => {
+  const lk = (hhmm: string) => new Date(`2026-04-07T${hhmm}:00+05:30`);
+
+  it('splits a monsoon hill stop into base, window and road parts', () => {
+    const r = explainLateRisk({ roadClass: 'hill', isMonsoon: true, plannedHour: 5, etaModel: lk('07:28'), windowClose: '07:45', actual: 61 });
+    expect(r.parts.map(p => p.value)).toEqual([20, 30, 11]);
+    expect(r.parts.reduce((s, p) => s + p.value, 0)).toBe(61);
+    expect(r.planned).toBe(50);
+  });
+
+  it('matches computeModelEta for the planned figure', () => {
+    const eta = new EtaService({} as any);
+    const m = eta.computeModelEta({ etaPlan: lk('07:00'), roadClass: 'hill', isMonsoon: true, windowClose: '08:00' });
+    const r = explainLateRisk({ roadClass: 'hill', isMonsoon: true, plannedHour: 7, etaModel: m.etaModel, windowClose: '08:00', actual: m.lateRiskPct });
+    expect(r.planned).toBe(m.lateRiskPct);
+    expect(r.parts[2].value).toBe(0);
+  });
+
+  it('has no parts without a planned arrival or a stored figure', () => {
+    expect(explainLateRisk({ roadClass: 'urban', isMonsoon: false, plannedHour: null, etaModel: null, windowClose: '08:00', actual: 8 }).parts).toEqual([]);
+  });
+
+  it('reads the stop, its road class and the monsoon flag', async () => {
+    const prisma = {
+      tripStop: { findUnique: jest.fn().mockResolvedValue({ id: 's2', etaPlan: lk('05:01'), etaModel: lk('07:28'), lateRiskPct: 61, trip: { depot: 'KANDY', runDate: new Date('2026-04-07T00:00:00Z') }, outlet: { district: 'Nuwara Eliya', windowClose: '07:45' } }) },
+      districtTravel: { findUnique: jest.fn().mockResolvedValue({ roadClass: 'hill' }) },
+      calendar: { findUnique: jest.fn().mockResolvedValue({ monsoon: 1 }) },
+    };
+    const r = await new EtaService(prisma as any).explainStop('s2');
+    expect(r).toMatchObject({ depot: 'KANDY', roadClass: 'hill', monsoon: true, plannedHour: 5, base: 20 });
+    expect(r!.parts.map(p => p.value)).toEqual([20, 30, 11]);
+  });
+
+  it('returns null for an unknown stop', async () => {
+    const prisma = { tripStop: { findUnique: jest.fn().mockResolvedValue(null) } };
+    await expect(new EtaService(prisma as any).explainStop('x')).resolves.toBeNull();
   });
 });

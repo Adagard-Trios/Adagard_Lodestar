@@ -265,6 +265,11 @@ describe('DSP-11 Trip and vehicle drawer', () => {
     // the designed footer: "Lock this trip" returns to the plan board (L157)
     expect(screen.getByText('Lock this trip').closest('[data-lk]')).toHaveAttribute('data-lk', 'L157');
     expect(screen.getByText('Swap vehicle')).toBeInTheDocument();
+    // moves and swaps are draft edits made with the planning agent (DSP-39)
+    fireEvent.click(screen.getByTestId('move-stop'));
+    fireEvent.click(screen.getByTestId('swap-vehicle'));
+    expect(router.push).toHaveBeenCalledWith('/plan/dsp-39-ask-the-planning-agent');
+    expect(router.push).toHaveBeenCalledTimes(2);
   });
 
   it('the trip tabs switch to the vehicle’s other trip', async () => {

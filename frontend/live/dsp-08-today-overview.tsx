@@ -47,7 +47,7 @@ function DepotCard({ depot, runDate }: { depot: string; runDate: string }) {
   const trips = useCount('Trips', `depot eq '${depot}' and ${day} and status eq 'ENROUTE'`, ['eta_update']);
   const vehicles = fleet.data ?? [];
   const workshop = vehicles.filter(v => v.status === 'WORKSHOP').length;
-  const served = (total ?? 0) - (deferred ?? 0);
+  const served = total === undefined || deferred === undefined ? undefined : total - deferred;
   const p = plan.data;
   return (
     <div className="dx-card" style={{ flex: '1' }} data-testid={`depot-${depot}`}>
@@ -55,7 +55,7 @@ function DepotCard({ depot, runDate }: { depot: string; runDate: string }) {
         <span className="dx-lead"><Ic n="depot" /></span>
         <div className="vstack" style={{ gap: '0' }}>
           <span className="dx-card__title">{DEPOT_NAME[depot] ?? depot}</span>
-          <span className="dx-t13">{trips ?? 0} vehicles out</span>
+          <span className="dx-t13">{trips ?? '…'} vehicles out</span>
         </div>
         <span className="spacer" />
         {p ? (
@@ -66,11 +66,11 @@ function DepotCard({ depot, runDate }: { depot: string; runDate: string }) {
       </div>
       <div className="dx-card__body">
         <div className="dx-stats">
-          <div className="dx-stat"><b>{total ?? '…'}</b><span>{served} served · {deferred ?? 0} deferred</span></div>
-          <div className="dx-stat"><b>{delivered ?? '…'}<small>/ {served}</small></b><span>delivered</span></div>
-          <div className="dx-stat"><b>{vehicles.length - workshop}/{vehicles.length}</b><span>{workshop ? `${workshop} in workshop` : 'all ready'}</span></div>
+          <div className="dx-stat"><b>{total ?? '…'}</b><span>{served ?? '…'} served · {deferred ?? '…'} deferred</span></div>
+          <div className="dx-stat"><b>{delivered ?? '…'}<small>/ {served ?? '…'}</small></b><span>delivered</span></div>
+          <div className="dx-stat"><b>{fleet.data ? `${vehicles.length - workshop}/${vehicles.length}` : '…'}</b><span>{!fleet.data ? '' : workshop ? `${workshop} in workshop` : 'all ready'}</span></div>
         </div>
-        <div className="dx-bar"><div className="dx-g-ok" style={{ width: `${pct(delivered, served)}%` }} /></div>
+        <div className="dx-bar"><div className="dx-g-ok" style={{ width: `${pct(delivered, served ?? 0)}%` }} /></div>
         {p?.explanation || p?.notes ? <div className="dx-t14">{p.explanation ?? p.notes}</div> : null}
       </div>
     </div>
@@ -212,6 +212,7 @@ export default function LiveDsp08TodayOverview({ offlineView = false }: { offlin
             <div className="dx-card__head"><span className="dx-card__title">This morning</span><span className="dx-t13">your latest notices</span></div>
             <div className="dx-card__body" style={{ flexDirection: 'row', gap: '10px' }}>
               {timeline.error && <ErrorBanner compact error={timeline.error} onRetry={timeline.refresh} />}
+              {!timeline.data && !timeline.error && <Skeleton rows={1} />}
               {timeline.data?.length === 0 && <span className="dx-t13">No notices yet today.</span>}
               {timeline.data?.map(n => (
                 <div key={n.id} className="vstack" style={{ gap: '6px', flex: '1', minWidth: '0' }}>

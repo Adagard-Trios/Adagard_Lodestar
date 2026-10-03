@@ -318,7 +318,8 @@ describe('DSP-17 Deferral log', () => {
         : req.path === 'Deferrals' && req.query.$top === '25' ? page([d1, d2], 3, 'http://localhost/odata/v4/Deferrals?$skiptoken=2')
           : req.path === 'Deferrals' ? page([d1, d2])
             : req.path === 'Outlets' ? page([outlet('OUTT01', { name: 'Outlet T01' }), outlet('OUTT02', { name: 'Outlet T02', parking: 'VAN_ONLY' })])
-              : page([])));
+              : req.path === 'Users' ? page([{ id: 'u-d', name: 'Dee Dispatcher' }])
+                : page([])));
 
   it('lists the last 30 days with the skip guard, reason codes and what happened next', async () => {
     const view = renderLive(<ScreenShell board="P2" nav={nav({ L168: '/plan/dsp-18-outlet-profile' })} live><DeferralLog /></ScreenShell>, { handler: handler() });
@@ -333,6 +334,9 @@ describe('DSP-17 Deferral log', () => {
     const q = view.calls.find(c => c.path === 'Deferrals' && c.query.$top === '25')!;
     expect(q.query).toMatchObject({ $filter: "createdAt ge 2026-03-07T00:00:00Z and order/outlet/depot in ('PELIYAGODA','KANDY')", $expand: 'order', $orderby: 'createdAt desc', $count: 'true' });
     expect(view.calls.find(c => c.path === 'Outlets')!.query.$filter).toBe("id in ('OUTT01','OUTT02')");
+    // the dispatcher who decided is named from the Users directory
+    expect(await screen.findByText(/by Dee Dispatcher/)).toBeInTheDocument();
+    expect(view.calls.find(c => c.path === 'Users')!.query.$filter).toBe("id in ('u-d')");
 
     // a row opens the outlet profile for that outlet
     fireEvent.click(row);
@@ -398,6 +402,14 @@ describe('DSP-18 Outlet profile', () => {
     expect(await screen.findByText('To Tue 7 Apr')).toBeInTheDocument();
     expect(view.calls.find(c => c.path.startsWith('ServiceAllowances('))!.path).toBe("ServiceAllowances(brand='FRESH',dockType='STREET')");
     expect(view.calls.find(c => c.path === 'Deferrals' && c.query.$expand)!.query.$filter).toBe("order/outletId eq 'OUTT02'");
+  });
+
+  it('protects by the planner’s own threshold (AgentConfig protectedScore), not a number on the screen', async () => {
+    window.sessionStorage.setItem('lodestar.focus.outlet', 'OUTT02');
+    const high = { ...next, deferredYesterday: false, deferralScore: 92 };
+    renderLive(<OutletProfile />, { handler: handler(req => (req.path === 'Orders' && req.query.$filter === "outletId eq 'OUTT02'" ? page([high, done]) : undefined)) });
+    expect(await screen.findByText('Protected')).toBeInTheDocument();
+    expect(screen.getByText('deferred yesterday').previousSibling).toHaveTextContent('no');
   });
 
   it('the picker switches outlet; a new outlet without history says so', async () => {

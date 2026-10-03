@@ -149,6 +149,9 @@ describe('DSP-34 / SM-35 Reset access', () => {
   it('Plan: without self-service reset the admin path, and back to sign in', () => {
     renderLive(<ResetPlan />, { handler: () => page([]), session: null });
     expect(screen.getByText('Your admin resets your sign-in')).toBeInTheDocument();
+    // no support desk hours or site are invented when none is configured
+    expect(screen.getByText('Call the IT desk')).toBeInTheDocument();
+    expect(screen.queryByText(/Open 24 hours/)).not.toBeInTheDocument();
     expect(screen.queryByTestId('reset-link')).not.toBeInTheDocument();
     expect(screen.getByTestId('back-to-sign-in')).toHaveAttribute('data-lk', 'L175');
   });

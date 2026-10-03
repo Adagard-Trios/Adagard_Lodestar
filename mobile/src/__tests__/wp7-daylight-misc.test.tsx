@@ -7,7 +7,7 @@ import { router } from 'expo-router';
 import { settings } from '@/lib/settings';
 import { network } from '@/offline/network';
 import { notices } from '@/realtime/notices';
-import { routes, signInAs } from './fake-platform';
+import { client, routes, signInAs } from './fake-platform';
 
 jest.mock('@/model/platform', () => require('./fake-platform'));
 jest.mock('expo-auth-session', () => ({
@@ -139,6 +139,60 @@ describe('DSP-31 call or SMS driver', () => {
     await waitFor(() => expect(open).toHaveBeenCalledWith(`sms:0772344521?body=${encodeURIComponent('Test, please call me when you can. Nimal')}`));
     expect(push).toHaveBeenCalledWith(opened('dsp-30-vehicle-detail', { vehicle: 'VAN-T9' }));
     open.mockRestore();
+  });
+});
+
+describe('DSP-30 / DSP-31 directory contacts', () => {
+  it('DSP-31 calls the depot desk from the Users directory (someone else, with a phone), never a made-up number', async () => {
+    await signInAs(dispatcher('u-dsp31b'));
+    params.vehicle = 'VAN-T9';
+    routes.set("Vehicles('VAN-T9')", vehicle);
+    routes.set('Trips', [trip]);
+    routes.set('TripStops', [stop]);
+    const users = jest.fn(() => [
+      { id: 'u-dsp31b', name: 'Nimal Dispatcher', phone: '0711111111', role: 'DISPATCHER' },
+      { id: 'u-ld', name: 'Kamal Loader', phone: '0712223344', role: 'LOADER' },
+    ]);
+    routes.set('Users', users);
+    const { Linking } = require('react-native');
+    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    const Screen = require('@/live/dsp-31-call-or-sms-driver').default;
+    await render(<Screen />);
+    await waitFor(() => expect(screen.getByTestId('desk-line').props.children).toBe('Kamal Loader · 071 ••• 3344'));
+    expect(screen.getByText('Call Kandy desk')).toBeTruthy();
+    expect((users.mock.calls as unknown as [string, { filter: string }][]).some(([, q]) => q?.filter?.includes("depot eq 'KANDY'"))).toBe(true);
+    await fireEvent.press(screen.getByTestId('call-desk'));
+    expect(open).toHaveBeenCalledWith('tel:0712223344');
+    open.mockRestore();
+  });
+
+  it('DSP-31 says no desk number when the directory has none', async () => {
+    await signInAs(dispatcher('u-dsp31c'));
+    params.vehicle = 'VAN-T9';
+    routes.set("Vehicles('VAN-T9')", vehicle);
+    routes.set('Trips', [trip]);
+    routes.set('TripStops', [stop]);
+    routes.set('Users', []);
+    const Screen = require('@/live/dsp-31-call-or-sms-driver').default;
+    await render(<Screen />);
+    await waitFor(() => expect(screen.getByTestId('desk-line').props.children).toBe('No desk number on file'));
+  });
+
+  it('DSP-30 warns the store managers of the undelivered stops (Notifications/Lodestar.Send)', async () => {
+    await signInAs(dispatcher('u-dsp30w'));
+    params.vehicle = 'VAN-T9';
+    routes.set("Vehicles('VAN-T9')", vehicle);
+    routes.set('Trips', [{ ...trip, status: 'ENROUTE' }]);
+    routes.set('TripStops', [stop, { ...stop, id: 'S-2', orderId: 'O-2', outletId: 'OUT-T2', stopSeq: 2, status: 'DELIVERED' }]);
+    routes.set('Users', [{ id: 'u-sm1', name: 'Hill Manager', outletId: 'OUT-T1', phone: '0770000000' }]);
+    client.action.mockClear();
+    const Screen = require('@/live/dsp-30-vehicle-detail').default;
+    await render(<Screen />);
+    await waitFor(() => expect(screen.getByTestId('warn-stores').props.accessibilityState?.disabled).toBeFalsy());
+    await fireEvent.press(screen.getByTestId('warn-stores'));
+    await waitFor(() => expect(client.action).toHaveBeenCalledWith('Notifications/Lodestar.Send', expect.objectContaining({ recipientId: 'u-sm1', type: 'DISPATCH_NOTICE', tripId: 'T-1', outletId: 'OUT-T1' })));
+    expect(client.action).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.getByText(/^Stores warned /)).toBeTruthy());
   });
 });
 

@@ -4,7 +4,8 @@
 // trips are (the day's trips), the orders moved off the day (Deferrals), and the queue for the next run (Orders).
 import { Text, View, StyleSheet } from 'react-native';
 import { dayLabel, hm, isoDay } from '@/lib/time';
-import { depotName, LIVE_POLL_MS, reasonCode, useAlertCount, useEvery, usePlansBoard } from '@/model/plan';
+import { depotName, LIVE_POLL_MS, orderCutoff, reasonCode, useAlertCount, useEvery, usePlansBoard } from '@/model/plan';
+import { clock12 } from '@/model/preferences';
 import { Frame, Icon, Scroll, Tap, type ScreenNav } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L183":{"to":"dsp-29-live-routes","kind":"go"},"N0":{"to":"dsp-27-alerts","kind":"nav"},"N1":{"to":"dsp-29-live-routes","kind":"nav"},"N3":{"to":"dsp-33-me-and-alert-rules","kind":"nav"}}};
@@ -119,7 +120,7 @@ export default function ScreenDsp32Plans() {
                       <Text style={s.t10}>{`Queue open for ${dayLabel(b.next)}`}</Text>
                     </View>
                     <View>
-                      <Text style={s.t11}>{[...b.queue.map(q => `${depotName(q.depot)} ${q.orders === 1 ? '1 order' : `${q.orders} orders`}`), 'closes 4:00 PM'].join(' · ')}</Text>
+                      <Text style={s.t11}>{[...b.queue.map(q => `${depotName(q.depot)} ${q.orders === 1 ? '1 order' : `${q.orders} orders`}`), `closes ${clock12(hm(new Date(orderCutoff(b.next)).toISOString()))}`].join(' · ')}</Text>
                     </View>
                   </View>
                 </View>

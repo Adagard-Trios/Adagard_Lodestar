@@ -5,7 +5,11 @@
 // stops (outlet, order sizes), the vehicle's other trips that day (tabs and the minutes budget) and
 // DistrictTravel for the drive times. The plan board behind the drawer is a plain backdrop.
 // Footer as designed: "Lock this trip" returns to the plan board (DSP-02), where the trip is edited and approved;
-// "Move a stop" and "Swap vehicle" carry no link in the design. Not shown: the "Vehicle" tab (the design gives it no content).
+// "Move a stop" and "Swap vehicle" open Ask the planning agent (DSP-39): moves and vehicle swaps are draft edits
+// (AgentRuns('…')/Lodestar.Resume {decision: 'edit'}) that the dispatcher then approves. Not shown: the "Vehicle"
+// tab (the design gives it no content).
+import { useRouter } from 'next/navigation';
+import Btn from '@/components/live/Btn';
 import { budget } from '@/components/live/board';
 import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
@@ -17,6 +21,8 @@ import { useEntity, useQuery } from '@/lib/odata/hooks';
 import type { Plan, Trip } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
 
+/** Where a stop move or a vehicle swap is asked for and applied to the draft. */
+export const ASK_AGENT = '/plan/dsp-39-ask-the-planning-agent';
 const SHORT: Record<string, string> = { PELIYAGODA: 'Peliyagoda', KANDY: 'Kandy Hub' };
 const DOCK: Record<string, string> = { REAR_DOCK: 'rear dock', STREET: 'street', MALL_BAY: 'mall bay' };
 const gauge = (used: number, cap: number) => {
@@ -37,6 +43,7 @@ function Meter({ label, used, cap, unit, digits = 0 }: { label: string; used: nu
 }
 
 export default function LiveDsp11TripAndVehicleDrawer() {
+  const router = useRouter();
   const { tripsFilter, loadingDate } = usePlanScope();
   const [focus, setFocus] = useFocusId('trip');
 
@@ -194,8 +201,8 @@ export default function LiveDsp11TripAndVehicleDrawer() {
           )}
         </div>
         <div className="dx-drawer__foot">
-          <span className="d-btn"><Ic n="split" />{"Move a stop"}</span>
-          <span className="d-btn d-btn--ghost">{"Swap vehicle"}</span>
+          <Btn className="d-btn" testId="move-stop" disabled={!t} onClick={() => router.push(ASK_AGENT)}><Ic n="split" />{"Move a stop"}</Btn>
+          <Btn className="d-btn d-btn--ghost" testId="swap-vehicle" disabled={!t} onClick={() => router.push(ASK_AGENT)}>{"Swap vehicle"}</Btn>
           <span className="spacer" />
           <span className="d-btn d-btn--primary" data-lk="L157"><Ic n="lock" />{"Lock this trip"}</span>
         </div>

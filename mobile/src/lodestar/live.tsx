@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Linking, useWindowDimensions } from 'react-native';
 import { useStore } from '@/lib/store';
 import { goHome } from '@/auth/use-sign-in';
+import { apiBase } from '@/lib/config';
 import { getDeviceId, session } from '@/model/platform';
 import { useQuery } from '@/model/query';
 import { openScreen, showToast } from './runtime';
@@ -75,5 +76,18 @@ export async function callDispatcher(contact?: DispatcherContact | null): Promis
   }
   const ok = await Linking.openURL(`tel:${phone.replace(/[^\d+]/g, '')}`).then(() => true, () => false);
   if (!ok) showToast(`Call ${contact?.name ?? 'the dispatcher'} on ${phone}`);
+  return false;
+}
+
+/** The dispatcher desk website (served by the same gateway as the API, under /plan), optionally at one screen. */
+export function desktopUrl(screen?: string): string {
+  return `${apiBase()}/plan${screen ? `/${screen}` : ''}`;
+}
+
+/** "Open on desktop" / "Approve on desktop instead": opens the desk website at that screen (stays here). */
+export async function openDesktop(screen?: string): Promise<false> {
+  const url = desktopUrl(screen);
+  const ok = await Linking.openURL(url).then(() => true, () => false);
+  if (!ok) showToast(`Open ${url} on a computer`);
   return false;
 }

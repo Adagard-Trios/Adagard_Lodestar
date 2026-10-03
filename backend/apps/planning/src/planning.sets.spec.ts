@@ -3,6 +3,7 @@ import { ODataError, runWithRequestContext } from '@lodestar/odata';
 import type { AuditSink } from '@lodestar/security';
 import { personas, principal } from '../../../libs/security/test/principals';
 import { AgentClient } from './agent.client';
+import { EtaService } from './eta.service';
 import { PlanningService } from './planning.service';
 import { AgentRunsSet, DeferralsSet, PlansSet } from './planning.sets';
 
@@ -20,11 +21,13 @@ const RUN_DATE = new Date('2026-04-07T00:00:00.000Z');
 
 describe('PlansSet', () => {
   let planning: PlanningService;
+  let eta: EtaService;
   let set: PlansSet;
 
   beforeEach(() => {
     planning = mock(PlanningService);
-    set = new PlansSet({} as any, instance(planning));
+    eta = mock(EtaService);
+    set = new PlansSet({} as any, instance(planning), instance(eta));
     when(planning.nextPlanId(anything(), anything())).thenResolve({ id: 'PLK-2026-04-07-v2', version: 2, runDate: RUN_DATE });
   });
 
@@ -116,6 +119,23 @@ describe('PlansSet', () => {
       when(planning.getPlan(anything(), anything())).thenResolve({} as any);
       await set.board({ principal: personas.admin, params: { depot: 'PELIYAGODA', runDate: '2026-04-07' }, headers: {} });
       verify(planning.getPlan('PELIYAGODA' as any, '2026-04-07')).once();
+    });
+  });
+
+  describe('Lodestar.LateRiskExplain', () => {
+    const explained = { stopId: 's1', depot: 'KANDY', lateRiskPct: 61, base: 20, planned: 50, parts: [] };
+    const kandyDispatcher = principal({ sub: 'd-kandy', roles: ['dispatcher'], depots: ['KANDY'], clientId: 'lodestar-web' });
+
+    it('explains a stop of a depot the dispatcher plans', async () => {
+      when(eta.explainStop('s1')).thenResolve(explained as any);
+      await expect(set.lateRiskExplain({ principal: kandyDispatcher, params: { stopId: 's1' }, headers: {} })).resolves.toMatchObject({ stopId: 's1', base: 20 });
+    });
+
+    it('refuses a stop of a foreign depot and an unknown stop', async () => {
+      when(eta.explainStop('s1')).thenResolve({ ...explained, depot: 'PELIYAGODA' } as any);
+      await expect(set.lateRiskExplain({ principal: kandyDispatcher, params: { stopId: 's1' }, headers: {} })).rejects.toMatchObject({ status: 403 });
+      when(eta.explainStop('nope')).thenResolve(null);
+      await expect(set.lateRiskExplain({ principal: kandyDispatcher, params: { stopId: 'nope' }, headers: {} })).rejects.toMatchObject({ status: 404 });
     });
   });
 });

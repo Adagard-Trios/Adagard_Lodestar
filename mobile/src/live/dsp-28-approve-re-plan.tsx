@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { Text, TextInput, View, StyleSheet } from 'react-native';
 import { dayLabel, hm } from '@/lib/time';
-import { plural, titleCase } from '@/lodestar/live';
+import { openDesktop, plural, titleCase } from '@/lodestar/live';
 import { useClaims, useOnline } from '@/model/hooks';
 import { approveReview, planSource, readPlan, usePlan } from '@/model/plan';
 import { bumpRevision } from '@/model/platform';
@@ -189,9 +189,9 @@ export default function ScreenDsp28ApproveRePlan() {
             <Icon xml={X2} width={22} height={22} style={s.v1} />
             <Text style={s.t45}>{busy ? "Approving…" : "Approve & send"}</Text>
           </Tap>
-          <View style={s.v48}>
+          <Tap style={s.v48} onPress={() => openDesktop('dsp-12-approve-and-go-live')} testID="open-desktop">
             <Text style={s.t47}>{"Open on desktop"}</Text>
-          </View>
+          </Tap>
         </View>
       </View>
     </Frame>

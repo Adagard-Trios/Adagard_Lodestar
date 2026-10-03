@@ -165,6 +165,25 @@ describe('Update required', () => {
     await fireEvent.press(screen.getByTestId('lk-L185'));
     expect(await screen.findByTestId('toast')).toBeTruthy();
     expect(push).not.toHaveBeenCalled();
+    const { Linking } = require('react-native');
+    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    await fireEvent.press(screen.getByTestId('approve-on-desktop'));
+    await waitFor(() => expect(open).toHaveBeenCalledWith(expect.stringMatching(/\/plan\/dsp-12-approve-and-go-live$/)));
+    open.mockRestore();
+  });
+
+  it('DSP-37: the desk address comes from the gateway origin; desktop opens it, Back to sign in goes back', async () => {
+    const Screen = require('@/live/dsp-37-can-t-sign-in').default;
+    await render(<Screen />);
+    expect(screen.queryByText(/plan\.lodestar\.waypoint\.lk/)).toBeNull();
+    expect(screen.getByText(/\/plan, if you are at the office$/)).toBeTruthy();
+    const { Linking } = require('react-native');
+    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    await fireEvent.press(screen.getByTestId('lk-L63'));
+    await waitFor(() => expect(open).toHaveBeenCalledWith(expect.stringMatching(/\/plan\/dsp-06-sign-in$/)));
+    open.mockRestore();
+    await fireEvent.press(screen.getByTestId('back-to-sign-in'));
+    expect(router.replace).toHaveBeenCalledWith(opened('dsp-26-sign-in'));
   });
 
   it('LD-26: the trip being loaded; Keep loading opens its load sheet', async () => {
