@@ -42,7 +42,8 @@ function Meter({ label, used, cap, unit, digits = 0 }: { label: string; used: nu
   );
 }
 
-export default function LiveDsp11TripAndVehicleDrawer() {
+/** The trip drawer: over the page it was opened from (OverlayHost), or on its own route over an empty board. */
+export function TripDrawer({ onClose }: { onClose?: () => void }) {
   const { name: depotName, short: depotShort } = useDepots();
   const router = useRouter();
   const { tripsFilter, loadingDate } = usePlanScope();
@@ -77,12 +78,8 @@ export default function LiveDsp11TripAndVehicleDrawer() {
   const planText = t ? `${plan && (plan.status === 'DRAFT' || plan.status === 'NEEDS_APPROVAL') ? 'draft' : 'plan'} v${plan?.version ?? t.planVersion}` : '';
 
   return (
-    <div className="frame frame--desktop mode-dispatcher" data-name="DSP-11 Trip and vehicle drawer · desktop">
-      <div className="d-app">
-        <PlanSide active="N2" />
-        <div className="d-main" />
-      </div>
-      <div className="dx-scrim" />
+    <>
+      <div className="dx-scrim" onClick={onClose} />
       <div className="dx-drawer" style={{ width: '600px' }} data-testid="trip-drawer">
         <div className="dx-drawer__head">
           <span className={`dx-lead${reefer ? ' dx-lead--cold' : ''}`} style={{ width: '44px', height: '44px' }}><Ic n={v?.type === 'VAN' ? 'van' : 'truck'} /></span>
@@ -208,6 +205,18 @@ export default function LiveDsp11TripAndVehicleDrawer() {
           <span className="d-btn d-btn--primary" data-lk="L157"><Ic n="lock" />{"Lock this trip"}</span>
         </div>
       </div>
+    </>
+  );
+}
+
+export default function LiveDsp11TripAndVehicleDrawer() {
+  return (
+    <div className="frame frame--desktop mode-dispatcher" data-name="DSP-11 Trip and vehicle drawer · desktop">
+      <div className="d-app">
+        <PlanSide active="N2" />
+        <div className="d-main" />
+      </div>
+      <TripDrawer />
     </div>
   );
 }

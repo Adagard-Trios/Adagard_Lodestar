@@ -112,10 +112,23 @@ function StatusForm({ v }: { v: Vehicle }) {
   );
 }
 
-export default function LiveAdm11VehicleStatus() {
+/** The vehicle status drawer: over the page it was opened from (OverlayHost), or on its own route over the page's head. */
+export function VehicleStatusDrawer({ onClose }: { onClose?: () => void }) {
   const [id] = useFocusId('vehicle');
   const vehicle = useEntity<Vehicle>('Vehicles', id);
   const wrap = (body: ReactNode) => <div className="dx-drawer" style={{ width: '600px' }}><div className="dx-drawer__body">{body}</div></div>;
+  return (
+    <>
+      <div className="dx-scrim" onClick={onClose} />
+      {!id && wrap(<Empty title="No vehicle chosen" text="Pick a vehicle in Vehicles to change its status." icon="truck" />)}
+      {id && vehicle.error && wrap(<ErrorBanner error={vehicle.error} onRetry={vehicle.refresh} />)}
+      {id && !vehicle.data && !vehicle.error && wrap(<Skeleton rows={4} />)}
+      {vehicle.data && <StatusForm key={vehicle.data.id} v={vehicle.data} />}
+    </>
+  );
+}
+
+export default function LiveAdm11VehicleStatus() {
   return (
     <div className="frame frame--desktop mode-dispatcher" data-name="ADM-11 Vehicle status · desktop">
       <div className="d-app">
@@ -130,11 +143,7 @@ export default function LiveAdm11VehicleStatus() {
           </div>
         </div>
       </div>
-      <div className="dx-scrim" />
-      {!id && wrap(<Empty title="No vehicle chosen" text="Pick a vehicle in Vehicles to change its status." icon="truck" />)}
-      {id && vehicle.error && wrap(<ErrorBanner error={vehicle.error} onRetry={vehicle.refresh} />)}
-      {id && !vehicle.data && !vehicle.error && wrap(<Skeleton rows={4} />)}
-      {vehicle.data && <StatusForm key={vehicle.data.id} v={vehicle.data} />}
+      <VehicleStatusDrawer />
     </div>
   );
 }

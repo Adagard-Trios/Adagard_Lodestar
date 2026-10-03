@@ -50,7 +50,7 @@ function Who({ icon, title: t, sub, items }: { icon: 'box' | 'truck' | 'store'; 
   );
 }
 
-export default function LiveDsp12ApproveAndGoLive() {
+function Approve({ onClose, framed = false }: { onClose?: () => void; framed?: boolean }) {
   const { name: depotName } = useDepots();
   const nav = useScreenNav();
   const { session } = useAuth();
@@ -110,35 +110,9 @@ export default function LiveDsp12ApproveAndGoLive() {
   const error = approveDraft.error ?? approvePlan.error;
   const approve = () => (draft ? void approveDraft.run({ decision: 'approve' }) : pending ? void approvePlan.run(pending) : undefined);
 
-  return (
-    <div className="frame frame--desktop mode-dispatcher" data-name="DSP-12 Approve and go live · desktop">
-      <div className="d-app">
-        <PlanSide active="N2" />
-        <div className="d-main" style={{ flexDirection: 'row', gap: '20px' }}>
-          <div className="x-col" style={{ flex: '1', gap: '16px' }}>
-            <div className="d-head">
-              <div className="d-head__txt">
-                <div className="d-eyebrow">
-                  {draft ? 'Draft by planning agent ' : pending ? `${title(pending.source)} plan ` : 'Plan '}
-                  <span className="m-sep" />{version ? ` v${version} ` : ' '}<span className="m-sep" />
-                  <span className={`m-tag ${target ? 'm-tag--warn' : 'm-tag--ok'}`}><span className="dot" />{target ? 'waiting for your approval' : 'nothing waiting'}</span>
-                </div>
-                <div className="d-h1">Plan for {runDate ? fmtRunDate(runDate) : '…'}</div>
-              </div>
-            </div>
-            <div className="x-board">
-              <div className="x-lanehead">
-                <span style={{ width: '168px' }}>{"Vehicle · minutes"}</span>
-                <span style={{ flex: '1' }}>Trip 1{firstDepart ? ` · departs ${fmtTime(firstDepart)}` : ''}</span>
-                <span style={{ flex: '1' }}>{tripTwoHead(board.limits)}</span>
-              </div>
-              {board.loading && <Skeleton rows={3} />}
-              {board.lanes.slice(0, 6).map(([id, cs]) => <Lane key={id} vehicleId={id} cards={cs} v={board.vehicles.get(id)} limits={board.limits} />)}
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="dx-scrim" />
+  const dialog = (
+    <>
+      <div className="dx-scrim" onClick={onClose} />
       <div className="dx-modal" style={{ left: '270px', top: '118px', width: '900px' }} role="dialog" aria-modal="true" aria-labelledby="approve-title">
         <div className="dx-modal__head">
           <div className="vstack" style={{ gap: '6px', flex: '1' }}>
@@ -215,6 +189,47 @@ export default function LiveDsp12ApproveAndGoLive() {
           </Btn>
         </div>
       </div>
+    </>
+  );
+  if (!framed) return dialog;
+  return (
+    <div className="frame frame--desktop mode-dispatcher" data-name="DSP-12 Approve and go live · desktop">
+      <div className="d-app">
+        <PlanSide active="N2" />
+        <div className="d-main" style={{ flexDirection: 'row', gap: '20px' }}>
+          <div className="x-col" style={{ flex: '1', gap: '16px' }}>
+            <div className="d-head">
+              <div className="d-head__txt">
+                <div className="d-eyebrow">
+                  {draft ? 'Draft by planning agent ' : pending ? `${title(pending.source)} plan ` : 'Plan '}
+                  <span className="m-sep" />{version ? ` v${version} ` : ' '}<span className="m-sep" />
+                  <span className={`m-tag ${target ? 'm-tag--warn' : 'm-tag--ok'}`}><span className="dot" />{target ? 'waiting for your approval' : 'nothing waiting'}</span>
+                </div>
+                <div className="d-h1">Plan for {runDate ? fmtRunDate(runDate) : '…'}</div>
+              </div>
+            </div>
+            <div className="x-board">
+              <div className="x-lanehead">
+                <span style={{ width: '168px' }}>{"Vehicle · minutes"}</span>
+                <span style={{ flex: '1' }}>Trip 1{firstDepart ? ` · departs ${fmtTime(firstDepart)}` : ''}</span>
+                <span style={{ flex: '1' }}>{tripTwoHead(board.limits)}</span>
+              </div>
+              {board.loading && <Skeleton rows={3} />}
+              {board.lanes.slice(0, 6).map(([id, cs]) => <Lane key={id} vehicleId={id} cards={cs} v={board.vehicles.get(id)} limits={board.limits} />)}
+            </div>
+          </div>
+        </div>
+      </div>
+      {dialog}
     </div>
   );
+}
+
+/** The approve and go live dialog over the page it was opened from (OverlayHost); its own route shows it over the plan board. */
+export function ApproveDialog({ onClose }: { onClose?: () => void }) {
+  return <Approve onClose={onClose} />;
+}
+
+export default function LiveDsp12ApproveAndGoLive() {
+  return <Approve framed />;
 }

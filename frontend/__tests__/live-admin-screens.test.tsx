@@ -19,6 +19,7 @@ import ChainCheck from '@/live/adm-20-chain-check-result';
 import { freezeDate, unfreeze } from './helpers/clock';
 import type { FakeRequest } from './helpers/live';
 import { page, renderLive, SESSIONS } from './helpers/live';
+import { closeOverlay, currentOverlay } from '@/lib/overlay';
 
 const router = { push: jest.fn(), replace: jest.fn(), back: jest.fn(), forward: jest.fn(), refresh: jest.fn(), prefetch: jest.fn() };
 jest.mock('next/navigation', () => ({ useRouter: () => router, usePathname: () => '/admin' }));
@@ -128,13 +129,16 @@ describe('ADM-02 Overview', () => {
 
     fireEvent.click(document.querySelector('[data-lost="DEVOLD"]')!);
     expect(window.sessionStorage.getItem('lodestar.focus.device')).toBe('DEVOLD');
-    expect(router.push).toHaveBeenLastCalledWith('/admin/adm-07-lost-phone');
+    // the lost-phone and audit drawers open over the overview (components/live/overlay.tsx)
+    expect(currentOverlay()).toBe('/admin/adm-07-lost-phone');
+    act(() => closeOverlay());
     fireEvent.click(document.querySelector('[data-device="DEVP1"]')!);
     expect(window.sessionStorage.getItem('lodestar.focus.device')).toBe('DEVP1');
     expect(router.push).toHaveBeenLastCalledWith('/admin/adm-05-access-requests');
     fireEvent.click(document.querySelector('[data-audit="41"]')!);
     expect(window.sessionStorage.getItem('lodestar.focus.audit')).toBe('41');
-    expect(router.push).toHaveBeenLastCalledWith('/admin/adm-19-audit-entry-detail');
+    expect(currentOverlay()).toBe('/admin/adm-19-audit-entry-detail');
+    act(() => closeOverlay());
   });
 
   it('quiet day: nothing waiting; a broken chain is flagged', async () => {
@@ -214,7 +218,8 @@ describe('ADM-03 People and roles', () => {
 
     fireEvent.click(row('u3'));
     expect(window.sessionStorage.getItem('lodestar.focus.user')).toBe('u3');
-    expect(router.push).toHaveBeenCalledWith('/admin/adm-04-add-or-edit-person');
+    expect(currentOverlay()).toBe('/admin/adm-04-add-or-edit-person');
+    act(() => closeOverlay());
 
     // The design's locked row: a person with an open device request opens that request in ADM-05.
     fireEvent.click(row('u2'));
@@ -376,7 +381,8 @@ describe('ADM-06 Devices', () => {
 
     fireEvent.click(within(row('DEV2')).getByText('Old Phone', { exact: false }));
     expect(window.sessionStorage.getItem('lodestar.focus.device')).toBe('DEV2');
-    expect(router.push).toHaveBeenCalledWith('/admin/adm-07-lost-phone');
+    expect(currentOverlay()).toBe('/admin/adm-07-lost-phone');
+    act(() => closeOverlay());
     expect(view.calls.find(c => c.path === 'OfflineEvents')!.query.$filter).toBe('syncedAt eq null');
   });
 
@@ -449,7 +455,8 @@ describe('ADM-08 Outlets', () => {
     await waitFor(() => expect(foot).toHaveTextContent('Showing 2 of 2 · Kandy Hub 60 · Peliyagoda DC 90'));
     fireEvent.click(within(r2).getByText('Style Mall'));
     expect(window.sessionStorage.getItem('lodestar.focus.outlet')).toBe('OUT102');
-    expect(router.push).toHaveBeenCalledWith('/admin/adm-09-edit-outlet');
+    expect(currentOverlay()).toBe('/admin/adm-09-edit-outlet');
+    act(() => closeOverlay());
     expect(view.calls.find(c => c.path === 'Outlets' && c.query.$top === '30')!.query).toMatchObject({ $orderby: 'id', $count: 'true' });
   });
 

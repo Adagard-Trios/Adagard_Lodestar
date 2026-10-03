@@ -22,6 +22,9 @@ export interface ScreenNavApi {
 
 const NavContext = createContext<ScreenNavApi | null>(null);
 
+/** Gives a drawer shown outside any shell (components/live/overlay.tsx) its own navigation. */
+export const ScreenNavProvider = NavContext.Provider;
+
 /** Inside a live screen: the shell's navigation. Outside a shell (unit tests), a no-op. */
 export function useScreenNav(): ScreenNavApi {
   return useContext(NavContext) ?? { go: () => false, notify: () => undefined };

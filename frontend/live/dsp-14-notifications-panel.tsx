@@ -43,7 +43,8 @@ function describe(n: Notification) {
 
 const when = (v: string) => (fmtDay(v) === fmtDay(new Date()) ? fmtClock(v) : `${fmtDay(v).split(' ')[0]} ${fmtTime(v)}`);
 
-export default function LiveDsp14NotificationsPanel() {
+/** The notifications panel: over the page it was opened from (OverlayHost), or on its own route over an empty board. */
+export function NotificationsDrawer({ onClose }: { onClose?: () => void }) {
   const [tab, setTab] = useState<Tab>('all');
   const list = useEntitySet<Notification>('Notifications', { orderby: 'sentAt desc', top: 50 }, { refreshOn: ['notification'] });
   const markAll = useAction<string[], unknown>(async (c, ids) => {
@@ -85,12 +86,8 @@ export default function LiveDsp14NotificationsPanel() {
   };
 
   return (
-    <div className="frame frame--desktop mode-dispatcher" data-name="DSP-14 Notifications panel · desktop">
-      <div className="d-app">
-        <PlanSide active="N0" />
-        <div className="dx-main" />
-      </div>
-      <div className="dx-scrim" />
+    <>
+      <div className="dx-scrim" onClick={onClose} />
       <div className="dx-drawer" style={{ width: '440px' }} data-testid="notifications">
         <div className="dx-drawer__head" style={{ alignItems: 'center' }}>
           <div className="vstack" style={{ gap: '2px', flex: '1' }}>
@@ -127,6 +124,18 @@ export default function LiveDsp14NotificationsPanel() {
           <span className="d-btn"><Ic n="cog" />{"Alert rules"}</span>
         </div>
       </div>
+    </>
+  );
+}
+
+export default function LiveDsp14NotificationsPanel() {
+  return (
+    <div className="frame frame--desktop mode-dispatcher" data-name="DSP-14 Notifications panel · desktop">
+      <div className="d-app">
+        <PlanSide active="N0" />
+        <div className="dx-main" />
+      </div>
+      <NotificationsDrawer />
     </div>
   );
 }

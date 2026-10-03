@@ -16,7 +16,8 @@ import type { Device, OfflineEvent } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
 import { useDepots } from '@/components/live/depots';
 
-export default function LiveAdm07LostPhone() {
+/** The lost phone drawer: over the page it was opened from (OverlayHost), or on its own route over the page's head. */
+export function LostPhoneDrawer({ onClose }: { onClose?: () => void }) {
   const { name: depotName } = useDepots();
   const nav = useScreenNav();
   const [focus, setFocus] = useFocusId('device');
@@ -33,14 +34,8 @@ export default function LiveAdm07LostPhone() {
   const n = waiting.data?.length ?? 0;
 
   return (
-    <div className="frame frame--desktop mode-dispatcher" data-name="ADM-07 Lost phone · desktop">
-      <div className="d-app">
-        <AdminSide active="N3" />
-        <div className="dx-main">
-          <div className="d-head"><div className="d-head__txt"><div className="d-eyebrow">{"Devices"}</div><div className="d-h1">{"Devices"}</div></div></div>
-        </div>
-      </div>
-      <div className="dx-scrim" />
+    <>
+      <div className="dx-scrim" onClick={onClose} />
       <div className="dx-drawer" style={{ width: '620px' }} role="dialog" aria-modal="true" aria-labelledby="lost-title">
         <div className="dx-drawer__head">
           <span className="dx-lead dx-lead--bad" style={{ width: '44px', height: '44px' }}><Ic n="phone" /></span>
@@ -109,6 +104,20 @@ export default function LiveAdm07LostPhone() {
           </Btn>
         </div>
       </div>
+    </>
+  );
+}
+
+export default function LiveAdm07LostPhone() {
+  return (
+    <div className="frame frame--desktop mode-dispatcher" data-name="ADM-07 Lost phone · desktop">
+      <div className="d-app">
+        <AdminSide active="N3" />
+        <div className="dx-main">
+          <div className="d-head"><div className="d-head__txt"><div className="d-eyebrow">{"Devices"}</div><div className="d-h1">{"Devices"}</div></div></div>
+        </div>
+      </div>
+      <LostPhoneDrawer />
     </div>
   );
 }

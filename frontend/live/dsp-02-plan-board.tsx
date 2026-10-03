@@ -15,6 +15,7 @@ import { fmtNum, fmtRunDate, fmtTime, title } from '@/lib/format';
 import { usePlanningRules } from '@/components/live/planning-rules';
 import { useQuery } from '@/lib/odata/hooks';
 import type { AgentRunDetail, Plan } from '@/lib/odata/types';
+import { openOverlay } from '@/lib/overlay';
 
 export default function LiveDsp02PlanBoard() {
   const warnPct = usePlanningRules().data?.load.warnPct;
@@ -76,7 +77,7 @@ export default function LiveDsp02PlanBoard() {
                 className={`d-btn${toApprove ? '' : ' d-btn--disabled'}`}
                 disabled={!toApprove}
                 testId="to-approve"
-                onClick={() => router.push('/plan/dsp-12-approve-and-go-live')}
+                onClick={() => openOverlay('/plan/dsp-12-approve-and-go-live')}
               >
                 <Ic n="lock" />{"Approve & go live"}
               </Btn>

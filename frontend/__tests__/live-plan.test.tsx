@@ -9,6 +9,7 @@ import AskAgent from '@/live/dsp-39-ask-the-planning-agent';
 import SignIn from '@/live/dsp-06-sign-in';
 import type { FakeRequest } from './helpers/live';
 import { agentConfigReply, page, renderLive, SESSIONS } from './helpers/live';
+import { closeOverlay, currentOverlay } from '@/lib/overlay';
 
 const router = { push: jest.fn(), replace: jest.fn(), back: jest.fn(), forward: jest.fn(), refresh: jest.fn(), prefetch: jest.fn() };
 jest.mock('next/navigation', () => ({ useRouter: () => router, usePathname: () => '/plan' }));
@@ -135,7 +136,9 @@ describe('DSP-03 Deferral decision', () => {
     await screen.findByText('Defer 1 order to Thu');
     fireEvent.change(screen.getByLabelText('Note to store'), { target: { value: 'Covered till Wednesday' } });
     fireEvent.click(screen.getByTestId('confirm-all'));
-    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/plan/dsp-12-approve-and-go-live'));
+    // approval opens over the deferral decision (components/live/overlay.tsx)
+    await waitFor(() => expect(currentOverlay()).toBe('/plan/dsp-12-approve-and-go-live'));
+    act(() => closeOverlay());
     expect(view.calls.find(c => c.method === 'POST')).toMatchObject({ path: "Deferrals('DT1')/Lodestar.Confirm", body: { notes: 'Covered till Wednesday', rescheduledDate: '2026-04-09' } });
     expect(view.calls.find(c => c.path === 'Calendar')!.query).toMatchObject({ $filter: 'date gt 2026-04-07T00:00:00Z and isOperating eq true', $top: '1' });
     expect(view.calls.find(c => c.path === 'Deferrals' && c.query.$expand === 'order')!.query.$filter).toContain("order/outlet/depot eq 'KANDY'");

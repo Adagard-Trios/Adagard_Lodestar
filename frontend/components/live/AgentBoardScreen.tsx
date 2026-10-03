@@ -11,6 +11,7 @@ import { useReviewRun, usePlanScope, useStartAgentRun } from './plan-data';
 import { Empty, ErrorBanner, Skeleton } from './states';
 import { fmtNum, fmtRunDate, fmtTime } from '@/lib/format';
 import { useDepots } from './depots';
+import { openOverlay } from '@/lib/overlay';
 
 export default function AgentBoardScreen({ name, mode }: { name: string; mode: 'ask' | 'proposal' }) {
   const { name: depotName } = useDepots();
@@ -40,7 +41,7 @@ export default function AgentBoardScreen({ name, mode }: { name: string; mode: '
               <div className="d-h1">Plan for {scope.runDate ? fmtRunDate(scope.runDate) : '…'}</div>
             </div>
             <span className="d-btn ag-btn-on" data-lk={mode === 'proposal' ? 'L160' : undefined} aria-current={mode === 'proposal' ? undefined : 'page'} aria-disabled={mode === 'proposal' ? undefined : true}><Ic n="sparkle-plus" />{"Ask the agent"}</span>
-            <Btn className={`d-btn${waiting ? '' : ' d-btn--disabled'}`} disabled={!waiting} onClick={() => router.push('/plan/dsp-12-approve-and-go-live')}><Ic n="lock" />{"Approve & go live"}</Btn>
+            <Btn className={`d-btn${waiting ? '' : ' d-btn--disabled'}`} disabled={!waiting} onClick={() => openOverlay('/plan/dsp-12-approve-and-go-live')}><Ic n="lock" />{"Approve & go live"}</Btn>
             <Btn className="d-btn d-btn--primary" onClick={() => router.push('/plan/dsp-03-deferral-decision')}><Ic n="history" />Review deferrals{deferrals.length ? ` (${deferrals.length})` : ''}</Btn>
           </div>
           <ErrorBanner error={run.error ?? start.error} onRetry={run.refresh} />

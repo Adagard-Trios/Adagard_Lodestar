@@ -19,7 +19,8 @@ function fields(payload: unknown): Array<[string, string]> {
   return Object.entries(payload as Record<string, unknown>).map(([k, v]) => [k, typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v)]);
 }
 
-export default function LiveAdm19AuditEntryDetail() {
+/** The audit entry drawer: over the page it was opened from (OverlayHost), or on its own route over the page's head. */
+export function AuditEntryDrawer({ onClose }: { onClose?: () => void }) {
   const [focus] = useFocusId('audit');
   const newest = useQuery<number | null>(focus ? null : 'audit-newest', async c => (await c.list<AuditEntry>('AuditEntries', { select: 'seq', orderby: 'seq desc', top: 1 })).value[0]?.seq ?? null);
   const seq = focus ? Number(focus) : newest.data ?? null;
@@ -45,12 +46,8 @@ export default function LiveAdm19AuditEntryDetail() {
   };
 
   return (
-    <div className="frame frame--desktop mode-dispatcher" data-name="ADM-19 Audit entry detail · desktop">
-      <div className="d-app">
-        <AdminSide active="N9" />
-        <div className="dx-main"><div className="d-head"><div className="d-head__txt"><div className="d-eyebrow">{"Trust"}</div><div className="d-h1">{"Audit log"}</div></div></div></div>
-      </div>
-      <div className="dx-scrim" />
+    <>
+      <div className="dx-scrim" onClick={onClose} />
       <div className="dx-drawer" style={{ width: '700px' }} role="dialog" aria-modal="true" aria-labelledby="entry-title" data-testid="audit-entry">
         <div className="dx-drawer__head">
           <span className="dx-lead"><Ic n="history" /></span>
@@ -118,6 +115,18 @@ export default function LiveAdm19AuditEntryDetail() {
           <Btn className="d-btn d-btn--primary" disabled={!e} onClick={exportEntry}><Ic n="download" />{"Export this entry"}</Btn>
         </div>
       </div>
+    </>
+  );
+}
+
+export default function LiveAdm19AuditEntryDetail() {
+  return (
+    <div className="frame frame--desktop mode-dispatcher" data-name="ADM-19 Audit entry detail · desktop">
+      <div className="d-app">
+        <AdminSide active="N9" />
+        <div className="dx-main"><div className="d-head"><div className="d-head__txt"><div className="d-eyebrow">{"Trust"}</div><div className="d-h1">{"Audit log"}</div></div></div></div>
+      </div>
+      <AuditEntryDrawer />
     </div>
   );
 }

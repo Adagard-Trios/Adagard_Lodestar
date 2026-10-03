@@ -20,6 +20,7 @@ import { IMPORT_FILES, type DataImport } from '@/components/live/settings-data';
 import type { AuditEntry, ChainCheck, Device, OfflineEvent, Plan } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
 import { useDepots } from '@/components/live/depots';
+import { openOverlay } from '@/lib/overlay';
 
 const inList = (ids: string[]) => ids.map(i => `'${i.replace(/'/g, "''")}'`).join(',');
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -62,8 +63,8 @@ export default function LiveAdm02Overview() {
   const needs = (pending.data?.length ?? 0) + (denied.data?.length ?? 0) + lostN;
   const first0 = lost.data?.[0];
   const openRequest = (d: Device) => { setDevice(d.id); router.push('/admin/adm-05-access-requests'); };
-  const openLost = (d: Device) => { setDevice(d.id); if (!nav.go('L285')) router.push('/admin/adm-07-lost-phone'); };
-  const openAudit = (a: AuditEntry) => { setAudit(String(a.seq)); router.push('/admin/adm-19-audit-entry-detail'); };
+  const openLost = (d: Device) => { setDevice(d.id); if (!nav.go('L285')) openOverlay('/admin/adm-07-lost-phone'); };
+  const openAudit = (a: AuditEntry) => { setAudit(String(a.seq)); openOverlay('/admin/adm-19-audit-entry-detail'); };
   const click = (fn: () => void) => ({
     role: 'button' as const, tabIndex: 0,
     onClick: (e: { stopPropagation(): void }) => { e.stopPropagation(); fn(); },

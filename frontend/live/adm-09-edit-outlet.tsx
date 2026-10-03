@@ -87,10 +87,23 @@ function OutletForm({ outlet }: { outlet: Outlet & { '@odata.etag'?: string } })
   );
 }
 
-export default function LiveAdm09EditOutlet() {
+/** The outlet drawer: over the page it was opened from (OverlayHost), or on its own route over the page's head. */
+export function OutletDrawer({ onClose }: { onClose?: () => void }) {
   const [id] = useFocusId('outlet');
   const outlet = useEntity<Outlet>('Outlets', id);
   const wrap = (body: ReactNode) => <div className="dx-drawer" style={{ width: '620px' }}><div className="dx-drawer__body">{body}</div></div>;
+  return (
+    <>
+      <div className="dx-scrim" onClick={onClose} />
+      {!id && wrap(<Empty title="No outlet chosen" text="Pick an outlet in Outlets to change its window." icon="store" />)}
+      {id && outlet.error && wrap(<ErrorBanner error={outlet.error} onRetry={outlet.refresh} />)}
+      {id && !outlet.data && !outlet.error && wrap(<Skeleton rows={4} />)}
+      {outlet.data && <OutletForm key={outlet.data.id} outlet={outlet.data} />}
+    </>
+  );
+}
+
+export default function LiveAdm09EditOutlet() {
   return (
     <div className="frame frame--desktop mode-dispatcher" data-name="ADM-09 Edit outlet · desktop">
       <div className="d-app">
@@ -105,11 +118,7 @@ export default function LiveAdm09EditOutlet() {
           </div>
         </div>
       </div>
-      <div className="dx-scrim" />
-      {!id && wrap(<Empty title="No outlet chosen" text="Pick an outlet in Outlets to change its window." icon="store" />)}
-      {id && outlet.error && wrap(<ErrorBanner error={outlet.error} onRetry={outlet.refresh} />)}
-      {id && !outlet.data && !outlet.error && wrap(<Skeleton rows={4} />)}
-      {outlet.data && <OutletForm key={outlet.data.id} outlet={outlet.data} />}
+      <OutletDrawer />
     </div>
   );
 }

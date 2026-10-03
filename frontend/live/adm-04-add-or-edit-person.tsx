@@ -159,9 +159,21 @@ function PersonForm({ person }: { person: (User & { '@odata.etag'?: string }) | 
   );
 }
 
-export default function LiveAdm04AddOrEditPerson() {
+/** The person drawer: over the page it was opened from (OverlayHost), or on its own route over the page's head. */
+export function PersonDrawer({ onClose }: { onClose?: () => void }) {
   const [id] = useFocusId('user');
   const person = useEntity<User>('Users', id);
+  return (
+    <>
+      <div className="dx-scrim" onClick={onClose} />
+      {id && person.error && <div className="dx-drawer" style={{ width: '600px' }}><div className="dx-drawer__body"><ErrorBanner error={person.error} onRetry={person.refresh} /></div></div>}
+      {id && !person.data && !person.error && <div className="dx-drawer" style={{ width: '600px' }}><div className="dx-drawer__body"><Skeleton rows={4} /></div></div>}
+      {(!id || person.data) && <PersonForm key={person.data?.id ?? 'new'} person={id ? person.data ?? null : null} />}
+    </>
+  );
+}
+
+export default function LiveAdm04AddOrEditPerson() {
   return (
     <div className="frame frame--desktop mode-dispatcher" data-name="ADM-04 Add or edit person · desktop">
       <div className="d-app">
@@ -175,10 +187,7 @@ export default function LiveAdm04AddOrEditPerson() {
           </div>
         </div>
       </div>
-      <div className="dx-scrim" />
-      {id && person.error && <div className="dx-drawer" style={{ width: '600px' }}><div className="dx-drawer__body"><ErrorBanner error={person.error} onRetry={person.refresh} /></div></div>}
-      {id && !person.data && !person.error && <div className="dx-drawer" style={{ width: '600px' }}><div className="dx-drawer__body"><Skeleton rows={4} /></div></div>}
-      {(!id || person.data) && <PersonForm key={person.data?.id ?? 'new'} person={id ? person.data ?? null : null} />}
+      <PersonDrawer />
     </div>
   );
 }

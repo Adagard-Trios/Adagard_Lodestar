@@ -30,7 +30,8 @@ function colombo(v: string): { hour: number; min: number } {
 const toMin = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + (m || 0); };
 const clock = (min: number) => `${Math.floor(min / 60)}:${String(min % 60).padStart(2, '0')}`;
 
-export default function LiveDsp15LateRiskExplainer() {
+/** The late-risk explainer: over the page it was opened from (OverlayHost), or on its own route over an empty board. */
+export function LateRiskDrawer({ onClose }: { onClose?: () => void }) {
   const levels = usePlanningRules().data?.lateRisk;
   const nav = useScreenNav();
   const { runDate, tripsFilter } = usePlanScope();
@@ -74,12 +75,8 @@ export default function LiveDsp15LateRiskExplainer() {
   let cum = 0;
 
   return (
-    <div className="frame frame--desktop mode-dispatcher" data-name="DSP-15 Late-risk explainer · desktop">
-      <div className="d-app">
-        <PlanSide active="N4" />
-        <div className="d-main" />
-      </div>
-      <div className="dx-scrim" />
+    <>
+      <div className="dx-scrim" onClick={onClose} />
       <div className="dx-drawer" style={{ width: '640px' }} data-testid="late-risk">
         <div className="dx-drawer__head">
           <span className="dx-lead dx-lead--warn" style={{ width: '44px', height: '44px' }}><Ic n="alert" /></span>
@@ -176,6 +173,18 @@ export default function LiveDsp15LateRiskExplainer() {
           <span className="d-btn d-btn--primary" data-lk="L58"><Ic n="truck" />{"Hold space on a later run"}</span>
         </div>
       </div>
+    </>
+  );
+}
+
+export default function LiveDsp15LateRiskExplainer() {
+  return (
+    <div className="frame frame--desktop mode-dispatcher" data-name="DSP-15 Late-risk explainer · desktop">
+      <div className="d-app">
+        <PlanSide active="N4" />
+        <div className="d-main" />
+      </div>
+      <LateRiskDrawer />
     </div>
   );
 }

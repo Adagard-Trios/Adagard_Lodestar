@@ -178,6 +178,13 @@ export interface QueryOptionsExt {
   pollMs?: number;
 }
 
+// every query on screen, so a drawer that changed data over a page can have the page read its data again
+const refreshers = new Set<() => void>();
+/** Reload every query on screen (a drawer opened over the page saved a change, components/live/overlay.tsx). */
+export function refreshQueries() {
+  refreshers.forEach(r => r());
+}
+
 const asError = (e: unknown) => (e instanceof ODataError ? e : new ODataError(0, { code: 'ClientError', message: (e as Error)?.message ?? String(e) }));
 
 /**
@@ -212,6 +219,12 @@ export function useQuery<T>(key: string | null, fetcher: (c: ODataClient) => Pro
   useRealtime(opts.refreshOn, () => {
     void run();
   });
+
+  useEffect(() => {
+    const r = () => void run();
+    refreshers.add(r);
+    return () => { refreshers.delete(r); };
+  }, [run]);
 
   useEffect(() => {
     if (!opts.pollMs || key === null) return;

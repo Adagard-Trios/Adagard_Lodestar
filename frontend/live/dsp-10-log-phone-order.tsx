@@ -53,7 +53,7 @@ function Check({ on, label, disabled, onToggle }: { on: boolean; label: string; 
   );
 }
 
-export default function LiveDsp10LogPhoneOrder() {
+function PhoneOrder({ onClose, framed = false }: { onClose?: () => void; framed?: boolean }) {
   const cutoff = usePlanningRules().data?.cutoff;
   const cutoffLabel = cutoff ? clock12(cutoff) : '…';
   const { name: depotName } = useDepots();
@@ -136,20 +136,9 @@ export default function LiveDsp10LogPhoneOrder() {
   const setLine = (key: number, k: 'name' | 'qty' | 'kg', v: string) => setLines(ls => ls.map(l => (l.key === key ? { ...l, [k]: v } : l)));
   const addLine = () => setLines(ls => [...ls, { key: Math.max(0, ...ls.map(l => l.key)) + 1, name: '', qty: '', kg: '' }]);
 
-  return (
-    <div className="frame frame--desktop mode-dispatcher" data-name="DSP-10 Log phone order · desktop">
-      <div className="d-app">
-        <PlanSide active="N1" />
-        <div className="d-main">
-          <div className="d-head">
-            <div className="d-head__txt">
-              <div className="d-eyebrow">{`Orders ${late ? 'closed' : 'close'} ${cutoffLabel}`}<span className="m-sep" />{active.map(d => depotName(d)).join(' + ')}</div>
-              <div className="d-h1">Cutoff queue for {runDate ? fmtRunDate(runDate) : '…'}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="dx-scrim" />
+  const dialog = (
+    <>
+      <div className="dx-scrim" onClick={onClose} />
       <div className="dx-modal" style={{ left: '370px', top: '92px', width: '700px' }} role="dialog" aria-modal="true" aria-labelledby="phone-order-title">
         <div className="dx-modal__head">
           <span className="dx-lead"><Ic n="call" /></span>
@@ -256,6 +245,32 @@ export default function LiveDsp10LogPhoneOrder() {
           </Btn>
         </div>
       </div>
+    </>
+  );
+  if (!framed) return dialog;
+  return (
+    <div className="frame frame--desktop mode-dispatcher" data-name="DSP-10 Log phone order · desktop">
+      <div className="d-app">
+        <PlanSide active="N1" />
+        <div className="d-main">
+          <div className="d-head">
+            <div className="d-head__txt">
+              <div className="d-eyebrow">{`Orders ${late ? 'closed' : 'close'} ${cutoffLabel}`}<span className="m-sep" />{active.map(d => depotName(d)).join(' + ')}</div>
+              <div className="d-h1">Cutoff queue for {runDate ? fmtRunDate(runDate) : '…'}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {dialog}
     </div>
   );
+}
+
+/** The log phone order dialog over the page it was opened from (OverlayHost); its own route shows it over the cutoff queue head. */
+export function PhoneOrderDialog({ onClose }: { onClose?: () => void }) {
+  return <PhoneOrder onClose={onClose} />;
+}
+
+export default function LiveDsp10LogPhoneOrder() {
+  return <PhoneOrder framed />;
 }

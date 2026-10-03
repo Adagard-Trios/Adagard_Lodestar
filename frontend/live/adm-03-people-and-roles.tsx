@@ -16,6 +16,7 @@ import { useEntitySet } from '@/lib/odata/hooks';
 import type { User, UserRole } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
 import { useDepots } from '@/components/live/depots';
+import { openOverlay } from '@/lib/overlay';
 
 const SIGN_IN: Record<UserRole, string> = {
   DISPATCHER: 'Work email + 2-step', ADMIN: 'Work email + 2-step', LOADER: 'Staff ID on a registered device',
@@ -52,7 +53,7 @@ export default function LiveAdm03PeopleAndRoles() {
       return;
     }
     setFocus(u.id);
-    router.push('/admin/adm-04-add-or-edit-person');
+    openOverlay('/admin/adm-04-add-or-edit-person');
   };
 
   return (
