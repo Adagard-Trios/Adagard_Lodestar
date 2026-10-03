@@ -6,6 +6,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode, type MouseEvent, type KeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDesignMode } from '@/lib/mode';
+import { isOverlayRoute, openOverlay } from '@/lib/overlay';
 
 type Target = { href?: string; app?: string; screen?: string; kind?: string };
 export type ScreenNav = { links: Record<string, Target>; auto?: Target; whole?: Target };
@@ -35,7 +36,9 @@ export default function ScreenShell({ board, nav, live = false, children }: { bo
   const go = useCallback((t: Target | undefined) => {
     if (!t) return;
     if (t.href) {
-      if (t.kind === 'back' && window.history.length > 1 && document.referrer.startsWith(window.location.origin)) router.back();
+      // a drawer opens over this page rather than on its own route (components/live/overlay.tsx)
+      if (t.kind === 'go' && isOverlayRoute(t.href) && !window.location.pathname.startsWith(t.href)) openOverlay(t.href);
+      else if (t.kind === 'back' && window.history.length > 1 && document.referrer.startsWith(window.location.origin)) router.back();
       else if (t.kind === 'nav') router.replace(t.href);
       else router.push(t.href);
     } else if (t.app) setToast(t);

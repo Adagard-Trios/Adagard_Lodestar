@@ -2,7 +2,8 @@
 // vehicle drawer, DSP-14 Notifications panel, plus the parents passing the opened order (DSP-01, DSP-18). Real
 // ODataClient over a fake fetch: assertions on requests are at the HTTP level. Date is frozen at Mon 6 Apr 2026
 // 13:30 (Colombo).
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { closeOverlay, currentOverlay } from '@/lib/overlay';
 import ScreenShell from '@/components/ScreenShell';
 import CutoffQueue from '@/live/dsp-01-cutoff-queue';
 import CapacityOutlook from '@/live/dsp-05-capacity-outlook';
@@ -223,7 +224,10 @@ describe('DSP-09 Order detail drawer', () => {
     const queue = await screen.findByTestId('queue');
     fireEvent.click(queue.querySelector('[data-order="ORDT5"]')!);
     expect(window.sessionStorage.getItem('lodestar.focus.order')).toBe('ORDT5');
-    expect(router.push).toHaveBeenCalledWith('/plan/dsp-09-order-detail-drawer');
+    // the drawer opens over the queue (lib/overlay.ts), not on its own route
+    expect(router.push).not.toHaveBeenCalledWith('/plan/dsp-09-order-detail-drawer');
+    expect(currentOverlay()).toBe('/plan/dsp-09-order-detail-drawer');
+    act(() => closeOverlay());
     first.unmount();
 
     window.sessionStorage.setItem('lodestar.focus.outlet', 'OUTT01');
@@ -234,6 +238,8 @@ describe('DSP-09 Order detail drawer', () => {
     renderLive(<ScreenShell board="P2" nav={nav({ L169: '/plan/dsp-09-order-detail-drawer' })} live><OutletProfile /></ScreenShell>, { handler: p });
     fireEvent.click(await screen.findByText('ORDT7'));
     expect(window.sessionStorage.getItem('lodestar.focus.order')).toBe('ORDT7');
+    expect(currentOverlay()).toBe('/plan/dsp-09-order-detail-drawer');
+    act(() => closeOverlay());
   });
 });
 

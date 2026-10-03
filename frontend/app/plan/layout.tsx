@@ -4,12 +4,14 @@
 import type { ReactNode } from 'react';
 import DeskWatch from '@/components/live/DeskWatch';
 import FaceGate from '@/components/live/FaceGate';
+import OverlayHost from '@/components/live/overlay';
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
     <FaceGate face="plan">
       <DeskWatch face="plan" />
       {children}
+      <OverlayHost />
     </FaceGate>
   );
 }

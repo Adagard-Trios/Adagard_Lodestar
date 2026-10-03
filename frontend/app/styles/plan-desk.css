@@ -114,3 +114,11 @@
 @media (prefers-reduced-motion: reduce) {
   .b-P2 .d-app > .d-side, .b-P2 .d-app > .d-side.is-open { transition: none !important; }
 }
+
+/* Drawers opened over the current page (components/live/overlay.tsx): the drawer and its scrim cover the viewport. */
+.pl-overlay { position: fixed; inset: 0; z-index: 1000; }
+.pl-overlay > .dx-scrim, .pl-overlay > .dx-drawer { position: fixed; top: 0 !important; bottom: 0; }
+.pl-overlay > .dx-drawer { right: 0; width: min(580px, 100vw); max-width: 100vw; animation: pl-drawer-in .18s ease-out; }
+.pl-overlay .dx-drawer__body { overflow-y: auto; }
+@keyframes pl-drawer-in { from { transform: translateX(24px); opacity: .6; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .pl-overlay > .dx-drawer { animation: none; } }

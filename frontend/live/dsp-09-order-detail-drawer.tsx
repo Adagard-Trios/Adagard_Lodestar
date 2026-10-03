@@ -44,7 +44,8 @@ function steps(o: OrderX, deferral: Deferral | null | undefined, plan: Plan | nu
   return out;
 }
 
-export default function LiveDsp09OrderDetailDrawer() {
+/** The order drawer: over the page it was opened from (OverlayHost), or on its own route over an empty board. */
+export function OrderDrawer({ onClose }: { onClose?: () => void }) {
   const { ordersFilter } = usePlanScope();
   const [focus] = useFocusId('order');
   const [, setOutlet] = useFocusId('outlet');
@@ -81,12 +82,8 @@ export default function LiveDsp09OrderDetailDrawer() {
   ].filter(Boolean) as Array<{ key: string; icon: IconName; tone?: string; at?: string | null; text: React.ReactNode }> : [];
 
   return (
-    <div className="frame frame--desktop mode-dispatcher" data-name="DSP-09 Order detail drawer · desktop">
-      <div className="d-app">
-        <PlanSide active="N1" />
-        <div className="d-main" />
-      </div>
-      <div className="dx-scrim" />
+    <>
+      <div className="dx-scrim" onClick={onClose} />
       <div className="dx-drawer" data-testid="order-drawer">
         <div className="dx-drawer__head">
           {o && <span className={`bb bb--${o.brand.toLowerCase()} bb--lg`}>{BRAND_LETTER[o.brand]}</span>}
@@ -190,6 +187,18 @@ export default function LiveDsp09OrderDetailDrawer() {
           <span className="d-btn d-btn--primary" data-lk="L153"><Ic n="grid" />{"Open on plan board"}</span>
         </div>
       </div>
+    </>
+  );
+}
+
+export default function LiveDsp09OrderDetailDrawer() {
+  return (
+    <div className="frame frame--desktop mode-dispatcher" data-name="DSP-09 Order detail drawer · desktop">
+      <div className="d-app">
+        <PlanSide active="N1" />
+        <div className="d-main" />
+      </div>
+      <OrderDrawer />
     </div>
   );
 }
