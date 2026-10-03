@@ -6,6 +6,8 @@ coverage
 **/.env
 **/.env.*
 apps/agent
+apps/ml
+apps/ocr
 apps/gateway
 identity
 tools

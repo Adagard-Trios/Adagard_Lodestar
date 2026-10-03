@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     azure_openai_api_key: SecretStr | None = Field(default=None, alias="AZURE_OPENAI_API_KEY")
     azure_openai_deployment: str | None = Field(default=None, alias="AZURE_OPENAI_DEPLOYMENT")
     azure_openai_api_version: str | None = Field(default=None, alias="AZURE_OPENAI_API_VERSION")
+    # one LLM call (phrasing an explanation or answer); on timeout the deterministic text is used
+    azure_openai_timeout_s: float = Field(default=20.0, alias="AZURE_OPENAI_TIMEOUT_S")
 
     # Persistence
     database_url: SecretStr | None = Field(default=None, alias="DATABASE_URL")
@@ -62,6 +64,10 @@ class Settings(BaseSettings):
     # Planning
     max_redrafts: int = Field(default=3, alias="AGENT_MAX_REDRAFTS")
     first_departure: str = Field(default="03:30", alias="AGENT_FIRST_DEPARTURE")
+
+    # ML service (Task 1 stop model): empty = disabled, the drafts keep the heuristic service time / ETA / late risk
+    ml_url: str = Field(default="", alias="ML_URL")
+    ml_timeout_s: float = Field(default=5.0, alias="ML_TIMEOUT_S")
 
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 

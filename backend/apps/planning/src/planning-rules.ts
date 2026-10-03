@@ -117,10 +117,56 @@ export function latenessAuc(rows: StopOutcome[]): Measured {
   return { value: Math.round((wins / (pos.length * neg.length)) * 100) / 100, n: scored.length };
 }
 
+export interface WeekOutcome {
+  depot: string;
+  weekStart: Date;
+  forecastM3: number;
+  actualM3: number;
+}
+
+/** Weighted absolute percentage error of weekly forecasts: Σ|forecast − actual| / Σ actual, in %. */
+export function demandWape(rows: WeekOutcome[]): Measured {
+  if (!rows.length) return { value: null, n: 0, reason: 'No stored forecast covers a week that is over yet' };
+  const actual = rows.reduce((s, r) => s + r.actualM3, 0);
+  if (actual <= 0) return { value: null, n: rows.length, reason: 'No volume was delivered in the forecast weeks' };
+  const err = rows.reduce((s, r) => s + Math.abs(r.forecastM3 - r.actualM3), 0);
+  return { value: Math.round((err / actual) * 1000) / 10, n: rows.length };
+}
+
+const WEEK_MS = 7 * 86_400_000;
+
+/**
+ * Stored weekly forecasts (DemandForecast) of weeks that are over, against the m³ the depot's orders of that
+ * week (cancelled ones left out, as the outlook's history) came to. The demand model's forecasts are scored
+ * when there are any; otherwise the heuristic's.
+ */
+export async function measureDemand(prisma: PrismaService, depots: string[] | null, at: Date = new Date()) {
+  if (!prisma.demandForecast) return { source: null, measured: demandWape([]) };
+  const done = new Date(at.getTime() - WEEK_MS);
+  const stored = await prisma.demandForecast.findMany({
+    where: { weekStart: { lte: done }, ...(depots ? { depot: { in: depots } } : {}) },
+    select: { depot: true, weekStart: true, source: true, totalM3: true },
+  });
+  const source = stored.some((f) => f.source === 'model') ? 'model' : stored.length ? 'history-median' : null;
+  const rows: WeekOutcome[] = [];
+  for (const f of stored.filter((x) => x.source === source)) {
+    const agg = await prisma.order.aggregate({
+      where: {
+        runDate: { gte: f.weekStart, lt: new Date(f.weekStart.getTime() + WEEK_MS) },
+        outlet: { depot: f.depot },
+        status: { not: 'CANCELLED' as any },
+      },
+      _sum: { m3: true },
+    });
+    rows.push({ depot: f.depot, weekStart: f.weekStart, forecastM3: f.totalM3, actualM3: agg._sum.m3 ?? 0 });
+  }
+  return { source, measured: demandWape(rows) };
+}
+
 /**
  * Measured quality of the estimators over the caller's depots (null depots = all): service-time MAE and
- * lateness AUC from stops that have both a prediction and an outcome. The demand forecast stores no past
- * forecasts, so its WAPE is not measured.
+ * lateness AUC from stops that have both a prediction and an outcome; demand WAPE from the stored weekly
+ * forecasts of weeks that are over (measureDemand).
  */
 export async function measureModels(prisma: PrismaService, depots: string[] | null) {
   const stops = await prisma.tripStop.findMany({
@@ -134,9 +180,10 @@ export async function measureModels(prisma: PrismaService, depots: string[] | nu
     serviceMinPredicted: s.serviceMinPredicted, lateRiskPct: s.lateRiskPct, arrivalActual: s.arrivalActual, leaveActual: s.leaveActual,
     runDate: s.trip.runDate, windowClose: s.outlet.windowClose,
   }));
+  const demand = await measureDemand(prisma, depots);
   return {
     serviceTime: { target: MODEL_TARGETS.serviceTime, measured: serviceTimeMae(rows) },
     lateness: { target: MODEL_TARGETS.lateness, measured: latenessAuc(rows) },
-    demand: { target: MODEL_TARGETS.demand, measured: { value: null, n: 0, reason: 'No past forecasts are stored to score against delivered volume' } as Measured },
+    demand: { target: MODEL_TARGETS.demand, measured: demand.measured, source: demand.source },
   };
 }

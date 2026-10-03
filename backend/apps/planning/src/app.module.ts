@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ODataModule } from '@lodestar/odata';
-import { PlatformModule } from '@lodestar/platform';
+import { MlClient, PlatformModule } from '@lodestar/platform';
 import { AgentClient } from './agent.client';
 import { CapacityService } from './capacity.service';
 import { DeferralScoringService } from './deferral-scoring.service';
@@ -14,7 +14,7 @@ import { AgentRunsSet, DeferralsSet, PlansSet } from './planning.sets';
     ODataModule.forRoot({
       service: 'planning',
       entitySets: [PlansSet, DeferralsSet, AgentRunsSet],
-      providers: [PlanningService, DeferralScoringService, CapacityService, EtaService, AgentClient],
+      providers: [PlanningService, DeferralScoringService, CapacityService, EtaService, AgentClient, MlClient],
     }),
   ],
 })

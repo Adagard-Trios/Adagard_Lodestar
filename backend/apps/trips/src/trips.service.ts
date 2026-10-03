@@ -2,12 +2,13 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@lodestar/prisma';
 import { ODataError } from '@lodestar/odata';
 import { OrderStatus, Prisma, TripStatus } from '@prisma/client';
-import { runDateRange } from '@lodestar/platform';
+import { MlClient, runDateRange } from '@lodestar/platform';
 import {
   announceStopIssue, CLOSED_STOP_STATUSES, depotDispatchers, NOTIFY, NotifyClient, podExceptionsWithStoreCount, podOutcome, recordArrival, recordDeparture,
-  storeManagers,
+  linkPodPhotos, storeManagers,
 } from '@lodestar/security';
 import { FleetClient } from './fleet.client';
+import { modelLateRiskPct } from './ml-late-risk';
 
 /** Stored window [start, end) of a run date (YYYY-MM-DD, or a Date read in Sri Lanka time). */
 export function dayRange(runDate: string | Date) {
@@ -84,6 +85,7 @@ export class TripsService {
     private prisma: PrismaService,
     @Inject(NOTIFY) private notify: NotifyClient,
     private fleet: FleetClient,
+    private ml: MlClient = new MlClient(),
   ) {}
 
   /** Loader: trips of a depot and run date in bay order (bay queue). */
@@ -260,6 +262,8 @@ export class TripsService {
       });
     });
     await this.announcePod(stopId, podData);
+    // photos the phone uploaded before this POD (POST /media/pod-photos) now count on it
+    await this.progress(() => linkPodPhotos(this.prisma, stopId));
     if (before) {
       await this.progress(async () => {
         // an arrival sent with the POD (no Arrive call before) moves the later stops first
@@ -303,9 +307,18 @@ export class TripsService {
     });
   }
 
-  /** Blackout: update late risk for a stop (DSP-A1) */
+  /**
+   * Blackout: update late risk for a stop (DSP-A1). When the ML service answers, the Task 1 model's late risk of
+   * the stop on its planned schedule is the floor: the reported figure (what the road says now) can raise it,
+   * never lower it below what the model expects anyway. Without the model the reported figure is stored as given.
+   */
   async updateLateRisk(stopId: string, lateRiskPct: number) {
-    return this.prisma.tripStop.update({ where: { id: stopId }, data: { lateRiskPct } });
+    const modelPct = await modelLateRiskPct(this.prisma, this.ml, stopId).catch((e) => {
+      this.logger.warn(`Model late risk not used for ${stopId}: ${(e as Error).message}`);
+      return null;
+    });
+    const pct = modelPct === null ? lateRiskPct : Math.max(lateRiskPct, modelPct);
+    return this.prisma.tripStop.update({ where: { id: stopId }, data: { lateRiskPct: pct } });
   }
 
   async updateShortfalls(tripId: string, shortfalls: unknown[], flaggedBy?: string) {

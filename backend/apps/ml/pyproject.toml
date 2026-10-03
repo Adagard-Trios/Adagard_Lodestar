@@ -1,0 +1,13 @@
+[project]
+name = "lodestar-ml"
+version = "0.1.0"
+description = "Waypoint Lodestar ML: serves the Adagard datathon models (stop service time + late risk, weekly demand) from a mounted directory."
+requires-python = ">=3.13"
+
+[tool.setuptools.packages.find]
+include = ["lodestar_ml*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]

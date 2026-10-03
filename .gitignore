@@ -27,6 +27,10 @@ Thumbs.db
 data/
 *.csv
 
+# Datathon work and trained models: served from a mounted directory (ML_MODELS_DIR), never committed or baked in
+datathon/
+*.pkl
+
 # Test coverage output
 coverage/
 
