@@ -87,7 +87,14 @@ export function Loadable<T>({
 }
 
 /** A full-window state outside any face (gate, sign-in callback). */
-export function GateScreen({ title, text, busy, action }: { title: string; text?: string; busy?: boolean; action?: { label: string; onClick: () => void } }) {
+export function GateScreen({ title, text, busy, action, link }: {
+  title: string;
+  text?: string;
+  busy?: boolean;
+  action?: { label: string; onClick: () => void };
+  /** A full-page link (outside the Next app, e.g. the field app at /field/), shown first as the main way on. */
+  link?: { label: string; href: string };
+}) {
   return (
     <main className="lv-gate" data-state={busy ? 'loading' : 'notice'}>
       <div className="lv-gate__card">
@@ -98,8 +105,13 @@ export function GateScreen({ title, text, busy, action }: { title: string; text?
         {busy && <span className="lv-spin" aria-hidden />}
         <b>{title}</b>
         {text && <span>{text}</span>}
+        {link && (
+          <a className="lv-gate__btn lv-gate__btn--link" href={link.href}>
+            {link.label}
+          </a>
+        )}
         {action && (
-          <button type="button" className="lv-gate__btn" onClick={action.onClick}>
+          <button type="button" className={link ? 'lv-gate__btn lv-gate__btn--ghost' : 'lv-gate__btn'} onClick={action.onClick}>
             {action.label}
           </button>
         )}
