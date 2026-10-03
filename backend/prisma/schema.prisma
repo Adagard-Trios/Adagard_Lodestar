@@ -366,15 +366,16 @@ model TripStop {
   updatedAt           DateTime    @default(now()) @updatedAt
 
   // POD
-  pod POD?
+  pod       POD?
+  podPhotos PodPhoto[]
 
   @@schema("trips")
 }
 
 model POD {
-  id             String    @id @default(cuid())
-  tripStopId     String    @unique
-  tripStop       TripStop  @relation(fields: [tripStopId], references: [id])
+  id             String     @id @default(cuid())
+  tripStopId     String     @unique
+  tripStop       TripStop   @relation(fields: [tripStopId], references: [id])
   unitsDelivered Int
   unitsOrdered   Int
   photoUrl       String?
@@ -382,11 +383,39 @@ model POD {
   signature      String? // base64 SVG or URL
   exceptions     Json? // [{type, description, photoUrl}]
   creditNoteId   String? // e.g., CN-2604-0441
-  savedOffline   Boolean   @default(false)
-  savedAt        DateTime  @default(now())
+  savedOffline   Boolean    @default(false)
+  savedAt        DateTime   @default(now())
   syncedAt       DateTime?
-  createdAt      DateTime  @default(now())
+  createdAt      DateTime   @default(now())
+  /// Photos of the drop stored for this stop (PodPhoto); photoUrl is the newest one's /media/pod-photos/<id>.
+  photoCount     Int        @default(0)
+  photos         PodPhoto[]
 
+  @@schema("trips")
+}
+
+/// A proof-of-delivery photo (DR-20/DR-03), stored in Postgres. Uploaded by the driver of the trip
+/// (POST /media/pod-photos or a PHOTO sync event); read by the depot's dispatchers and the stop's store manager.
+/// Unique per stop by SHA-256 and per client event id, so a replayed upload never stores a second copy.
+model PodPhoto {
+  id         String    @id @default(cuid())
+  tripStopId String
+  tripStop   TripStop  @relation(fields: [tripStopId], references: [id])
+  /// Set once the stop's POD exists (a photo may reach the server before its POD).
+  podId      String?
+  pod        POD?      @relation(fields: [podId], references: [id], onDelete: SetNull)
+  mime       String // image/jpeg | image/png | image/webp (checked against the magic bytes)
+  bytes      Bytes
+  size       Int
+  sha256     String
+  /// The client's outbox id (Idempotency-Key / PHOTO event id).
+  eventId    String?   @unique
+  takenAt    DateTime?
+  uploadedBy String // token subject
+  createdAt  DateTime  @default(now())
+
+  @@unique([tripStopId, sha256])
+  @@index([podId])
   @@schema("trips")
 }
 
@@ -589,6 +618,24 @@ model AgentRun {
   @@schema("planning")
 }
 
+/// A weekly demand forecast as the capacity outlook (DSP-05) served it, kept so measureModels can score it
+/// against the volume delivered once the week is over (WAPE). One row per depot, week and source; a later
+/// forecast made before the week starts replaces the earlier one.
+model DemandForecast {
+  id         String   @id @default(cuid())
+  depot      String // Depot.code (outlets schema)
+  weekStart  DateTime // Monday of the ISO week, UTC midnight of the Colombo date
+  source     String // model (ML service, Task 2A) | history-median (heuristic)
+  totalM3    Float
+  chilledM3  Float
+  forecastAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@unique([depot, weekStart, source])
+  @@index([weekStart])
+  @@schema("planning")
+}
+
 // ─────────────────────────────────────────────────────────────
 // Devices (auth service): field-app device posture
 // ─────────────────────────────────────────────────────────────
@@ -635,6 +682,23 @@ model OrdersIdempotencyKey {
   @@id([userId, key])
   @@index([expiresAt])
   @@map("IdempotencyKey")
+  @@schema("orders")
+}
+
+/// @odata.ignore Dispatcher "close orders" for a run date and depot (Orders/Lodestar.CloseOrders, ReopenOrders):
+/// while closed, no new order is taken for that run. Read through Orders/Lodestar.OrderWindow.
+model OrderClosure {
+  depot      String // Depot.code
+  runDate    DateTime
+  closed     Boolean   @default(true)
+  closedBy   String
+  closedAt   DateTime  @default(now())
+  reason     String?
+  reopenedBy String?
+  reopenedAt DateTime?
+  updatedAt  DateTime  @default(now()) @updatedAt
+
+  @@id([depot, runDate])
   @@schema("orders")
 }
 

@@ -9,7 +9,7 @@ import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@
 const nav: ScreenNav = {"links":{"L221":{"to":"ld-21-bay-overview","kind":"go"}}};
 
 export default function ScreenLd20SharedSignIn() {
-  const { signIn, ready, busy } = useSignIn();
+  const { signIn, ready, busy } = useSignIn('dock');
   const problem = useAccessProblem();
   const device = useDeviceId();
   return (

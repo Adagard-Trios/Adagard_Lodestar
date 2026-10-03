@@ -1,4 +1,4 @@
-# Names the 14 built images for the registry (CI `images` job): REGISTRY/lodestar-<service>:TAG.
+# Names the 16 built images for the registry (CI `images` job): REGISTRY/lodestar-<service>:TAG.
 # docker compose -f docker-compose.yml -f deploy/ci/compose.images.yml build && ... push
 services:
   migrate:       { image: "${REGISTRY}/lodestar-migrate:${TAG}" }
@@ -13,6 +13,8 @@ services:
   audit:         { image: "${REGISTRY}/lodestar-audit:${TAG}" }
   agent:         { image: "${REGISTRY}/lodestar-agent:${TAG}" }
   ocr:           { image: "${REGISTRY}/lodestar-ocr:${TAG}" }
+  ml:            { image: "${REGISTRY}/lodestar-ml:${TAG}" }
   gateway:       { image: "${REGISTRY}/lodestar-gateway:${TAG}", build: { args: { GIT_SHA: "${TAG}" } } }
   frontend:      { image: "${REGISTRY}/lodestar-frontend:${TAG}" }
   mobile-web:    { image: "${REGISTRY}/lodestar-mobile-web:${TAG}" }
+  identity:      { image: "${REGISTRY}/lodestar-identity:${TAG}" }

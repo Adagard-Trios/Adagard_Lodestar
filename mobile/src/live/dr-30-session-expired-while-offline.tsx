@@ -11,7 +11,7 @@ import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@
 const nav: ScreenNav = {"links":{"L275":{"to":"dr-01-today-s-run","kind":"go"},"L276":{"to":"dr-06-sign-in","kind":"go"}}};
 
 export default function ScreenDr30SessionExpiredWhileOffline() {
-  const { signIn, ready, busy } = useSignIn();
+  const { signIn, ready, busy } = useSignIn('run');
   const problem = useAccessProblem();
   const device = useDeviceId();
   const net = useNet();

@@ -1,15 +1,59 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
-// DSP-26 Sign in · phone (P2, phone)
-import { Text, View, StyleSheet } from 'react-native';
-import { useAccessProblem, useDeviceId, useSignIn } from '@/lodestar/live';
+// DSP-26 Sign in · phone (P2, phone). Fingerprint unlock, as designed: the dispatcher's session is stored on the
+// phone (refresh token in the secure store); the splash (DSP-25) stops here while the phone has a fingerprint
+// enrolled, and "Unlock with fingerprint" (L179) asks the OS sensor (expo-local-authentication) before the plan
+// opens. No stored session, no sensor, or the web build: the design's fallback "Use work password" (L60, DSP-37).
+import { Text, View, StyleSheet, useWindowDimensions } from 'react-native';
+import { useEffect, useState } from 'react';
+import { useStore } from '@/lib/store';
+import { biometricAvailable, unlockWithBiometrics } from '@/auth/biometric';
+import { goHome } from '@/auth/use-sign-in';
+import { session } from '@/model/platform';
+import { depotsLabel } from '@/model/plan';
+import { useDepots } from '@/model/depots';
+import { useAccessProblem } from '@/lodestar/live';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L60":{"to":"dsp-37-can-t-sign-in","kind":"go"},"L179":{"to":"dsp-28-approve-re-plan","kind":"go"}}};
 
 export default function ScreenDsp26SignIn() {
-  const { signIn, ready, busy } = useSignIn();
+  useDepots(); // depot names for depotsLabel
   const problem = useAccessProblem();
-  const device = useDeviceId();
+  const st = useStore(session.state);
+  const { width } = useWindowDimensions();
+  const [sensor, setSensor] = useState<boolean | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void biometricAvailable().then(v => live && setSensor(v));
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const claims = st.status === 'signed-in' ? st.claims : null;
+  const first = claims?.name?.split(/\s+/)[0];
+  const depots = depotsLabel(claims?.depots);
+  const canUnlock = Boolean(claims) && sensor === true;
+
+  const unlock = async () => {
+    if (!claims || !sensor) return false;
+    setBusy(true);
+    setError(null);
+    const r = await unlockWithBiometrics('Unlock Lodestar Plan');
+    setBusy(false);
+    if (r.ok) goHome(claims, width);
+    else setError(r.message);
+    return false; // the plan opens through goHome
+  };
+
+  const hint =
+    sensor === null ? 'Checking this phone…'
+      : !sensor ? 'Fingerprint unlock works in the Lodestar app on a phone with a fingerprint set up. Use your work password.'
+        : !claims ? 'Sign in once with your work password, then unlock with your fingerprint.'
+          : 'Touch the sensor to unlock';
+
   return (
     <Frame bg="#f4f5f9" nav={nav} style={s.v0}>
       <View style={s.v23}>
@@ -19,10 +63,10 @@ export default function ScreenDsp26SignIn() {
               <Icon xml={X0} width={56} height={56} style={s.v1} />
             </View>
             <View>
-              <Text style={s.t3}>{"Lodestar Plan"}</Text>
+              <Text style={s.t3}>{first ? `Welcome back, ${first}` : "Lodestar Plan"}</Text>
             </View>
             <View>
-              <Text style={s.t4}>{"On call for your depots"}</Text>
+              <Text style={s.t4}>{depots ? `On call · ${depots}` : "On call for your depots"}</Text>
             </View>
           </View>
           <View style={s.v10}>
@@ -32,24 +76,24 @@ export default function ScreenDsp26SignIn() {
                 <Text style={s.t7}>{"Alerts and re-plans wait for you"}</Text>
               </View>
               <View>
-                <Text style={s.t8}>{problem?.message ?? "Sign in with your Waypoint account to review them. Nothing is sent until you approve."}</Text>
+                <Text style={s.t8} testID="sign-in-note">{error ?? problem?.message ?? "Unlock to review the agent's re-plans. Nothing is sent until you approve."}</Text>
               </View>
             </View>
           </View>
           <View style={s.v14}>
-            <View style={s.v12}>
+            <View style={[s.v12, canUnlock ? null : { opacity: 0.45 }]}>
               <Icon xml={X2} width={64} height={64} style={s.v11} />
             </View>
             <View>
-              <Text style={s.t13}>{"This phone: "}{device ?? "…"}</Text>
+              <Text style={s.t13} testID="unlock-hint">{hint}</Text>
             </View>
           </View>
         </Scroll>
         <View style={s.v22}>
-          <Tap lk="L179" style={s.v19} onPress={signIn} disabled={!ready || busy}>
+          <Tap lk="L179" style={s.v19} onPress={unlock} disabled={!canUnlock || busy}>
             <Grad g={G0} style={s.v17} />
             <Icon xml={X3} width={22} height={22} style={s.v11} />
-            <Text style={s.t18}>{busy ? "Signing in…" : "Sign in"}</Text>
+            <Text style={s.t18}>{busy ? "Unlocking…" : "Unlock with fingerprint"}</Text>
           </Tap>
           <Tap lk="L60" style={s.v21}>
             <Text style={s.t20}>{"Use work password"}</Text>

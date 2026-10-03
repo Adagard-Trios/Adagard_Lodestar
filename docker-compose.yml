@@ -39,6 +39,8 @@ x-service-env: &service-env
   AUDIT_URL: http://audit:3009
   NOTIFICATIONS_URL: http://notifications:3008
   FLEET_URL: http://fleet:3004
+  # the ML models (Task 1 stop model, Task 2A demand); set ML_URL= (empty) to keep the heuristics only
+  ML_URL: ${ML_URL-http://ml:8000}
   PUBLIC_BASE_URL: ${PUBLIC_ORIGIN:-https://localhost:8443}
 
 x-service: &service
@@ -110,7 +112,9 @@ services:
 
   # ---------------------------------------------------------------- identity (Azure: Entra ID)
   identity:
-    image: quay.io/keycloak/keycloak:26.0
+    # Keycloak 26.0 + Lodestar's sign-in extension (backend/identity/extension): each role's designed sign-in
+    # screen posts to the token endpoint; no Keycloak login page on the normal paths
+    build: { context: ./backend/identity }
     command: ["start-dev", "--import-realm"]
     restart: unless-stopped
     environment:
@@ -141,6 +145,16 @@ services:
       SVC_NOTIFICATIONS_SECRET: ${SVC_NOTIFICATIONS_SECRET:-svc-notifications-dev-only}
       SVC_AUDIT_SECRET: ${SVC_AUDIT_SECRET:-svc-audit-dev-only}
       SVC_AGENT_SECRET: ${SVC_AGENT_SECRET:-svc-agent-dev-only}
+      # sign-in codes (phone + SMS) and the Dock PIN: SMS_PROVIDER log | twilio | notifylk
+      SMS_PROVIDER: ${SMS_PROVIDER:-log}
+      DEMO_SHOW_CODES: ${DEMO_SHOW_CODES:-true}     # demo: the app shows the code the SMS would carry
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM: ${TWILIO_FROM:-}
+      NOTIFYLK_USER_ID: ${NOTIFYLK_USER_ID:-}
+      NOTIFYLK_API_KEY: ${NOTIFYLK_API_KEY:-}
+      NOTIFYLK_SENDER_ID: ${NOTIFYLK_SENDER_ID:-}
+      LODESTAR_DEMO_PIN: ${LODESTAR_DEMO_PIN:-2468}  # seeds the loaders' Dock PIN when they have none
     volumes:
       - ./backend/identity:/opt/keycloak/data/import:ro
     ports:
@@ -235,6 +249,12 @@ services:
       OIDC_CLIENT_SECRET: ${SVC_NOTIFICATIONS_SECRET:-svc-notifications-dev-only}
       WS_CORS_ORIGINS: ${PUBLIC_ORIGIN:-https://localhost:8443}
       REDIS_URL: redis://:${REDIS_PASSWORD:-redis-dev-only}@redis:6379
+      # SMS behind a flag (apps/notifications/src/sms.ts): off = the faces offer no SMS; log = record only
+      SMS_ENABLED: ${SMS_ENABLED:-false}
+      SMS_PROVIDER: ${SMS_PROVIDER:-log}
+      SMS_API_URL: ${SMS_API_URL:-}
+      SMS_API_KEY: ${SMS_API_KEY:-}
+      SMS_FROM: ${SMS_FROM:-}
     depends_on:
       migrate: { condition: service_completed_successfully }
       identity: { condition: service_healthy }
@@ -255,6 +275,11 @@ services:
     build: { context: ./backend/apps/agent, dockerfile: Dockerfile }
     environment:
       AGENT_MODEL: ${AGENT_MODEL:-mock}
+      # azure-openai only phrases explanations and answers; unset → the mock (see .env.example)
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
+      AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-}
+      AZURE_OPENAI_API_VERSION: ${AZURE_OPENAI_API_VERSION:-}
       DATABASE_URL: postgresql://lodestar:${POSTGRES_PASSWORD:-lodestar-dev-only}@postgres:5432/lodestar
       AGENT_DB_SCHEMA: agent
       OIDC_ISSUER: ${PUBLIC_ORIGIN:-https://localhost:8443}/auth/realms/lodestar
@@ -265,6 +290,7 @@ services:
       OIDC_CLIENT_SECRET: ${SVC_AGENT_SECRET:-svc-agent-dev-only}
       # read the owning services directly inside the app network (each still checks the token)
       LODESTAR_SERVICE_URLS: Orders=http://orders:3002,Outlets=http://outlets:3005,Calendar=http://outlets:3005,DistrictTravel=http://outlets:3005,ServiceAllowances=http://outlets:3005,Vehicles=http://fleet:3004
+      ML_URL: ${ML_URL-http://ml:8000}
 
   # ---------------------------------------------------------------- OCR (RapidOCR / PP-OCR mobile, CPU only)
   # "Read from photo · confirm": camera screens send a photo, the value is pre-filled, the person confirms.
@@ -280,6 +306,23 @@ services:
     networks: [app]
     depends_on:
       identity: { condition: service_healthy }
+
+  # ---------------------------------------------------------------- ML (Adagard datathon models, CPU only)
+  # Task 1 (stop service time + late risk) and Task 2A (weekly demand) behind /predict/stops and /forecast/weeks.
+  # Internal only (app network, not routed by the gateway, no token: it holds no data and writes nothing). The
+  # image carries no model: dtcore.py and the *.pkl files are mounted read-only from the host; without them
+  # /health says "degraded", the endpoints answer 503 and agent / trips / planning keep their heuristics.
+  ml:
+    <<: *hardened
+    build: { context: ./backend/apps/ml, dockerfile: Dockerfile }
+    environment:
+      ML_MODELS_DIR: /models
+      ML_DTCORE: /opt/dtcore/dtcore.py
+      ML_FORECAST_WAIT_S: "1.5"
+    volumes:
+      - ${ML_MODELS_DIR:-./datathon/Adagard_Datathon/models}:/models:ro
+      - ${ML_DTCORE:-./datathon/Adagard_Datathon/dtcore.py}:/opt/dtcore/dtcore.py:ro
+    networks: [app]
 
   # ---------------------------------------------------------------- edge
   gateway:
@@ -299,7 +342,9 @@ services:
       auth: { condition: service_started }
 
   frontend:
-    build: { context: ./frontend }
+    # local stack keeps the ?design=1 prototype switch (smoke tests use it); production builds pass off
+    # (deploy/azure-demo/compose.prod.yml, ship.sh, CI) and the Dockerfile defaults to off
+    build: { context: ./frontend, args: { NEXT_PUBLIC_DESIGN_PREVIEW: "${NEXT_PUBLIC_DESIGN_PREVIEW:-on}" } }
     <<: *hardened
     tmpfs: ["/tmp", "/app/.next/cache:uid=1000,gid=1000"]
     # API, sign-in and realtime URLs come from the page's own origin (frontend/lib/config.ts)

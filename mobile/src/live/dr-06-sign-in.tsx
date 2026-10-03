@@ -1,15 +1,36 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
-// DR-06 Sign in · phone (P4, phone)
+// DR-06 Sign in · phone (P4, phone). As designed: the mobile number the depot has on file, typed on the drawn
+// keypad; "Send code" (L229) asks the realm's direct-grant flow for a 6-digit SMS code and opens DR-07.
 import { Text, View, StyleSheet } from 'react-native';
-import { useAccessProblem, useDeviceId, useSignIn } from '@/lodestar/live';
-import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useState } from 'react';
+import { useStore } from '@/lib/store';
+import { groupLocal, phoneSignIn } from '@/auth/direct';
+import { useAccessProblem, useDeviceId, useDirectSignIn } from '@/lodestar/live';
+import { Keypad, typeKey } from '@/lodestar/keypad';
+import { Frame, Grad, Icon, openScreen, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L229":{"to":"dr-07-verify-code","kind":"go"}}};
 
 export default function ScreenDr06SignIn() {
-  const { signIn, ready, busy } = useSignIn();
+  const flow = useDirectSignIn('run');
   const problem = useAccessProblem();
   const device = useDeviceId();
+  const saved = useStore(phoneSignIn);
+  const [digits, setDigits] = useState(saved.face === 'run' ? saved.digits : '');
+  const [error, setError] = useState<string | null>(null);
+
+  const send = async () => {
+    if (digits.replace(/^0/, '').length < 9) {
+      setError('Enter your 9-digit mobile number, like 77 123 4567.');
+      return false;
+    }
+    setError(null);
+    const r = await flow.sendCode(digits);
+    if (!r.ok && r.error === 'code_sent') return true;
+    if (!r.ok) setError(r.description);
+    return false;
+  };
+
   return (
     <Frame bg="#070b16" nav={nav} style={s.v0}>
       <View style={s.v31}>
@@ -25,37 +46,50 @@ export default function ScreenDr06SignIn() {
         <Scroll style={s.v4} contentStyle={s.v21}>
           <View style={s.v9}>
             <View>
-              <Text style={s.t7}>{"Sign in to your run"}</Text>
+              <Text style={s.t7}>{"Sign in with your phone"}</Text>
             </View>
             <View>
-              <Text style={s.t8}>{"Use your Waypoint account. The sign-in page opens, then you come straight back to today's run."}</Text>
+              <Text style={s.t8}>{"Use the mobile number your depot has for you. We'll text you a 6-digit code."}</Text>
             </View>
           </View>
           <View style={s.v17}>
             <View style={s.v13}>
               <View style={s.v11}>
-                <Text style={s.t10}>{"ID"}</Text>
+                <Text style={s.t10}>{"LK"}</Text>
               </View>
+              <Text style={s.t12}>{"+94"}</Text>
             </View>
             <View style={s.v16}>
-              <Text style={s.t14} numberOfLines={1} testID="device-id">{device ?? "…"}</Text>
+              <Text style={[s.t14, digits ? null : { opacity: 0.45 }]} numberOfLines={1} testID="phone-value">{digits ? groupLocal(digits) : "77 123 4567"}</Text>
               <View style={s.v15} />
             </View>
           </View>
           <View style={s.v20}>
             <Icon xml={X1} width={16} height={16} style={s.v18} />
             <View style={s.v11}>
-              <Text style={s.t19} testID="sign-in-note">{problem?.message ?? "This phone is checked at every sign-in. Your run stays saved on it without signal."}</Text>
+              <Text style={[s.t19, error ? { color: '#fda29b' } : null]} testID="sign-in-note">
+                {error ?? problem?.message ?? "The code comes by SMS, so a weak signal is fine."}
+              </Text>
             </View>
           </View>
+          {device ? (
+            <View style={s.v20}>
+              <View style={s.v11}><Text style={s.t19} numberOfLines={1} testID="device-id">{`This phone: ${device}`}</Text></View>
+            </View>
+          ) : null}
         </Scroll>
         <View style={s.v25}>
-          <Tap lk="L229" style={s.v24} onPress={signIn} disabled={!ready || busy}>
+          <Tap lk="L229" style={s.v24} onPress={send} disabled={flow.busy}>
             <Grad g={G0} style={s.v22} />
-            <Text style={s.t23}>{busy ? "Signing in…" : "Sign in"}</Text>
+            <Text style={s.t23}>{flow.busy ? "Sending…" : "Send code"}</Text>
             <Icon xml={X2} width={22} height={22} style={s.v1} />
           </Tap>
         </View>
+        <Keypad
+          wrap={s.v30} row={s.v28} keyStyle={s.v27} blank={s.v29} text={s.t26}
+          back={{ xml: X3, size: 26, style: s.v1 }}
+          onKey={k => (k === 'enter' ? void send().then(ok => ok && openScreen('dr-07-verify-code')) : setDigits(d => typeKey(d, k, 10)))}
+        />
       </View>
     </Frame>
   );
@@ -64,6 +98,7 @@ export default function ScreenDr06SignIn() {
 const X0 = "<svg viewBox=\"0 0 32 32\" width=\"36\" height=\"36\" fill=\"#000000\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"32\" height=\"32\" rx=\"8\" fill=\"#0369a1\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect><g transform=\"translate(7.36 7.36) scale(0.72)\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"><path d=\"m3 11 19-9-9 19-2-8-8-2z\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></g></svg>";
 const X1 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#7f89a3\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"16\" height=\"16\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z\" fill=\"none\" stroke=\"#7f89a3\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const X2 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#111522\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M5 12h14M12 5l7 7-7 7\" fill=\"none\" stroke=\"#111522\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X3 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#b5bdd1\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"26\" height=\"26\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z\" fill=\"none\" stroke=\"#b5bdd1\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"m18 9-6 6M12 9l6 6\" fill=\"none\" stroke=\"#b5bdd1\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const G0: GradSpec[] = [{"type":"linear","angle":135,"at":null,"repeat":false,"stops":[{"c":"#ffd37a","p":0},{"c":"#f5b83d","p":0.6},{"c":"#eda422","p":1}]}];
 
 const s = StyleSheet.create({

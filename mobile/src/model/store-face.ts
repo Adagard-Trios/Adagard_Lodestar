@@ -7,12 +7,12 @@ import { Store, useStore } from '@/lib/store';
 import { addDays, colomboDate, dayLabel, hm, isoDay } from '@/lib/time';
 import type { QueueItem } from '@/offline/queue';
 import { DEFAULT_M3_PER_KG, type NewOrderLine } from './api';
-
-export { DEFAULT_M3_PER_KG };
 import { today, useClaims, useOutbox, usePods, useStoreDay } from './hooks';
 import { queue, session } from './platform';
 import { useQuery } from './query';
 import type { Notification, Order, OrderLineItem, POD, TempClass, Trip } from './types';
+
+export { DEFAULT_M3_PER_KG };
 
 // ---------------------------------------------------------------- clock
 
@@ -62,6 +62,21 @@ export function nextOpenDay(day: string, closed: ReadonlySet<string> = NO_DAYS):
 }
 
 export type ClosedDay = { date: string; reason?: string };
+
+/** Orders/Lodestar.OrderWindow: whether dispatch closed orders for the store's depot on a run (DSP-01 "Close orders"). */
+export interface OrderWindow {
+  runDate: string;
+  closed: boolean;
+  closedAt?: string | null;
+  reason?: string | null;
+}
+
+/** The dispatch closure of `runDate` for the signed-in store's depot (the 4:00 PM cut-off is separate: cutoffFor). */
+export function useOrderWindow(runDate: string | null | undefined): OrderWindow | undefined {
+  const claims = useClaims();
+  return useQuery<OrderWindow>(claims?.outletId && runDate ? `store.window.${runDate}` : null, c =>
+    c.fn<OrderWindow>(`Orders/Lodestar.OrderWindow(runDate=${runDate})`), { persist: true }).data;
+}
 
 /** The non-operating days (Calendar isOperating = false) from today on, with the Calendar's reason. */
 export function useClosedCalendar(): ClosedDay[] | undefined {

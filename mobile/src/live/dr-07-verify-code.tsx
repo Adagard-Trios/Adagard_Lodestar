@@ -1,15 +1,51 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
-// DR-07 Verify code · phone (P4, phone)
+// DR-07 Verify code · phone (P4, phone). The 6-digit code for the number typed on DR-06, typed on the drawn keypad
+// (or filled from the SMS); "Verify" (L230) posts it to the token endpoint and opens the run. "Resend in 0:24"
+// (L34) opens DR-29 (resend, voice call, ask dispatch) as designed.
 import { Text, View, StyleSheet } from 'react-native';
-import { useAccessProblem, useDeviceId, useSignIn } from '@/lodestar/live';
+import { useState } from 'react';
+import { useStore } from '@/lib/store';
+import { clock, fullNumber, phoneSignIn } from '@/auth/direct';
+import { useCountdown } from '@/auth/countdown';
+import { useAccessProblem, useDirectSignIn } from '@/lodestar/live';
+import { Keypad, typeKey } from '@/lodestar/keypad';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L34":{"to":"dr-29-can-t-sign-in","kind":"go"},"L230":{"to":"dr-08-permissions","kind":"go"},"L231":{"to":"dr-06-sign-in","kind":"go"}}};
 
 export default function ScreenDr07VerifyCode() {
-  const { signIn, ready, busy } = useSignIn();
+  const flow = useDirectSignIn('run');
   const problem = useAccessProblem();
-  const device = useDeviceId();
+  const p = useStore(phoneSignIn);
+  const [code, setCode] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const left = useCountdown(p.resendAt);
+
+  const verify = async (value = code) => {
+    if (!p.digits) {
+      setError('Send a code from the sign-in screen first.');
+      return false;
+    }
+    if (value.length !== 6) {
+      setError('Enter all 6 digits.');
+      return false;
+    }
+    setError(null);
+    const r = await flow.verifyCode(value);
+    if (!r.ok) {
+      setCode('');
+      setError(r.description);
+    }
+    return false; // the run opens through enterApp
+  };
+
+  const onKey = (k: Parameters<typeof typeKey>[1]) => {
+    if (k === 'enter') return void verify();
+    const next = typeKey(code, k, 6);
+    setCode(next);
+    if (next.length === 6 && code.length === 5) void verify(next);
+  };
+
   return (
     <Frame bg="#070b16" nav={nav} style={s.v0}>
       <View style={s.v30}>
@@ -25,49 +61,39 @@ export default function ScreenDr07VerifyCode() {
         <Scroll style={s.v4} contentStyle={s.v20}>
           <View style={s.v10}>
             <View>
-              <Text style={s.t7}>{"Confirm it's you"}</Text>
+              <Text style={s.t7}>{"Enter the code"}</Text>
             </View>
             <View>
-              <Text style={s.t9}>{"Sign in on the Waypoint page to continue. This phone: "}<Text style={s.t8}>{device ?? "…"}</Text></Text>
+              <Text style={[s.t9, error ? { color: '#fda29b' } : null]} testID="sign-in-note">
+                {error ?? problem?.message ?? <>{p.step?.method === 'voice' ? "Calling " : "Sent to "}<Text style={s.t8}>{p.digits ? fullNumber(p.digits) : "your phone"}</Text></>}
+              </Text>
             </View>
           </View>
-          <View style={s.v13}>
-            <View style={s.v12}>
-              <Text style={s.t11}>{"•"}</Text>
-            </View>
-            <View style={s.v12}>
-              <Text style={s.t11}>{"•"}</Text>
-            </View>
-            <View style={s.v12}>
-              <Text style={s.t11}>{"•"}</Text>
-            </View>
-            <View style={s.v12}>
-              <Text style={s.t11}>{"•"}</Text>
-            </View>
-            <View style={s.v12}>
-              <Text style={s.t11}>{"•"}</Text>
-            </View>
-            <View style={s.v12}>
-              <Text style={s.t11}>{"•"}</Text>
-            </View>
+          <View style={s.v13} testID="code-boxes">
+            {Array.from({ length: 6 }, (_, i) => (
+              <View key={i} style={[s.v12, i === code.length ? { borderWidth: 2, borderColor: '#5b8def' } : null]}>
+                <Text style={s.t11}>{code[i] ?? ''}</Text>
+              </View>
+            ))}
           </View>
           <View style={s.v19}>
             <View style={s.v16}>
               <Icon xml={X1} width={14} height={14} style={s.v14} />
-              <Text style={s.t15} numberOfLines={1}>{problem?.message ?? "Checked by Lodestar"}</Text>
+              <Text style={s.t15} numberOfLines={1} testID="demo-code">{p.step?.demoCode ? `Demo: your code is ${p.step.demoCode}` : "Filled from SMS"}</Text>
             </View>
             <Tap lk="L34" style={s.v18}>
-              <Text style={s.t17}>{"Can't sign in?"}</Text>
+              <Text style={s.t17}>{left > 0 ? `Resend in ${clock(left)}` : "Resend code"}</Text>
             </Tap>
           </View>
         </Scroll>
         <View style={s.v24}>
-          <Tap lk="L230" style={s.v23} onPress={signIn} disabled={!ready || busy}>
+          <Tap lk="L230" style={s.v23} onPress={() => verify()} disabled={flow.busy}>
             <Grad g={G0} style={s.v21} />
             <Icon xml={X2} width={22} height={22} style={s.v1} />
-            <Text style={s.t22}>{busy ? "Signing in…" : "Sign in"}</Text>
+            <Text style={s.t22}>{flow.busy ? "Checking…" : "Verify"}</Text>
           </Tap>
         </View>
+        <Keypad wrap={s.v29} row={s.v27} keyStyle={s.v26} blank={s.v28} text={s.t25} back={{ xml: X3, size: 26, style: s.v1 }} onKey={onKey} />
       </View>
     </Frame>
   );
@@ -76,6 +102,7 @@ export default function ScreenDr07VerifyCode() {
 const X0 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#f2f4fa\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"20\" height=\"20\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M19 12H5M12 19l-7-7 7-7\" fill=\"none\" stroke=\"#f2f4fa\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const X1 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#7f89a3\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"14\" height=\"14\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M20 6 9 17l-5-5\" fill=\"none\" stroke=\"#7f89a3\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const X2 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#111522\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"22\" height=\"22\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M20 6 9 17l-5-5\" fill=\"none\" stroke=\"#111522\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
+const X3 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#b5bdd1\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"26\" height=\"26\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z\" fill=\"none\" stroke=\"#b5bdd1\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"m18 9-6 6M12 9l6 6\" fill=\"none\" stroke=\"#b5bdd1\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const G0: GradSpec[] = [{"type":"linear","angle":135,"at":null,"repeat":false,"stops":[{"c":"#ffd37a","p":0},{"c":"#f5b83d","p":0.6},{"c":"#eda422","p":1}]}];
 
 const s = StyleSheet.create({

@@ -7,7 +7,7 @@ import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpe
 const nav: ScreenNav = {"links":{"L213":{"to":"ld-06-sign-in","kind":"go"},"B":{"to":"ld-06-sign-in","kind":"back"}}};
 
 export default function ScreenLd24CanTSignIn() {
-  const { signIn, ready, busy } = useSignIn();
+  const { signIn, ready, busy } = useSignIn('dock');
   const problem = useAccessProblem();
   const device = useDeviceId();
   return (

@@ -1,15 +1,35 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
-// SM-05 Sign in · phone (P1, phone)
+// SM-05 Sign in · phone (P1, phone). As designed: the registered phone number, typed on the drawn keypad; "Send code"
+// asks the realm's direct-grant flow for a 6-digit SMS code (auth/direct.ts) and opens SM-06 (L68).
 import { Text, View, StyleSheet } from 'react-native';
-import { useAccessProblem, useDeviceId, useSignIn } from '@/lodestar/live';
-import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useStore } from '@/lib/store';
+import { groupLocal, phoneSignIn } from '@/auth/direct';
+import { useAccessProblem, useDirectSignIn } from '@/lodestar/live';
+import { Keypad, typeKey } from '@/lodestar/keypad';
+import { Frame, Grad, Icon, openScreen, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { useState } from 'react';
 
 const nav: ScreenNav = {"links":{"L51":{"to":"sm-31-can-t-sign-in","kind":"go"},"L68":{"to":"sm-06-verify-code","kind":"go"}}};
 
 export default function ScreenSm05SignIn() {
-  const { signIn, ready, busy } = useSignIn();
+  const flow = useDirectSignIn('store');
   const problem = useAccessProblem();
-  const device = useDeviceId();
+  const saved = useStore(phoneSignIn);
+  const [digits, setDigits] = useState(saved.face === 'store' ? saved.digits : '');
+  const [error, setError] = useState<string | null>(null);
+
+  const send = async () => {
+    if (digits.replace(/^0/, '').length < 9) {
+      setError('Enter your 9-digit mobile number, like 77 123 4567.');
+      return false;
+    }
+    setError(null);
+    const r = await flow.sendCode(digits);
+    if (!r.ok && r.error === 'code_sent') return true;
+    if (!r.ok) setError(r.description);
+    return false;
+  };
+
   return (
     <Frame bg="#f4f5f9" nav={nav} style={s.v0}>
       <View style={s.v31}>
@@ -28,42 +48,48 @@ export default function ScreenSm05SignIn() {
               <Text style={s.t6}>{"Sign in to your store"}</Text>
             </View>
             <View>
-              <Text style={s.t7}>{problem?.message ?? "Use your Waypoint account. The sign-in page opens, then you come straight back to your store."}</Text>
+              <Text style={[s.t7, error ? { color: '#b42318' } : null]} testID="sign-in-note">{error ?? problem?.message ?? "Use your registered phone number. We'll text you a 6-digit code."}</Text>
             </View>
           </View>
           <View style={s.v18}>
             <View>
-              <Text style={s.t9}>{"This phone"}</Text>
+              <Text style={s.t9}>{"Phone number"}</Text>
             </View>
             <View style={s.v16}>
               <View style={s.v13}>
                 <View style={s.v11}>
-                  <Text style={s.t10}>{"ID"}</Text>
+                  <Text style={s.t10}>{"LK"}</Text>
                 </View>
-                <Text style={s.t12}>{""}</Text>
+                <Text style={s.t12}>{"+94"}</Text>
               </View>
               <View style={s.v11}>
-                <Text style={s.t14}>{device ?? "…"}</Text>
+                <Text style={[s.t14, digits ? null : { color: '#98a2b3' }]} testID="phone-value">{digits ? groupLocal(digits) : "77 123 4567"}</Text>
               </View>
               <View style={s.v15} />
             </View>
             <Tap lk="L51">
-              <Text style={s.t17}>{"Store managers and receiving staff only. Can't sign in? Get help."}</Text>
+              <Text style={s.t17}>{"Store managers and receiving staff only. New number? Ask your depot to add you."}</Text>
             </Tap>
           </View>
         </Scroll>
         <View style={s.v24}>
-          <Tap lk="L68" style={s.v23} onPress={signIn} disabled={!ready || busy}>
+          <Tap lk="L68" style={s.v23} onPress={send} disabled={flow.busy}>
             <Grad g={G0} style={s.v21} />
-            <Text style={s.t22}>{busy ? "Signing in…" : "Sign in"}</Text>
+            <Text style={s.t22}>{flow.busy ? "Sending…" : "Send code"}</Text>
           </Tap>
         </View>
+        <Keypad
+          wrap={s.v30} row={s.v27} keyStyle={s.v26} blank={s.v28} text={s.t25}
+          back={{ xml: X1, size: 24, style: s.v29 }}
+          onKey={k => (k === 'enter' ? void send().then(ok => ok && openScreen('sm-06-verify-code')) : setDigits(d => typeKey(d, k, 10)))}
+        />
       </View>
     </Frame>
   );
 }
 
 const X0 = "<svg viewBox=\"0 0 32 32\" fill=\"#000000\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"44\" height=\"44\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"32\" height=\"32\" rx=\"8\" fill=\"#047857\" stroke=\"none\" stroke-width=\"1\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></rect><g transform=\"translate(7.36 7.36) scale(0.72)\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"><path d=\"M3 9l1.5-5h15L21 9\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"M5 13v8h14v-8M10 21v-5h4v5\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></g></svg>";
+const X1 = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#0f1422\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\" width=\"24\" height=\"24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Z\" fill=\"none\" stroke=\"#0f1422\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path><path d=\"m18 9-6 6M12 9l6 6\" fill=\"none\" stroke=\"#0f1422\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"1\" stroke-opacity=\"1\" fill-rule=\"nonzero\"></path></svg>";
 const G0: GradSpec[] = [{"type":"linear","angle":135,"at":null,"repeat":false,"stops":[{"c":"#4f5fe0","p":0},{"c":"#3b4cca","p":0.55},{"c":"#2f3cb0","p":1}]}];
 
 const s = StyleSheet.create({

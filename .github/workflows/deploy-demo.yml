@@ -87,6 +87,7 @@ jobs:
           cache-dependency-path: |
             backend/apps/agent/requirements-dev.txt
             backend/apps/ocr/requirements-dev.txt
+            backend/apps/ml/requirements-dev.txt
 
       - name: Data-model diagram is up to date with schema.prisma
         run: node tools/docs/erd.mjs --check
@@ -147,6 +148,13 @@ jobs:
           grep -v '^-r ' requirements-dev.txt >> /tmp/ocr-deps.txt
           .venv-ci/bin/python -m pip install -r /tmp/ocr-deps.txt
           .venv-ci/bin/python -m pip install --no-deps "$(grep '^rapidocr' requirements.txt)"
+          .venv-ci/bin/python -m pytest
+      - name: ml · pytest
+        working-directory: backend/apps/ml
+        run: |
+          # fake models only: the real ones (and dtcore.py) are never in the repo, so the real-model test skips
+          python -m venv .venv-ci
+          .venv-ci/bin/python -m pip install -r requirements-dev.txt
           .venv-ci/bin/python -m pytest
 
       - name: Coverage reports
@@ -223,7 +231,9 @@ jobs:
           context: ${{ matrix.image.context }}
           file: ${{ matrix.image.file }}
           push: true
-          build-args: GIT_SHA=${{ github.sha }}
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+            NEXT_PUBLIC_DESIGN_PREVIEW=off
           tags: |
             ${{ env.REGISTRY }}/lodestar-${{ matrix.image.name }}:main
             ${{ env.REGISTRY }}/lodestar-${{ matrix.image.name }}:${{ github.sha }}

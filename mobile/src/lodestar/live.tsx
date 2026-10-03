@@ -2,26 +2,37 @@
 import { useEffect, useState } from 'react';
 import { Linking, useWindowDimensions } from 'react-native';
 import { useStore } from '@/lib/store';
+import { biometricAvailable } from '@/auth/biometric';
 import { goHome } from '@/auth/use-sign-in';
 import { apiBase } from '@/lib/config';
 import { getDeviceId, session } from '@/model/platform';
 import { useQuery } from '@/model/query';
 import { openScreen, showToast } from './runtime';
 
-export { useSignIn } from '@/auth/use-sign-in';
+export { useDirectSignIn, useSignIn } from '@/auth/use-sign-in';
 
-/** Splash: signed in already → the role's first screen; otherwise on to the sign-in screen after 1.5 s. */
-export function useSplash(signInKey: string) {
+/**
+ * Splash: signed in already → the role's first screen; otherwise on to the sign-in screen after 1.5 s.
+ * `lock`: a stored session first stops on that unlock screen when the phone has a fingerprint enrolled (DSP-26).
+ */
+export function useSplash(signInKey: string, lock?: string) {
   const s = useStore(session.state);
   const { width } = useWindowDimensions();
   useEffect(() => {
     if (s.status === 'restoring') return;
+    let live = true;
     const t = setTimeout(() => {
-      if (s.status === 'signed-in' && s.claims) goHome(s.claims, width);
-      else openScreen(signInKey, undefined, 'nav');
+      if (s.status === 'signed-in' && s.claims) {
+        const claims = s.claims;
+        if (!lock) goHome(claims, width);
+        else void biometricAvailable().then(v => live && (v ? openScreen(lock, undefined, 'nav') : goHome(claims, width)));
+      } else openScreen(signInKey, undefined, 'nav');
     }, s.status === 'signed-in' ? 400 : 1500);
-    return () => clearTimeout(t);
-  }, [s.status, s.claims, width, signInKey]);
+    return () => {
+      live = false;
+      clearTimeout(t);
+    };
+  }, [s.status, s.claims, width, signInKey, lock]);
 }
 
 /** This install's device id (shown on sign-in and access screens so an admin can approve the phone). */

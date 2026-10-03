@@ -12,7 +12,7 @@ const nav: ScreenNav = {"links":{}};
 
 export default function ScreenDsp25Splash() {
   useDepots(); // re-render when the depot names (depotsLabel) arrive
-  useSplash('dsp-26-sign-in');
+  useSplash('dsp-26-sign-in', 'dsp-26-sign-in'); // a stored session unlocks with the fingerprint first (DSP-26)
   // the depots in the signed-in dispatcher's token; nothing before sign-in
   const depots = depotsLabel(useClaims()?.depots);
   return (

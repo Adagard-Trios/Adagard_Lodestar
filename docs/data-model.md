@@ -9,10 +9,10 @@ One Postgres database with one schema per service; a service reads and writes on
 | `auth` | User, Device |
 | `outlets` | Depot, Outlet, Calendar, DistrictTravel, DataImport, ServiceAllowance |
 | `fleet` | Vehicle |
-| `orders` | Order, OrderLineItem, OrdersIdempotencyKey |
-| `trips` | Trip, TripStop, POD, LoadRecord, TripsIdempotencyKey |
+| `orders` | Order, OrderLineItem, OrdersIdempotencyKey, OrderClosure |
+| `trips` | Trip, TripStop, POD, PodPhoto, LoadRecord, TripsIdempotencyKey |
 | `sync` | OfflineEvent |
-| `planning` | DeferralLog, Plan, AgentRun |
+| `planning` | DeferralLog, Plan, AgentRun, DemandForecast |
 | `notifications` | Notification |
 | `audit` | AuditEntry |
 
@@ -170,6 +170,20 @@ erDiagram
     datetime savedAt
     datetime syncedAt
     datetime createdAt
+    int photoCount
+  }
+  PodPhoto {
+    string id PK
+    string tripStopId FK
+    string podId FK
+    string mime
+    Bytes bytes
+    int size
+    string sha256
+    string eventId UK
+    datetime takenAt
+    string uploadedBy
+    datetime createdAt
   }
   LoadRecord {
     string id PK
@@ -294,6 +308,16 @@ erDiagram
     datetime createdAt
     datetime updatedAt
   }
+  DemandForecast {
+    string id PK
+    string depot
+    datetime weekStart
+    string source
+    float totalM3
+    float chilledM3
+    datetime forecastAt
+    datetime createdAt
+  }
   Device {
     string id PK
     string userId FK
@@ -318,6 +342,17 @@ erDiagram
     json response
     datetime createdAt
     datetime expiresAt
+  }
+  OrderClosure {
+    string depot
+    datetime runDate
+    bool closed
+    string closedBy
+    datetime closedAt
+    string reason
+    string reopenedBy
+    datetime reopenedAt
+    datetime updatedAt
   }
   TripsIdempotencyKey {
     string userId
@@ -355,6 +390,8 @@ erDiagram
   Order ||--o| TripStop : "order"
   Outlet ||--o{ TripStop : "outlet"
   TripStop ||--o| POD : "tripStop"
+  TripStop ||--o{ PodPhoto : "tripStop"
+  POD |o--o{ PodPhoto : "pod"
   Trip ||--o| LoadRecord : "trip"
   Vehicle ||--o{ LoadRecord : "vehicle"
   User ||--o{ LoadRecord : "loader"

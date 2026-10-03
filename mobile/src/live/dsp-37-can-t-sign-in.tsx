@@ -15,7 +15,7 @@ const TITLES: Record<string, string> = {
 };
 
 export default function ScreenDsp37CanTSignIn() {
-  const { signIn, ready, busy } = useSignIn();
+  const { signIn, ready, busy } = useSignIn('plan');
   const problem = useAccessProblem();
   const device = useDeviceId();
   return (

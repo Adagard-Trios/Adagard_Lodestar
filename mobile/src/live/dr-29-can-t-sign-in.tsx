@@ -1,19 +1,43 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // DR-29 Can't sign in · phone (P4, phone)
-// Live: the session problem (expired, revoked, not registered…), this phone's id, and sign in again.
+// Live: when the code was sent and to which number, a new code (L232, 30 s cooldown) or a voice call reading it out
+// (L233), both back to DR-07; asking dispatch (dialer); the session problem (expired, revoked, …) when there is one.
 import { Text, View, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import { useStore } from '@/lib/store';
+import { fullNumber, phoneSignIn } from '@/auth/direct';
+import { useCountdown } from '@/auth/countdown';
 import { hm } from '@/lib/time';
-import { plural, useAccessProblem, useDeviceId, useSignIn } from '@/lodestar/live';
+import { plural, useAccessProblem, useDeviceId, useDirectSignIn } from '@/lodestar/live';
 import { useOutbox } from '@/model/hooks';
 import { openDialer } from '@/model/run';
-import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { Frame, Grad, Icon, openScreen, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L232":{"to":"dr-07-verify-code","kind":"go"},"L233":{"to":"dr-07-verify-code","kind":"go"},"L234":{"to":"dr-07-verify-code","kind":"go"}}};
 
 const TITLES = { expired: 'Your session ended', revoked: 'This phone was removed', unregistered: 'This phone is not registered', denied: 'No Lodestar Run access', failed: "Sign-in didn't finish" } as const;
 
 export default function ScreenDr29CanTSignIn() {
-  const { signIn, ready, busy } = useSignIn();
+  const flow = useDirectSignIn('run');
+  const p = useStore(phoneSignIn);
+  const left = useCountdown(p.resendAt);
+  const [error, setError] = useState<string | null>(null);
+  // Resend (L232) and voice call (L233) go back to DR-07 with a new code; without a number typed yet, to DR-06.
+  const again = (channel?: 'voice') => async () => {
+    if (!p.digits) {
+      openScreen('dr-06-sign-in', undefined, 'nav');
+      return false;
+    }
+    if (left > 0) {
+      setError(`You can ask for a new code in ${left} s.`);
+      return false;
+    }
+    setError(null);
+    const r = await flow.sendCode(p.digits, channel);
+    if (!r.ok && r.error === 'code_sent') return true;
+    if (!r.ok) setError(r.description);
+    return false;
+  };
   const problem = useAccessProblem();
   const device = useDeviceId();
   const { waiting } = useOutbox();
@@ -32,26 +56,26 @@ export default function ScreenDr29CanTSignIn() {
         <Scroll style={s.v4} contentStyle={s.v26}>
           <View style={s.v11}>
             <View style={s.v8}>
-              <Text style={s.t7} numberOfLines={1} testID="device-id">{`This phone · ${device ?? '…'}`}</Text>
+              <Text style={s.t7} numberOfLines={1} testID="device-id">{p.sentAt && p.digits ? `Code sent ${hm(new Date(p.sentAt).toISOString())} to ${fullNumber(p.digits)}` : `This phone · ${device ?? '…'}`}</Text>
             </View>
             <View>
-              <Text style={s.t9} testID="problem-title">{problem ? TITLES[problem.kind] : "Can't sign in?"}</Text>
+              <Text style={s.t9} testID="problem-title">{problem ? TITLES[problem.kind] : "Didn't get a code?"}</Text>
             </View>
             <View>
-              <Text style={s.t10} testID="problem-message">{problem ? `${problem.message}${problem.at ? ` (${hm(problem.at)})` : ''}` : 'Try signing in again. If it keeps failing, try one of these.'}</Text>
+              <Text style={s.t10} testID="problem-message">{error ?? (problem ? `${problem.message}${problem.at ? ` (${hm(problem.at)})` : ''}` : left > 0 ? `A new code can be sent in ${left} s. If SMS keeps failing, try one of these.` : 'A new code is ready to send now. If SMS keeps failing, try one of these.')}</Text>
             </View>
           </View>
           <View style={s.v20}>
-            <Tap lk="L233" style={s.v17} testID="help-sign-in">
+            <Tap lk="L233" style={s.v17} testID="help-sign-in" onPress={again('voice')} disabled={flow.busy}>
               <View style={s.v12}>
                 <Icon xml={X1} width={22} height={22} style={s.v1} />
               </View>
               <View style={s.v16}>
                 <View>
-                  <Text style={s.t13}>{"Open the sign-in page again"}</Text>
+                  <Text style={s.t13}>{"Get the code by voice call"}</Text>
                 </View>
                 <View style={s.v15}>
-                  <Text style={s.t14}>{"Sign in with your Waypoint account. This phone's ID goes with it."}</Text>
+                  <Text style={s.t14}>{"An automatic call reads out the 6 digits."}</Text>
                 </View>
               </View>
               <Icon xml={X2} width={18} height={18} style={s.v1} />
@@ -84,13 +108,13 @@ export default function ScreenDr29CanTSignIn() {
           </View>
         </Scroll>
         <View style={s.v32}>
-          <Tap lk="L232" style={s.v29} onPress={signIn} disabled={!ready || busy}>
+          <Tap lk="L232" style={s.v29} onPress={again()} disabled={flow.busy}>
             <Grad g={G0} style={s.v27} />
             <Icon xml={X5} width={22} height={22} style={s.v1} />
-            <Text style={s.t28}>{busy ? 'Signing in…' : 'Sign in again'}</Text>
+            <Text style={s.t28}>{flow.busy ? 'Sending…' : p.digits ? 'Resend code' : 'Sign in again'}</Text>
           </Tap>
           <View style={s.v31}>
-            <Text style={s.t30}>{"Sign-in can take a minute on a weak signal."}</Text>
+            <Text style={s.t30}>{"Codes can take up to 2 minutes on a weak signal."}</Text>
           </View>
         </View>
       </View>

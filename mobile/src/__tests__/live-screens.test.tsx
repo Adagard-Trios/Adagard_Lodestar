@@ -138,7 +138,7 @@ describe('Sign-in entry and access problems', () => {
     await act(() => session.handleUnauthorized({ message: 'Device is revoked' }));
     const Screen = require('@/live/dr-06-sign-in').default;
     await render(<Screen />);
-    expect(await screen.findByText('DEV-TEST-0001')).toBeTruthy();
+    expect((await screen.findByTestId('device-id')).props.children).toContain('DEV-TEST-0001');
     expect(screen.getByTestId('sign-in-note').props.children).toMatch(/removed from Lodestar/);
     expect(screen.getByTestId('lk-L229')).toBeTruthy();
   });

@@ -109,6 +109,8 @@ export interface POD {
   unitsOrdered: number;
   receiverName?: string | null;
   photoUrl?: string | null;
+  /** Photos of the drop held for the stop; photoUrl is the newest (/media/pod-photos/<id>, bearer token). */
+  photoCount?: number;
   exceptions?: Array<{ type?: string; description?: string }> | string[] | null;
   creditNoteId?: string | null;
   savedOffline: boolean;
@@ -345,4 +347,16 @@ export interface AgentAnswer {
   /** The tools the agent used: names (the agent's answer) or {name, args}. */
   toolCalls?: Array<string | { name: string; args?: Record<string, unknown> }>;
   proposal?: { edits: Array<Record<string, unknown>>; draftVersion?: number; ruleChecks?: AgentRunDetail['ruleChecks']; violations?: unknown[] } | null;
+}
+
+/** Orders/Lodestar.OrderWindow: whether dispatch closed orders for a depot's run (Orders/Lodestar.CloseOrders). */
+export interface OrderWindow {
+  depot: string;
+  runDate: string;
+  closed: boolean;
+  closedBy: string | null;
+  closedAt: string | null;
+  reason: string | null;
+  reopenedBy: string | null;
+  reopenedAt: string | null;
 }

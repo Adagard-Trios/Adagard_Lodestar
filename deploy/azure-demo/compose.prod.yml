@@ -68,7 +68,10 @@ services:
     mem_limit: 320m
   ocr:
     mem_limit: 400m
+  ml:
+    mem_limit: 768m     # LightGBM/XGBoost/sklearn models + a Task 2A refit (statsmodels) in memory
   frontend:
+    build: { context: ./frontend, args: { NEXT_PUBLIC_DESIGN_PREVIEW: "off" } }   # no ?design=1 prototype in production
     mem_limit: 384m
     environment:
       NODE_OPTIONS: --max-old-space-size=256

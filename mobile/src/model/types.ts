@@ -74,6 +74,8 @@ export type POD = Etag & {
   unitsOrdered: number;
   receiverName?: string | null;
   photoUrl?: string | null;
+  /** Photos of the drop the server holds for this stop (/media/pod-photos). */
+  photoCount?: number;
   exceptions?: { type?: string; description?: string; item?: string; qty?: number; unitsShort?: number; source?: string; note?: string | null }[] | null;
   creditNoteId?: string | null;
   savedOffline: boolean;

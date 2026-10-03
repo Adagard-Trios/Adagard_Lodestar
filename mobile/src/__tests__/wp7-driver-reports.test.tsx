@@ -231,7 +231,7 @@ describe('Trip status from the driver: started (ENROUTE) and finished (COMPLETE)
     await fireEvent.press(screen.getByTestId('end-shift'));
     await waitFor(() => expect(push).toHaveBeenCalledWith(opened('dr-28-end-of-shift-summary')));
     expect(statusWrites('u-done')).toHaveLength(1);
-    view.unmount();
+    await view.unmount();
 
     network.set({ online: true, since: new Date().toISOString() });
     const { sync } = require('./fake-platform');

@@ -11,7 +11,7 @@ import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@
 const nav: ScreenNav = {"links":{"L214":{"to":"ld-06-sign-in","kind":"go"}}};
 
 export default function ScreenLd25SignedOutAtShiftEnd() {
-  const { signIn, ready, busy } = useSignIn();
+  const { signIn, ready, busy } = useSignIn('dock');
   const problem = useAccessProblem();
   const device = useDeviceId();
   const { items, waiting } = useOutbox();

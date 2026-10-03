@@ -276,6 +276,7 @@
         <NavigationProperty Name="order" Type="Lodestar.Order" Nullable="false"/>
         <NavigationProperty Name="outlet" Type="Lodestar.Outlet" Nullable="false"/>
         <NavigationProperty Name="pod" Type="Lodestar.POD"/>
+        <NavigationProperty Name="podPhotos" Type="Collection(Lodestar.PodPhoto)"/>
       </EntityType>
       <EntityType Name="POD">
         <Key>
@@ -293,7 +294,26 @@
         <Property Name="savedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
         <Property Name="syncedAt" Type="Edm.DateTimeOffset"/>
         <Property Name="createdAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <Property Name="photoCount" Type="Edm.Int32" Nullable="false"/>
         <NavigationProperty Name="tripStop" Type="Lodestar.TripStop" Nullable="false"/>
+        <NavigationProperty Name="photos" Type="Collection(Lodestar.PodPhoto)"/>
+      </EntityType>
+      <EntityType Name="PodPhoto">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="id" Type="Edm.String" Nullable="false"/>
+        <Property Name="tripStopId" Type="Edm.String" Nullable="false"/>
+        <Property Name="podId" Type="Edm.String"/>
+        <Property Name="mime" Type="Edm.String" Nullable="false"/>
+        <Property Name="size" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="sha256" Type="Edm.String" Nullable="false"/>
+        <Property Name="eventId" Type="Edm.String"/>
+        <Property Name="takenAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="uploadedBy" Type="Edm.String" Nullable="false"/>
+        <Property Name="createdAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <NavigationProperty Name="tripStop" Type="Lodestar.TripStop" Nullable="false"/>
+        <NavigationProperty Name="pod" Type="Lodestar.POD"/>
       </EntityType>
       <EntityType Name="LoadRecord">
         <Key>
@@ -461,6 +481,19 @@
         <Property Name="createdAt" Type="Edm.DateTimeOffset" Nullable="false"/>
         <Property Name="updatedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
       </EntityType>
+      <EntityType Name="DemandForecast">
+        <Key>
+          <PropertyRef Name="id"/>
+        </Key>
+        <Property Name="id" Type="Edm.String" Nullable="false"/>
+        <Property Name="depot" Type="Edm.String" Nullable="false"/>
+        <Property Name="weekStart" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <Property Name="source" Type="Edm.String" Nullable="false"/>
+        <Property Name="totalM3" Type="Edm.Double" Nullable="false"/>
+        <Property Name="chilledM3" Type="Edm.Double" Nullable="false"/>
+        <Property Name="forecastAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+        <Property Name="createdAt" Type="Edm.DateTimeOffset" Nullable="false"/>
+      </EntityType>
       <EntityType Name="Device">
         <Key>
           <PropertyRef Name="id"/>
@@ -568,6 +601,25 @@
         <Parameter Name="savedAt" Type="Edm.DateTimeOffset" Nullable="false"/>
         <ReturnType Type="Lodestar.Order"/>
       </Action>
+      <Action Name="CloseOrders" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.Order)" Nullable="false"/>
+        <Parameter Name="depot" Type="Edm.String" Nullable="false"/>
+        <Parameter Name="runDate" Type="Edm.Date" Nullable="false"/>
+        <Parameter Name="reason" Type="Edm.String"/>
+        <ReturnType Type="Edm.Untyped"/>
+      </Action>
+      <Action Name="ReopenOrders" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.Order)" Nullable="false"/>
+        <Parameter Name="depot" Type="Edm.String" Nullable="false"/>
+        <Parameter Name="runDate" Type="Edm.Date" Nullable="false"/>
+        <ReturnType Type="Edm.Untyped"/>
+      </Action>
+      <Function Name="OrderWindow" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.Order)" Nullable="false"/>
+        <Parameter Name="runDate" Type="Edm.Date" Nullable="false"/>
+        <Parameter Name="depot" Type="Edm.String"/>
+        <ReturnType Type="Edm.Untyped"/>
+      </Function>
       <Function Name="Summary" IsBound="true">
         <Parameter Name="bindingParameter" Type="Collection(Lodestar.Order)" Nullable="false"/>
         <Parameter Name="runDate" Type="Edm.Date" Nullable="false"/>
@@ -741,6 +793,10 @@
         <Parameter Name="bindingParameter" Type="Lodestar.Notification" Nullable="false"/>
         <ReturnType Type="Lodestar.Notification"/>
       </Action>
+      <Function Name="Channels" IsBound="true">
+        <Parameter Name="bindingParameter" Type="Collection(Lodestar.Notification)" Nullable="false"/>
+        <ReturnType Type="Edm.Untyped"/>
+      </Function>
       <Action Name="Send" IsBound="true">
         <Parameter Name="bindingParameter" Type="Collection(Lodestar.Notification)" Nullable="false"/>
         <Parameter Name="recipientId" Type="Edm.String" Nullable="false"/>

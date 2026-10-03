@@ -134,7 +134,7 @@ describe('SM-17 deferral notice', () => {
     await fireEvent.press(screen.getByTestId('call-dispatcher'));
     await waitFor(() => expect(open).toHaveBeenCalledWith('tel:+94770001111'));
     expect(push).not.toHaveBeenCalled();
-    view.unmount();
+    await view.unmount();
     open.mockClear();
     routes.set('Users/Lodestar.MyDispatcher()', { depot: 'KANDY', name: null, phone: null });
     const { clearCache } = require('@/model/query');

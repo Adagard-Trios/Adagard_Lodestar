@@ -73,6 +73,40 @@ The production override:
 - runs Keycloak in production mode behind the proxy, with a local cache and a heap sized to its 1 GiB ceiling
 - caps the memory of every container
 
+### The ML models (optional)
+
+The `ml` service serves the Adagard datathon models (Task 1: stop service time and late risk; Task 2A: weekly demand). Neither the models nor `dtcore.py` are in the repository or in any image: copy them to the VM by hand and point `.env` at them.
+
+```bash
+# from your machine
+ssh lodestar@<fqdn> 'mkdir -p /opt/lodestar/models'
+scp datathon/Adagard_Datathon/models/task1_model.pkl datathon/Adagard_Datathon/models/task2a_model.pkl     datathon/Adagard_Datathon/dtcore.py lodestar@<fqdn>:/opt/lodestar/models/
+ssh lodestar@<fqdn> 'chmod 755 /opt/lodestar/models && chmod 644 /opt/lodestar/models/*'   # the container runs as uid 10001
+# on the VM: add to /opt/lodestar/.env, then deploy/azure-demo/up.sh
+ML_MODELS_DIR=/opt/lodestar/models
+ML_DTCORE=/opt/lodestar/models/dtcore.py
+```
+
+Check: `docker compose exec ml python -c "import urllib.request;print(urllib.request.urlopen('http://127.0.0.1:8000/health').read().decode())"` shows `"status":"ok"`. Without the files it says `"degraded"`, and the agent, trips and planning keep their heuristics (as they do whenever the service is slow or down; `ML_URL=` in `.env` switches the models off). The container is capped at 768 MiB ([`compose.prod.yml`](compose.prod.yml)); the first demand forecast of a week takes a minute or two in the background (the outlook shows the heuristic until it is cached).
+
+### Sign-in screens (once, after the first deploy with the new identity image)
+
+Every role signs in on its own designed screen (SM-26/SM-05 store, DSP-06/07 plan, ADM-01 admin, LD-06 dock,
+DR-06/07 run); the screens post to Keycloak's token endpoint and the `lodestar-identity` image's extension
+(`backend/identity/extension`) checks phone + SMS code, staff ID + PIN, or email + password + a second step.
+The VM's realm was imported long ago, so switch it over (idempotent; safe to re-run):
+
+```bash
+deploy/azure-demo/up.sh                      # pulls/starts lodestar-identity (Keycloak + extension)
+deploy/azure-demo/realm-signin.sh            # flow + client binding + phone/staff_id attributes + demo Dock PINs
+```
+
+`.env` knobs: `SMS_PROVIDER=log|twilio|notifylk` (+ `TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN/TWILIO_FROM` or
+`NOTIFYLK_USER_ID/NOTIFYLK_API_KEY/NOTIFYLK_SENDER_ID`), `DEMO_SHOW_CODES=true` (the app shows "Demo: your code is
+123456" instead of a real SMS; set `false` with a real provider), `LODESTAR_DEMO_PIN` (loaders' Dock PIN, default
+2468), `LODESTAR_ADMIN_PHONE` (where the admin's second-step code goes). `RESET_PINS=1 realm-signin.sh` resets PINs.
+Keycloak's own login page stays only behind the "Waypoint single sign-on" buttons.
+
 ## 3. Check it from a phone-sized browser
 
 Open `https://<fqdn>/`, pick each role on the start page and sign in with the README accounts. Driver and loader open the field app at `/field/`.

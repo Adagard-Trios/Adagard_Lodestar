@@ -8,7 +8,7 @@ import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@
 const nav: ScreenNav = {"links":{"L110":{"to":"sm-06-verify-code","kind":"go"},"L111":{"to":"sm-32-access-request-sent","kind":"go"},"B":{"to":"sm-05-sign-in","kind":"back"}}};
 
 export default function ScreenSm31CanTSignIn() {
-  const { signIn, ready, busy } = useSignIn();
+  const { signIn, ready, busy } = useSignIn('store');
   const problem = useAccessProblem();
   const device = useDeviceId();
   return (

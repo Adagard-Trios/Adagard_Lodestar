@@ -9,7 +9,7 @@ import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@
 const nav: ScreenNav = {"links":{"L113":{"to":"sm-05-sign-in","kind":"go"}}};
 
 export default function ScreenSm33SessionExpired() {
-  const { signIn, ready, busy } = useSignIn();
+  const { signIn, ready, busy } = useSignIn('store');
   const problem = useAccessProblem();
   const device = useDeviceId();
   const { draft } = useDraft();
