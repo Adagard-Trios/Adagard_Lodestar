@@ -185,7 +185,12 @@ export default function LiveSm01PlaceOrder() {
       if (isUnreachable(e)) saveOrderDraft({ ...draft, savedAt: Date.now() });
       throw e;
     });
-    if (!created.length) throw new Error('Add at least one item with a quantity.');
+    if (!created.length) {
+      // an earlier submit already sent every class with items (the draft remembers it): go on to the history
+      const done = Object.values(draft.sent ?? {}).filter((id): id is string => Boolean(id));
+      if (done.length) return done.map(id => ({ id, runDate: draft.runDate }) as Order);
+      throw new Error('Add at least one item with a quantity.');
+    }
     return created;
   }, {
     onSuccess: created => {
