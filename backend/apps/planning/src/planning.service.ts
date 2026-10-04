@@ -16,6 +16,10 @@ export const PLAN_PREFIX: Record<string, string> = { PELIYAGODA: 'PLG', KANDY: '
 /** Plan id prefix: the two original depots keep PLG/PLK; a depot registered later uses P + its code (PGALLE). */
 export const planPrefix = (depot: string) => PLAN_PREFIX[depot] ?? `P${depot}`;
 
+/** Publishing a plan writes every trip and order of the day in one transaction: on a remote database (Prisma
+ * Postgres) that takes over a minute, so it may run up to just under the gateway's 150 s read timeout. */
+export const APPROVE_TX_TIMEOUT_MS = 140_000;
+
 /** Plans a human may still approve or reject. */
 export const OPEN_PLAN_STATUSES: PlanStatus[] = [PlanStatus.DRAFT, PlanStatus.NEEDS_APPROVAL];
 
@@ -283,14 +287,26 @@ export class PlanningService {
             : {}),
         },
       });
-    }, { timeout: 60_000, maxWait: 10_000 });
-    if (execution) await this.announce(execution);
+    }, { timeout: APPROVE_TX_TIMEOUT_MS, maxWait: 10_000 });
+    // the plan is live once the transaction commits: a failed notice must not turn that into an error
+    if (execution) await this.announce(execution).catch((e: Error) => this.logger.warn(`Plan ${planId} is live, but announcing it failed: ${e.message}`));
     return published;
   }
 
   /** After a plan is in effect: each affected store gets a notice, and the open screens are told to refresh. */
   private async announce(x: ExecutionResult) {
     const outlets = [...new Set([...x.planned.map(p => p.outletId), ...x.deferred.map(d => d.outletId), ...(x.atRisk ?? []).map(a => a.outletId)])];
+    // the open screens first (the dock's re-plan alert, LD-14): the per-store notices below can be slow
+    const rooms = [
+      `dispatcher:${x.depot}`,
+      `loader:${x.depot}`,
+      ...outlets.map(o => `store:${o}`),
+      ...x.trips.filter(t => t.driverId).map(t => `driver:${t.driverId}`),
+    ];
+    await this.notify.publish('plan_published', rooms, {
+      planId: x.planId, depot: x.depot, runDate: x.runDate,
+      trips: x.trips.length, planned: x.planned.length, deferred: x.deferred.length, supersededTrips: x.supersededTrips,
+    });
     const managers = await this.prisma.user.findMany({
       where: { role: Role.STORE_MANAGER, isActive: true, outletId: { in: outlets } },
       select: { id: true, outletId: true },
@@ -317,16 +333,6 @@ export class PlanningService {
         });
       }
     }
-    const rooms = [
-      `dispatcher:${x.depot}`,
-      `loader:${x.depot}`,
-      ...outlets.map(o => `store:${o}`),
-      ...x.trips.filter(t => t.driverId).map(t => `driver:${t.driverId}`),
-    ];
-    await this.notify.publish('plan_published', rooms, {
-      planId: x.planId, depot: x.depot, runDate: x.runDate,
-      trips: x.trips.length, planned: x.planned.length, deferred: x.deferred.length, supersededTrips: x.supersededTrips,
-    });
     this.logger.log(`Plan ${x.planId} in effect: ${x.trips.length} trips, ${x.planned.length} orders, ${x.deferred.length} deferred, ${x.locked.length} left on started trips`);
   }
 

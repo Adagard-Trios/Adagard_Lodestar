@@ -6,13 +6,13 @@
 // or, when the draft cannot serve the run as the rules stand (protected orders it could not place, rule
 // violations left), to DSP-23 Plan infeasible, which says why.
 // Nothing goes live from here: the agent can never publish.
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Btn from '@/components/live/Btn';
 import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
 import { tripTwoHead } from '@/components/live/board';
-import { infeasibility, useReviewRun, usePlanScope, useStartAgentRun } from '@/components/live/plan-data';
+import { infeasibility, useReviewRun, usePlanScope, useStartAgentRun, useStartingRun } from '@/components/live/plan-data';
 import { type AgentConfig, useAgentConfig } from '@/components/live/settings-data';
 import { Empty, ErrorBanner } from '@/components/live/states';
 import { fmtNum, fmtRunDate, fmtTime, isoDay } from '@/lib/format';
@@ -50,12 +50,20 @@ export default function LiveDsp22PlanningAgentDrafting() {
   const { name: depotName } = useDepots();
   const router = useRouter();
   const scope = usePlanScope();
-  const { runId, run, setRunId } = useReviewRun();
+  const { runId: reviewId, run: review, setRunId } = useReviewRun();
   const config = useAgentConfig();
-  const start = useStartAgentRun(r => setRunId(r.id));
-  const status = String(run.data?.status ?? '').toUpperCase();
+  const start = useStartAgentRun(r => setRunId(r.id), { track: true });
+  // the draft this tab just asked for (DSP-01 or the button below): the agent is still working on it, so no
+  // earlier run of the day stands in for it; its steps advance with the time it has been drafting
+  const starting = useStartingRun();
+  const pending = Boolean(starting && !starting.failed);
+  const now = useNow(pending);
+  const runId = pending ? null : reviewId;
+  const run = pending ? { ...review, data: undefined, error: undefined, drafting: true } : review;
+  const status = pending ? 'DRAFTING' : String(run.data?.status ?? '').toUpperCase();
   const detail: AgentRunDetail = run.data?.detail ?? {};
-  const done = new Set((detail.history ?? []).map(h => h.node));
+  const paced = pending ? Math.max(0, Math.min(Math.floor((now - starting!.at) / 4000), STEPS.length - 1)) : 0;
+  const done = new Set(pending ? STEPS.slice(0, paced).map(s => s.node) : (detail.history ?? []).map(h => h.node));
   const ready = status === 'NEEDS_APPROVAL';
   const blocked = ready && infeasibility(run.data) !== null;
   const next = blocked ? INFEASIBLE : BOARD;
@@ -67,10 +75,11 @@ export default function LiveDsp22PlanningAgentDrafting() {
     }
   }, [ready, next, router]);
 
-  const firstOpen = STEPS.findIndex(s => !done.has(s.node));
+  const firstOpen = pending ? paced : STEPS.findIndex(s => !done.has(s.node));
   const progress = ready || ['APPROVED', 'REJECTED'].includes(status) ? 100 : Math.round((Math.max(firstOpen, 0) / STEPS.length) * 100);
-  const depot = run.data?.depot ?? scope.depot ?? scope.active[0];
-  const runDate = run.data ? isoDay(run.data.runDate) : scope.runDate;
+  const depot = starting?.depot ?? run.data?.depot ?? scope.depot ?? scope.active[0];
+  const runDate = starting?.runDate ?? (run.data ? isoDay(run.data.runDate) : scope.runDate);
+  const begin = () => { setRunId(null); void start.run({ depot: depot!, runDate: runDate! }); };
 
   return (
     <div className="frame frame--desktop mode-dispatcher" data-name="DSP-22 Planning agent drafting · desktop">
@@ -91,7 +100,8 @@ export default function LiveDsp22PlanningAgentDrafting() {
             </div>
             <span className="d-btn" data-lk="C"><Ic n="x" />{"Stop, plan manually"}</span>
           </div>
-          {!runId && (
+          {starting?.failed && !start.error && <ErrorBanner error={new Error('The planning agent could not draft this run. Start it again or plan manually.')} />}
+          {!runId && !pending && (
             <div className="dx-card">
               <Empty title="No draft running" text="Start the planning agent for this run date. It drafts and explains; only you can approve." icon="sparkle-plus">
                 <Btn
@@ -99,7 +109,7 @@ export default function LiveDsp22PlanningAgentDrafting() {
                   testId="start-agent"
                   busy={start.pending}
                   disabled={!depot || !runDate}
-                  onClick={() => void start.run({ depot: depot!, runDate: runDate! })}
+                  onClick={begin}
                 >
                   <Ic n="sparkle-plus" />{"Start the planning agent"}
                 </Btn>
@@ -109,7 +119,7 @@ export default function LiveDsp22PlanningAgentDrafting() {
           )}
           {run.error && <ErrorBanner error={run.error} onRetry={run.refresh} />}
           {status === 'FAILED' && <ErrorBanner error={new Error('The agent run failed. Plan manually or start a new draft.')} />}
-          {runId && (
+          {(runId || pending) && (
             <div className="dx-hrow">
               <div className="dx-card" style={{ flex: '1' }}>
                 <div className="dx-card__body" style={{ padding: '22px 24px', gap: '14px' }}>
@@ -145,7 +155,7 @@ export default function LiveDsp22PlanningAgentDrafting() {
               <div className="dx-col" style={{ width: '320px', flexShrink: '0' }}>
                 <div className="dx-inset dx-inset--brand" style={{ padding: '18px' }}>
                   <span className="dx-sech" style={{ color: 'var(--brand-600)' }}>{"Run"}</span>
-                  <b style={{ fontSize: '16px' }} className="mono">{runId}</b>
+                  <b style={{ fontSize: '16px' }} className="mono">{runId ?? 'starting…'}</b>
                   <span className="dx-t14">{detail.redrafts ? `${String(detail.redrafts)} redraft(s) after rule checks.` : 'Drafts, checks the rules and explains itself.'}</span>
                 </div>
                 <div className="dx-inset" style={{ padding: '18px' }}>
@@ -159,7 +169,7 @@ export default function LiveDsp22PlanningAgentDrafting() {
               </div>
             </div>
           )}
-          {runId && !ready && (
+          {(runId || pending) && !ready && (
             <div className="vstack" style={{ gap: '12px', flex: '1', minHeight: '0', opacity: '.9' }} aria-hidden>
               <div className="x-lanehead">
                 <span style={{ width: '168px' }}>{"Vehicle · Fresh minutes"}</span>
@@ -191,4 +201,15 @@ export default function LiveDsp22PlanningAgentDrafting() {
       </div>
     </div>
   );
+}
+
+/** The clock, ticking each second while `on` (the paced steps of a draft still being made). */
+function useNow(on: boolean) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!on) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [on]);
+  return now;
 }

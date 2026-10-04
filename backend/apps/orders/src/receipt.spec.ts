@@ -3,7 +3,7 @@ import { anything, capture, instance, mock, verify, when } from 'ts-mockito';
 import { operationsOf } from '@lodestar/odata';
 import { NotifyClient, rowFilter } from '@lodestar/security';
 import { personas } from '../../../libs/security/test/principals';
-import { creditNotePrefix, creditNoteSequence, OrdersService, ReceiptException } from './orders.service';
+import { creditNotePrefix, creditNoteSequence, OrdersService, RECEIPT_TX, ReceiptException } from './orders.service';
 import { OrdersSet } from './orders.sets';
 
 interface OrderDelegate {
@@ -70,6 +70,7 @@ describe('Orders ConfirmReceipt (SM-03)', () => {
     let notify: NotifyClient;
     let outerOrder: OrderDelegate;
     let user: FindManyDelegate;
+    let prisma: { $transaction: jest.Mock };
 
     const delivered = (podRow: any = null, extra: any = {}) => ({ id: 'ORD0104217', status: 'DELIVERED', unitsReceived: null, tripStop: podRow === undefined ? null : { pod: podRow }, ...extra });
 
@@ -79,7 +80,8 @@ describe('Orders ConfirmReceipt (SM-03)', () => {
       tx = { order: instance(order), pOD: instance(pod) };
       outerOrder = mock<OrderDelegate>();
       user = mock<FindManyDelegate>();
-      const prisma = { $transaction: jest.fn(async (fn: (t: any) => Promise<unknown>) => fn(tx)), order: instance(outerOrder), user: instance(user) };
+      prisma = { $transaction: jest.fn(async (fn: (t: any) => Promise<unknown>) => fn(tx)) };
+      Object.assign(prisma, { order: instance(outerOrder), user: instance(user) });
       notify = mock(NotifyClient);
       when(notify.notice(anything())).thenResolve(true);
       // the receipt's outlet (Kandy) and trip, and the dispatchers: one based at Kandy, one at Peliyagoda
@@ -98,6 +100,13 @@ describe('Orders ConfirmReceipt (SM-03)', () => {
       expect(res).toMatchObject({ status: 'DELIVERED', unitsReceived: 34, unitsExpected: 34, receiptNote: null, receiptSavedAt: SAVED, receivedBy: 'fathima', creditNoteId: null });
       expect((res as any).receivedAt).toBeInstanceOf(Date);
       verify(pod.update(anything())).never();
+    });
+
+    it('runs the receipt in one transaction with room for a remote database (not the 5 s default)', async () => {
+      when(order.findUnique(anything())).thenResolve(delivered({ id: 'POD1', creditNoteId: null, exceptions: null }));
+      await service.confirmReceipt('ORD0104217', 'fathima', { unitsReceived: 30, unitsExpected: 34, savedAt: SAVED });
+      expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), RECEIPT_TX);
+      expect(RECEIPT_TX.timeout).toBeGreaterThanOrEqual(20_000);
     });
 
     it("a short count reuses the POD's credit note and adds the shortfall to its exceptions", async () => {

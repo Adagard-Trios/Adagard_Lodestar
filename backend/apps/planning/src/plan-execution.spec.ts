@@ -9,6 +9,7 @@ function store(seed: { orders: any[]; trips?: any[]; users?: any[]; calendar?: a
     deferrals: (seed.deferrals ?? []) as any[],
     users: seed.users ?? [],
     calendar: seed.calendar ?? [],
+    writes: 0,
   };
   for (const t of db.trips) for (const s of t.stops ?? []) db.stops.push({ ...s, tripId: t.id });
   const ids = (w: any) => (w?.in ?? [w]) as string[];
@@ -36,7 +37,8 @@ function store(seed: { orders: any[]; trips?: any[]; users?: any[]; calendar?: a
     order: {
       findMany: async ({ where }: any) =>
         db.orders.filter(o => ids(where.id).includes(o.id)).map(o => ({ ...o, deferralLog: db.deferrals.find(d => d.orderId === o.id) ?? null })),
-      update: async ({ where, data }: any) => Object.assign(db.orders.find(o => o.id === where.id), data),
+      update: async ({ where, data }: any) => { db.writes++; return Object.assign(db.orders.find(o => o.id === where.id), data); },
+      updateMany: async ({ where, data }: any) => { db.writes++; for (const o of db.orders.filter(x => ids(where.id).includes(x.id))) Object.assign(o, data); },
     },
     deferralLog: {
       update: async ({ where, data }: any) => Object.assign(db.deferrals.find(d => d.orderId === where.orderId), data),
@@ -91,6 +93,13 @@ describe('executePlan', () => {
     expect(db.stops[0].etaModel.toISOString()).toBe('2026-04-07T01:05:00.000Z'); // 06:35 Colombo
     expect(db.orders.filter(o => o.status === 'PLANNED').map(o => o.id)).toEqual(['O1', 'O2', 'O3']);
     expect(x.planned).toHaveLength(3);
+  });
+
+  it('plans the served orders in one write (each round trip counts on a remote database)', async () => {
+    const { db, tx } = store({ orders: ORDERS, users: [RUWAN], calendar: CALENDAR });
+    await executePlan(tx, plan(1, [trip('VEH057', 1, '03:30', [['O1', 'OUT106', '06:35'], ['O3', 'OUT106', '06:35'], ['O2', 'OUT108', '07:25']])]));
+    expect(db.writes).toBe(1);
+    expect(db.orders.filter(o => o.status === 'PLANNED').map(o => o.id)).toEqual(['O1', 'O2', 'O3']);
   });
 
   it('records each deferral with its reason and rolls the order to the next operating day, where it is protected', async () => {

@@ -83,6 +83,32 @@ export async function queuePodPhoto(stop: TripStop, photo: { dataBase64: string;
   });
 }
 
+const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+/** ASCII text (an SVG) as base64, without btoa/Buffer (not on every phone runtime). */
+export function asciiToBase64(text: string): string {
+  let out = '';
+  for (let i = 0; i < text.length; i += 3) {
+    const a = text.charCodeAt(i) & 255, b = i + 1 < text.length ? text.charCodeAt(i + 1) & 255 : -1, c = i + 2 < text.length ? text.charCodeAt(i + 2) & 255 : -1;
+    out += B64[a >> 2] + B64[((a & 3) << 4) | (b < 0 ? 0 : b >> 4)] + (b < 0 ? '=' : B64[((b & 15) << 2) | (c < 0 ? 0 : c >> 6)]) + (c < 0 ? '=' : B64[c & 63]);
+  }
+  return out;
+}
+
+/**
+ * The receiver's signature (DR-03 / DR-20 pad), as a POD_PHOTO write of kind SIGNATURE: the SVG is uploaded to
+ * /media/pod-photos?kind=SIGNATURE with signal; the server sets the POD's signatureUrl and signedAt (signed by receiverName).
+ */
+export async function queuePodSignature(stop: TripStop, sig: { svg: string; signedBy?: string; signedAt: string }) {
+  return queue.enqueue('POD_PHOTO', {
+    sub: sub(),
+    tripId: stop.tripId,
+    ref: stop.id,
+    label: `Signature · ${stop.orderId}`,
+    payload: { kind: 'SIGNATURE', stopId: stop.id, orderId: stop.orderId, mime: 'image/svg+xml', dataBase64: asciiToBase64(sig.svg), bytes: sig.svg.length, takenAt: sig.signedAt, ...(sig.signedBy ? { signedBy: sig.signedBy } : {}) },
+    savedAt: sig.signedAt,
+  });
+}
+
 // ---------------------------------------------------------------- trip status (driver)
 
 const STATUS_ORDER: TripStatus[] = ['PLANNED', 'LOADING', 'ENROUTE', 'COMPLETE'];

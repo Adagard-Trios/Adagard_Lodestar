@@ -97,3 +97,33 @@ textarea.lv-input { resize: vertical; min-height: 64px; }
   .b-P1 .ot-last, .b-P1 .ot-sug { display: none; }
   .b-P1 .ot-qty { width: auto; }
 }
+
+/* Store desk tables (SM-02, SM-27, SM-28) at every width: a value longer than its column wraps instead of being cut. */
+.b-P1 :is(.wk-row, .sx-tr) .c { white-space: normal; overflow-wrap: break-word; flex-wrap: wrap; row-gap: 2px; }
+.b-P1 :is(.wk-row, .sx-tr) .c :is(span, b) { min-width: 0; }
+
+/* Store sign-in (SM-26, SM-35): the brand panel narrows below 1280 px and sits above the card on a phone. */
+@media (max-width: 1279px) {
+  .b-P1 .sx-dauth__brand { width: 42%; padding: 40px 36px 0; }
+  .b-P1 .sx-dauth__brand svg[width] { max-width: 100%; height: auto; }
+}
+@media (max-width: 899px) {
+  .b-P1 .sx-dauth { flex-direction: column; flex: 1 0 auto; }
+  .b-P1 .sx-dauth__brand { width: auto; gap: 12px; padding: 24px 16px; }
+  .b-P1 .sx-dauth__brand > :not(.sx-dauth__logo, .sx-dauth__h) { display: none; }
+  .b-P1 .sx-dauth__h { font-size: 26px; }
+  .b-P1 .sx-dauth__form { justify-content: flex-start; padding: 16px; }
+  .b-P1 .sx-dcard { width: 100%; max-width: 460px; box-sizing: border-box; padding: 24px 20px; }
+  .b-P1 .sx-dcard .sx-otp { gap: 6px; }
+  .b-P1 .sx-dcard .sx-otp > * { flex: 1 1 0; min-width: 0; width: auto; }
+  /* order lines and two-pane pages (SM-01, SM-29, SM-30) */
+  .b-P1 .ot-item { flex-wrap: wrap; white-space: normal; row-gap: 0; }
+  .b-P1 .d-split > * { width: auto !important; max-width: 100%; min-width: 0; flex-shrink: 1 !important; }
+  .b-P1 .sx-dn__t, .b-P1 .sx-dn__m { white-space: normal; overflow-wrap: anywhere; }
+}
+/* a card narrower than its columns (900-1279 px, or beside a detail panel) shrinks them evenly, so the last column
+   keeps room; a flexible column keeps at least 96 px */
+@media (min-width: 900px) {
+  .b-P1 .d-card > :is(.sx-tr, .wk-row) > .c { flex-shrink: 1; }
+  .b-P1 .d-card > :is(.sx-tr, .wk-row) > .c[style*="flex"] { min-width: 96px; }
+}

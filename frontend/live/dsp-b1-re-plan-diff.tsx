@@ -13,7 +13,7 @@
 // override reason when the draft breaks a hard rule) and marks the fault notice handled: the dock, the drivers and
 // the stores are told by planning. "Discard" rejects it; "Edit manually" opens the plan board.
 // Not shown: the agent's alternative options for one order (A/B) and its rejected moves: a draft has neither.
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useScreenNav } from '@/components/ScreenShell';
 import Btn from '@/components/live/Btn';
 import { budget } from '@/components/live/board';
@@ -67,7 +67,10 @@ export default function LiveDspB1RePlanDiff() {
     c.all<Trip>('Trips', { filter: tripsFilter, expand: 'stops($expand=outlet($select=id,name,windowClose),order($select=id,m3,kg,tempClass,deferredYesterday,deferralScore)),vehicle', orderby: 'vehicleId,tripNumber' }),
   { refreshOn: ['plan_published', 'notification'] });
 
-  const all = useMemo(() => trips.data ?? [], [trips.data]);
+  // while "Approve & send" is in flight the plan goes live (plan_published refreshes the trips) before the answer
+  // comes back: the diff stays as approved instead of collapsing to "0 changes"
+  const [sending, setSending] = useState<{ trips: Trip[]; run: AgentRun } | null>(null);
+  const all = sending?.trips ?? trips.data ?? [];
   const open = (t: Trip) => t.status === 'PLANNED' || t.status === 'LOADING';
   const affected = (down.data ?? []).filter(v => all.some(t => t.vehicleId === v.id && open(t)));
   const faultOf = (id: string) => (faults.data ?? []).find(n => (n.payload as FaultPayload | null)?.vehicleId === id);
@@ -86,7 +89,7 @@ export default function LiveDspB1RePlanDiff() {
   const r = run.data;
   const draft = r && vehicle && r.depot === vehicle.depot && runDate && r.runDate.slice(0, 10) === runDate.slice(0, 10)
     && (!vehicle.updatedAt || r.createdAt >= vehicle.updatedAt) ? r : null;
-  const ready = draft?.status === 'NEEDS_APPROVAL' ? draft : null;
+  const ready = sending?.run ?? (draft?.status === 'NEEDS_APPROVAL' ? draft : null);
   const draftTrips = (ready?.detail?.plan?.trips ?? []) as DraftTrip[];
 
   const changes = ((): Change[] => {
@@ -134,9 +137,10 @@ export default function LiveDspB1RePlanDiff() {
   const needsReason = violations.length > 0 && !reason.trim();
   const decide = useAction<'approve' | 'reject', AgentRun>(
     async (c, decision) => {
+      if (decision === 'approve') setSending({ trips: all, run: ready! });
       const r2 = await c.action<AgentRun>('AgentRuns', ready!.id, 'Resume', {
         decision, comment: reason.trim() || undefined, overrideReason: decision === 'approve' && violations.length ? reason.trim() : undefined,
-      });
+      }).catch((e: unknown) => { setSending(null); throw e; });
       if (decision === 'approve' && notice && !notice.readAt) await c.action('Notifications', notice.id, 'MarkRead');
       return r2;
     },

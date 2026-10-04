@@ -171,11 +171,14 @@ erDiagram
     datetime syncedAt
     datetime createdAt
     int photoCount
+    string signatureUrl
+    datetime signedAt
   }
   PodPhoto {
     string id PK
     string tripStopId FK
     string podId FK
+    string kind
     string mime
     Bytes bytes
     int size

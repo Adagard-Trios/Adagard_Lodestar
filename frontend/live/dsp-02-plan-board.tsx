@@ -16,6 +16,10 @@ import { usePlanningRules } from '@/components/live/planning-rules';
 import { useQuery } from '@/lib/odata/hooks';
 import type { AgentRunDetail, Plan } from '@/lib/odata/types';
 import { openOverlay } from '@/lib/overlay';
+import { useFocusId } from '@/lib/workday';
+import type { Card } from '@/components/live/board';
+
+const TRIP_DRAWER = '/plan/dsp-11-trip-and-vehicle-drawer';
 
 export default function LiveDsp02PlanBoard() {
   const warnPct = usePlanningRules().data?.load.warnPct;
@@ -32,6 +36,10 @@ export default function LiveDsp02PlanBoard() {
   });
   const board = useBoardCards({ draft: showing === 'draft' ? draft : null, tripsFilter, ordersFilter, active });
   const { trips, orders, fleet, vehicles, cards, lanes, down, idle, loading } = board;
+  const [, setFocusTrip] = useFocusId('trip');
+  const [, setFocusVehicle] = useFocusId('vehicle');
+  // a trip card (or its vehicle) opens that trip in the drawer over the board: a draft trip by its draft id
+  const openTrip = (c: Card) => { setFocusTrip(c.id); setFocusVehicle(c.vehicleId); openOverlay(TRIP_DRAWER); };
   const p = plan.data;
   const deferrals = draft?.deferrals ?? [];
   const review = draft?.needsReview ?? [];
@@ -109,7 +117,7 @@ export default function LiveDsp02PlanBoard() {
               {!loading && lanes.length === 0 && (
                 <Empty title="No trips on the board" text={showing === 'draft' ? 'The agent draft has no trips.' : 'No trips are planned for this run date in the depots in view.'} icon="truck" />
               )}
-              {lanes.map(([id, cs]) => <Lane key={id} vehicleId={id} cards={cs} v={vehicles.get(id)} limits={board.limits} />)}
+              {lanes.map(([id, cs]) => <Lane key={id} vehicleId={id} cards={cs} v={vehicles.get(id)} limits={board.limits} onOpen={openTrip} />)}
               {down.map(v => (
                 <div key={v.id} className="x-lane">
                   <div className="x-veh" style={{ padding: '0 2px', justifyContent: 'center' }}>

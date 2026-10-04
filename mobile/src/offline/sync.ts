@@ -225,7 +225,7 @@ export class SyncEngine {
         case 'POD_PHOTO': {
           if (!this.client.request) return { status: 'retry', reason: 'Photos cannot be sent from here yet', stop: false };
           if (typeof p.dataBase64 !== 'string') return { status: 'synced', conflict: null }; // sent already
-          const q = new URLSearchParams({ ...(p.stopId ? { stopId: p.stopId } : { orderId: p.orderId }), takenAt: p.takenAt ?? item.savedAt, eventId: item.id });
+          const q = new URLSearchParams({ ...(p.stopId ? { stopId: p.stopId } : { orderId: p.orderId }), takenAt: p.takenAt ?? item.savedAt, eventId: item.id, ...(p.kind === 'SIGNATURE' ? { kind: 'SIGNATURE' } : {}) });
           await this.client.request('POST', `/media/pod-photos?${q.toString()}`, {
             raw: base64ToBytes(p.dataBase64),
             headers: { 'Content-Type': p.mime ?? 'image/jpeg' },

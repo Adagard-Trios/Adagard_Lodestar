@@ -120,6 +120,24 @@ describe('DeviceEnrollment', () => {
       expect(h.e.state.get().status).toBe('pending');
     });
 
+    it('a dropped Devices read is tried again: the demo phone is still adopted (no access request)', async () => {
+      const h = adopting({});
+      const read = h.deps.read as jest.Mock;
+      const real = read.getMockImplementation()!;
+      read.mockImplementationOnce(async () => Promise.reject({ status: 0, message: 'aborted' })).mockImplementationOnce(async () => Promise.reject({ status: 502 }));
+      read.mockImplementation(real);
+      await expect(h.e.ensure(claims('DEV-RB-01'))).resolves.toBe(true);
+      expect(read).toHaveBeenCalledTimes(3);
+      expect(h.adopt).toHaveBeenCalledWith('DEV-RB-01');
+      expect(h.deps.register).not.toHaveBeenCalled();
+    });
+
+    it('a refused Devices read (403) is not tried again', async () => {
+      const h = adopting(Object.assign(new Error('Forbidden'), { status: 403 }));
+      await expect(h.e.ensure(claims('DEV-RB-01'))).resolves.toBe(false);
+      expect(h.deps.read).toHaveBeenCalledTimes(1);
+    });
+
     it("another user on a browser that adopted a demo phone gets the install's own id back", async () => {
       const h = adopting({ sharedDemo: false });
       h.install.id = 'DEV-RB-01'; // adopted for ruwan earlier

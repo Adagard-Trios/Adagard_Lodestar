@@ -43,6 +43,16 @@ describe('buildDemoDay (no peak files: generated)', () => {
     expect(day.orders.filter((o) => o.deferredYesterday).length).toBeGreaterThan(1);
   });
 
+  it('gives Kandy a bulk chilled order bigger than any Kandy reefer, last so earlier ids stay put', () => {
+    const last = day.orders[day.orders.length - 1];
+    const depotOf = new Map(outlets.map((o) => [o.id, o.depot]));
+    expect(depotOf.get(last.outletId)).toBe('KANDY');
+    expect(last).toMatchObject({ id: demoOrderId(DATE, 999), tempClass: 'CHILLED', deferredYesterday: false });
+    // the biggest Kandy reefer in data/vehicles.csv is VEH039/VEH042: 6,180 kg, 29.9 m3
+    expect(last.kg).toBeGreaterThan(6180);
+    expect(last.m3).toBeGreaterThan(29.9);
+  });
+
   it('orders were placed before the 4:00 PM cut-off the day before, with line items that add up', () => {
     for (const o of day.orders) {
       expect(o.orderedAt.getTime()).toBeLessThan(Date.parse('2026-10-01T16:00:00+05:30'));

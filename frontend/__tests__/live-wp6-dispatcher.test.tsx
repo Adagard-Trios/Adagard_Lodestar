@@ -287,11 +287,11 @@ describe('DSP-11 Trip and vehicle drawer', () => {
     const view = renderLive(<TripDrawer />, { handler: handler() });
     const drawer = await screen.findByTestId('trip-drawer');
     expect(await within(drawer).findByText('VEHT2 · Trip 1')).toBeInTheDocument();
-    expect(drawer).toHaveTextContent('Reefer truck');
+    await waitFor(() => expect(drawer).toHaveTextContent('Reefer truck'));
     expect(drawer).toHaveTextContent('Fresh · District T');
     expect(drawer).toHaveTextContent('Peliyagoda DC');
     expect(drawer).toHaveTextContent('draft v3');
-    expect(view.calls.find(c => c.path === "Trips('TRPT1')")!.query.$expand).toBe('vehicle,plan($select=status,version),stops($expand=outlet,order($select=id,kg,m3),pod($select=id,photoUrl,photoCount))');
+    expect(view.calls.find(c => c.path === "Trips('TRPT1')")!.query.$expand).toBe('vehicle,plan($select=status,version,agentRunId),stops($expand=outlet,order($select=id,kg,m3),pod($select=id,photoUrl,photoCount,receiverName,signatureUrl,signedAt))');
 
     await waitFor(() => expect(screen.getByTestId('minutes')).toHaveTextContent('209/ 270 min'));
     expect(screen.getByText('61 min spare')).toBeInTheDocument();

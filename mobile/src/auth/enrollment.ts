@@ -133,9 +133,23 @@ export class DeviceEnrollment {
     const adopt = this.deps.adoptDevice;
     if (!adopt || !this.deps.sendsDeviceHeader()) return;
     const id = claims?.deviceId;
-    const row = id ? await this.deps.read(id).catch(() => null) : null;
+    const row = id ? await this.readShared(id) : null;
     const confirmed = !!row && row.id === id && row.sharedDemo === true && row.status === 'ACTIVE' && row.userId === claims?.sub;
     await adopt(confirmed ? row.id : null);
+  }
+
+  /** GET Devices('id'), tried again on a dropped or failed call (a busy network must not send a demo phone to SM-32); null when refused. */
+  private async readShared(id: string): Promise<DeviceRow | null> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.deps.read(id);
+      } catch (e) {
+        const status = (e as ErrorLike)?.status;
+        const transient = status === undefined || status === 0 || status >= 500;
+        if (!transient || attempt >= 2) return null;
+        await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+      }
+    }
   }
 
   /** The API said this phone is not bound (DeviceMismatch / DeviceNotBound) in the middle of a session. */

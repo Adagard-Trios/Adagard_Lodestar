@@ -213,10 +213,17 @@ export function buildDemoDay(opts: BuildOptions): DemoDay {
     kandy.push(...generatedOrders(r, o, 0.4).slice(0, 26 - kandy.length));
   }
 
-  const all = [...kandy, ...peli];
+  // Kandy's deferral: one bulk chilled order bigger than any Kandy reefer (6,500 kg, ~34 m³), so the agent's draft
+  // always has a reefer-capacity deferral to review next to the protected OUT108. Appended last, as ORD…999, so the
+  // ids of a day seeded before it stay the same (the writer is create-only).
+  const bulkAt = active.find((x) => x.depot === 'KANDY' && x.brand === Brand.FRESH && !['OUT106', 'OUT108'].includes(x.id));
+  const bulk = bulkAt ? [{ outletId: bulkAt.id, brand: bulkAt.brand, tempClass: TempClass.CHILLED, units: 1100, kg: 6500, m3: 34.2, deferredYesterday: false, daysSince: 1, source: 'synthetic' as const }] : [];
+
+  const all = [...kandy, ...peli, ...bulk];
   const orders: DemoOrder[] = all.map((o, i) => ({
     ...o,
-    id: demoOrderId(opts.date, i + 1),
+    // the bulk order has a fixed id clear of the day's sequence (orders placed later on the stack take ids after it)
+    id: demoOrderId(opts.date, bulk.length && i === all.length - 1 ? 999 : i + 1),
     orderedAt: orderedAtFor(opts.date, i),
     lineItems: linesFor(o.units, o.kg, o.tempClass, o.brand, i),
   }));

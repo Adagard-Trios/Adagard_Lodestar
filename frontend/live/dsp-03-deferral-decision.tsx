@@ -31,6 +31,10 @@ export default function LiveDsp03DeferralDecision() {
   const { runDate, active } = usePlanScope();
   const { run } = useReviewRun();
   const draftCandidates = run.data?.status === 'NEEDS_APPROVAL' ? run.data.detail?.deferrals ?? [] : [];
+  // protected outlets (deferred yesterday, or score at the protected line) the draft keeps on the plan: never deferred
+  const draftProtected = run.data?.status === 'NEEDS_APPROVAL'
+    ? (run.data.detail?.plan?.trips ?? []).flatMap(t => (t.stops ?? []).filter(s => s.protected).map(s => ({ ...s, vehicleId: t.vehicleId, tripNo: t.tripNo })))
+    : [];
 
   const filter = runDate ? [ "status eq 'SUGGESTED'", dayFilter('order/runDate', runDate), depotFilter('order/outlet/depot', active)].filter(Boolean).join(' and ') : null;
   const list = useQuery<Row[]>(filter ? `deferrals:${filter}` : null, async c => {
@@ -42,6 +46,7 @@ export default function LiveDsp03DeferralDecision() {
   }, { refreshOn: PLAN_EVENTS });
 
   const rows = useMemo(() => list.data ?? [], [list.data]);
+  const toDecide = rows.length || draftCandidates.length;
   const [selId, setSelId] = useState<string | null>(null);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -76,7 +81,7 @@ export default function LiveDsp03DeferralDecision() {
                 {runDate ? ` ${fmtRunDate(runDate)} ` : ' '}<span className="m-sep" />{` ${depotLine}`}
               </div>
               <div className="d-h1" style={{ fontSize: '28px' }}>
-                {rows.length ? `Defer ${rows.length} order${rows.length === 1 ? '' : 's'} to ${nextDay ? fmtRunDate(nextDay).split(' ')[0] : 'the next run'}` : 'No deferrals to decide'}
+                {toDecide ? `Defer ${toDecide} order${toDecide === 1 ? '' : 's'} to ${nextDay ? fmtRunDate(nextDay).split(' ')[0] : 'the next run'}` : 'No deferrals to decide'}
               </div>
               <div className="d-sub">{"Ranked lowest score first: safest to defer. Approve or dismiss each, with a note to the store."}</div>
             </div>
@@ -158,7 +163,22 @@ export default function LiveDsp03DeferralDecision() {
                         <div className="x-cand__name"><b>{d.outletId}</b><span><span className="id">{d.orderId}</span> · rank {d.rank}</span></div>
                         <div className="x-score"><b>{d.score}</b><span>{"score"}</span></div>
                       </div>
-                      <div className="x-meta"><span className="m-tag m-tag--cold"><Ic n="snow-heavy" />{fmtNum(d.m3, 1)} m³</span><span className="x-code">{code(d.reason)}</span></div>
+                      <div className="x-meta"><span className="m-tag m-tag--cold"><Ic n="snow-heavy" />{fmtNum(d.m3, 1)} m³</span><span className="x-code">{code(d.reason)}</span><span className="t-3">{REASONS[d.reason] ?? d.reason}</span></div>
+                    </div>
+                  ))}
+                </>
+              )}
+              {draftProtected.length > 0 && (
+                <>
+                  <div className="x-sect">{"Protected outlets "}<span className="m-sep" /><span style={{ fontWeight: '600' }}>kept on the plan, never deferred</span></div>
+                  {draftProtected.map(p => (
+                    <div key={p.orderId} className="x-cand x-cand--prot" data-testid="protected-outlet">
+                      <div className="x-cand__top">
+                        <span className="x-chk"><Ic n="shield-check" /></span>
+                        <div className="x-cand__name"><b>{p.outletId}</b><span><span className="id">{p.orderId}</span> · {p.vehicleId} trip {p.tripNo}</span></div>
+                        <span className="m-pill m-pill--warn"><Ic n="shield-check" />{"Protected"}</span>
+                      </div>
+                      <div className="x-meta">{"deferred yesterday: the agent can never defer it"}</div>
                     </div>
                   ))}
                 </>

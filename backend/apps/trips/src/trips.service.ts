@@ -77,6 +77,9 @@ const FAULT_LABEL: Record<VehicleFault, string> = {
   NOT_COOLING: 'Reefer not cooling', ENGINE: 'Engine fault', DOOR_SEAL: 'Door seal fault', OTHER: 'Vehicle fault',
 };
 
+/** CompleteStop's transaction (POD, stop, order): room for a remote, pooled database (Prisma's default is 5 s). */
+export const STOP_TX = { timeout: 30_000, maxWait: 10_000 } as const;
+
 @Injectable()
 export class TripsService {
   private readonly logger = new Logger(TripsService.name);
@@ -190,7 +193,9 @@ export class TripsService {
       throw ODataError.conflict(`A ${trip.status} trip has already left the dock; the driver reports faults on the road`);
     }
     const workshopNote = `${FAULT_LABEL[fault]} reported at bay ${trip.bay ?? '?'}${reeferTempC !== undefined ? ` (reefer ${reeferTempC} °C)` : ''}${note ? `: ${note}` : ''}`;
-    const marked = await this.fleet.setStatus(trip.vehicleId, 'WORKSHOP', workshopNote, tripId);
+    // fleet can answer late (its write committed after our timeout): the vehicle in the workshop is what counts
+    const marked = (await this.fleet.setStatus(trip.vehicleId, 'WORKSHOP', workshopNote, tripId))
+      || (await this.prisma.trip.findUnique({ where: { id: tripId }, select: { vehicle: { select: { status: true } } } }))?.vehicle?.status === 'WORKSHOP';
     if (!marked) throw new ODataError(502, 'FleetUnavailable', `Could not mark ${trip.vehicleId} down in fleet; try again or tell dispatch`);
     const payload = {
       tripId, vehicleId: trip.vehicleId, depot: trip.depot, bay: trip.bay, fault, reeferTempC: reeferTempC ?? null, note: note ?? null,
@@ -260,7 +265,7 @@ export class TripsService {
           leaveActual: left,
         },
       });
-    });
+    }, STOP_TX);
     await this.announcePod(stopId, podData);
     // photos the phone uploaded before this POD (POST /media/pod-photos) now count on it
     await this.progress(() => linkPodPhotos(this.prisma, stopId));

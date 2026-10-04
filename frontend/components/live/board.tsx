@@ -44,12 +44,26 @@ function capClass(used: number, cap: number, warnPct: number | undefined) {
   return t === 'ok' ? '' : t;
 }
 
-export function TripCard({ c, v, limits }: { c: Card; v?: Vehicle; limits?: PlanLimits }) {
+/** A draft time ("03:39", Colombo) on the run date as an instant; full timestamps pass through. */
+export function draftTime(day: string | undefined, t: string | null | undefined): string | null {
+  if (!t) return null;
+  if (!/^\d{1,2}:\d{2}$/.test(t)) return t;
+  return day ? `${day.slice(0, 10)}T${t.padStart(5, '0')}:00+05:30` : null;
+}
+
+/** A card or lane that opens its trip (the plan board's trip drawer) on click and with Enter. */
+const opener = (open?: () => void) => open ? {
+  role: 'button', tabIndex: 0, style: { cursor: 'pointer' },
+  onClick: (e: React.MouseEvent) => { e.stopPropagation(); open(); },
+  onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } },
+} : {};
+
+export function TripCard({ c, v, limits, onOpen }: { c: Card; v?: Vehicle; limits?: PlanLimits; onOpen?: (c: Card) => void }) {
   const warnPct = usePlanningRules().data?.load.warnPct;
   const kgCls = capClass(c.kg, v?.capacityKg ?? 0, warnPct);
   const m3Cls = capClass(c.m3, v?.capacityM3 ?? 0, warnPct);
   return (
-    <div className={`x-trip x-trip--${c.brand.toLowerCase()}`} data-trip={c.id}>
+    <div className={`x-trip x-trip--${c.brand.toLowerCase()}`} data-trip={c.id} {...opener(onOpen && (() => onOpen(c)))}>
       <div className="x-trip__head">
         <span className="x-trip__t">{title(c.brand)} · {c.district}</span>
         {c.chilled ? <span className="m-tag m-tag--cold"><Ic n="snow" />{"Chilled"}</span> : <span className="m-tag"><span className="dot" style={{ color: '#98A1B3' }} />{"Dry"}</span>}
@@ -77,20 +91,20 @@ export function TripCard({ c, v, limits }: { c: Card; v?: Vehicle; limits?: Plan
   );
 }
 
-export function Lane({ vehicleId, cards, v, limits }: { vehicleId: string; cards: Card[]; v?: Vehicle; limits?: PlanLimits }) {
+export function Lane({ vehicleId, cards, v, limits, onOpen }: { vehicleId: string; cards: Card[]; v?: Vehicle; limits?: PlanLimits; onOpen?: (c: Card) => void }) {
   const minutes = cards.reduce((s, c) => s + c.minutes, 0);
   const max = budget(cards[0]?.brand ?? 'FRESH', limits);
   const reefer = v?.tempClass === 'CHILLED';
   return (
     <div className="x-lane" data-vehicle={vehicleId}>
-      <div className="x-veh">
+      <div className="x-veh" {...opener(onOpen && cards[0] && (() => onOpen(cards[0])))} aria-label={onOpen ? `Open ${vehicleId}'s trip` : undefined}>
         <div className="x-veh__id"><span className={`x-veh__ic${reefer ? '' : ' x-veh__ic--dry'}`}><Ic n={v?.type === 'VAN' ? 'van' : 'truck'} /></span><span className="id">{vehicleId}</span></div>
         <div className="x-veh__type">{reefer ? 'Reefer' : 'Dry'} {v?.type === 'VAN' ? 'van' : 'truck'} · {fmtNum(v?.capacityM3, 1)} m³</div>
         <div className="x-veh__min"><span>{minutes}<small>/ {max ?? '—'} min</small></span></div>
         <div className="x-veh__bar"><div style={{ width: `${pct(minutes, max)}%` }} /></div>
         {v && <div className="x-veh__fuel"><span className="hstack" style={{ gap: '5px' }}><Ic n="fuel" /><b>{v.usedLThisWeek}</b>/ {v.weeklyLFuel} L</span></div>}
       </div>
-      {cards.slice(0, 2).map(c => <TripCard key={c.id} c={c} v={v} limits={limits} />)}
+      {cards.slice(0, 2).map(c => <TripCard key={c.id} c={c} v={v} limits={limits} onOpen={onOpen} />)}
     </div>
   );
 }
@@ -124,7 +138,8 @@ export function useBoardCards(opts: { draft: AgentRunDetail | null; tripsFilter?
     if (draft?.plan?.trips) {
       return draft.plan.trips.map((t: AgentTrip) => ({
         id: t.id, vehicleId: t.vehicleId, tripNo: t.tripNo, brand: t.brand, district: t.district, chilled: t.chilled,
-        stops: t.orderIds.length, firstOutlet: undefined, kg: t.kg, m3: t.m3, minutes: t.minutes, departs: t.departs,
+        stops: t.orderIds.length, firstOutlet: t.stops?.[0]?.outletId, kg: t.kg, m3: t.m3, minutes: t.minutes,
+        departs: draftTime(typeof draft.runDate === 'string' ? draft.runDate : undefined, t.departs),
       }));
     }
     return (trips.data ?? []).map(t => {

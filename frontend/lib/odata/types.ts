@@ -111,6 +111,9 @@ export interface POD {
   photoUrl?: string | null;
   /** Photos of the drop held for the stop; photoUrl is the newest (/media/pod-photos/<id>, bearer token). */
   photoCount?: number;
+  /** The receiver's signature (/media/pod-photos/<id>, a sanitised SVG), signed by receiverName at signedAt. */
+  signatureUrl?: string | null;
+  signedAt?: string | null;
   exceptions?: Array<{ type?: string; description?: string }> | string[] | null;
   creditNoteId?: string | null;
   savedOffline: boolean;
@@ -309,6 +312,22 @@ export interface AgentTrip {
   litres?: number;
   departs?: string | null;
   returns?: string | null;
+  /** The stops in sequence with the agent's times ("05:30", Colombo), service minutes and late risk. */
+  stops?: AgentStop[];
+}
+
+export interface AgentStop {
+  seq: number;
+  orderId: string;
+  outletId: string;
+  arrive?: string | null;
+  etaModel?: string | null;
+  window?: string | null;
+  serviceMin?: number | null;
+  lateRiskPct?: number | null;
+  dockType?: string | null;
+  parking?: string | null;
+  protected?: boolean;
 }
 
 export interface AgentRunDetail {

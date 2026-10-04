@@ -5,7 +5,7 @@
 // the run's synced offline records with a conflict note (DSP-A2). p5Link() names the P5 screen that handles an item.
 import { addDays, dayFilter, fmtClock, fmtTime, isoDay } from '@/lib/format';
 import { loadPlanningRules } from './planning-rules';
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import { useAction, useEntity, useQuery } from '@/lib/odata/hooks';
 import type { AgentRun, AgentRunDetail, Notification, OfflineEvent, Order, TripStop } from '@/lib/odata/types';
 import { colomboDay, cutoffFor, depotFilter, useAgentRunId, useDepot, useRunDate } from '@/lib/workday';
@@ -206,11 +206,33 @@ export function useReviewRun() {
 }
 
 /** Starts a planning-agent draft for one depot and run date. The agent drafts; it never publishes. */
-export function useStartAgentRun(onStarted?: (run: AgentRun) => void) {
-  return useAction<{ depot: string; runDate: string }, AgentRun>(
+export function useStartAgentRun(onStarted?: (run: AgentRun) => void, opts: { track?: boolean } = {}) {
+  const action = useAction<{ depot: string; runDate: string }, AgentRun>(
     (c, p) => c.create<AgentRun>('AgentRuns', { depot: p.depot, runDate: `${p.runDate}T00:00:00.000Z` }),
     { onSuccess: r => onStarted?.(r) },
   );
+  const { run: start } = action;
+  const track = Boolean(opts.track);
+  // tracked: the draft being started is shown on DSP-22 while the agent works (useStartingRun), so the
+  // screen that started it can move there at once instead of waiting for the whole draft
+  const run = useCallback(async (p: { depot: string; runDate: string }) => {
+    if (!track) return start(p);
+    const at = Date.now();
+    setStarting({ ...p, at });
+    const r = await start(p);
+    setStarting(r ? null : { ...p, at, failed: true });
+    return r;
+  }, [start, track]);
+  return { ...action, run };
+}
+
+/** A planning-agent draft this tab asked for that the agent is still drafting (the start request is in flight). */
+export type StartingRun = { depot: string; runDate: string; at: number; failed?: boolean };
+let starting: StartingRun | null = null;
+const startingSubs = new Set<() => void>();
+export function setStarting(s: StartingRun | null) { starting = s; startingSubs.forEach(fn => fn()); }
+export function useStartingRun(): StartingRun | null {
+  return useSyncExternalStore(fn => { startingSubs.add(fn); return () => { startingSubs.delete(fn); }; }, () => starting, () => null);
 }
 
 function useInterval(ms: number | null, fn: () => void) {

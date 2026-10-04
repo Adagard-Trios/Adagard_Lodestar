@@ -168,6 +168,21 @@ const key = (page: Page, d: string) => page.locator(`[data-testid="key-${d}"]:vi
 export async function fieldSignIn(page: Page, who: PersonaKey | Persona) {
   const p = typeof who === 'string' ? PERSONAS[who] : who;
   await page.waitForURL(/\/field\/s\/(sm-05|dr-06|ld-06)/, { timeout: 30_000 });
+  // Desktop/tablet browsers get the desk sign-in card (mobile/src/lodestar/desk-auth.tsx): typed fields, no keypad.
+  if (await page.locator('[data-testid="desk-card"]:visible').count()) {
+    if (/ld-06/.test(page.url())) {
+      await page.locator('[data-testid="staff-id-input"]:visible').first().fill(p.username === 'kasun' ? STAFF_ID : p.username);
+      await page.locator('[data-testid="pin-input"]:visible').first().fill(DOCK_PIN);
+    } else {
+      await page.locator('[data-testid="phone-input"]:visible').first().fill(phoneOf(p.username));
+      await page.locator(`[data-testid="${/sm-05/.test(page.url()) ? 'lk-L68' : 'lk-L229'}"]:visible`).first().click();
+      const demo = page.locator('[data-testid="demo-code"]:visible').first();
+      await expect(demo).toContainText(/\d{6}/, { timeout: 30_000 });
+      await page.locator('[data-testid="code-input"]:visible').first().fill(/(\d{6})/.exec((await demo.textContent()) ?? '')![1]);
+    }
+    await expect(page).not.toHaveURL(/sign-in|verify-code/, { timeout: 30_000 });
+    return;
+  }
   if (/ld-06/.test(page.url())) {
     await page.locator('[data-testid="staff-id-input"]:visible').first().fill(p.username === 'kasun' ? STAFF_ID : p.username);
     for (const d of DOCK_PIN) await key(page, d);

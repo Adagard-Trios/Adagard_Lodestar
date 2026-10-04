@@ -295,6 +295,8 @@
         <Property Name="syncedAt" Type="Edm.DateTimeOffset"/>
         <Property Name="createdAt" Type="Edm.DateTimeOffset" Nullable="false"/>
         <Property Name="photoCount" Type="Edm.Int32" Nullable="false"/>
+        <Property Name="signatureUrl" Type="Edm.String"/>
+        <Property Name="signedAt" Type="Edm.DateTimeOffset"/>
         <NavigationProperty Name="tripStop" Type="Lodestar.TripStop" Nullable="false"/>
         <NavigationProperty Name="photos" Type="Collection(Lodestar.PodPhoto)"/>
       </EntityType>
@@ -305,6 +307,7 @@
         <Property Name="id" Type="Edm.String" Nullable="false"/>
         <Property Name="tripStopId" Type="Edm.String" Nullable="false"/>
         <Property Name="podId" Type="Edm.String"/>
+        <Property Name="kind" Type="Edm.String" Nullable="false"/>
         <Property Name="mime" Type="Edm.String" Nullable="false"/>
         <Property Name="size" Type="Edm.Int32" Nullable="false"/>
         <Property Name="sha256" Type="Edm.String" Nullable="false"/>

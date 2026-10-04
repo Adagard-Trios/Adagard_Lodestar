@@ -3,7 +3,8 @@
 import { Text, View, StyleSheet } from 'react-native';
 import { hm } from '@/lib/time';
 import { titleCase, useAccessProblem, useDeviceId, useSignIn } from '@/lodestar/live';
-import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { DeskFrame } from '@/lodestar/desk-auth';
 
 const nav: ScreenNav = {"links":{"L110":{"to":"sm-06-verify-code","kind":"go"},"L111":{"to":"sm-32-access-request-sent","kind":"go"},"B":{"to":"sm-05-sign-in","kind":"back"}}};
 
@@ -12,7 +13,7 @@ export default function ScreenSm31CanTSignIn() {
   const problem = useAccessProblem();
   const device = useDeviceId();
   return (
-    <Frame bg="#f4f5f9" nav={nav} style={s.v0}>
+    <DeskFrame app="store" bg="#f4f5f9" nav={nav} style={s.v0}>
       <View style={s.v41}>
         <View style={s.v7}>
           <Tap lk="B" style={s.v2}>
@@ -107,7 +108,7 @@ export default function ScreenSm31CanTSignIn() {
           </Tap>
         </View>
       </View>
-    </Frame>
+    </DeskFrame>
   );
 }
 

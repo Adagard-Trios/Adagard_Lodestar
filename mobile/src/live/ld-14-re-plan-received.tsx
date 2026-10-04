@@ -22,9 +22,12 @@ export default function ScreenLd14RePlanReceived() {
   const depot = bay.data?.depot ?? claims?.depots[0];
   const q = useRePlan(depot, planId);
   const plan = q.data?.plan ?? null;
+  // the changed lines: the orders the vehicle that can't depart had in the version before, where they go now
+  const moved = new Set(q.data?.moved ?? []);
+  const allStops = q.data?.stops ?? [];
+  const stops = moved.size ? allStops.filter(st => moved.has(st.orderId)) : allStops;
   const down = q.data?.down[0] ?? null;
-  const stops = q.data?.stops ?? [];
-  const trips = (q.data?.trips ?? []).filter(t => t.status === 'PLANNED' || t.status === 'LOADING');
+  const trips = (q.data?.trips ?? []).filter(t => (t.status === 'PLANNED' || t.status === 'LOADING') && (!moved.size || stops.some(st => st.tripId === t.id)));
   const stopsOf = (id: string) => stops.filter(st => st.tripId === id);
   const going = trips.map(t => ({ t, stops: stopsOf(t.id), m3: stopsOf(t.id).reduce((n, st) => n + (st.order?.m3 ?? 0), 0) }));
   const orders = going.reduce((n, g) => n + g.stops.length, 0);

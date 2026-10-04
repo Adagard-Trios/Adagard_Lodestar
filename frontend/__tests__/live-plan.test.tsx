@@ -9,6 +9,7 @@ import AskAgent from '@/live/dsp-39-ask-the-planning-agent';
 import type { FakeRequest } from './helpers/live';
 import { agentConfigReply, page, renderLive } from './helpers/live';
 import { closeOverlay, currentOverlay } from '@/lib/overlay';
+import { rulePairs } from '@/components/live/AskAgent';
 
 const router = { push: jest.fn(), replace: jest.fn(), back: jest.fn(), forward: jest.fn(), refresh: jest.fn(), prefetch: jest.fn() };
 jest.mock('next/navigation', () => ({ useRouter: () => router, usePathname: () => '/plan' }));
@@ -63,7 +64,9 @@ describe('DSP-01 Cutoff queue', () => {
     await waitFor(() => expect(view.calls.some(c => c.path === 'Orders' && c.query.$filter?.includes("tempClass eq 'CHILLED'"))).toBe(true));
 
     fireEvent.click(screen.getByTestId('start-agent'));
-    await waitFor(() => expect(router.push).toHaveBeenCalledWith('/plan/dsp-22-planning-agent-drafting'));
+    // DSP-22 opens at once and shows the draft being made; the run is stored when the agent is done
+    expect(router.push).toHaveBeenCalledWith('/plan/dsp-22-planning-agent-drafting');
+    await waitFor(() => expect(window.sessionStorage.getItem('lodestar.agentRun')).toBe('run-1'));
     const post = view.calls.find(c => c.method === 'POST')!;
     expect(post).toMatchObject({ path: 'AgentRuns', body: { depot: 'PELIYAGODA', runDate: '2026-04-07T00:00:00.000Z' } });
     expect(window.sessionStorage.getItem('lodestar.agentRun')).toBe('run-1');
@@ -165,6 +168,37 @@ describe('DSP-03 Deferral decision', () => {
     expect(view.calls.find(c => c.method === 'POST')).toMatchObject({ path: "Deferrals('DT1')/Lodestar.Confirm", body: { notes: 'Covered till Wednesday', rescheduledDate: '2026-04-09' } });
     expect(view.calls.find(c => c.path === 'Calendar')!.query).toMatchObject({ $filter: 'date gt 2026-04-07T00:00:00Z and isOperating eq true', $top: '1' });
     expect(view.calls.find(c => c.path === 'Deferrals' && c.query.$expand === 'order')!.query.$filter).toContain("order/outlet/depot eq 'KANDY'");
+  });
+});
+
+describe('DSP-40 proposal rule checks', () => {
+  it('lays them out two per row, failing first (ten nowrap chips in one row overlapped)', () => {
+    const checks = ['a', 'b', 'c', 'd', 'e'].map((rule, i) => ({ rule, label: rule, passed: i !== 3 }));
+    expect(rulePairs(checks).map(r => r.map(c => c.rule))).toEqual([['d', 'a'], ['b', 'c'], ['e']]);
+  });
+});
+
+describe('DSP-03 with an agent draft under review', () => {
+  it('shows the draft deferral with its reason code and the protected outlet it keeps', async () => {
+    window.sessionStorage.setItem('lodestar.agentRun', 'run-3');
+    const run = {
+      id: 'run-3', depot: 'KANDY', runDate: DAY, status: 'NEEDS_APPROVAL', requestedBy: 'u-d', createdAt: DAY,
+      detail: {
+        plan: { version: 1, trips: [{ id: 'VEHT1-T1', vehicleId: 'VEHT1', tripNo: 1, brand: 'FRESH', district: 'District T', chilled: true, orderIds: ['ORDP1'], kg: 50, m3: 0.5, minutes: 90,
+          stops: [{ seq: 1, orderId: 'ORDP1', outletId: 'OUTP1', protected: true }] }] },
+        deferrals: [{ orderId: 'ORDB1', outletId: 'OUTB1', reason: 'CAP_REEFER', score: 20, suggested: true, m3: 34.2, rank: 1 }],
+      },
+    };
+    renderLive(
+      <ScreenShell board="P2" nav={nav({})} live><DeferralDecision /></ScreenShell>,
+      { handler: req => base(req) ?? (req.path === "AgentRuns('run-3')" ? run : page([])) },
+    );
+    expect(await screen.findByText(/^Defer 1 order to/)).toBeInTheDocument();
+    expect(screen.getByText('CAP-REEFER')).toBeInTheDocument();
+    expect(screen.getByText('Reefer capacity')).toBeInTheDocument();
+    const prot = screen.getByTestId('protected-outlet');
+    expect(within(prot).getByText('OUTP1')).toBeInTheDocument();
+    expect(within(prot).getByText('Protected')).toBeInTheDocument();
   });
 });
 

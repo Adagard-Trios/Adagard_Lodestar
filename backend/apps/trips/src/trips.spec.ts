@@ -3,7 +3,7 @@ import { depotDelegate } from '../../../libs/odata/test/depots';
 import { NotifyClient } from '@lodestar/security';
 import { personas } from '../../../libs/security/test/principals';
 import { FleetClient } from './fleet.client';
-import { newShortfalls, TripsService, tripLitres } from './trips.service';
+import { newShortfalls, STOP_TX, TripsService, tripLitres } from './trips.service';
 import { LoadRecordsSet, TripsSet, TripStopsSet } from './trips.sets';
 
 interface TravelDelegate {
@@ -178,6 +178,7 @@ describe('LoadRecordsSet', () => {
 });
 
 describe('TripsService', () => {
+  let txOptions: unknown[] = [];
   let trip: TripDelegate;
   let txTrip: TripDelegate;
   let txLoad: LoadRecordDelegate;
@@ -204,9 +205,10 @@ describe('TripsService', () => {
     loadRecord = mock<LoadRecordDelegate>();
     tripStop = mock<StopDelegate>();
     user = mock<FindManyDelegate>();
+    txOptions = [];
     const prisma = {
       trip: instance(trip), districtTravel: instance(travel), loadRecord: instance(loadRecord), tripStop: instance(tripStop), user: instance(user),
-      $transaction: async (cb: (t: any) => any) => cb(tx),
+      $transaction: async (cb: (t: any) => any, opts?: unknown) => { txOptions.push(opts); return cb(tx); },
     };
     // the directory: Nilanthi (based at Peliyagoda, covers Kandy) and Fathima, manager of OUT106
     when(user.findMany(anything())).thenCall(async (a: any) =>
@@ -301,6 +303,13 @@ describe('TripsService', () => {
       await expect(service.reportVehicleFault('T1', 'ENGINE', 'kasun')).rejects.toMatchObject({ status: 409 });
       verify(fleet.setStatus(anything(), anything(), anything(), anything())).never();
       verify(notify.notice(anything())).never();
+    });
+
+    it('goes on when fleet timed out but the vehicle is already in the workshop', async () => {
+      when(trip.findUnique(anything())).thenResolve(atDock as any, { vehicle: { status: 'WORKSHOP' } } as any);
+      when(fleet.setStatus(anything(), anything(), anything(), anything())).thenResolve(false);
+      await expect(service.reportVehicleFault('T1', 'NOT_COOLING', 'kasun')).resolves.toMatchObject({ vehicleStatus: 'WORKSHOP' });
+      verify(notify.publish('vehicle_fault', anything(), anything())).once();
     });
 
     it('says so when fleet could not mark the vehicle down, and tells nobody', async () => {
@@ -440,6 +449,12 @@ describe('TripsService', () => {
       });
       await expect(service.completeStop('S1', 'ORD1', { unitsDelivered: -1, unitsOrdered: 10 })).rejects.toMatchObject({ status: 400 });
       verify(txPod.upsert(anything())).never();
+    });
+
+    it('runs the POD in one transaction with room for a remote database (not the 5 s default)', async () => {
+      await service.completeStop('S1', 'ORD1', { unitsDelivered: 10, unitsOrdered: 10, receiverName: 'F' });
+      expect(txOptions).toContain(STOP_TX);
+      expect(STOP_TX.timeout).toBeGreaterThanOrEqual(20_000);
     });
 
     it('upserts the POD and delivers order and stop', async () => {

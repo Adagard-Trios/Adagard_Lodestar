@@ -23,6 +23,10 @@ const CHIP: Record<Chip, string | undefined> = {
   OTHER: "reason in ('WINDOW','FUEL','VEH_DOWN')",
 };
 const code = (r: string) => r.replace('_', '-');
+/** Who decided: the dispatcher who confirmed it, else the one who approved the plan that deferred it. */
+export const deciderOf = (d: Pick<Deferral, 'resolvedBy' | 'plan'>) => d.resolvedBy ?? d.plan?.approvedBy ?? null;
+/** The run the order was deferred from (the plan's run); the order itself has moved to the rescheduled run. */
+export const deferredFrom = (d: Pick<Deferral, 'plan' | 'order'>) => d.plan?.runDate ?? d.order?.runDate ?? null;
 
 function Next({ d }: { d: Deferral }) {
   switch (d.status) {
@@ -46,7 +50,7 @@ export default function LiveDsp17DeferralLog() {
   const since = daysAgo(30);
   const base = [`createdAt ge ${since}T00:00:00Z`, depotFilter('order/outlet/depot', active)].filter(Boolean).join(' and ');
 
-  const log = useEntitySet<Deferral>('Deferrals', { filter: [base, CHIP[chip]].filter(Boolean).join(' and '), expand: 'order', orderby: 'createdAt desc', top: 25, count: true, search: search.trim() || undefined }, {
+  const log = useEntitySet<Deferral>('Deferrals', { filter: [base, CHIP[chip]].filter(Boolean).join(' and '), expand: 'order,plan($select=id,runDate,approvedBy)', orderby: 'createdAt desc', top: 25, count: true, search: search.trim() || undefined }, {
     refreshOn: ['notification'],
   });
   const ids = [...new Set((log.data ?? []).map(d => d.order?.outletId).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b))) as string[];
@@ -55,7 +59,7 @@ export default function LiveDsp17DeferralLog() {
     return new Map(rows.map(o => [o.id, o]));
   });
   // who decided each row (Users directory), so the log names the dispatcher instead of "a dispatcher"
-  const deciders = [...new Set((log.data ?? []).map(d => d.resolvedBy).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b))) as string[];
+  const deciders = [...new Set((log.data ?? []).map(deciderOf).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b))) as string[];
   const people = useQuery<Map<string, string>>(deciders.length ? `log-deciders:${deciders.join(',')}` : null, async c => {
     const rows = await c.all<User>('Users', { filter: `id in (${deciders.map(i => `'${i}'`).join(',')})`, select: 'id,name' });
     return new Map(rows.map(u => [u.id, u.name]));
@@ -140,7 +144,7 @@ export default function LiveDsp17DeferralLog() {
                   data-deferral={d.id}
                   onClickCapture={() => setOutlet(o?.outletId ?? null)}
                 >
-                  <span className="dx-td" style={{ width: '90px' }}>{o ? fmtRunDate(o.runDate) : '—'}</span>
+                  <span className="dx-td" style={{ width: '90px' }}>{deferredFrom(d) ? fmtRunDate(deferredFrom(d)!) : '—'}</span>
                   <span className="dx-td" style={{ width: '110px' }}><span className="id">{d.orderId}</span></span>
                   <span className="dx-td" style={{ width: '204px' }}>
                     <span className="hstack" style={{ gap: '10px' }}>
@@ -153,7 +157,7 @@ export default function LiveDsp17DeferralLog() {
                   <span className="dx-td" style={{ width: '232px' }}>
                     <span className="dx-td2">
                       <b>{d.status === 'SUGGESTED' ? 'Suggested by the planner' : d.status === 'CONFIRMED' ? 'Confirmed' : d.status === 'REVERSED' ? 'Reversed' : 'Dismissed'}</b>
-                      <span>{d.resolvedBy ? `by ${people.data?.get(d.resolvedBy) ?? 'a dispatcher'}` : 'not decided yet'} · {fmtDayTime(d.confirmedAt ?? d.updatedAt ?? d.createdAt)}</span>
+                      <span>{deciderOf(d) ? `by ${people.data?.get(deciderOf(d)!) ?? 'a dispatcher'}` : d.status === 'SUGGESTED' ? 'not decided yet' : 'by the plan'} · {fmtDayTime(d.confirmedAt ?? d.updatedAt ?? d.createdAt)}</span>
                     </span>
                   </span>
                   <span className="dx-td" style={{ flex: '1', minWidth: '0' }}><Next d={d} /></span>

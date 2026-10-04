@@ -11,6 +11,7 @@ import { precoolReading, recordPrecool } from '@/model/field-reports';
 import { useClaims, useLoadSheet } from '@/model/hooks';
 import type { Trip } from '@/model/types';
 import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec, type Target } from '@/lodestar/runtime';
+import { TEMP_KEYBOARD } from '@/lib/keyboard';
 
 const nav: ScreenNav = {"links":{"L192":{"to":"ld-02-load-sheet","kind":"go"},"L193":{"to":"ld-b1-vehicle-can-t-depart","kind":"go"},"B":{"to":"ld-01-dock-queue","kind":"back"}}};
 
@@ -128,7 +129,7 @@ export default function ScreenLd09PreCoolCheck() {
                     onChangeText={setText}
                     placeholder={temp !== undefined ? String(temp) : "—"}
                     placeholderTextColor="#8f98aa"
-                    keyboardType="numbers-and-punctuation"
+                    keyboardType={TEMP_KEYBOARD}
                     style={[s.t14, x.input]}
                     testID="reefer-reading"
                   />

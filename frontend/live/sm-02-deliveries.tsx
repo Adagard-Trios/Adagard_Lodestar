@@ -13,7 +13,7 @@ import { useMemo, useState } from 'react';
 import Btn from '@/components/live/Btn';
 import { StoreTop, useMyOutlet } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
-import PodPhoto from '@/components/live/PodPhoto';
+import PodPhoto, { PodSignature } from '@/components/live/PodPhoto';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { isCounted, leftText, noticeText, orderCredit, STORE_EVENTS, useNextRun } from '@/components/live/store-data';
 import { useAuth } from '@/lib/auth/AuthProvider';
@@ -238,7 +238,7 @@ export default function LiveSm02Deliveries() {
                       <span className="d-kpi__l" style={{ paddingBottom: '2px' }}>{"Receiving plan"}</span>
                       <div className="plan-i"><span className="plan-i__lead"><Ic n="people" /></span><span><b>Staff at the door</b> from {current.etaModelBandEarly ? fmtClock(current.etaModelBandEarly) : o?.windowOpen}</span></div>
                       {sameRun.some(s => s.order?.tempClass === 'CHILLED') && (
-                        <div className="plan-i"><span className="plan-i__lead plan-i__lead--cold"><Ic n="snow" /></span><span><b>Chilled first</b>, to the cold room ({sameRun.filter(s => s.order?.tempClass === 'CHILLED').map(s => <span key={s.id} className="id">{s.orderId}</span>)})</span></div>
+                        <div className="plan-i"><span className="plan-i__lead plan-i__lead--cold"><Ic n="snow" /></span><span><b>Chilled first</b>, to the cold room ({sameRun.filter(s => s.order?.tempClass === 'CHILLED').map((s, i) => <span key={s.id}>{i ? ', ' : ''}<span className="id">{s.orderId}</span></span>)})</span></div>
                       )}
                       {o?.accessNote && <div className="plan-i"><span className="plan-i__lead plan-i__lead--plain"><Ic n="van-3" /></span><span>{o.accessNote}</span></div>}
                     </div>
@@ -257,6 +257,7 @@ export default function LiveSm02Deliveries() {
                               ? <span style={{ color: 'var(--st-deferred-fg)', fontWeight: '700' }}>{s.pod.unitsDelivered} of {s.pod.unitsOrdered}</span>
                               : <span>{s.order?.units ?? 0} units</span>}
                           {s.pod && <PodPhoto pod={s.pod} label={`the drop of ${s.orderId}`} width={40} height={30} />}
+                          {s.pod?.signatureUrl && <PodSignature pod={s.pod} width={56} height={24} />}
                         </div>
                       ))}
                       <span className="t-3" style={{ fontSize: '12.5px' }}>{units} units in this delivery</span>

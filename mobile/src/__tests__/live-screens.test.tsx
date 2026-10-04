@@ -5,6 +5,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-
 import { router } from 'expo-router';
 import { network } from '@/offline/network';
 import { client, queue, routes, session, signInAs } from './fake-platform';
+import { draw } from './signature-draw';
 
 jest.mock('@/model/platform', () => require('./fake-platform'));
 jest.mock('expo-auth-session', () => ({
@@ -96,9 +97,18 @@ describe('DR-03 proof of delivery', () => {
     await act(async () => network.set({ online: false, since: new Date().toISOString() }));
     await fireEvent.press(screen.getByTestId('units-minus'));
     await fireEvent.changeText(screen.getByTestId('receiver-name'), 'R. Receiver');
+    // Complete stop waits for the receiver's signature (or the store code, DR-16)
+    push.mockClear();
+    await fireEvent.press(screen.getByTestId('lk-L15'));
+    expect(await screen.findByText(/Ask the receiver to sign/)).toBeTruthy();
+    expect(push).not.toHaveBeenCalled();
+    expect(queue.list().filter(i => i.sub === 'u-dr03')).toHaveLength(0);
+    await draw('signature-pad', [[20, 50], [60, 20], [120, 55], [200, 30]]);
     await fireEvent.press(screen.getByTestId('lk-L15'));
     await waitFor(() => expect(push).toHaveBeenCalledWith({ pathname: '/s/[key]', params: { key: 'dr-a2-pod-saved-offline', stop: 'S-1' } }));
-    const mine = queue.list().filter(i => i.sub === 'u-dr03');
+    const sig = queue.list().find(i => i.sub === 'u-dr03' && i.kind === 'POD_PHOTO')!;
+    expect(sig.payload).toMatchObject({ kind: 'SIGNATURE', stopId: 'S-1', mime: 'image/svg+xml', signedBy: 'R. Receiver' });
+    const mine = queue.list().filter(i => i.sub === 'u-dr03' && i.kind !== 'POD_PHOTO');
     // no arrival was recorded for S-1 yet, so it is saved first; all three wait for signal
     expect(mine.map(i => i.kind)).toEqual(['ARRIVAL', 'POD_SAVE', 'LEAVE']);
     expect(mine.every(i => i.status === 'pending')).toBe(true);

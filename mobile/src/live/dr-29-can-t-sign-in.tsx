@@ -11,7 +11,8 @@ import { hm } from '@/lib/time';
 import { plural, useAccessProblem, useDeviceId, useDirectSignIn } from '@/lodestar/live';
 import { useOutbox } from '@/model/hooks';
 import { openDialer } from '@/model/run';
-import { Frame, Grad, Icon, openScreen, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { Grad, Icon, openScreen, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { DeskFrame } from '@/lodestar/desk-auth';
 
 const nav: ScreenNav = {"links":{"L232":{"to":"dr-07-verify-code","kind":"go"},"L233":{"to":"dr-07-verify-code","kind":"go"},"L234":{"to":"dr-07-verify-code","kind":"go"}}};
 
@@ -42,7 +43,7 @@ export default function ScreenDr29CanTSignIn() {
   const device = useDeviceId();
   const { waiting } = useOutbox();
   return (
-    <Frame bg="#070b16" nav={nav} style={s.v0}>
+    <DeskFrame app="run" bg="#070b16" nav={nav} style={s.v0}>
       <View style={s.v33}>
         <View style={s.v6}>
           <Tap lk="L234" style={s.v2}>
@@ -118,7 +119,7 @@ export default function ScreenDr29CanTSignIn() {
           </View>
         </View>
       </View>
-    </Frame>
+    </DeskFrame>
   );
 }
 

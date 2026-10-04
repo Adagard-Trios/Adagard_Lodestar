@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import PodPhoto, { podPhotoPath } from '@/components/live/PodPhoto';
+import PodPhoto, { podPhotoPath, PodSignature, podSignaturePath } from '@/components/live/PodPhoto';
 import { ODataClient } from '@/lib/odata/client';
 import { ApiContext } from '@/lib/odata/hooks';
 import { tokens } from './helpers/live';
@@ -81,5 +81,34 @@ describe('PodPhoto', () => {
     const { Wrapper } = setup(() => ({ status: 404 }));
     render(<PodPhoto pod={{ photoUrl: PHOTO, photoCount: 1 }} />, { wrapper: Wrapper });
     await waitFor(() => expect(screen.getByTestId('pod-photo')).toHaveAttribute('data-state', 'error'));
+  });
+});
+
+describe('PodSignature', () => {
+  const SIG = '/media/pod-photos/cmsign0001';
+  beforeEach(() => {
+    (URL as unknown as { createObjectURL: (b: Blob) => string }).createObjectURL = jest.fn((b: Blob) => `blob:http://localhost/sig-${b.type}`);
+    (URL as unknown as { revokeObjectURL: (u: string) => void }).revokeObjectURL = jest.fn();
+  });
+
+  it('renders nothing for an unsigned POD (no request)', () => {
+    const { calls, Wrapper } = setup(() => ({ status: 200 }));
+    const view = render(<PodSignature pod={{ signatureUrl: null, receiverName: 'M. Ilyas' }} />, { wrapper: Wrapper });
+    expect(view.container).toBeEmptyDOMElement();
+    expect(podSignaturePath({ signatureUrl: 'https://elsewhere.example/s.svg' })).toBeNull();
+    expect(calls).toHaveLength(0);
+  });
+
+  it('fetches the signature with the bearer token and shows it as an image with who signed and when', async () => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 84"><g><path d="M1 2 L3 4"/></g></svg>';
+    const { calls, Wrapper } = setup(() => ({ status: 200, blob: new Blob([svg], { type: 'image/svg+xml' }) }));
+    render(<PodSignature pod={{ signatureUrl: SIG, signedAt: '2026-04-07T01:28:00Z', receiverName: 'M. Ilyas' }} />, { wrapper: Wrapper });
+    await waitFor(() => expect(screen.getByTestId('pod-signature')).toHaveAttribute('data-state', 'ready'));
+    expect(calls[0].url).toContain(SIG);
+    expect(new Headers(calls[0].init.headers).get('Authorization')).toMatch(/^Bearer /);
+    const img = screen.getByRole('img');
+    expect(img).toHaveAttribute('src', 'blob:http://localhost/sig-image/svg+xml');
+    expect(img.getAttribute('alt')).toMatch(/^Signature: Signed by M\. Ilyas · Signed \d{1,2}:\d{2}/);
+    expect(screen.getByText(/Signed by M\. Ilyas · Signed/)).toBeInTheDocument();
   });
 });

@@ -1,8 +1,8 @@
-import { createElement, type ComponentType } from 'react';
-import { Text, View } from 'react-native';
+import { createElement, type ComponentType, type ReactNode } from 'react';
+import { Platform, Text, View, useWindowDimensions } from 'react-native';
 import { Link, useLocalSearchParams } from 'expo-router';
 
-import { SCREENS } from '@/screens/registry';
+import { FACES, SCREENS } from '@/screens/registry';
 import { themedKey, useSettings } from '@/lib/settings';
 
 // Screens are loaded once and kept, so a screen's component identity is stable across renders.
@@ -12,6 +12,29 @@ function screenFor(key: string): ComponentType | undefined {
   if (!load) return undefined;
   if (!loaded.has(key)) loaded.set(key, load());
   return loaded.get(key);
+}
+
+// A browser window at tablet/desktop width shows a phone screen as a phone-sized card centred on the desk background
+// (as the field sign-in screens do, lodestar/desk-auth.tsx). Tablet screens fill the window; the sign-in family draws
+// its own desk layout.
+const TABLET = new Set(FACES.filter(f => f.device === 'tablet').flatMap(f => f.screens.map(s => s.key)));
+const OWN_DESK_LAYOUT = /sign-in|verify-code/;
+function PhoneColumn({ screen, children }: { screen: string; children: ReactNode }) {
+  const { width, height } = useWindowDimensions();
+  if (Platform.OS !== 'web' || width < 768 || TABLET.has(screen) || OWN_DESK_LAYOUT.test(screen)) return <>{children}</>;
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#F4F5F9' }}>
+      <View
+        testID="phone-column"
+        style={{
+          width: 420, maxWidth: '100%', height: Math.min(880, height - 48), borderRadius: 28, overflow: 'hidden',
+          backgroundColor: '#FFFFFF', boxShadow: '0 1px 2px rgba(15,20,50,.04), 0 16px 48px rgba(15,20,50,.08)',
+        }}
+      >
+        {children}
+      </View>
+    </View>
+  );
 }
 
 // Any Lodestar screen by its key, e.g. /s/dr-02-stop-arrival (live screens read extra params, e.g. ?stop=…)
@@ -29,7 +52,7 @@ export default function ScreenRoute() {
       </View>
     );
   }
-  return createElement(screen);
+  return <PhoneColumn screen={key!}>{createElement(screen)}</PhoneColumn>;
 }
 
 // Static web export: pre-render every screen route.

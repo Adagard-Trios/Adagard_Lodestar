@@ -189,16 +189,20 @@ export async function executePlan(tx: Prisma.TransactionClient, plan: Plan): Pro
   }
 
   // 4. Served orders are PLANNED for this day. One a previous version had deferred is brought back.
-  for (const p of result.planned) {
+  //    One write for the plain ones: each round trip counts against the transaction's time on a remote database.
+  const wasDeferred = (id: string) => {
+    const o = orderById.get(id)!;
+    return o.status === OrderStatus.DEFERRED && o.deferralLog?.status === DeferralStatus.CONFIRMED;
+  };
+  const plain = result.planned.filter(p => !wasDeferred(p.orderId)).map(p => p.orderId);
+  if (plain.length) await tx.order.updateMany({ where: { id: { in: plain } }, data: { status: OrderStatus.PLANNED } });
+  for (const p of result.planned.filter(x => wasDeferred(x.orderId))) {
     const o = orderById.get(p.orderId)!;
-    const wasDeferred = o.status === OrderStatus.DEFERRED && o.deferralLog?.status === DeferralStatus.CONFIRMED;
     await tx.order.update({
       where: { id: p.orderId },
-      data: wasDeferred
-        ? { status: OrderStatus.PLANNED, runDate: day, deferredYesterday: false, daysSince: Math.max(0, o.daysSince - 1) }
-        : { status: OrderStatus.PLANNED },
+      data: { status: OrderStatus.PLANNED, runDate: day, deferredYesterday: false, daysSince: Math.max(0, o.daysSince - 1) },
     });
-    if (wasDeferred) await tx.deferralLog.update({ where: { orderId: p.orderId }, data: { status: DeferralStatus.REVERSED, notes: `Placed by ${plan.id}` } });
+    await tx.deferralLog.update({ where: { orderId: p.orderId }, data: { status: DeferralStatus.REVERSED, notes: `Placed by ${plan.id}` } });
   }
 
   // 5. Deferrals: recorded with their reason, and rolled to the next operating day, where they are protected.

@@ -117,6 +117,15 @@ describe('PlanningService', () => {
       expect(payload).toMatchObject({ planId: open.id, trips: 1, planned: 1, deferred: 1 });
     });
 
+    it('a plan that went live stays live when the store notices fail: the dock is told first', async () => {
+      when(txPlan.findUnique(anything())).thenResolve(open);
+      when(txPlan.updateMany(anything())).thenResolve({ count: 0 });
+      when(txPlan.update(anything())).thenCall(async (a: any) => ({ id: a.where.id, ...a.data }));
+      users.findMany.mockRejectedValue(new Error("Can't reach database server"));
+      await expect(service.approvePlan(open.id, 'nilanthi')).resolves.toMatchObject({ status: 'PUBLISHED' });
+      expect(capture(notify.publish).last()[0]).toBe('plan_published');
+    });
+
     it('does not publish when the plan cannot be put into effect', async () => {
       when(txPlan.findUnique(anything())).thenResolve(open);
       when(txPlan.updateMany(anything())).thenResolve({ count: 0 });

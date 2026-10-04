@@ -11,6 +11,7 @@ import { reeferOf } from '@/model/dock';
 import { reportToDispatch } from '@/model/field-reports';
 import { useOnline, useRun } from '@/model/hooks';
 import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { TEMP_KEYBOARD } from '@/lib/keyboard';
 
 const nav: ScreenNav = {"links":{"L240":{"to":"dr-13-saving-run-for-offline","kind":"go"},"B":{"to":"dr-11-load-handover-received","kind":"back"}}};
 
@@ -98,7 +99,7 @@ export default function ScreenDr12PreTripVehicleCheck() {
                   }}
                   placeholder="—"
                   placeholderTextColor="#7f89a3"
-                  keyboardType="numbers-and-punctuation"
+                  keyboardType={TEMP_KEYBOARD}
                   style={[s.t10, x.input]}
                   testID="reefer-reading"
                 />

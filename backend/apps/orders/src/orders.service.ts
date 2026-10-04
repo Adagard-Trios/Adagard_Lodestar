@@ -9,7 +9,7 @@ import { depotDispatchers, NOTIFY, NotifyClient } from '@lodestar/security';
 export function dayRange(runDate: string | Date) {
   return runDateRange(runDate);
 }
-
+  
 /** How far ahead a moved order looks for an operating day before taking the earliest date anyway. */
 const OPERATING_DAY_HORIZON = 14;
 
@@ -71,6 +71,8 @@ const STOP_MIRRORED: OrderStatus[] = [OrderStatus.LOADED, OrderStatus.ENROUTE, O
 
 const MAX_NOTE = 500;
 const CREDIT_NOTE_ATTEMPTS = 3;
+/** The receipt transaction (read, POD exception, credit note number, order): room for a remote, pooled database. */
+export const RECEIPT_TX = { timeout: 30_000, maxWait: 10_000 } as const;
 
 /** Credit note ids follow the scenario's format: CN-<yy><mm>-<4-digit sequence>, e.g. CN-2604-0441. */
 export function creditNotePrefix(at: Date): string {
@@ -202,7 +204,7 @@ export class OrdersService {
   private async receiptWithCreditNote(orderId: string, receivedBy: string, input: ReceiptInput) {
     for (let attempt = 1; ; attempt++) {
       try {
-        return await this.prisma.$transaction((tx) => this.recordReceipt(tx, orderId, receivedBy, input));
+        return await this.prisma.$transaction((tx) => this.recordReceipt(tx, orderId, receivedBy, input), RECEIPT_TX);
       } catch (err) {
         // Two short receipts drew the same credit note number: draw again.
         const target = (err as any)?.meta?.target;

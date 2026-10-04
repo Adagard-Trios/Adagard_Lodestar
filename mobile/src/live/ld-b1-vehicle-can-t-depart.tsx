@@ -14,6 +14,7 @@ import { useBayQueue, useClaims, useLoadSheet, useOnline, useOutbox } from '@/mo
 import { useNow } from '@/model/store-face';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 import { useDepots } from '@/model/depots';
+import { TEMP_KEYBOARD } from '@/lib/keyboard';
 
 const nav: ScreenNav = {"links":{"L31":{"app":"Lodestar Plan (desktop)","screen":"DSP-B1 Re-plan diff"},"B":{"to":"ld-09-pre-cool-check","kind":"back"}}};
 
@@ -121,7 +122,7 @@ export default function ScreenLdB1VehicleCanTDepart() {
                       onChangeText={setReading}
                       placeholder="—"
                       placeholderTextColor="#b42318"
-                      keyboardType="numbers-and-punctuation"
+                      keyboardType={TEMP_KEYBOARD}
                       editable={!sentAt}
                       style={[s.t16, x.input]}
                       accessibilityLabel="Reefer reading in °C"

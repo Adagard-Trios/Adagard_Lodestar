@@ -12,13 +12,17 @@ const STOP_EXPAND = 'outlet,order($select=id,units,kg,m3,tempClass,status,notes,
 export type RunDay = { date: string; isToday: boolean };
 
 /**
- * The run day to show: today (Colombo) when it has trips, else the most recent day that does
- * (so a phone still opens on its last run, e.g. against a seeded demo day).
+ * The run day to show: today (Colombo) when it has trips, else the next day that does (today is closed,
+ * the demo day is tomorrow), else the most recent day that does (a phone still opens on its last run).
  */
 export async function resolveRunDay(c: C, today: string, filter?: string): Promise<RunDay> {
   const scoped = (f: string) => (filter ? `(${filter}) and ${f}` : f);
   const hit = await c.list<Pick<Trip, 'id'>>('Trips', { filter: scoped(dayFilter('runDate', today)), select: ['id'], top: 1 });
   if (hit.value.length) return { date: today, isToday: true };
+  // a closed day (e.g. Sunday): the next run already planned, so the phone opens on the coming demo day
+  const next = await c.list<Pick<Trip, 'runDate'>>('Trips', { filter: scoped(`runDate gt ${today}T00:00:00Z`), select: ['runDate'], orderby: 'runDate asc', top: 1 });
+  const upcoming = isoDay(next.value[0]?.runDate);
+  if (upcoming && upcoming > today) return { date: upcoming, isToday: false };
   const latest = await c.list<Pick<Trip, 'runDate'>>('Trips', { filter: filter, select: ['runDate'], orderby: 'runDate desc', top: 1 });
   const d = isoDay(latest.value[0]?.runDate);
   return d ? { date: d, isToday: d === today } : { date: today, isToday: true };

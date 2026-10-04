@@ -73,6 +73,14 @@ export function latestProposal(turns: ChatTurn[]) {
   return null;
 }
 
+/** A proposal's rule checks two per row (the design's ag-rrow), failing rules first. */
+export function rulePairs<T extends { passed: boolean }>(checks: T[]): T[][] {
+  const sorted = [...checks.filter(c => !c.passed), ...checks.filter(c => c.passed)];
+  const rows: T[][] = [];
+  for (let i = 0; i < sorted.length; i += 2) rows.push(sorted.slice(i, i + 2));
+  return rows;
+}
+
 const SUGGESTIONS = ['Why are these orders deferred?', 'Which rules are closest to failing?', 'What if the busiest reefer fails its check?'];
 
 function Answer({ t }: { t: ChatTurn }) {
@@ -160,12 +168,18 @@ export default function AskAgent({ run, mode, subtitle }: { run: AgentRun; mode:
                   ))}
                 </div>
                 {t.a.proposal.ruleChecks?.length ? (
-                  <div className="ag-rules">
-                    <div className="ag-rrow" style={{ flexWrap: 'wrap' }}>
-                      {t.a.proposal.ruleChecks.map(r => (
-                        <div key={r.rule} className="ag-rule" style={r.passed ? undefined : { color: 'var(--st-exception-fg)' }}><Ic n={r.passed ? 'check' : 'alert'} /><b>{r.label}</b></div>
-                      ))}
-                    </div>
+                  <div className="ag-rules" data-testid="proposal-rules">
+                    {/* two per row as designed (ag-rrow), the failing rules first */}
+                    {rulePairs(t.a.proposal.ruleChecks).map((pair, k) => (
+                      <div key={k} className="ag-rrow">
+                        {pair.map(r => (
+                          <div key={r.rule} className="ag-rule" title={r.label} data-failed={r.passed ? undefined : true}>
+                            <span style={{ display: 'inline-flex', color: r.passed ? undefined : 'var(--st-exception-fg)' }}><Ic n={r.passed ? 'check' : 'alert'} /></span>
+                            <b style={{ overflow: 'hidden', textOverflow: 'ellipsis', ...(r.passed ? {} : { color: 'var(--st-exception-fg)' }) }}>{r.label}</b>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
                   </div>
                 ) : null}
                 <div className="ag-acts">

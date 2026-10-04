@@ -12,6 +12,7 @@ import { reportToDispatch } from '@/model/field-reports';
 import { useOnline, useRun } from '@/model/hooks';
 import { openDialer } from '@/model/run';
 import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { TEMP_KEYBOARD } from '@/lib/keyboard';
 
 const nav: ScreenNav = {"links":{"L247":{"to":"dr-36-en-route-driving-mode","kind":"go"},"L248":{"to":"dr-36-en-route-driving-mode","kind":"go"}}};
 
@@ -95,7 +96,7 @@ export default function ScreenDr37ReeferTemperatureAlert() {
                   }}
                   placeholder="—"
                   placeholderTextColor="#7f89a3"
-                  keyboardType="numbers-and-punctuation"
+                  keyboardType={TEMP_KEYBOARD}
                   style={[s.t14, x.input]}
                   testID="reefer-reading"
                 />

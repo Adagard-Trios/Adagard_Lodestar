@@ -390,6 +390,9 @@ model POD {
   /// Photos of the drop stored for this stop (PodPhoto); photoUrl is the newest one's /media/pod-photos/<id>.
   photoCount     Int        @default(0)
   photos         PodPhoto[]
+  /// The receiver's signature (a PodPhoto of kind SIGNATURE): /media/pod-photos/<id>, signed by receiverName at signedAt.
+  signatureUrl   String?
+  signedAt       DateTime?
 
   @@schema("trips")
 }
@@ -404,7 +407,9 @@ model PodPhoto {
   /// Set once the stop's POD exists (a photo may reach the server before its POD).
   podId      String?
   pod        POD?      @relation(fields: [podId], references: [id], onDelete: SetNull)
-  mime       String // image/jpeg | image/png | image/webp (checked against the magic bytes)
+  /// PHOTO (the drop) | SIGNATURE (the receiver's, a sanitised SVG)
+  kind       String    @default("PHOTO")
+  mime       String // image/jpeg | image/png | image/webp (checked against the magic bytes); image/svg+xml for a SIGNATURE
   bytes      Bytes
   size       Int
   sha256     String

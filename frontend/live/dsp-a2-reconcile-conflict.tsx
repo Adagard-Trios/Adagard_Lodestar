@@ -71,9 +71,14 @@ export default function LiveDspA2ReconcileConflict() {
   const latest = useQuery<OfflineEvent[]>(`a2-latest:${active.join(',')}`, c =>
     c.list<OfflineEvent>('OfflineEvents', { filter: ['conflictNote ne null', depotFilter('trip/depot', active)].filter(Boolean).join(' and '), orderby: 'savedAt desc', top: 20 }).then(p => p.value),
   { refreshOn: ['notification', 'signal_back'] });
-  // the trip DSP-A1 had open, if it has a conflict; else the latest trip with one
+  // trips that synced records saved offline, conflict or not (a clean sync is shown too: its stops and photos)
+  const recent = useQuery<OfflineEvent[]>(`a2-recent:${active.join(',')}`, c =>
+    c.list<OfflineEvent>('OfflineEvents', { filter: depotFilter('trip/depot', active) || undefined, orderby: 'savedAt desc', top: 50 }).then(p => p.value),
+  { refreshOn: ['notification', 'signal_back'] });
+  // the trip DSP-A1 had open; else the latest trip with a conflict; else the latest trip that synced
   const conflictTrips = [...new Set((latest.data ?? []).map(e => e.tripId).filter(Boolean))] as string[];
-  const tripId = (focus && conflictTrips.includes(focus) ? focus : conflictTrips[0]) ?? null;
+  const syncedTrips = [...new Set((recent.data ?? []).map(e => e.tripId).filter(Boolean))] as string[];
+  const tripId = (focus && (conflictTrips.includes(focus) || syncedTrips.includes(focus)) ? focus : conflictTrips[0] ?? syncedTrips[0]) ?? null;
   const trip = useEntity<Trip>('Trips', tripId, { expand: 'stops($expand=pod,outlet($select=id,name),order($select=id,units,kg,m3,tempClass)),driver' }, { refreshOn: ['notification'] });
   const events = useQuery<OfflineEvent[]>(tripId ? `a2-events:${tripId}` : null, c => c.all<OfflineEvent>('OfflineEvents', { filter: `tripId eq '${tripId}'`, orderby: 'savedAt asc' }), { refreshOn: ['notification'] });
   const status = useQuery<SyncStatus>(tripId ? `a2-status:${tripId}` : null, c => c.fn<SyncStatus>('OfflineEvents', null, 'SyncStatus', { tripId: tripId! }));
@@ -118,7 +123,7 @@ export default function LiveDspA2ReconcileConflict() {
     { onSuccess: () => { setResolved(true); void deferrals.refresh(); nav.go('L29'); } },
   );
 
-  const loading = (!latest.data && !latest.error) || (tripId && !trip.data && !trip.error) || (tripId && !events.data && !events.error);
+  const loading = (!latest.data && !latest.error) || (!recent.data && !recent.error) || (tripId && !trip.data && !trip.error) || (tripId && !events.data && !events.error);
   const error = latest.error ?? trip.error ?? events.error ?? status.error ?? deferrals.error;
 
   const timeline: Array<{ at: string; text: ReactNode; dot?: CSSProperties }> = [];
@@ -143,14 +148,65 @@ export default function LiveDspA2ReconcileConflict() {
                 {syncedAt && <><span className="m-sep" />{` ${fmtDay(syncedAt)}, ${fmtClock(syncedAt)}`}</>}
               </div>
               <div className="d-h1" data-testid="a2-title">
-                {loading ? 'Loading the sync…' : !main ? 'No sync conflicts' : needYou ? `${needYou} conflict${needYou === 1 ? '' : 's'} need${needYou === 1 ? 's' : ''} your decision` : 'Conflict resolved: field evidence kept'}
+                {loading ? 'Loading the sync…' : !main ? (tripId && all.length ? 'Synced: nothing needs your decision' : 'No sync conflicts') : needYou ? `${needYou} conflict${needYou === 1 ? '' : 's'} need${needYou === 1 ? 's' : ''} your decision` : 'Conflict resolved: field evidence kept'}
               </div>
             </div>
             {ops.trips.data && <span className="m-pill m-pill--ok"><span className="dot" />{reporting} reporting live</span>}
           </div>
           <ErrorBanner error={error} onRetry={() => { void latest.refresh(); void trip.refresh(); void events.refresh(); }} />
-          {loading ? <Skeleton rows={4} /> : !tripId || !main ? (
+          {loading ? <Skeleton rows={4} /> : !tripId || (!main && !all.length) ? (
             <Empty icon="cloud-check" title="Nothing to reconcile" text="When a vehicle syncs records it saved without signal, any conflict with a change made meanwhile shows here." />
+          ) : !main ? (
+            <>
+              <div className="g-dbanner g-dbanner--info" data-p="1" data-testid="a2-clean">
+                <Ic n="wifi" />
+                <span>
+                  <b>{`${t?.vehicleId ?? 'The vehicle'} synced${syncedAt ? ` at ${fmtClock(syncedAt)}` : ''}`}</b>
+                  {` · ${status.data?.total ?? all.length} records received · `}<b>{`${clean.length} applied automatically`}</b>{' · none need you'}
+                </span>
+              </div>
+              <div className="d-card" data-p="2">
+                <div className="d-card__head">
+                  <span style={{ color: 'var(--st-delivered-fg)', display: 'flex' }}><Ic n="cloud-check" /></span>
+                  <span className="d-card__title">{"Stops on "}<span className="id">{t?.vehicleId}</span>{` · ${driverName}`}</span>
+                </div>
+                <div className="vstack" style={{ gap: '0', padding: '0 18px 12px' }}>
+                  {stops.map(st => (
+                    <div key={st.id} className="hstack" style={{ gap: '12px', padding: '8px 0', borderTop: '1px solid var(--line, #EEF0F6)' }} data-testid={`a2-stop-${st.stopSeq}`}>
+                      <span className="id" style={{ width: '24px' }}>{st.stopSeq}</span>
+                      <span style={{ flex: '1', minWidth: '0' }}><span className="id">{st.outletId}</span>{` ${st.outlet?.name ?? ''} · `}<span className="id">{st.orderId}</span></span>
+                      {st.pod ? (
+                        <>
+                          <PodPhoto pod={st.pod} label={`the drop at ${st.outletId}`} />
+                          <span style={{ fontSize: '13px', color: 'var(--text-2)', width: '220px' }}>
+                            {`Delivered · POD ${st.pod.unitsDelivered}/${st.pod.unitsOrdered}${st.pod.receiverName ? ` · ${st.pod.receiverName}` : ''}${st.pod.savedOffline ? ' · captured offline' : ''}`}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="m-pill" style={{ height: '24px', fontSize: '12px' }}>{st.status.toLowerCase()}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="d-card">
+                <div className="d-card__head">
+                  <span style={{ color: 'var(--st-delivered-fg)', display: 'flex' }}><Ic n="cloud-check" /></span>
+                  <span className="d-card__title">{"Synced without conflict"}</span>
+                  <div className="spacer" />
+                  <span style={{ fontSize: '13px', color: 'var(--text-3)' }}>{clean.length}{syncedAt ? ` at ${fmtClock(syncedAt)}` : ''}</span>
+                </div>
+                <div className="vstack" style={{ gap: '0', padding: '0 18px 12px' }}>
+                  {clean.map(e => (
+                    <div key={e.id} className="g-li" style={{ padding: '5px 0' }}>
+                      <span className="g-mark g-mark--ok"><Ic n="check" /></span>
+                      <span style={{ flex: '1' }}>{syncedLabel(e, stops)}</span>
+                      <span className="t-3">{fmtClock(e.savedAt)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
           ) : (
             <>
               <div className="g-dbanner g-dbanner--info" data-p="1">

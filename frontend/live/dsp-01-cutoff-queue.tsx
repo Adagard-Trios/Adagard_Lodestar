@@ -123,10 +123,13 @@ export default function LiveDsp01CutoffQueue() {
   const vans = ready.filter(v => v.type === 'VAN');
 
   const draftDepot = depot ?? active[0];
-  const start = useStartAgentRun(run => {
-    setRunId(run.id);
+  // DSP-22 opens at once and shows the draft while the agent works; the run it drafted is opened when it is done
+  const start = useStartAgentRun(run => setRunId(run.id), { track: true });
+  const startDraft = () => {
+    setRunId(null);
+    void start.run({ depot: draftDepot!, runDate: runDate! });
     nav.go('L1');
-  });
+  };
   // a busy day can take a while on a small VM: show how long the draft has been running
   const drafting = useElapsed(start.pending);
 
@@ -174,14 +177,14 @@ export default function LiveDsp01CutoffQueue() {
               testId="start-agent"
               busy={start.pending}
               disabled={!runDate || !draftDepot}
-              onClick={() => void start.run({ depot: draftDepot!, runDate: runDate! })}
+              onClick={startDraft}
             >
               <Ic n="sparkle-plus" />
               {start.pending ? `Agent drafting… ${drafting}` : `Draft the plan with the agent${active.length > 1 ? ` · ${depotName(draftDepot!) ?? draftDepot}` : ''}`}
             </Btn>
           </div>
           {toggleOrders.error && <ErrorBanner error={toggleOrders.error} />}
-          {start.error && <ErrorBanner error={start.error} onRetry={() => void start.run({ depot: draftDepot!, runDate: runDate! })} />}
+          {start.error && <ErrorBanner error={start.error} onRetry={startDraft} />}
           {scope.noPlans && <Empty title="No run date yet" text="There are no plans to queue orders against." icon="calendar" />}
           <div className="d-kpis">
             <div className="d-kpi d-kpi--hero x-kpi-xl" style={{ flex: '1' }}>

@@ -2,7 +2,8 @@
 // LD-24 Can't sign in · phone (P3, phone)
 import { Linking, Text, View, StyleSheet } from 'react-native';
 import { useAccessProblem, useDeviceId, useSignIn } from '@/lodestar/live';
-import { Frame, Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { Grad, Icon, Scroll, Tap, showToast, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { DeskFrame } from '@/lodestar/desk-auth';
 
 const nav: ScreenNav = {"links":{"L213":{"to":"ld-06-sign-in","kind":"go"},"B":{"to":"ld-06-sign-in","kind":"back"}}};
 
@@ -11,7 +12,7 @@ export default function ScreenLd24CanTSignIn() {
   const problem = useAccessProblem();
   const device = useDeviceId();
   return (
-    <Frame bg="#f2f4f8" nav={nav} style={s.v0}>
+    <DeskFrame app="dock" bg="#f2f4f8" nav={nav} style={s.v0}>
       <View style={s.v38}>
         <View style={s.v7}>
           <Tap lk="B" style={s.v2}>
@@ -113,7 +114,7 @@ export default function ScreenLd24CanTSignIn() {
           </Tap>
         </View>
       </View>
-    </Frame>
+    </DeskFrame>
   );
 }
 

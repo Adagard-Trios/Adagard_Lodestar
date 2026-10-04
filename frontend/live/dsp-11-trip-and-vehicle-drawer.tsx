@@ -11,16 +11,16 @@
 // tab (the design gives it no content).
 import { useRouter } from 'next/navigation';
 import Btn from '@/components/live/Btn';
-import PodPhoto from '@/components/live/PodPhoto';
-import { budget } from '@/components/live/board';
+import PodPhoto, { PodSignature } from '@/components/live/PodPhoto';
+import { budget, draftTime } from '@/components/live/board';
 import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
-import { usePlanScope } from '@/components/live/plan-data';
+import { usePlanScope, useReviewRun } from '@/components/live/plan-data';
 import { useAgentConfig } from '@/components/live/settings-data';
 import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { BRAND_LETTER, dayFilter, fmtClock, fmtNum, isoDay, pct, title } from '@/lib/format';
 import { useEntity, useQuery } from '@/lib/odata/hooks';
-import type { Plan, Trip } from '@/lib/odata/types';
+import type { AgentRun, AgentRunDetail, AgentTrip, Outlet, Plan, Trip, Vehicle } from '@/lib/odata/types';
 import { useFocusId } from '@/lib/workday';
 import { useDepots } from '@/components/live/depots';
 import { loadTone, usePlanningRules } from '@/components/live/planning-rules';
@@ -31,7 +31,29 @@ const DOCK: Record<string, string> = { REAR_DOCK: 'rear dock', STREET: 'street',
 /** Gauge class by the planning service's load level (PlanningRules.load.warnPct). */
 const gauge = (used: number, cap: number, warnPct: number | undefined) => `dx-g-${loadTone(used, cap, warnPct)}`;
 
-type TripX = Trip & { plan?: Pick<Plan, 'status' | 'version'> | null };
+type TripX = Trip & { plan?: Pick<Plan, 'status' | 'version' | 'agentRunId'> | null };
+
+/**
+ * A trip of the planning agent's draft (not yet approved, so not in Trips) in the drawer's Trip shape: its stops
+ * in sequence with the agent's plan and model ETAs, service minutes and late risk.
+ */
+export function tripFromDraft(d: AgentTrip, run: { depot: string; runDate: string; version?: number }, vehicle?: Vehicle): TripX {
+  const day = isoDay(run.runDate);
+  return {
+    id: d.id, vehicleId: d.vehicleId, depot: run.depot as Trip['depot'], runDate: run.runDate, brand: d.brand as Trip['brand'], district: d.district,
+    status: 'PLANNED' as Trip['status'], planVersion: run.version ?? 1, tripNumber: d.tripNo, planMinutes: d.minutes,
+    departTime: draftTime(day, d.departs), returnTime: draftTime(day, d.returns), vehicle,
+    plan: { status: 'NEEDS_APPROVAL', version: run.version ?? 1 },
+    stops: (d.stops ?? []).map(x => {
+      const [open, close] = String(x.window ?? '').split('-');
+      return {
+        id: `${d.id}-${x.seq}`, tripId: d.id, orderId: x.orderId, outletId: x.outletId, stopSeq: x.seq, status: 'PLANNED' as Trip['status'],
+        etaPlan: draftTime(day, x.arrive), etaModel: draftTime(day, x.etaModel), lateRiskPct: x.lateRiskPct ?? null, serviceMinPredicted: x.serviceMin ?? null,
+        outlet: (x.window || x.dockType ? { id: x.outletId, windowOpen: open, windowClose: close, dockType: x.dockType } : undefined) as Outlet | undefined,
+      };
+    }) as Trip['stops'],
+  };
+}
 
 function Meter({ label, used, cap, unit, digits = 0 }: { label: string; used: number; cap: number; unit: string; digits?: number }) {
   const warnPct = usePlanningRules().data?.load.warnPct;
@@ -50,14 +72,29 @@ export function TripDrawer({ onClose }: { onClose?: () => void }) {
   const router = useRouter();
   const { tripsFilter, loadingDate } = usePlanScope();
   const [focus, setFocus] = useFocusId('trip');
+  // the agent's draft under review: a trip opened from it on the plan board is read from the draft
+  const { runId: reviewId, run: review, loading: reviewLoading } = useReviewRun();
+  // until the run under review is read, a focused id may be a draft trip's: Trips is not asked for it yet
+  const reviewPending = reviewLoading || (Boolean(reviewId) && !review.data && !review.error);
+  const draft: AgentRunDetail | null = review.data?.status === 'NEEDS_APPROVAL' ? review.data.detail ?? null : null;
+  const draftTrips = draft?.plan?.trips ?? [];
+  const fromDraft = focus ? draftTrips.find(x => x.id === focus) : undefined;
+  const draftVehicle = useEntity<Vehicle>('Vehicles', fromDraft?.vehicleId ?? null);
 
   const first = useQuery<string | null>(!focus && tripsFilter ? `drawer-first-trip:${tripsFilter}` : null, async c =>
     (await c.list<Trip>('Trips', { filter: tripsFilter, select: 'id', orderby: 'departTime,vehicleId,tripNumber', top: 1 })).value[0]?.id ?? null);
   const id = focus ?? first.data ?? null;
-  const trip = useEntity<TripX>('Trips', id, { expand: 'vehicle,plan($select=status,version),stops($expand=outlet,order($select=id,kg,m3),pod($select=id,photoUrl,photoCount))' }, { refreshOn: ['eta_update', 'notification'] });
+  const stored = useEntity<TripX>('Trips', fromDraft || (focus && reviewPending) ? null : id, { expand: 'vehicle,plan($select=status,version,agentRunId),stops($expand=outlet,order($select=id,kg,m3),pod($select=id,photoUrl,photoCount,receiverName,signatureUrl,signedAt))' }, { refreshOn: ['eta_update', 'notification'] });
+  const draftTrip = fromDraft && review.data ? tripFromDraft(fromDraft, { depot: review.data.depot, runDate: review.data.runDate, version: draft?.plan?.version ?? draft?.version }, draftVehicle.data) : null;
+  const trip = draftTrip ? { ...stored, data: draftTrip, error: undefined, loading: false } : stored;
   const t = trip.data;
   const day = t ? isoDay(t.runDate) : null;
-  const siblings = useQuery<Trip[]>(t && day ? `vehicle-day:${t.vehicleId}:${day}` : null, async c =>
+  // the rule checks of the draft, or of the agent run an approved plan came from
+  const source = useEntity<AgentRun>('AgentRuns', !draftTrip ? t?.plan?.agentRunId ?? null : null);
+  const checkRun: AgentRunDetail | null = draftTrip ? draft : source.data?.detail ?? null;
+  const checks = checkRun?.ruleChecks ?? [];
+  const mine = (rule: string) => (checkRun?.violations ?? []).filter(x => x.rule === rule && x.vehicleId === t?.vehicleId).length;
+  const siblings = useQuery<Trip[]>(!draftTrip && t && day ? `vehicle-day:${t.vehicleId}:${day}` : null, async c =>
     (await c.list<Trip>('Trips', { filter: `vehicleId eq '${t!.vehicleId}' and ${dayFilter('runDate', day!)}`, select: 'id,tripNumber,brand,district,planMinutes', expand: 'stops($select=id,outletId)', orderby: 'tripNumber' })).value);
   const travel = useQuery<{ depotToDistMin: number; interStopMin: number } | null>(t ? `travel:${t.district}` : null, c =>
     c.get<{ depotToDistMin: number; interStopMin: number }>('DistrictTravel', t!.district).catch(() => null));
@@ -65,9 +102,11 @@ export function TripDrawer({ onClose }: { onClose?: () => void }) {
   const v = t?.vehicle;
   const reefer = v?.tempClass === 'CHILLED';
   const stops = [...(t?.stops ?? [])].sort((a, b) => a.stopSeq - b.stopSeq);
-  const kg = stops.reduce((s, x) => s + (x.order?.kg ?? 0), 0);
-  const m3 = stops.reduce((s, x) => s + (x.order?.m3 ?? 0), 0);
-  const day3 = siblings.data ?? (t ? [t] : []);
+  const kg = fromDraft && draftTrip ? fromDraft.kg : stops.reduce((s, x) => s + (x.order?.kg ?? 0), 0);
+  const m3 = fromDraft && draftTrip ? fromDraft.m3 : stops.reduce((s, x) => s + (x.order?.m3 ?? 0), 0);
+  const day3 = draftTrip && review.data
+    ? draftTrips.filter(x => x.vehicleId === draftTrip.vehicleId).sort((a, b) => a.tripNo - b.tripNo).map(x => tripFromDraft(x, { depot: review.data!.depot, runDate: review.data!.runDate }))
+    : siblings.data ?? (t ? [t] : []);
   const config = useAgentConfig();
   const max = budget(t?.brand ?? 'FRESH', config.data?.limits);
   const minutes = day3.reduce((s, x) => s + (x.planMinutes ?? 0), 0);
@@ -86,7 +125,7 @@ export function TripDrawer({ onClose }: { onClose?: () => void }) {
         <div className="dx-drawer__head">
           <span className={`dx-lead${reefer ? ' dx-lead--cold' : ''}`} style={{ width: '44px', height: '44px' }}><Ic n={v?.type === 'VAN' ? 'van' : 'truck'} /></span>
           <div className="vstack" style={{ gap: '3px', flex: '1', minWidth: '0' }}>
-            <span className="d-h1" style={{ fontSize: '24px' }}>{t ? `${t.vehicleId} · Trip ${t.tripNumber}` : trip.loading || first.loading || (!focus && loadingDate) ? 'Loading…' : 'Trip'}</span>
+            <span className="d-h1" style={{ fontSize: '24px' }}>{t ? `${t.vehicleId} · Trip ${t.tripNumber}` : trip.loading || reviewPending || first.loading || (!focus && loadingDate) ? 'Loading…' : 'Trip'}</span>
             {t && (
               <span className="x-meta">
                 {reefer ? 'Reefer' : 'Dry'} {v?.type === 'VAN' ? 'van' : 'truck'}<span className="m-sep" />
@@ -161,6 +200,15 @@ export function TripDrawer({ onClose }: { onClose?: () => void }) {
                         <span className="t-2" style={{ fontWeight: '600' }}>{DOCK[s.outlet?.dockType ?? ''] ?? ''}</span>
                         <span className="dx-stop__tm">{s.etaPlan ? fmtClock(s.etaPlan) : ''}</span>
                       </div>
+                      {(s.etaModel || s.lateRiskPct !== null && s.lateRiskPct !== undefined) && (
+                        <div className="dx-stop__m" data-testid="stop-eta">
+                          {s.etaPlan && <span>plan {fmtClock(s.etaPlan)}</span>}
+                          {s.etaModel && <><span className="m-sep" /><span>model {fmtClock(s.etaModel)}</span></>}
+                          {s.lateRiskPct !== null && s.lateRiskPct !== undefined && (
+                            <><span className="m-sep" /><b data-testid="late-risk" style={{ color: s.lateRiskPct >= 30 ? 'var(--st-exception-fg)' : undefined }}>late risk {Math.round(s.lateRiskPct)}%</b></>
+                          )}
+                        </div>
+                      )}
                       <div className="dx-stop__m">
                         {s.outlet && <span className="mono">window {s.outlet.windowOpen}–{s.outlet.windowClose}</span>}
                         {s.serviceMinPredicted !== null && s.serviceMinPredicted !== undefined && <><span className="m-sep" />service {s.serviceMinPredicted} min</>}
@@ -170,6 +218,7 @@ export function TripDrawer({ onClose }: { onClose?: () => void }) {
                       </div>
                     </div>
                     {s.pod?.photoUrl && <PodPhoto pod={s.pod} label={`the drop at ${s.outletId}`} width={48} height={34} />}
+                    {s.pod?.signatureUrl && <PodSignature pod={s.pod} width={64} height={26} />}
                   </div>
                 ))}
                 <div className="dx-stop">
@@ -198,6 +247,25 @@ export function TripDrawer({ onClose }: { onClose?: () => void }) {
                   </div>
                 )}
               </div>
+              {checks.length > 0 && (
+                <>
+                  <div className="dx-hair" />
+                  <div className="dx-sech"><b>Rule checks</b><span className="spacer" />{checks.filter(c => c.passed).length} / {checks.length} pass</div>
+                  <div className="vstack" style={{ gap: '0' }} data-testid="rule-checks">
+                    {checks.map(c => {
+                      const here = mine(c.rule);
+                      const ok = c.passed || here === 0;
+                      return (
+                        <div key={c.rule} className="x-ck" data-rule={c.rule}>
+                          <span className="x-ck__i" style={ok ? undefined : { color: 'var(--st-exception-fg)' }}><Ic n={ok ? 'check' : 'alert'} /></span>
+                          <span className="x-ck__l">{c.label}</span>
+                          <span className="x-ck__v">{ok ? 'pass' : `${here} on this vehicle`}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>

@@ -189,7 +189,7 @@ function NextStopCard({ t, current, title }: Themed & { current: TripStop | null
       </View>
       <View style={s.v17}>
         <View style={s.v15}>
-          <Text style={s.t14}>{current?.etaModel ? `~${hm(current.etaModel)}` : '—'}<Text style={s.t13}>{"ETA"}</Text></Text>
+          <Text style={s.t14}>{current ? <>{current.etaModel ? `~${hm(current.etaModel)}` : '—'}<Text style={s.t13}>{"ETA"}</Text></> : title === 'All stops delivered' ? 'Run complete' : '—'}</Text>
         </View>
         {current ? (
           <View style={s.v6}>
@@ -285,6 +285,8 @@ function ShortfallCard({ t, first, count }: Themed & { first: Shortfall; count: 
 function StartTripBar({ t, view, items }: Themed & { view: RunView | null; items: Outbox['items'] }) {
   const { s } = t;
   const trip = view?.trip ?? null;
+  // a finished run has nothing left to start
+  if (view?.stops.length && view.stops.every(st => st.status === 'DELIVERED')) return null;
   return (
     <View style={s.v51}>
       <Tap

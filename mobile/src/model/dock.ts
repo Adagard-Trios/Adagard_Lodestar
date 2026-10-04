@@ -320,7 +320,29 @@ export function deferredCount(plan?: Pick<Plan, 'summary'> | null): number | und
   return undefined;
 }
 
-export type RePlan = { plan: PublishedPlan | null; down: Vehicle[]; trips: Trip[]; stops: TripStop[] };
+export type RePlan = {
+  plan: PublishedPlan | null; down: Vehicle[]; trips: Trip[]; stops: TripStop[];
+  /** Orders the version before this one had on a vehicle now in the workshop: the lines the re-plan moved. */
+  moved?: string[];
+};
+
+/** The version a re-plan replaced: the newest earlier version of the depot's day that was in effect (a rejected draft never was). */
+export async function previousPlan(c: Pick<ODataClient, 'list'>, plan: Pick<Plan, 'depot' | 'runDate' | 'version'>): Promise<PublishedPlan | null> {
+  if (plan.version <= 1) return null;
+  const r = await c.list<PublishedPlan>('Plans', {
+    filter: `depot eq ${lit(plan.depot)} and ${dayFilter('runDate', isoDay(plan.runDate))} and version lt ${plan.version} and status eq 'SUPERSEDED'`,
+    orderby: 'version desc',
+    top: 1,
+  });
+  return r.value[0] ?? null;
+}
+
+/** The orders `prev` (a plan's summary) had on the vehicles in `down`. */
+export function movedOrders(prev: Pick<Plan, 'summary'> | null | undefined, down: Pick<Vehicle, 'id'>[]): string[] {
+  const ids = new Set(down.map(v => v.id));
+  const trips = ((prev?.summary as Record<string, any> | null)?.plan?.trips ?? []) as { vehicleId?: string; orderIds?: string[] }[];
+  return trips.filter(t => t.vehicleId && ids.has(t.vehicleId)).flatMap(t => t.orderIds ?? []);
+}
 
 /** A re-plan for the dock: the plan (by id, else the depot's latest published), vehicles in the workshop, the plan's trips and stops. */
 export async function rePlan(c: Pick<ODataClient, 'list' | 'all' | 'get'>, depot: string, planId?: string): Promise<RePlan> {
@@ -332,7 +354,10 @@ export async function rePlan(c: Pick<ODataClient, 'list' | 'all' | 'get'>, depot
   const stops = trips.length
     ? await c.all<TripStop>('TripStops', { filter: inList('tripId', trips.map(t => t.id)), expand: 'order($select=id,m3)', orderby: 'tripId,stopSeq' })
     : [];
-  return { plan, down, trips, stops };
+  const prev = plan && down.length ? await previousPlan(c, plan).catch(() => null) : null;
+  // the vehicle the re-plan was for (it had trips in the version before) first
+  const had = (v: Vehicle) => movedOrders(prev, [v]).length > 0;
+  return { plan, down: [...down.filter(had), ...down.filter(v => !had(v))], trips, stops, moved: movedOrders(prev, down) };
 }
 
 export function useRePlan(depot: string | undefined, planId: string | undefined) {

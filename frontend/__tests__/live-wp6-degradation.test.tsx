@@ -308,6 +308,19 @@ describe('DSP-A2 Reconcile conflict', () => {
     expect(await screen.findByText('Nothing to reconcile')).toBeInTheDocument();
     expect(screen.getByTestId('a2-title')).toHaveTextContent('No sync conflicts');
   });
+
+  it('a clean offline sync (no conflict) shows the synced stops with their PODs', async () => {
+    const clean = events.map(e => ({ ...e, conflictNote: null, conflictResolved: false }));
+    renderLive(<Reconcile />, { handler: handler(req => (
+      req.path === 'OfflineEvents' && req.query.$filter?.startsWith('conflictNote') ? page([])
+        : req.path === 'OfflineEvents' && req.query.$orderby === 'savedAt desc' ? page(clean)
+          : req.path === 'OfflineEvents' && req.query.$filter === "tripId eq 'TRT1'" ? page(clean) : undefined)) });
+    await waitFor(() => expect(screen.getByTestId('a2-title')).toHaveTextContent('Synced: nothing needs your decision'));
+    expect(screen.getByTestId('a2-clean')).toHaveTextContent('VEHT57 synced at 13:10');
+    expect(screen.getByTestId('a2-stop-2')).toHaveTextContent('Delivered · POD 28/28 · Store staff · captured offline');
+    expect(screen.getByTestId('a2-stop-1')).toHaveTextContent('POD 20/20');
+    expect(screen.queryByText('Nothing to reconcile')).not.toBeInTheDocument();
+  });
 });
 
 // ------------------------------------------------------------------------------------------------ DSP-B1
@@ -370,6 +383,20 @@ describe('DSP-B1 Re-plan diff', () => {
     await waitFor(() => expect(posts(view.calls).some(c => c.path === "AgentRuns('RUN1')/Lodestar.Resume")).toBe(true));
     expect(posts(view.calls).find(c => c.path === "AgentRuns('RUN1')/Lodestar.Resume")!.body).toEqual({ decision: 'approve' });
     expect(await screen.findByText(/on the phone: LD-14 Re-plan received · phone/)).toBeInTheDocument();
+  });
+
+  it('keeps the approved diff on screen once the re-plan is live (no "0 changes" while the answer comes back)', async () => {
+    window.sessionStorage.setItem('lodestar.agentRun', 'RUN1');
+    let live = false;
+    const view = renderLive(shell(<RePlan />, links), { handler: handler(req => {
+      if (req.path === "AgentRuns('RUN1')/Lodestar.Resume") live = true;
+      return live && req.path === 'Trips' ? page(trips.filter(x => x.vehicleId !== 'VEHT6')) : live && req.path === "AgentRuns('RUN1')" ? { ...run, status: 'APPROVED' } : undefined;
+    }) });
+    expect(await screen.findByText('Re-plan for VEHT6: 2 changes, 3 orders')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('approve-send'));
+    await waitFor(() => expect(view.calls.filter(c => c.path === 'Trips').length).toBeGreaterThan(1));
+    expect(screen.getByText('Re-plan for VEHT6: 2 changes, 3 orders')).toBeInTheDocument();
+    expect(screen.queryByText('Nothing to move')).not.toBeInTheDocument();
   });
 
   it('a draft with hard-rule violations needs a reason, sent as the override reason', async () => {

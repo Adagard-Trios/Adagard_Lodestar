@@ -14,6 +14,9 @@ import DeferralLog from '@/live/dsp-17-deferral-log';
 import OutletProfile from '@/live/dsp-18-outlet-profile';
 import Fleet from '@/live/dsp-19-fleet-and-vehicle-profile';
 import Drafting from '@/live/dsp-22-planning-agent-drafting';
+import { TripDrawer } from '@/live/dsp-11-trip-and-vehicle-drawer';
+import { setStarting } from '@/components/live/plan-data';
+import { closeOverlay, currentOverlay } from '@/lib/overlay';
 import Proposal from '@/live/dsp-40-agent-proposal-in-draft';
 import { freezeDate, unfreeze } from './helpers/clock';
 import type { FakeRequest } from './helpers/live';
@@ -332,7 +335,7 @@ describe('DSP-17 Deferral log', () => {
     expect(screen.getByText(/· van_only/)).toBeInTheDocument();
     expect(screen.getByText(/Showing/).textContent).toBe('Showing 2 of 3 · every row opens the outlet');
     const q = view.calls.find(c => c.path === 'Deferrals' && c.query.$top === '25')!;
-    expect(q.query).toMatchObject({ $filter: "createdAt ge 2026-03-07T00:00:00Z and order/outlet/depot in ('PELIYAGODA','KANDY')", $expand: 'order', $orderby: 'createdAt desc', $count: 'true' });
+    expect(q.query).toMatchObject({ $filter: "createdAt ge 2026-03-07T00:00:00Z and order/outlet/depot in ('PELIYAGODA','KANDY')", $expand: 'order,plan($select=id,runDate,approvedBy)', $orderby: 'createdAt desc', $count: 'true' });
     expect(view.calls.find(c => c.path === 'Outlets')!.query.$filter).toBe("id in ('OUTT01','OUTT02')");
     // the dispatcher who decided is named from the Users directory
     expect(await screen.findByText(/by Dee Dispatcher/)).toBeInTheDocument();
@@ -671,5 +674,78 @@ describe('DSP-01/02/03/12 · loading, empty and error states', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Someone else changed this plan first');
     expect(posts(view.calls)[0].path).toBe("Plans('PLT-v5')/Lodestar.Approve");
     expect(screen.getByTestId('approve')).toHaveTextContent('Approve & go live');
+  });
+});
+
+// ------------------------------------------------------------------- the demo flow: draft → board → trip drawer
+
+describe('Agent draft → plan board → trip drawer', () => {
+  const stops = [
+    { seq: 1, orderId: 'ORDT1', outletId: 'OUTT01', arrive: '05:30', etaModel: '05:41', window: '05:30-08:00', dockType: 'REAR_DOCK', serviceMin: 15, lateRiskPct: 5 },
+    { seq: 2, orderId: 'ORDT2', outletId: 'OUTT02', arrive: '06:10', etaModel: '06:32', window: '05:30-07:00', dockType: 'STREET', serviceMin: 12, lateRiskPct: 41 },
+  ];
+  const draftRun = {
+    id: 'run-1', depot: 'KANDY', runDate: DAY, status: 'NEEDS_APPROVAL', requestedBy: 'u-d', createdAt: NOW,
+    detail: {
+      runDate: '2026-04-07',
+      plan: { version: 1, trips: [
+        { id: 'VEH039-T1', vehicleId: 'VEH039', tripNo: 1, brand: 'FRESH', district: 'District T', chilled: true, orderIds: ['ORDT9'], kg: 50, m3: 1, minutes: 90, departs: '03:30', stops: [] },
+        { id: 'VEH057-T1', vehicleId: 'VEH057', tripNo: 1, brand: 'FRESH', district: 'Kandy', chilled: true, orderIds: ['ORDT1', 'ORDT2'], kg: 300, m3: 2.5, minutes: 120, departs: '04:50', returns: '07:30', stops },
+      ] },
+      ruleChecks: [
+        { rule: 'weight', label: 'Weight within vehicle capacity (kg)', passed: true, violations: 0 },
+        { rule: 'window', label: 'Every stop arrives before its window closes', passed: false, violations: 1 },
+      ],
+      violations: [{ rule: 'window', tripId: 'VEH057-T1', vehicleId: 'VEH057', orderIds: ['ORDT2'], reason: 'late', detail: '' }],
+    },
+  };
+  const handler = (req: FakeRequest) => base(req) ?? (
+    req.path === "AgentRuns('run-1')" ? draftRun
+      : req.path === "Vehicles('VEH057')" ? vehicle('VEH057', { depot: 'KANDY' })
+        : req.path === 'Vehicles' ? page([vehicle('VEH039', { depot: 'KANDY', type: 'TRUCK' }), vehicle('VEH057', { depot: 'KANDY' })])
+          : page([]));
+  afterEach(() => { act(() => { setStarting(null); closeOverlay(); }); });
+
+  it('DSP-22 shows the draft being made (not an earlier run of the day) until the agent is done', async () => {
+    window.sessionStorage.setItem('lodestar.agentRun', 'run-1');
+    act(() => setStarting({ depot: 'KANDY', runDate: '2026-04-07', at: Date.now() }));
+    renderLive(<Drafting />, { handler });
+    expect(await screen.findByTestId('agent-status')).toHaveTextContent('Drafting');
+    expect(screen.queryByText('Draft ready for your review')).not.toBeInTheDocument();
+    expect(screen.queryByText('No draft running')).not.toBeInTheDocument();
+    act(() => setStarting(null));
+    await waitFor(() => expect(screen.getByTestId('agent-status')).toHaveTextContent('Ready'));
+  });
+
+  it('a draft trip card (or its vehicle) opens that trip in the drawer, read from the draft', async () => {
+    window.sessionStorage.setItem('lodestar.agentRun', 'run-1');
+    const board = renderLive(<PlanBoard />, { handler });
+    const lane = await waitFor(() => { const l = document.querySelector('[data-vehicle="VEH057"]'); expect(l).not.toBeNull(); return l as HTMLElement; });
+    expect(lane).toHaveTextContent('departs 4:50');
+    fireEvent.click(lane.querySelector('.x-veh')!);
+    expect(window.sessionStorage.getItem('lodestar.focus.trip')).toBe('VEH057-T1');
+    expect(window.sessionStorage.getItem('lodestar.focus.vehicle')).toBe('VEH057');
+    expect(currentOverlay()).toBe('/plan/dsp-11-trip-and-vehicle-drawer');
+    fireEvent.click(document.querySelector('[data-trip="VEH039-T1"]')!);
+    expect(window.sessionStorage.getItem('lodestar.focus.trip')).toBe('VEH039-T1');
+    board.unmount();
+
+    window.sessionStorage.setItem('lodestar.focus.trip', 'VEH057-T1');
+    const view = renderLive(<TripDrawer />, { handler });
+    const drawer = await screen.findByTestId('trip-drawer');
+    expect(await within(drawer).findByText('VEH057 · Trip 1')).toBeInTheDocument();
+    expect(drawer).toHaveTextContent('draft v1');
+    const rows = [...screen.getByTestId('stops').querySelectorAll('[data-stop]')];
+    expect(rows.map(r => r.getAttribute('data-stop'))).toEqual(['VEH057-T1-1', 'VEH057-T1-2']);
+    expect(rows[1]).toHaveTextContent('plan 6:10');
+    expect(rows[1]).toHaveTextContent('model 6:32');
+    expect(rows[1]).toHaveTextContent('late risk 41%');
+    expect(rows[0]).toHaveTextContent('window 05:30–08:00');
+    const checks = screen.getByTestId('rule-checks');
+    expect(checks.querySelector('[data-rule="weight"]')).toHaveTextContent('pass');
+    expect(checks.querySelector('[data-rule="window"]')).toHaveTextContent('1 on this vehicle');
+    expect(screen.getByText('300 / 1,000 kg')).toBeInTheDocument();
+    // a draft trip is not in Trips yet
+    expect(view.calls.some(c => c.path.startsWith('Trips('))).toBe(false);
   });
 });

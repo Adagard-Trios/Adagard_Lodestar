@@ -32,7 +32,7 @@ jest.mock('react-native-svg', () => {
   const { View } = require('react-native');
   const Box = (p: { children?: unknown }) => React.createElement(View, null, p.children);
   const Nothing = () => null;
-  return { __esModule: true, default: Box, Svg: Box, SvgXml: Nothing, Defs: Nothing, LinearGradient: Nothing, RadialGradient: Nothing, Rect: Nothing, Stop: Nothing };
+  return { __esModule: true, default: Box, Svg: Box, SvgXml: Nothing, Defs: Nothing, LinearGradient: Nothing, RadialGradient: Nothing, Rect: Nothing, Stop: Nothing, Path: Nothing, G: Nothing, Circle: Nothing };
 });
 // The device cache (SQLite on phones) as an in-memory map.
 jest.mock('@/lib/kv', () => {
