@@ -1,9 +1,10 @@
-import { createElement, type ComponentType, type ReactNode } from 'react';
-import { Platform, Text, View, useWindowDimensions } from 'react-native';
-import { Link, useLocalSearchParams } from 'expo-router';
+import { createElement, useEffect, type ComponentType, type ReactNode } from 'react';
+import { Text, View, useWindowDimensions } from 'react-native';
+import { Link, router, useLocalSearchParams } from 'expo-router';
 
 import { FACES, SCREENS } from '@/screens/registry';
 import { themedKey, useSettings } from '@/lib/settings';
+import { dockVariant, useWebWidth, useWideWeb } from '@/lodestar/dock-variant';
 
 // Screens are loaded once and kept, so a screen's component identity is stable across renders.
 const loaded = new Map<string, ComponentType>();
@@ -14,14 +15,15 @@ function screenFor(key: string): ComponentType | undefined {
   return loaded.get(key);
 }
 
-// A browser window at tablet/desktop width shows a phone screen as a phone-sized card centred on the desk background
-// (as the field sign-in screens do, lodestar/desk-auth.tsx). Tablet screens fill the window; the sign-in family draws
-// its own desk layout.
+// A browser window at tablet/desktop width shows every phone screen the same way: a phone-sized card centred on the
+// desk background. Tablet screens fill the window. The Run and Store sign-ins draw their own desk layout
+// (lodestar/desk-auth.tsx); the Dock's sign-ins stay phone screens in the card like the rest of the Dock.
 const TABLET = new Set(FACES.filter(f => f.device === 'tablet').flatMap(f => f.screens.map(s => s.key)));
-const OWN_DESK_LAYOUT = /sign-in|verify-code/;
+const OWN_DESK_LAYOUT = /^(?!ld-).*(sign-in|verify-code)/;
 function PhoneColumn({ screen, children }: { screen: string; children: ReactNode }) {
-  const { width, height } = useWindowDimensions();
-  if (Platform.OS !== 'web' || width < 768 || TABLET.has(screen) || OWN_DESK_LAYOUT.test(screen)) return <>{children}</>;
+  const { height } = useWindowDimensions();
+  const wide = useWideWeb();
+  if (!wide || TABLET.has(screen) || OWN_DESK_LAYOUT.test(screen)) return <>{children}</>;
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#F4F5F9' }}>
       <View
@@ -39,7 +41,14 @@ function PhoneColumn({ screen, children }: { screen: string; children: ReactNode
 
 // Any Lodestar screen by its key, e.g. /s/dr-02-stop-arrival (live screens read extra params, e.g. ?stop=…)
 export default function ScreenRoute() {
-  const { key: asked } = useLocalSearchParams<{ key: string }>();
+  const { key: asked, ...params } = useLocalSearchParams<{ key: string }>();
+  // Dock: the phone or the tablet variant of the screen for this width (dock-variant.ts); a resize swaps it too.
+  const width = useWebWidth();
+  const variant = asked && width ? dockVariant(asked, width === 'wide') : asked;
+  const query = JSON.stringify(params);
+  useEffect(() => {
+    if (variant && variant !== asked) router.replace({ pathname: '/s/[key]', params: { ...JSON.parse(query), key: variant } });
+  }, [variant, asked, query]);
   // Night or day screen (DR-24): the driver's run, route and summary have designed daylight variants.
   const { theme } = useSettings();
   const key = asked ? themedKey(asked, theme) : asked;
@@ -52,6 +61,7 @@ export default function ScreenRoute() {
       </View>
     );
   }
+  if (variant !== asked) return <View style={{ flex: 1, backgroundColor: '#F4F5F9' }} />;
   return <PhoneColumn screen={key!}>{createElement(screen)}</PhoneColumn>;
 }
 

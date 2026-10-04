@@ -1,4 +1,5 @@
-// The field sign-ins (LD-06, DR-06/07, SM-05/06 and their "can't sign in" screens) in a desktop or tablet browser.
+// The field sign-ins (DR-06/07, SM-05/06 and their "can't sign in" screens) in a desktop or tablet browser.
+// (On wide web windows every field sign-in, the Dock's included, uses this desk layout, as the Plan sign-in DSP-06.)
 // Phones keep the designed screen; on the web at 768px and up the screen takes the desk sign-in layout of
 // DSP-06 (P2, frontend/live/dsp-06-sign-in.tsx): a brand panel on the left (from 1024px) and the sign-in card
 // centred on the page, in the field app's own brand colour and mark. Sign-in screens pass their card content as

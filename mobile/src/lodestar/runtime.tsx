@@ -11,6 +11,7 @@ import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
 import * as Speech from 'expo-speech';
 import { useSettings } from '@/lib/settings';
+import { dockVariant, isWideWeb } from './dock-variant';
 import Svg, { Defs, LinearGradient, RadialGradient, Rect, Stop, SvgXml } from 'react-native-svg';
 
 export type Target = { to?: string; kind?: 'go' | 'nav' | 'back'; app?: string; screen?: string; params?: Record<string, string> };
@@ -36,7 +37,9 @@ function go(t: Target | undefined, notify: (t: Toast) => void) {
   if (!t) return;
   if (t.app) { notify(t); return; }
   if (!t.to) return;
-  const href = { pathname: '/s/[key]' as const, params: { ...t.params, key: t.to } };
+  // Dock links open the tablet variant of a screen in a wide web window (dock-variant.ts); the screen route sends a
+  // tablet screen back to its phone variant on a narrow one.
+  const href = { pathname: '/s/[key]' as const, params: { ...t.params, key: isWideWeb() ? dockVariant(t.to, true) : t.to } };
   if (t.kind === 'back') { if (router.canGoBack()) router.back(); else router.replace(href); }
   else if (t.kind === 'nav') router.replace(href);
   else router.push(href);
