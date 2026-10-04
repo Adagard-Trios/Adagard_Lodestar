@@ -24,7 +24,6 @@
 .hm-top__nav { display: flex; gap: 22px; margin-left: 12px; }
 .hm-top__nav a { color: #B5BDD1; font-size: 14px; font-weight: 500; text-decoration: none; }
 .hm-top__nav a:hover, .hm-top__nav a:focus-visible { color: #fff; }
-.hm-top__badge { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--hm-gold); border: 1px solid rgba(245, 184, 61, .35); padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
 
 /* hero */
 .hm-hero { background: radial-gradient(1200px 500px at 85% -10%, rgba(85, 102, 224, .35), transparent 60%), linear-gradient(160deg, var(--hm-navy) 0%, var(--hm-navy-2) 100%); color: #fff; padding: clamp(48px, 8vw, 96px) 0 clamp(56px, 8vw, 104px); }
@@ -112,7 +111,6 @@
 }
 @media (max-width: 640px) {
   .hm-grid { grid-template-columns: 1fr; }
-  .hm-top__badge { display: none; }
   .hm-hero__stats b { font-size: 32px; }
   .hm-card__device { display: none; }
 }

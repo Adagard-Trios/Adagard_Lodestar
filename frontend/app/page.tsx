@@ -145,7 +145,6 @@ export default function Home() {
             <a href="#flow">How it works</a>
             <a href="#network">Network</a>
           </nav>
-          <span className="hm-top__badge">Hackathon demo · synthetic data</span>
         </div>
       </header>
 
