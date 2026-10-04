@@ -3,6 +3,7 @@
 // Data: Deferrals SUGGESTED for the run date (with their Order and Outlet), decided one by one or together with
 // Deferrals('…')/Lodestar.Confirm {notes, rescheduledDate} and Lodestar.Dismiss. When a planning-agent draft is
 // under review, its ranked candidates are shown too (they are recorded when the draft is approved on DSP-12).
+import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { useScreenNav } from '@/components/ScreenShell';
 import Btn from '@/components/live/Btn';
@@ -13,7 +14,8 @@ import { Empty, ErrorBanner, Skeleton } from '@/components/live/states';
 import { BRAND_LETTER, dayFilter, fmtDay, fmtNum, fmtRunDate, fmtTime } from '@/lib/format';
 import { useAction, useQuery } from '@/lib/odata/hooks';
 import type { Deferral, Outlet } from '@/lib/odata/types';
-import { depotFilter } from '@/lib/workday';
+import { depotFilter, useFocusId } from '@/lib/workday';
+import { openOverlay } from '@/lib/overlay';
 import { useDepots } from '@/components/live/depots';
 
 const REASONS: Record<string, string> = {
@@ -51,7 +53,14 @@ export default function LiveDsp03DeferralDecision() {
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [dates, setDates] = useState<Record<string, string>>({});
-  const sel = rows.find(r => r.id === selId) ?? rows[0];
+  // a draft candidate or protected outlet picked on the left (not recorded yet: shown read-only)
+  const [pick, setPick] = useState<{ kind: 'cand' | 'prot'; orderId: string } | null>(null);
+  const [, setOrderFocus] = useFocusId('order');
+  const router = useRouter();
+  const sel = pick ? undefined : rows.find(r => r.id === selId) ?? rows[0];
+  const pickCand = pick?.kind === 'cand' ? draftCandidates.find(d => d.orderId === pick.orderId) : undefined;
+  const pickProt = pick?.kind === 'prot' ? draftProtected.find(p => p.orderId === pick.orderId) : undefined;
+  const openOrder = (orderId: string) => { setOrderFocus(orderId); openOverlay('/plan/dsp-09-order-detail-drawer'); };
   const isChecked = (id: string) => checked[id] ?? true;
   const chosen = rows.filter(r => isChecked(r.id));
   // approval rolls a deferred order to the next operating day (Calendar): a confirmed deferral defaults to the same
@@ -117,8 +126,8 @@ export default function LiveDsp03DeferralDecision() {
                     data-deferral={r.id}
                     role="button"
                     tabIndex={0}
-                    onClick={e => { e.stopPropagation(); setSelId(r.id); }}
-                    onKeyDown={e => { if (e.key === 'Enter') setSelId(r.id); }}
+                    onClick={e => { e.stopPropagation(); setPick(null); setSelId(r.id); }}
+                    onKeyDown={e => { if (e.key === 'Enter') { setPick(null); setSelId(r.id); } }}
                   >
                     <div className="x-cand__top">
                       <span
@@ -157,7 +166,8 @@ export default function LiveDsp03DeferralDecision() {
                 <>
                   <div className="x-sect">{"Agent draft candidates "}<span className="m-sep" /><span style={{ fontWeight: '600' }}>recorded when you approve the draft</span></div>
                   {draftCandidates.map(d => (
-                    <div key={d.orderId} className="x-cand">
+                    <div key={d.orderId} className={`x-cand lv-click${pick?.orderId === d.orderId ? ' is-on' : ''}`} role="button" tabIndex={0} data-testid="draft-candidate"
+                      onClick={() => setPick({ kind: 'cand', orderId: d.orderId })} onKeyDown={e => { if (e.key === 'Enter') setPick({ kind: 'cand', orderId: d.orderId }); }}>
                       <div className="x-cand__top">
                         <span className="x-chk"><Ic n="sparkle-plus" /></span>
                         <div className="x-cand__name"><b>{d.outletId}</b><span><span className="id">{d.orderId}</span> · rank {d.rank}</span></div>
@@ -172,7 +182,8 @@ export default function LiveDsp03DeferralDecision() {
                 <>
                   <div className="x-sect">{"Protected outlets "}<span className="m-sep" /><span style={{ fontWeight: '600' }}>kept on the plan, never deferred</span></div>
                   {draftProtected.map(p => (
-                    <div key={p.orderId} className="x-cand x-cand--prot" data-testid="protected-outlet">
+                    <div key={p.orderId} className={`x-cand x-cand--prot lv-click${pick?.orderId === p.orderId ? ' is-on' : ''}`} data-testid="protected-outlet" role="button" tabIndex={0}
+                      onClick={() => setPick({ kind: 'prot', orderId: p.orderId })} onKeyDown={e => { if (e.key === 'Enter') setPick({ kind: 'prot', orderId: p.orderId }); }}>
                       <div className="x-cand__top">
                         <span className="x-chk"><Ic n="shield-check" /></span>
                         <div className="x-cand__name"><b>{p.outletId}</b><span><span className="id">{p.orderId}</span> · {p.vehicleId} trip {p.tripNo}</span></div>
@@ -185,7 +196,24 @@ export default function LiveDsp03DeferralDecision() {
               )}
             </div>
             <div className="d-card" style={{ flex: '1' }}>
-              {!sel ? (
+              {pickCand || pickProt ? (
+                <div className="vstack" style={{ gap: '14px', padding: '22px 24px' }} data-testid="draft-pick">
+                  <div className="d-h1" style={{ fontSize: '24px' }}>{(pickCand ?? pickProt)!.outletId}</div>
+                  <span className="x-meta"><span className="id">{(pickCand ?? pickProt)!.orderId}</span><span className="m-sep" />{pickCand ? `rank ${pickCand.rank} · score ${pickCand.score}` : `${pickProt!.vehicleId} trip ${pickProt!.tripNo}`}</span>
+                  {pickCand ? (
+                    <>
+                      <div className="x-meta"><span className="x-code">{code(pickCand.reason)}</span><span>{REASONS[pickCand.reason] ?? pickCand.reason}</span><span className="m-sep" /><span>{fmtNum(pickCand.m3, 1)} m³</span></div>
+                      <p className="t-2" style={{ margin: 0 }}>{"The planning agent proposes deferring this order: it is the safest to move (lowest score). It is recorded as a suggestion when you approve the draft on Approve & go live, and the store is told then."}</p>
+                    </>
+                  ) : (
+                    <p className="t-2" style={{ margin: 0 }}>{"This outlet was deferred yesterday, so the consecutive-skip guard keeps it on the plan: the agent can never defer it today."}</p>
+                  )}
+                  <div className="hstack" style={{ gap: '10px', flexWrap: 'wrap' }}>
+                    <Btn className="d-btn" testId="open-order" onClick={() => openOrder((pickCand ?? pickProt)!.orderId)}><Ic n="list" />{"Open the order"}</Btn>
+                    <Btn className="d-btn" testId="ask-agent" onClick={() => router.push('/plan/dsp-39-ask-the-planning-agent')}><Ic n="sparkle" />{"Ask the planning agent"}</Btn>
+                  </div>
+                </div>
+              ) : !sel ? (
                 <Empty title="Pick a deferral" text="Select an order on the left to see its thread and decide." icon="list" />
               ) : (
                 <>
