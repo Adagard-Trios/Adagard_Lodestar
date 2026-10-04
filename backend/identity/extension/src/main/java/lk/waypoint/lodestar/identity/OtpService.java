@@ -20,7 +20,16 @@ public final class OtpService {
     public static final int TTL_SECONDS = 300;
     public static final int MAX_ATTEMPTS = 5;
     public static final int COOLDOWN_SECONDS = 30;
-    public static final int MAX_SENDS_PER_HOUR = 5;
+    /** Codes per number per hour: OTP_MAX_SENDS_PER_HOUR, else 5 (50 on a demo stack that shows codes on screen). */
+    public static final int MAX_SENDS_PER_HOUR = maxSendsPerHour();
+
+    private static int maxSendsPerHour() {
+        try {
+            String v = System.getenv("OTP_MAX_SENDS_PER_HOUR");
+            if (v != null && !v.isBlank()) return Math.max(1, Integer.parseInt(v.trim()));
+        } catch (NumberFormatException ignored) { }
+        return "true".equalsIgnoreCase(System.getenv("DEMO_SHOW_CODES")) ? 50 : 5;
+    }
 
     public enum IssueStatus { SENT, COOLDOWN, RATE_LIMITED }
 

@@ -148,6 +148,7 @@ services:
       # sign-in codes (phone + SMS) and the Dock PIN: SMS_PROVIDER log | twilio | notifylk
       SMS_PROVIDER: ${SMS_PROVIDER:-log}
       DEMO_SHOW_CODES: ${DEMO_SHOW_CODES:-true}     # demo: the app shows the code the SMS would carry
+      OTP_MAX_SENDS_PER_HOUR: ${OTP_MAX_SENDS_PER_HOUR:-}   # empty: 5 an hour, or 50 while demo codes are shown
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
       TWILIO_FROM: ${TWILIO_FROM:-}
