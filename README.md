@@ -8,7 +8,7 @@ One system, five faces on one URL:
 |---|---|---|---|
 | Lodestar Store | Store manager | Desktop and phone | Order before 4 PM, follow the ETA, count the delivery, report an issue |
 | Lodestar Plan | Dispatcher | Desktop (phone on call) | Plan the day with the planning agent, review deferrals, approve, watch it live |
-| Lodestar Dock | Loader | Phone (390 px) or bay tablet | Load in reverse stop order, flag a shortfall, release the vehicle |
+| Lodestar Dock | Loader | Bay tablet or desktop browser, or phone (390 px) | Load in reverse stop order, flag a shortfall, release the vehicle |
 | Lodestar Run | Driver | Phone (390 px), works offline | Drive the run, arrive, prove each delivery, sync later |
 | Lodestar Admin | Admin | Desktop | People, phones, outlets, vehicles, audit log |
 
@@ -16,19 +16,21 @@ One system, five faces on one URL:
 
 **URL:** https://waypoint-lodestar.eastasia.cloudapp.azure.com
 
-Open the URL, pick a role on the start page and sign in. One account per role works on the desk website and in the phone apps.
+Open the URL and pick a role on the start page: each card opens that role's own sign-in screen, as designed (no shared login page).
 
-| Role | App | Username | Password |
-|---|---|---|---|
-| Store manager (OUT106, Nuwara Eliya) | Lodestar Store (desk, or the phone app) | `fathima` | `Waypoint-Judge-2026` |
-| Dispatcher (both depots) | Lodestar Plan (desk) | `nilanthi` | `Waypoint-Judge-2026` |
-| Loader (Kandy) | Lodestar Dock (phone or bay tablet) | `kasun` | `Waypoint-Judge-2026` |
-| Driver (VEH057, Kandy) | Lodestar Run (phone) | `ruwan` | `Waypoint-Judge-2026` |
-| Admin | Lodestar Admin (desk) | `admin` | not published: it can approve phones and change accounts. Ask the team (the submission form lists our contact). |
+| Role | Sign-in screen | Sign in with |
+|---|---|---|
+| Store manager (OUT106, Nuwara Eliya) | Lodestar Store, desk (SM-26) or phone app (SM-05) | Phone `77 456 7890`, then the 6-digit code |
+| Dispatcher (both depots) | Lodestar Plan (DSP-06 → DSP-07) | `nilanthi@waypoint.lk`, password `Waypoint-Judge-2026`, then the 6-digit code |
+| Loader (Kandy) | Lodestar Dock (LD-06) | Staff ID `KDY-0427`, PIN `2468` |
+| Driver (VEH057, Kandy) | Lodestar Run (DR-06 → DR-07) | Phone `77 345 6789`, then the 6-digit code |
+| Admin | Lodestar Admin (ADM-01) | `admin` — not published: it can approve phones and change accounts. Ask the team (the submission form lists our contact). |
 
-The judge walkthrough below needs only the four role accounts. Driver and loader screens are designed for a phone: use a phone or a 390 px wide browser window.
+**The 6-digit code:** this demo has no SMS gateway, so the code the SMS would carry is shown on the screen ("Demo: your code is …"). Codes last 5 minutes; a new one can be sent after 30 s.
 
-On a local install (`docker compose up`) the passwords are `lodestar-dev-only` (the four roles) and `lodestar-admin-dev-only` (admin).
+The judge walkthrough below needs only the four role accounts. Driver and loader screens are designed for a phone: use a phone or a 390 px wide browser window. The Dock also has its bay-tablet screens, which a desktop browser shows.
+
+On a local install (`docker compose up`) the dispatcher's password is `lodestar-dev-only` and the admin's `lodestar-admin-dev-only`; phones, staff ID and PIN are the same as above.
 
 ## Run it locally
 
@@ -57,41 +59,41 @@ docker compose up --build     # first build takes a while; then open https://loc
 Open the start page in a desktop browser. For the driver and the loader, use a phone, or the browser's device toolbar at 390 × 844. Each role signs in from its card on the start page.
 
 **Store manager: order (desktop)**
-1. Pick **Store manager** and sign in as `fathima`. SM-01 shows the order form for the next run that is still open, with the 4 PM cut-off countdown.
+1. Pick **Store manager** and sign in with phone `77 456 7890` and the code shown on screen. SM-01 shows the order form for the next run that is still open, with the 4 PM cut-off countdown.
 2. Add a line, change a quantity and press **Submit**. The order appears in the order history with its run date. (After 4 PM it goes to the following run.)
 3. Open **Deliveries** (SM-02): today's two orders for OUT106 (chilled and ambient) are waiting to be planned.
 
 **Dispatcher: plan and approve (desktop)**
 
-4. Sign out, pick **Dispatcher** and sign in as `nilanthi`. On the **Cutoff queue** (DSP-01), choose the Kandy depot and today's run, then press **Draft the plan with the agent**. DSP-22 shows the agent working, then the draft opens on the **Plan board** (DSP-02).
-5. Read the draft: trips per vehicle with stops in order, ETAs, the rule checks (weight, volume, temperature, access, windows, fuel), and the orders it could not fit, each with a reason code (for example `CAP_REEFER`) on **Review deferrals** (DSP-03). For Peliyagoda, the same step shows an over-capacity day: several deferrals, and any protected outlet (skipped yesterday) is sent for your decision instead of being deferred again.
-6. Give the store's orders to Ruwan's van: on **Ask the planning agent** (DSP-39), ask it to move OUT106's orders onto VEH057, and accept its proposal (DSP-40). The draft now shows the move, and any rule it bends (for example the van's working minutes) as a violation.
+4. Sign out, pick **Dispatcher** and sign in as `nilanthi@waypoint.lk` (password, then the code). On the **Cutoff queue** (DSP-01), choose the Kandy depot and today's run; **Close orders** freezes the run, then press **Draft the plan with the agent**. DSP-22 shows the agent's steps and progress, then the draft opens on the **Plan board** (DSP-02). Click any trip card (for example VEH057's) to open its trip drawer (DSP-11) over the board: stops in order, plan and model ETAs, late risk and the rule checks.
+5. On **Review deferrals** (DSP-03), the orders the agent could not fit are listed, each with a reason code (for example `CAP-REEFER`, a bulk chilled order no Kandy reefer can carry) and a score, plus the **Protected outlets** kept on the plan because they were skipped yesterday (OUT108). Click one to see why; tick the deferrals to approve. For Peliyagoda the same step shows a larger over-capacity day.
+6. On **Ask the planning agent** (DSP-39), ask for a change, for example "Move ORD261005999 to VEH040 trip 1", and accept its proposal (DSP-40). The draft shows the move, and every rule it breaks (weight, volume, van-only…) in red: the agent proposes, the deterministic rule checks decide, and nothing is fixed silently.
 7. Press **Approve & go live** (DSP-12). If the draft has violations, DSP-12 lists them and asks for an **Override reason**; it is recorded with the plan and in the audit log. The plan is now in effect: trips and stops exist, deferred orders move to the next operating day with their reason, and each affected store gets a notice.
 
 **Loader: load and release (phone)**
 
-8. Open the **Loader** card on a phone and sign in as `kasun`. The dock queue (LD-01) lists today's Kandy trips by bay.
+8. Open the **Loader** card and sign in with staff ID `KDY-0427` and PIN `2468`. The dock queue (LD-01) lists today's Kandy trips by bay; in a desktop browser the Dock shows its bay-tablet screens (bay overview LD-21, load sheet LD-02, release checklist LD-22).
 9. Open VEH057's load sheet (LD-02): lines in reverse stop order. Tick them off; on one line, **Flag** a shortfall and **Send flag** (LD-03).
 10. **Release to driver** (LD-04) with the seal number and the reefer temperature (a temperature above the limit blocks the release). The trip and its orders go en route.
 
 **Driver: deliver with proof (phone)**
 
-11. Open the **Driver** card and sign in as `ruwan`. Today's run (DR-01) shows VEH057's stops. Press **Start trip**.
-12. At OUT106: **Arrived**, then **Start delivery** (DR-02), count the units, capture the receiver's name, record any exception, then **Complete stop** (DR-03).
+11. Open the **Driver** card and sign in with phone `77 345 6789` and the code shown on screen. Today's run (DR-01) shows VEH057's stops with their ETAs. Press **Start trip**.
+12. At OUT106: **Arrived**, then **Start delivery** (DR-02), count the units, capture the receiver's name and **signature**, record any exception, then **Complete stop** (DR-03). No signature? **Use store OTP** (DR-16).
 13. Offline (the app must have opened once online on that phone): switch the phone to airplane mode before the next stop. Complete it with the proof of delivery and a photo (DR-20); everything waits in the phone's outbox. Reconnect: the outbox sends once, in order, and the records reconcile without duplicates. If the office changed the same stop meanwhile, the dispatcher sees the conflict on the reconcile screen (DSP-A2) and the field evidence wins.
 
 **Store manager: receipt (desktop or phone)**
 
-14. Sign in as `fathima` again. Deliveries (SM-02) shows the delivery as arrived. Count it, use **Report an issue** for any short or damaged item, and **Confirm receipt**. A short count creates a credit note.
+14. Sign in as the store manager again. Deliveries (SM-02) shows the delivery as arrived. Count it, use **Report an issue** for any short or damaged item, and **Confirm receipt**. A short count creates a credit note.
 
 **Dispatcher: the result**
 
-15. As `nilanthi`, **Live operations** (DSP-04) shows the trip's progress and the delivered stops, and the **Deferral log** (DSP-17) lists every deferral with its reason and new date.
+15. As the dispatcher, **Live operations** (DSP-04) shows the trip's progress and the delivered stops, and the **Deferral log** (DSP-17) lists every deferral with its reason and new date.
 
 **When the day breaks: a reefer cannot depart (optional)**
 
-16. As `kasun`, on a trip that has not left yet, report **Vehicle can't depart** (LD-B1); the vehicle goes to the workshop.
-17. As `nilanthi`, the re-plan opens as a difference against the live plan (DSP-B1): which orders move to which vehicle and which must wait. Approve it; the loader's sheet updates (LD-14).
+16. As the loader, on a vehicle's second trip that has not left yet, report **Vehicle can't depart** (LD-B1); the vehicle goes to the workshop and dispatch is alerted.
+17. As the dispatcher, the re-plan opens as a difference against the live plan (DSP-B1): which orders move to which vehicle and which must wait. Approve it; the loader's sheet updates (LD-14).
 
 **Admin: audit and devices (desktop)**
 
@@ -125,13 +127,14 @@ The Day 5 Designathon submission is the specification. Where the build differs:
 
 | Area | Design | Build | Why |
 |---|---|---|---|
-| Computer-vision auto-fill (scan, temperature, seal, damage) | Camera reads and fills the field; the person confirms | Not built: the person types or confirms the values. The fields work as designed without it. | Time; an on-device model needs training data we do not have. |
+| Computer-vision auto-fill (scan, temperature, seal, damage) | Camera reads and fills the field; the person confirms | Temperatures only: **Read from photo** (LD-09, DR-12) sends the photo to the internal `ocr` service (RapidOCR, PP-OCR mobile on CPU) and pre-fills the value for the person to confirm. Scan, seal and damage are typed or confirmed by hand. | A small CPU model fits the demo VM; the other readers need training data we do not have. |
+| Sign-in | One designed sign-in per app (SM-05/06, SM-26, DSP-06/07, LD-06, DR-06/07, ADM-01) | As designed, with no Keycloak login page on the normal path: a Lodestar extension inside Keycloak (`backend/identity/extension`) checks phone + code, staff ID + PIN and email + password + second step, and Keycloak issues the session (no service can sign in as a user). Codes: 5 minutes, 5 tries, 30 s between sends, 5 an hour per number (50 on a demo stack). | Same screens as the design; Keycloak stays the only token issuer. |
+| SMS codes | The code arrives by SMS | `SMS_PROVIDER=log` (default) with `DEMO_SHOW_CODES=true`: the code is shown on screen. `twilio` or `notifylk` send real SMS when configured. | No SMS gateway contract for the demo. |
 | Downloadable voice packs (Sinhala, Tamil) | Voice settings, pack download, voice unavailable (DR-33–35, LD-28–30, SM-37–39) | Not built. Read-aloud uses the phone's own text-to-speech where the build has it. | Time. |
-| Screens not yet live | Every screen in P1–P6 | The screens a judge needs are live; the rest still show the generated design mock. The current list is in the design-conformance report (`tests/visual/report`). | Time; tracked by the conformance check, never hidden. |
-| Field app on the web | Native phone apps | The same Expo app served in the browser at `/field/` (native builds are possible from the same code) | Judges use a browser; one URL for every role. |
+| Field app on the web | Native phone apps | The same Expo app served in the browser at `/field/`; on a tablet or desktop window the Dock uses its bay-tablet screens and the field sign-ins use the desk layout. An Android build comes from the same code (`npx expo prebuild -p android`, then Gradle); debug builds can reach a local stack over `adb reverse`. | Judges use a browser; one URL for every role. |
 | SMS and phone-call alerts | Settings offer SMS and a call per alert (DSP-20, DSP-33, SM-30) | In-app (WebSocket) always. SMS is behind `SMS_ENABLED` (default off: the SMS switches show "Not available in this deployment"); when on, the recipient's own settings decide, and `SMS_PROVIDER=log` (default) records what would be sent on the notification (`payload.delivery.sms`) and in the audit log, while `SMS_PROVIDER=http` posts `{to, from, body}` to `SMS_API_URL` (see `.env.example`). The call channel is removed. | No SMS gateway contract for the demo; no voice provider at all. |
-| Proof-of-delivery photos | Photo of the drop shown with the POD | The phone compresses the photo (JPEG) and keeps it in its outbox until there is signal, then uploads it (`POST /media/pod-photos`, at most 3 MB, JPEG/PNG/WebP checked by content). It is stored in Postgres (`trips.PodPhoto`) and shown as a thumbnail to the depot's dispatchers (DSP-A2) and the store's manager (SM-02); the field app's store screens show only that a photo exists. | One database to back up and secure; photos are small. |
-| Estimators (service time, late risk, demand) | The Datathon models drive ETAs, late-risk alerts and the capacity outlook | The trained Adagard models run in the internal `ml` service (`backend/apps/ml`: `POST /predict/stops`, `POST /forecast/weeks`). The planning agent scores each draft's stops in one call (predicted service minutes, simulated ETA, late risk); `UpdateLateRisk` keeps the model's late risk as the floor; the capacity outlook (DSP-05) uses the weekly demand forecast and stores it, so Plan's model quality shows its WAPE once a week is over. The models and `dtcore.py` are mounted from the host (`ML_MODELS_DIR`, `ML_DTCORE`), never in the repo or an image; without them, or when the service is slow (2 s) or down, every caller keeps its heuristic (booklet allowances, road-class ETA, history median). | Competition terms: the trained models and datathon code are not redistributed. |
+| Proof-of-delivery photos and signatures | Photo of the drop and the receiver's signature shown with the POD | The phone keeps the photo (JPEG) and the signature (SVG, drawn on DR-03/DR-20) in its outbox until there is signal, then uploads them (`POST /media/pod-photos`, photos at most 3 MB, JPEG/PNG/WebP checked by content; signatures rebuilt on the server from path data only). They are stored in Postgres (`trips.PodPhoto`) and shown to the depot's dispatchers (trip drawer DSP-11, reconcile DSP-A2), the store's manager (SM-02) and the driver's record (DR-22). | One database to back up and secure; photos and signatures are small. |
+| Estimators (service time, late risk, demand) | The Datathon models drive ETAs, late-risk alerts and the capacity outlook | The trained Adagard models run in the internal `ml` service (`backend/apps/ml`: `POST /predict/stops`, `POST /forecast/weeks`). The planning agent scores each draft's stops in one call (predicted service minutes, simulated ETA, late risk); `UpdateLateRisk` keeps the model's late risk as the floor; the capacity outlook (DSP-05) uses the weekly demand forecast and stores it, so Plan's model quality shows its WAPE once a week is over. The models and `dtcore.py` are mounted from the host (`ML_MODELS_DIR`, `ML_DTCORE`), never in the repo or an image; without them, or when the service is slow (8 s) or down, every caller keeps its heuristic (booklet allowances, road-class ETA, history median). | Competition terms: the trained models and datathon code are not redistributed. |
 | Auto-plan | `Plans/Lodestar.AutoPlan` stored a capacity picture and deferral suggestions as a plan to approve | `AutoPlan` drafts with the planning agent (the same path as "Draft the plan with the agent", dispatchers only) and stores the draft, with its trips, as an `AUTOPLAN` plan version linked to the agent run; approving either one publishes it, and the run is closed when the plan is approved. A plan stored without trips (older capacity-only auto-plans) is never offered for approval (DSP-12 disables the button and says why; the API answers 409 `PlanNotExecutable`). | A plan with no trips cannot go live. |
 | Closing orders | Orders close at the 4:00 PM cut-off | Also an explicit dispatcher step: "Close orders" on the cutoff queue (DSP-01) closes the run in view for the depot (`Orders/Lodestar.CloseOrders`, `ReopenOrders`, audited; `orders.OrderClosure`). While closed, the orders service refuses new orders and store edits for that run (422 `OrdersClosed`), and the store apps say "orders closed" (SM-01 on the web, SM-13/SM-23 in the field app). | Dispatch plans a run once its orders are final, without waiting for the clock. |
 | Planning-agent model | An LLM drafts and explains | Planning is deterministic (packing, rule checks, validation, simulation, deferrals, approval). With `AGENT_MODEL=gemini` an LLM router (Google Gemini, then Groq, then the deterministic template) classifies the dispatcher's request, picks enum planning preferences, chooses the "Ask the agent" tools and phrases verified text; every edit it proposes is re-checked against the hard rules and a dispatcher approves. Without keys, or when both providers fail (the run is marked `LLM_DEGRADED`), the template text is used. `AGENT_MODEL=mock` is fully deterministic; `azure-openai` remains an optional phrasing model. | The same plan for the same data, and a demo that never depends on an external model. |
