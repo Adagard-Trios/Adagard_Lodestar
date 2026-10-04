@@ -97,14 +97,14 @@ export default function LiveAdm08Outlets() {
                 <span className="dx-td" style={{ width: '230px' }}>
                   <span className="hstack" style={{ gap: '10px' }}><span className={`bb bb--${o.brand.toLowerCase()} dx-bb`}>{BRAND_LETTER[o.brand]}</span><span className="dx-td2"><b>{o.name}</b><span>Waypoint {title(o.brand)}</span></span></span>
                 </span>
-                <span className="dx-td" style={{ width: '120px' }}>{o.district}</span>
-                <span className="dx-td" style={{ width: '100px' }}>{depotShort(o.depot)}</span>
-                <span className="dx-td" style={{ width: '100px' }}><span className="dx-mono">{DOCK[o.dockType] ?? o.dockType}</span></span>
-                <span className="dx-td" style={{ width: '130px' }}><span className="dx-mono">{o.windowOpen} to {o.windowClose}</span></span>
-                <span className="dx-td" style={{ width: '100px' }}>
+                <span className="dx-td" data-label="District" style={{ width: '120px' }}>{o.district}</span>
+                <span className="dx-td" data-label="Depot" style={{ width: '100px' }}>{depotShort(o.depot)}</span>
+                <span className="dx-td" data-label="Dock type" style={{ width: '100px' }}><span className="dx-mono">{DOCK[o.dockType] ?? o.dockType}</span></span>
+                <span className="dx-td" data-label="Window" style={{ width: '130px' }}><span className="dx-mono">{o.windowOpen} to {o.windowClose}</span></span>
+                <span className="dx-td" data-label="Access" style={{ width: '100px' }}>
                   {o.parking === 'VAN_ONLY' ? <span className="acc acc--van">{"van_only"}</span> : o.parking === 'MALL_DOCK' ? <span className="acc">{"mall_dock"}</span> : <span className="t-3" style={{ color: 'var(--text-3)' }}>{"normal"}</span>}
                 </span>
-                <span className="dx-td" style={{ flex: '1', minWidth: '0' }}>
+                <span className="dx-td" data-label="Status" style={{ flex: '1', minWidth: '0' }}>
                   {o.isActive ? <span className="m-tag m-tag--ok"><span className="dot" />{"Active"}</span> : <span className="m-tag m-tag--bad"><span className="dot" />{"Inactive"}</span>}
                 </span>
               </div>

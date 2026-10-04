@@ -97,10 +97,10 @@ export default function LiveAdm06Devices() {
                       </span>
                     </span>
                   </span>
-                  <span className="dx-td" style={{ width: '140px' }}><span className="dx-td2"><b>{d.lastSeenAt ? fmtClock(d.lastSeenAt) : '—'}</b><span>{d.lastSeenAt ? fmtDay(d.lastSeenAt) : 'never'}</span></span></span>
-                  <span className="dx-td" style={{ width: '120px' }}><span className="dx-mono">{d.platform ?? '—'}</span></span>
-                  <span className="dx-td" style={{ width: '110px' }}><b style={{ fontFamily: 'var(--font-display)', fontSize: '17px', color: q ? 'var(--st-exception-fg)' : 'var(--text-3)' }}>{q}</b></span>
-                  <span className="dx-td" style={{ flex: '1', minWidth: '0' }}>
+                  <span className="dx-td" data-label="Last seen" style={{ width: '140px' }}><span className="dx-td2"><b>{d.lastSeenAt ? fmtClock(d.lastSeenAt) : '—'}</b><span>{d.lastSeenAt ? fmtDay(d.lastSeenAt) : 'never'}</span></span></span>
+                  <span className="dx-td" data-label="Platform" style={{ width: '120px' }}><span className="dx-mono">{d.platform ?? '—'}</span></span>
+                  <span className="dx-td" data-label="Queued" style={{ width: '110px' }}><b style={{ fontFamily: 'var(--font-display)', fontSize: '17px', color: q ? 'var(--st-exception-fg)' : 'var(--text-3)' }}>{q}</b></span>
+                  <span className="dx-td" data-label="Status" style={{ flex: '1', minWidth: '0' }}>
                     {d.status === 'REVOKED' ? <span className="m-pill m-pill--bad" style={{ height: '26px', fontSize: '12.5px' }}><Ic n="ban" />Revoked{d.revokedAt ? ` ${fmtDay(d.revokedAt)}` : ''}</span>
                       : d.status === 'PENDING' ? <span className="m-pill m-pill--warn" style={{ height: '26px', fontSize: '12.5px' }}><span className="dot" />{"Waiting for approval"}</span>
                         : <span className="m-pill m-pill--ok" style={{ height: '26px', fontSize: '12.5px' }}><span className="dot" />{"Active"}</span>}

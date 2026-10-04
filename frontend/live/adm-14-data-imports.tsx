@@ -128,10 +128,10 @@ export default function LiveAdm14DataImports() {
                       <span className="dx-td2"><b><span className="id">{f.csv}</span></b><span>{f.what}</span></span>
                     </span>
                   </span>
-                  <span className="dx-td" style={{ width: '90px' }}><span className="dx-mono">{fmtNum(r.rows)}</span></span>
-                  <span className="dx-td" style={{ width: '170px' }}>{r.last ? when(r.last.importedAt) : 'From the seed'}</span>
-                  <span className="dx-td" style={{ width: '120px' }}>{r.last ? r.last.byName ?? 'Admin' : '—'}</span>
-                  <span className="dx-td" style={{ flex: '1', minWidth: '0' }}>
+                  <span className="dx-td" data-label="Rows" style={{ width: '90px' }}><span className="dx-mono">{fmtNum(r.rows)}</span></span>
+                  <span className="dx-td" data-label="Last imported" style={{ width: '170px' }}>{r.last ? when(r.last.importedAt) : 'From the seed'}</span>
+                  <span className="dx-td" data-label="By" style={{ width: '120px' }}>{r.last ? r.last.byName ?? 'Admin' : '—'}</span>
+                  <span className="dx-td" data-label="Status" style={{ flex: '1', minWidth: '0' }}>
                     {failed
                       ? <span className="m-tag m-tag--bad"><Ic n="alert" />{`Check failed ${when(r.last!.importedAt)}`}</span>
                       : <span className="m-tag m-tag--ok"><Ic n="check" />{r.last ? 'Clean' : 'Clean, from the seed'}</span>}

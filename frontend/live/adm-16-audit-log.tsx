@@ -114,8 +114,8 @@ export default function LiveAdm16AuditLog() {
             {log.data?.length === 0 && <Empty title="No entries" text="Nothing matches this filter." icon="history" />}
             {log.data?.map(a => (
               <div key={a.seq} className="dx-tr" style={{ minHeight: '52px' }} data-lk="L302" data-seq={a.seq} onClickCapture={() => setFocus(String(a.seq))}>
-                <span className="dx-td" style={{ width: '110px' }}><span className="dx-td2"><b className="dx-mono" style={{ color: 'var(--text)' }}>{fmtClock(a.at)}</b><span>{fmtDay(a.at)}</span></span></span>
-                <span className="dx-td" style={{ width: '190px' }}>
+                <span className="dx-td" data-label="When" style={{ width: '110px' }}><span className="dx-td2"><b className="dx-mono" style={{ color: 'var(--text)' }}>{fmtClock(a.at)}</b><span>{fmtDay(a.at)}</span></span></span>
+                <span className="dx-td" data-label="Who" style={{ width: '190px' }}>
                   <span className="hstack" style={{ gap: '10px' }}>
                     <Ic n={a.client?.startsWith('svc-') ? 'sliders' : 'user'} className="ic ic--sm" />
                     <span className="dx-td2"><b style={{ fontWeight: '700' }}>{names.data?.get(a.actor) ?? (a.client?.startsWith('svc-') ? a.client : a.actor.slice(0, 12))}</b><span>{a.actorRoles?.join(', ')}</span></span>
@@ -126,8 +126,8 @@ export default function LiveAdm16AuditLog() {
                     {a.action}{a.entityKey ? ` · ${a.entityKey}` : ''}{a.outcome !== 'SUCCESS' ? ` · ${a.outcome.toLowerCase()}` : ''}
                   </span>
                 </span>
-                <span className="dx-td" style={{ width: '100px' }}><span className="t-3" style={{ color: 'var(--text-2)' }}>{a.entitySet ?? a.service}</span></span>
-                <span className="dx-td" style={{ width: '120px' }}><span className="adm-hash"><Ic n="link" className="ic ic--sm" />{shortHash(a.hash)}</span></span>
+                <span className="dx-td" data-label="Area" style={{ width: '100px' }}><span className="t-3" style={{ color: 'var(--text-2)' }}>{a.entitySet ?? a.service}</span></span>
+                <span className="dx-td" data-label="Signature" style={{ width: '120px' }}><span className="adm-hash"><Ic n="link" className="ic ic--sm" />{shortHash(a.hash)}</span></span>
               </div>
             ))}
             <div className="spacer" />

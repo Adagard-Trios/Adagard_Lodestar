@@ -120,6 +120,38 @@
   :is(.b-P2, .b-P5, .b-P6) .dx-modal { max-width: calc(100vw - 32px) !important; max-height: calc(100dvh - 32px); overflow: auto; }
 }
 
+/* Admin tables and ADM-17's toggle rows at every width: a value longer than its column wraps onto a second line
+   (the row grows) instead of being cut off; the column widths stay the design's. */
+.b-P6 .dx-card > .dx-tr:has(> .dx-td[data-label]) > .dx-td { white-space: normal; overflow-wrap: anywhere; }
+.b-P6 .dx-card > .dx-tr:has(> .dx-td[data-label]) > .dx-td :is(.hstack, .dx-td2) { min-width: 0; }
+.b-P6 .dx-card > .dx-tr:has(> .dx-td[data-label]) > .dx-td .m-tag { white-space: normal; }
+/* a pane narrower than the columns (1280 px) shrinks them evenly, header included, so the last one keeps room */
+.b-P6 .dx-card:has(> .dx-tr > .dx-td[data-label]) > .dx-tr > .dx-td { flex-shrink: 1; }
+.b-P6 .dx-card:has(> .dx-tr > .dx-td[data-label]) > .dx-tr > .dx-td[style*="flex"] { min-width: 96px !important; }
+.b-P6 .dx-kv > .dx-td2 { min-width: 0; }
+.b-P6 .dx-kv > .dx-td2 > * { white-space: normal; overflow-wrap: anywhere; }
+
+/* Admin tables (ADM-03, 06, 08, 10, 14, 15, 16, 21) below 1024 px: each row becomes a card. Cells without a
+   data-label (the name or id) lead on full-width lines; the labelled cells follow as "label over value" in a grid
+   that fits as many columns as the width allows. Nothing is clipped; the header row is dropped. */
+@media (max-width: 1023px) {
+  .b-P6 .dx-card:has(> .dx-tr > .dx-td[data-label]) > .dx-tr--head { display: none; }
+  .b-P6 .dx-card > .dx-tr:has(> .dx-td[data-label]) {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); gap: var(--s-2) var(--s-4);
+    align-items: start; min-height: 0 !important; padding: var(--s-3) var(--s-4);
+  }
+  .b-P6 .dx-tr:has(> .dx-td[data-label]) > .dx-td { width: auto !important; min-width: 0 !important; flex: none !important; overflow: visible; white-space: normal; overflow-wrap: anywhere; }
+  .b-P6 .dx-tr:has(> .dx-td[data-label]) > .dx-td:not([data-label]) { grid-column: 1 / -1; order: -1; }
+  .b-P6 .dx-tr:has(> .dx-td[data-label]) > .dx-td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 2px; font-size: 12px; font-weight: 700; color: var(--text-3); }
+  .b-P6 .dx-tr:has(> .dx-td[data-label]) > .dx-td * { white-space: normal !important; }
+  .b-P6 .dx-tr:has(> .dx-td[data-label]) > .dx-td :is(.hstack, .dx-td2) { min-width: 0; }
+  .b-P6 .dx-tr:has(> .dx-td[data-label]) > .dx-td :is(.m-pill, .m-tag, .adm-hash) { height: auto !important; min-height: 24px; max-width: 100%; flex-wrap: wrap; }
+  /* ADM-17 "What it may read" checklist: the label wraps beside its value */
+  .b-P6 .x-ck { padding: var(--s-1) 0; }
+  .b-P6 .x-ck__l { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+  .b-P6 .x-ck__v { flex-shrink: 0; }
+}
+
 /* sign-in screens (DSP-06, DSP-07, DSP-34, ADM-01): the frame scrolls; the brand panel narrows, then sits above the card */
 :is(.b-P2, .b-P5, .b-P6) > .frame:has(> .dx-auth) { overflow-y: auto; }
 :is(.b-P2, .b-P6) > .frame > .dx-auth { flex: 1 0 auto; }

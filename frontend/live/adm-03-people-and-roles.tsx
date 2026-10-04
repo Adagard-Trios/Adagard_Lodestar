@@ -108,11 +108,11 @@ export default function LiveAdm03PeopleAndRoles() {
                       <span className="dx-td2"><b>{u.name}</b><span>{u.email}</span></span>
                     </span>
                   </span>
-                  <span className="dx-td" style={{ width: '190px' }}><span className="hstack" style={{ gap: '8px' }}><Ic n={info?.icon ?? 'user'} className="ic ic--sm" /><span className="dx-td2"><b>{info?.label ?? u.role}</b><span>{info?.face}</span></span></span></span>
-                  <span className="dx-td" style={{ width: '190px' }}>{u.outletId ?? (u.depot ? depotName(u.depot) : 'All depots')}</span>
-                  <span className="dx-td" style={{ width: '180px' }}><span className="t-2" style={{ color: 'var(--text-2)' }}>{SIGN_IN[u.role]}</span></span>
-                  <span className="dx-td" style={{ width: '130px' }}><span className={`m-tag ${cls}`}><span className="dot" />{label}</span></span>
-                  <span className="dx-td" style={{ flex: '1', minWidth: '0' }}><span className="dx-mono">{u.updatedAt ? fmtDayTime(u.updatedAt) : '—'}</span></span>
+                  <span className="dx-td" data-label="Role" style={{ width: '190px' }}><span className="hstack" style={{ gap: '8px' }}><Ic n={info?.icon ?? 'user'} className="ic ic--sm" /><span className="dx-td2"><b>{info?.label ?? u.role}</b><span>{info?.face}</span></span></span></span>
+                  <span className="dx-td" data-label="Scope" style={{ width: '190px' }}>{u.outletId ?? (u.depot ? depotName(u.depot) : 'All depots')}</span>
+                  <span className="dx-td" data-label="Sign-in method" style={{ width: '180px' }}><span className="t-2" style={{ color: 'var(--text-2)' }}>{SIGN_IN[u.role]}</span></span>
+                  <span className="dx-td" data-label="Status" style={{ width: '130px' }}><span className={`m-tag ${cls}`}><span className="dot" />{label}</span></span>
+                  <span className="dx-td" data-label="Last change" style={{ flex: '1', minWidth: '0' }}><span className="dx-mono">{u.updatedAt ? fmtDayTime(u.updatedAt) : '—'}</span></span>
                 </div>
               );
             })}

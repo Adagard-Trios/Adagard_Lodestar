@@ -220,9 +220,9 @@ export default function LiveAdm21Depots() {
                 onClick={e => { e.stopPropagation(); setEditing(d); }} onKeyDown={e => { if (e.key === 'Enter') setEditing(d); }}>
                 <span className="dx-td" style={{ width: '130px' }}><span className="id">{d.code}</span></span>
                 <span className="dx-td" style={{ width: '220px' }}><span className="dx-td2"><b>{d.name}</b><span>{d.district}</span></span></span>
-                <span className="dx-td" style={{ width: '240px' }}>{d.address || <span className="t-3" style={{ color: 'var(--text-3)' }}>{"not given"}</span>}</span>
-                <span className="dx-td" style={{ width: '150px' }}><span className="dx-mono">{d.phone || '—'}</span></span>
-                <span className="dx-td" style={{ flex: '1', minWidth: '0' }}>
+                <span className="dx-td" data-label="Address" style={{ width: '240px' }}>{d.address || <span className="t-3" style={{ color: 'var(--text-3)' }}>{"not given"}</span>}</span>
+                <span className="dx-td" data-label="Desk phone" style={{ width: '150px' }}><span className="dx-mono">{d.phone || '—'}</span></span>
+                <span className="dx-td" data-label="Status" style={{ flex: '1', minWidth: '0' }}>
                   {d.isActive ? <span className="m-tag m-tag--ok"><span className="dot" />{"Active"}</span> : <span className="m-tag m-tag--bad"><span className="dot" />{"Deactivated"}</span>}
                 </span>
               </div>

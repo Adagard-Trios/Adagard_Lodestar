@@ -102,11 +102,11 @@ export default function LiveAdm10Vehicles() {
                     <span className="dx-td2"><b>{v.tempClass === 'CHILLED' ? 'Reefer' : 'Dry'} {v.type === 'VAN' ? 'van' : 'truck'}</b><span>{v.tempClass === 'CHILLED' ? 'reefer' : 'ambient'}</span></span>
                   </span>
                 </span>
-                <span className="dx-td" style={{ width: '110px' }}><span className="dx-mono">{fmtNum(v.capacityKg)} kg</span></span>
-                <span className="dx-td" style={{ width: '100px' }}><span className="dx-mono">{fmtNum(v.capacityM3, 1)} m³</span></span>
-                <span className="dx-td" style={{ width: '110px' }}>{depotShort(v.depot)}</span>
-                <span className="dx-td" style={{ width: '120px' }}><span className="dx-mono">{v.weeklyLFuel} L/wk</span></span>
-                <span className="dx-td" style={{ flex: '1', minWidth: '0' }}>
+                <span className="dx-td" data-label="Weight" style={{ width: '110px' }}><span className="dx-mono">{fmtNum(v.capacityKg)} kg</span></span>
+                <span className="dx-td" data-label="Volume" style={{ width: '100px' }}><span className="dx-mono">{fmtNum(v.capacityM3, 1)} m³</span></span>
+                <span className="dx-td" data-label="Depot" style={{ width: '110px' }}>{depotShort(v.depot)}</span>
+                <span className="dx-td" data-label="Fuel quota" style={{ width: '120px' }}><span className="dx-mono">{v.weeklyLFuel} L/wk</span></span>
+                <span className="dx-td" data-label="Status" style={{ flex: '1', minWidth: '0' }}>
                   {v.status === 'WORKSHOP'
                     ? <span className="m-tag m-tag--warn"><Ic n="wrench" />{v.workshopNote ?? 'Workshop'}</span>
                     : <span className="m-tag m-tag--ok"><span className="dot" />{v.status === 'ENROUTE' ? 'On the road' : 'In service'}</span>}

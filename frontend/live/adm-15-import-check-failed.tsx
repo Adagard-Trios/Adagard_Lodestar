@@ -101,10 +101,10 @@ export default function LiveAdm15ImportCheckFailed() {
                 <div style={{ maxHeight: '320px', overflow: 'auto' }} data-testid="rejected-rows">
                   {d.problems.map((p, i) => (
                     <div key={`${p.row}-${i}`} className="dx-tr" style={{ minHeight: '64px' }}>
-                      <span className="dx-td" style={{ width: '70px' }}><span className="dx-mono" style={{ color: 'var(--text)' }}>{p.row}</span></span>
-                      <span className="dx-td" style={{ width: '86px' }}>{p.key ? <span className="id">{p.key}</span> : '—'}</span>
-                      <span className="dx-td" style={{ width: '170px' }}><span className="dx-mono">{p.column ?? '—'}</span></span>
-                      <span className="dx-td" style={{ width: '110px' }}>{p.value !== null && p.value !== '' ? <span className="adm-bad">{p.value}</span> : '—'}</span>
+                      <span className="dx-td" data-label="Row" style={{ width: '70px' }}><span className="dx-mono" style={{ color: 'var(--text)' }}>{p.row}</span></span>
+                      <span className="dx-td" data-label="Key" style={{ width: '86px' }}>{p.key ? <span className="id">{p.key}</span> : '—'}</span>
+                      <span className="dx-td" data-label="Column" style={{ width: '170px' }}><span className="dx-mono">{p.column ?? '—'}</span></span>
+                      <span className="dx-td" data-label="Value" style={{ width: '110px' }}>{p.value !== null && p.value !== '' ? <span className="adm-bad">{p.value}</span> : '—'}</span>
                       <span className="dx-td" style={{ flex: '1', minWidth: '0' }}><span style={{ whiteSpace: 'normal', lineHeight: '1.4' }}>{p.reason}</span></span>
                     </div>
                   ))}
