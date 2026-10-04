@@ -106,6 +106,23 @@ describe('DSP-05 Capacity outlook', () => {
     expect(text).not.toHaveTextContent('Datathon');
   });
 
+  it('says the weeks come from the demand model when the planning service used it, per depot', async () => {
+    const basis = { historyDays: 3, historyFrom: '2026-04-02', historyTo: '2026-04-04', minHistoryDays: 5, medianTotalM3PerDay: 31.5, medianChilledM3PerDay: 12.25 };
+    const withBasis = (method: string) => (req: FakeRequest) =>
+      fnDepot(req.path) ? { ...(outlooks[fnDepot(req.path)!] as object), uncoveredWeeks: [], reason: null, basis: { ...basis, method } } : undefined;
+    const view = renderLive(<CapacityOutlook />, { handler: handler(withBasis('model')) });
+    const text = await screen.findByTestId('forecast-basis');
+    await waitFor(() => expect(text).toHaveTextContent('Peliyagoda: demand model.'));
+    expect(text).toHaveTextContent('The demand model forecasts each week');
+    expect(text).not.toHaveTextContent('median daily volume');
+    view.unmount();
+    renderLive(<CapacityOutlook />, { handler: handler(req => (fnDepot(req.path) === 'KANDY' ? withBasis('history-median') : withBasis('model'))(req)) });
+    const mixed = await screen.findByTestId('forecast-basis');
+    await waitFor(() => expect(mixed).toHaveTextContent('Kandy: 3 run dates, 2 Apr to 4 Apr · median 31.5 m³ a day, 12.3 chilled.'));
+    expect(mixed).toHaveTextContent('Peliyagoda: demand model.');
+    expect(mixed).toHaveTextContent('median daily volume');
+  });
+
   it('shows no chart when no depot has enough history', async () => {
     renderLive(<CapacityOutlook />, {
       handler: handler(req => fnDepot(req.path) ? { depot: fnDepot(req.path), weeks: [], uncoveredWeeks: [], basis: null, reason: 'Only 0 past run dates of orders; the forecast needs 5.' } : undefined),
@@ -274,7 +291,7 @@ describe('DSP-11 Trip and vehicle drawer', () => {
     expect(drawer).toHaveTextContent('Fresh · District T');
     expect(drawer).toHaveTextContent('Peliyagoda DC');
     expect(drawer).toHaveTextContent('draft v3');
-    expect(view.calls.find(c => c.path === "Trips('TRPT1')")!.query.$expand).toBe('vehicle,plan($select=status,version),stops($expand=outlet,order($select=id,kg,m3))');
+    expect(view.calls.find(c => c.path === "Trips('TRPT1')")!.query.$expand).toBe('vehicle,plan($select=status,version),stops($expand=outlet,order($select=id,kg,m3),pod($select=id,photoUrl,photoCount))');
 
     await waitFor(() => expect(screen.getByTestId('minutes')).toHaveTextContent('209/ 270 min'));
     expect(screen.getByText('61 min spare')).toBeInTheDocument();
@@ -299,6 +316,18 @@ describe('DSP-11 Trip and vehicle drawer', () => {
     fireEvent.click(screen.getByTestId('swap-vehicle'));
     expect(router.push).toHaveBeenCalledWith('/plan/dsp-39-ask-the-planning-agent');
     expect(router.push).toHaveBeenCalledTimes(2);
+  });
+
+  it('a delivered stop shows the driver’s proof-of-delivery photo; a stop without one shows none', async () => {
+    window.sessionStorage.setItem('lodestar.focus.trip', 'TRPT1');
+    const delivered = { ...trip1, stops: [
+      stop(1, 'OUTT11', { status: 'DELIVERED', pod: { id: 'P1', photoUrl: '/media/pod-photos/cmphoto0001', photoCount: 1 } }),
+      stop(2, 'OUTT06', { pod: null }),
+    ] };
+    renderLive(<TripDrawer />, { handler: handler(req => (req.path === "Trips('TRPT1')" ? delivered : undefined)) });
+    const stops = await screen.findByTestId('stops');
+    await waitFor(() => expect(stops.querySelector('[data-stop="S1"] [data-testid="pod-photo"]')).not.toBeNull());
+    expect(stops.querySelector('[data-stop="S2"] [data-testid="pod-photo"]')).toBeNull();
   });
 
   it('the trip tabs switch to the vehicle’s other trip', async () => {

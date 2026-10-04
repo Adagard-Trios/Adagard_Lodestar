@@ -41,6 +41,8 @@ export interface OutlookBasis {
   minHistoryDays: number;
   medianTotalM3PerDay: number | null;
   medianChilledM3PerDay: number | null;
+  /** 'model': the weeks come from the demand model (ML service, weekly m³ per depot × brand); else the median. */
+  method?: 'model' | 'history-median';
 }
 
 interface DepotOutlook {
@@ -305,11 +307,15 @@ export default function LiveDsp05CapacityOutlook() {
               <div className="x-handled" style={{ background: 'transparent', padding: '4px 6px', flexDirection: 'column', gap: '4px' }}>
                 <span className="x-sect" data-lk="L165"><Ic n="chart" className="ic ic--sm" />{"Forecast model"}</span>
                 <span data-testid="forecast-basis">
-                  {"Each operating day in the calendar gets the depot's median daily volume from its past run dates, × (1 + festival_ramp). "}
+                  {data.length > 0 && data.every(o => o.basis?.method === 'model')
+                    ? "The demand model forecasts each week's total and chilled m³ per depot and brand from the order history and the calendar (paydays, festivals, monsoon). "
+                    : "Each operating day in the calendar gets the depot's median daily volume from its past run dates, × (1 + festival_ramp). "}
                   {data.map(o => (
                     <span key={o.depot} style={{ display: 'block' }}>
                       <b className="t-2">{depotShort(o.depot)}</b>
-                      {o.basis && o.basis.historyDays > 0 && o.basis.historyFrom && o.basis.historyTo
+                      {o.basis?.method === 'model'
+                        ? ': demand model.'
+                        : o.basis && o.basis.historyDays > 0 && o.basis.historyFrom && o.basis.historyTo
                         ? `: ${fmtNum(o.basis.historyDays)} run dates, ${dayMonth(o.basis.historyFrom)} to ${dayMonth(o.basis.historyTo)} · median ${fmtNum(o.basis.medianTotalM3PerDay ?? 0, 1)} m³ a day, ${fmtNum(o.basis.medianChilledM3PerDay ?? 0, 1)} chilled.`
                         : ': no past run dates yet.'}
                       {o.reason ? ` ${o.reason}` : ''}

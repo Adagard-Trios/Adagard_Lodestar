@@ -3,13 +3,15 @@
 // The trip is the one the dispatcher opened (useFocusId('trip')) or ?id=; otherwise the run date's first departing
 // trip, which is what the plan board's "Trip 1 · departs …" header opens. Data: Trips('…') with vehicle, plan and
 // stops (outlet, order sizes), the vehicle's other trips that day (tabs and the minutes budget) and
-// DistrictTravel for the drive times. The plan board behind the drawer is a plain backdrop.
+// DistrictTravel for the drive times. The plan board behind the drawer is a plain backdrop. A delivered stop shows its
+// proof-of-delivery photo (PodPhoto, the thumbnail DSP-A2 and SM-02 use) once the driver's photo has reached the server.
 // Footer as designed: "Lock this trip" returns to the plan board (DSP-02), where the trip is edited and approved;
 // "Move a stop" and "Swap vehicle" open Ask the planning agent (DSP-39): moves and vehicle swaps are draft edits
 // (AgentRuns('…')/Lodestar.Resume {decision: 'edit'}) that the dispatcher then approves. Not shown: the "Vehicle"
 // tab (the design gives it no content).
 import { useRouter } from 'next/navigation';
 import Btn from '@/components/live/Btn';
+import PodPhoto from '@/components/live/PodPhoto';
 import { budget } from '@/components/live/board';
 import { PlanSide } from '@/components/live/chrome';
 import { Ic } from '@/components/live/icons';
@@ -52,7 +54,7 @@ export function TripDrawer({ onClose }: { onClose?: () => void }) {
   const first = useQuery<string | null>(!focus && tripsFilter ? `drawer-first-trip:${tripsFilter}` : null, async c =>
     (await c.list<Trip>('Trips', { filter: tripsFilter, select: 'id', orderby: 'departTime,vehicleId,tripNumber', top: 1 })).value[0]?.id ?? null);
   const id = focus ?? first.data ?? null;
-  const trip = useEntity<TripX>('Trips', id, { expand: 'vehicle,plan($select=status,version),stops($expand=outlet,order($select=id,kg,m3))' }, { refreshOn: ['eta_update', 'notification'] });
+  const trip = useEntity<TripX>('Trips', id, { expand: 'vehicle,plan($select=status,version),stops($expand=outlet,order($select=id,kg,m3),pod($select=id,photoUrl,photoCount))' }, { refreshOn: ['eta_update', 'notification'] });
   const t = trip.data;
   const day = t ? isoDay(t.runDate) : null;
   const siblings = useQuery<Trip[]>(t && day ? `vehicle-day:${t.vehicleId}:${day}` : null, async c =>
@@ -167,6 +169,7 @@ export function TripDrawer({ onClose }: { onClose?: () => void }) {
                         <span className="t-3">{tr && i < stops.length - 1 ? `${tr.interStopMin} min drive` : ''}</span>
                       </div>
                     </div>
+                    {s.pod?.photoUrl && <PodPhoto pod={s.pod} label={`the drop at ${s.outletId}`} width={48} height={34} />}
                   </div>
                 ))}
                 <div className="dx-stop">
