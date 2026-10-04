@@ -6,7 +6,7 @@ import { addDays, dayLabel, hm } from '@/lib/time';
 import { signOutTo } from '@/lodestar/live';
 import { collectFlags, useFlagRecords, type Flag } from '@/model/dock';
 import { useBayQueue, useClaims, useNotifications, useOutbox } from '@/model/hooks';
-import { Frame, Icon, Scroll, Tap, type ScreenNav } from '@/lodestar/runtime';
+import { Frame, PhoneOnly, Icon, Scroll, Tap, type ScreenNav } from '@/lodestar/runtime';
 
 const nav: ScreenNav = {"links":{"L203":{"to":"ld-03-flag-shortfall","kind":"go"},"N0":{"to":"ld-01-dock-queue","kind":"nav"},"N2":{"to":"ld-16-shift-summary","kind":"nav"}}};
 
@@ -185,6 +185,7 @@ export default function ScreenLd13FlagsTab() {
             </View>
           </View>
         </Scroll>
+        <PhoneOnly>
         <View style={s.v49}>
           <Tap lk="N0" style={s.v47}>
             <Icon xml={X4} width={24} height={24} style={s.v1} />
@@ -199,6 +200,7 @@ export default function ScreenLd13FlagsTab() {
             <Text style={s.t27}>{"Shift"}</Text>
           </Tap>
         </View>
+        </PhoneOnly>
       </View>
     </Frame>
   );

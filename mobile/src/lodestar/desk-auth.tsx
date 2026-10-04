@@ -7,7 +7,7 @@
 import { useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions, type TextInputProps } from 'react-native';
 import Svg, { Circle, G, Path, Rect } from 'react-native-svg';
-import { Frame, Grad, Tap, type GradSpec, type ScreenNav, type TapAction } from './runtime';
+import { Frame, Grad, Tap, useInDockShell, type GradSpec, type ScreenNav, type TapAction } from './runtime';
 
 export type DeskApp = 'dock' | 'run' | 'store';
 

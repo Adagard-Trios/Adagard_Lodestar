@@ -6,7 +6,7 @@ import { plural, signOutTo, titleCase } from '@/lodestar/live';
 import { nextToLoad, useMyBay, useRePlanAlert } from '@/model/dock';
 import { useBayQueue, useClaims, useOutbox } from '@/model/hooks';
 import type { Trip } from '@/model/types';
-import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { Frame, PhoneOnly, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
 import { useDepots } from '@/model/depots';
 
 const nav: ScreenNav = {"links":{"L6":{"to":"ld-02-load-sheet","kind":"go"},"L190":{"to":"ld-09-pre-cool-check","kind":"go"},"N1":{"to":"ld-13-flags-tab","kind":"nav"},"N2":{"to":"ld-16-shift-summary","kind":"nav"}}};
@@ -143,6 +143,7 @@ export default function ScreenLd01DockQueue() {
             <Text style={s.t54}>{next ? `Start loading ${next.vehicleId}` : 'Start loading'}</Text>
           </Tap>
         </View>
+        <PhoneOnly>
         <View style={s.v59}>
           <View style={s.v58}>
             <Icon xml={X6} width={24} height={24} style={s.v1} />
@@ -157,6 +158,7 @@ export default function ScreenLd01DockQueue() {
             <Text style={s.t26}>{"Shift"}</Text>
           </Tap>
         </View>
+        </PhoneOnly>
       </View>
     </Frame>
   );

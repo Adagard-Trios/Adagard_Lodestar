@@ -5,6 +5,7 @@ import { Link, router, useLocalSearchParams } from 'expo-router';
 import { FACES, SCREENS } from '@/screens/registry';
 import { themedKey, useSettings } from '@/lib/settings';
 import { dockVariant, useWebWidth, useWideWeb } from '@/lodestar/dock-variant';
+import { DockDesktopShell, ownsWideLayout } from '@/lodestar/dock-desktop-shell';
 
 // Screens are loaded once and kept, so a screen's component identity is stable across renders.
 const loaded = new Map<string, ComponentType>();
@@ -17,13 +18,15 @@ function screenFor(key: string): ComponentType | undefined {
 
 // A browser window at tablet/desktop width shows every phone screen the same way: a phone-sized card centred on the
 // desk background. Tablet screens fill the window. The Run and Store sign-ins draw their own desk layout
-// (lodestar/desk-auth.tsx); the Dock's sign-ins stay phone screens in the card like the rest of the Dock.
+// (lodestar/desk-auth.tsx). The Dock never shows a phone card there: its tablet screens and the desk sign-in (LD-06)
+// fill the window, and every other Dock screen sits in the bay-tablet shell (lodestar/dock-desktop-shell.tsx).
 const TABLET = new Set(FACES.filter(f => f.device === 'tablet').flatMap(f => f.screens.map(s => s.key)));
 const OWN_DESK_LAYOUT = /^(?!ld-).*(sign-in|verify-code)/;
 function PhoneColumn({ screen, children }: { screen: string; children: ReactNode }) {
   const { height } = useWindowDimensions();
   const wide = useWideWeb();
   if (!wide || TABLET.has(screen) || OWN_DESK_LAYOUT.test(screen)) return <>{children}</>;
+  if (screen.startsWith('ld-')) return ownsWideLayout(screen, TABLET) ? <>{children}</> : <DockDesktopShell screen={screen}>{children}</DockDesktopShell>;
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#F4F5F9' }}>
       <View
