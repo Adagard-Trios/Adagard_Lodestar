@@ -16,6 +16,8 @@ One system, five faces on one URL:
 
 **URL:** https://waypoint-lodestar.eastasia.cloudapp.azure.com
 
+**Demo video:** [DEMO VIDEO LINK]
+
 Open the URL and pick a role on the start page: each card opens that role's own sign-in screen, as designed (no shared login page).
 
 | Role | Sign-in screen | Sign in with |
@@ -110,7 +112,7 @@ Open the start page in a desktop browser. For the driver and the loader, use a p
 | `tools/qa/` | The quality gate (`gate.sh`), stack readiness, Sonar gate, design baselines |
 | `deploy/azure-demo/` | The live demo: one VM, Caddy with Let's Encrypt, production compose override |
 | `infra/terraform/envs/demo` | Terraform for that VM. `envs/dev`, `envs/prod`, AKS and Istio are target architecture, not applied: see [infra/README.md](infra/README.md) |
-| `docs/` | [Architecture](docs/architecture.md), [data model](docs/data-model.md), [platform contract](docs/architecture/PLATFORM.md), [QA and CI](docs/QA.md), [AI disclosure](docs/AI_DISCLOSURE.md) |
+| `docs/` | [Architecture](docs/architecture.md), [planner agent](docs/architecture/PLANNER_AGENT.md), [data model](docs/data-model.md), [platform contract](docs/architecture/PLATFORM.md), [QA and CI](docs/QA.md), [AI disclosure](docs/AI_DISCLOSURE.md) |
 
 ## How it is built
 
