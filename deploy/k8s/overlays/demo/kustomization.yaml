@@ -17,49 +17,49 @@ resources:
 images:
 - name: lodestar-agent
   newName: ghcr.io/adagard-trios/lodestar-agent
-  newTag: b7ab2ca4efaa867335e4f31febd7f8190fa49cd2
+  newTag: bd8975bd0b7a18474ee95741e0d5509535d5f0ef
 - name: lodestar-audit
   newName: ghcr.io/adagard-trios/lodestar-audit
-  newTag: b7ab2ca4efaa867335e4f31febd7f8190fa49cd2
+  newTag: bd8975bd0b7a18474ee95741e0d5509535d5f0ef
 - name: lodestar-auth
   newName: ghcr.io/adagard-trios/lodestar-auth
-  newTag: b7ab2ca4efaa867335e4f31febd7f8190fa49cd2
+  newTag: bd8975bd0b7a18474ee95741e0d5509535d5f0ef
 - name: lodestar-fleet
   newName: ghcr.io/adagard-trios/lodestar-fleet
-  newTag: b7ab2ca4efaa867335e4f31febd7f8190fa49cd2
+  newTag: bd8975bd0b7a18474ee95741e0d5509535d5f0ef
 - name: lodestar-frontend
   newName: ghcr.io/adagard-trios/lodestar-frontend
-  newTag: b7ab2ca4efaa867335e4f31febd7f8190fa49cd2
+  newTag: bd8975bd0b7a18474ee95741e0d5509535d5f0ef
 - name: lodestar-gateway
   newName: ghcr.io/adagard-trios/lodestar-gateway
-  newTag: b7ab2ca4efaa867335e4f31febd7f8190fa49cd2
+  newTag: bd8975bd0b7a18474ee95741e0d5509535d5f0ef
 - name: lodestar-identity
   newName: ghcr.io/adagard-trios/lodestar-identity
-  newTag: b7ab2ca4efaa867335e4f31febd7f8190fa49cd2
+  newTag: bd8975bd0b7a18474ee95741e0d5509535d5f0ef
 - name: lodestar-migrate
   newName: ghcr.io/adagard-trios/lodestar-migrate
-  newTag: b7ab2ca4efaa867335e4f31febd7f8190fa49cd2
+  newTag: bd8975bd0b7a18474ee95741e0d5509535d5f0ef
 - name: lodestar-mobile-web
   newName: ghcr.io/adagard-trios/lodestar-mobile-web
-  newTag: b7ab2ca4efaa867335e4f31febd7f8190fa49cd2
+  newTag: bd8975bd0b7a18474ee95741e0d5509535d5f0ef
 - name: lodestar-notifications
   newName: ghcr.io/adagard-trios/lodestar-notifications
-  newTag: b7ab2ca4efaa867335e4f31febd7f8190fa49cd2
+  newTag: bd8975bd0b7a18474ee95741e0d5509535d5f0ef
 - name: lodestar-ocr
   newName: ghcr.io/adagard-trios/lodestar-ocr
-  newTag: b7ab2ca4efaa867335e4f31febd7f8190fa49cd2
+  newTag: bd8975bd0b7a18474ee95741e0d5509535d5f0ef
 - name: lodestar-orders
   newName: ghcr.io/adagard-trios/lodestar-orders
-  newTag: b7ab2ca4efaa867335e4f31febd7f8190fa49cd2
+  newTag: bd8975bd0b7a18474ee95741e0d5509535d5f0ef
 - name: lodestar-outlets
   newName: ghcr.io/adagard-trios/lodestar-outlets
-  newTag: b7ab2ca4efaa867335e4f31febd7f8190fa49cd2
+  newTag: bd8975bd0b7a18474ee95741e0d5509535d5f0ef
 - name: lodestar-planning
   newName: ghcr.io/adagard-trios/lodestar-planning
-  newTag: b7ab2ca4efaa867335e4f31febd7f8190fa49cd2
+  newTag: bd8975bd0b7a18474ee95741e0d5509535d5f0ef
 - name: lodestar-sync
   newName: ghcr.io/adagard-trios/lodestar-sync
-  newTag: b7ab2ca4efaa867335e4f31febd7f8190fa49cd2
+  newTag: bd8975bd0b7a18474ee95741e0d5509535d5f0ef
 - name: lodestar-trips
   newName: ghcr.io/adagard-trios/lodestar-trips
-  newTag: b7ab2ca4efaa867335e4f31febd7f8190fa49cd2
+  newTag: bd8975bd0b7a18474ee95741e0d5509535d5f0ef
