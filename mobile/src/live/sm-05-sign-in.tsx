@@ -6,7 +6,8 @@ import { useStore } from '@/lib/store';
 import { groupLocal, phoneSignIn } from '@/auth/direct';
 import { useAccessProblem, useDirectSignIn } from '@/lodestar/live';
 import { Keypad, typeKey } from '@/lodestar/keypad';
-import { Frame, Grad, Icon, openScreen, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { Grad, Icon, openScreen, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { DeskButton, DeskField, DeskFrame, DeskHead, DeskOr, DeskSmall, ICONS } from '@/lodestar/desk-auth';
 import { useState } from 'react';
 
 const nav: ScreenNav = {"links":{"L51":{"to":"sm-31-can-t-sign-in","kind":"go"},"L68":{"to":"sm-06-verify-code","kind":"go"}}};
@@ -30,8 +31,24 @@ export default function ScreenSm05SignIn() {
     return false;
   };
 
+  // Desktop/tablet browser: the DSP-06 desk sign-in card (desk-auth.tsx), the number typed in a field.
+  const desk = (
+    <>
+      <DeskHead app="store" title="Sign in to your store" sub="Use your registered phone number. We'll text you a 6-digit code." error={error} note={problem?.message} />
+      <DeskField
+        label="Mobile number" icon={ICONS.phone} prefix="+94" testID="phone-input" value={digits} placeholder="77 123 4567"
+        keyboardType="phone-pad" maxLength={10} autoFocus onChangeText={v => setDigits(v.replace(/\D/g, '').slice(0, 10))}
+        onSubmitEditing={() => void send().then(ok => ok && openScreen('sm-06-verify-code'))}
+      />
+      <DeskButton lk="L68" label={flow.busy ? 'Sending…' : 'Send code'} onPress={send} disabled={flow.busy} />
+      <DeskOr />
+      <DeskButton lk="L51" secondary icon={ICONS.key} label="Can't sign in? Get help" />
+      <DeskSmall>{'Store managers and receiving staff only. New number? Ask your depot to add you.'}</DeskSmall>
+    </>
+  );
+
   return (
-    <Frame bg="#f4f5f9" nav={nav} style={s.v0}>
+    <DeskFrame app="store" bg="#f4f5f9" nav={nav} style={s.v0} desk={desk}>
       <View style={s.v31}>
         <Scroll style={s.v19} contentStyle={s.v20}>
           <View style={s.v5}>
@@ -84,7 +101,7 @@ export default function ScreenSm05SignIn() {
           onKey={k => (k === 'enter' ? void send().then(ok => ok && openScreen('sm-06-verify-code')) : setDigits(d => typeKey(d, k, 10)))}
         />
       </View>
-    </Frame>
+    </DeskFrame>
   );
 }
 

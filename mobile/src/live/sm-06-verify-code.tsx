@@ -9,7 +9,8 @@ import { clock, fullNumber, phoneSignIn } from '@/auth/direct';
 import { useCountdown } from '@/auth/countdown';
 import { useAccessProblem, useDirectSignIn } from '@/lodestar/live';
 import { Keypad, typeKey } from '@/lodestar/keypad';
-import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { DeskButton, DeskField, DeskFrame, DeskHead, DeskLink, DeskOr, DeskSmall, ICONS } from '@/lodestar/desk-auth';
 
 const nav: ScreenNav = {"links":{"L69":{"to":"sm-07-onboarding-1","kind":"go"},"L70":{"to":"sm-05-sign-in","kind":"go"},"L71":{"to":"sm-31-can-t-sign-in","kind":"go"}}};
 
@@ -46,8 +47,32 @@ export default function ScreenSm06VerifyCode() {
     if (next.length === 6 && code.length === 5) void verify(next);
   };
 
+  // Desktop/tablet browser: the DSP-06 desk sign-in card (desk-auth.tsx), the code typed in a field.
+  const desk = (
+    <>
+      <DeskHead
+        app="store" title="Enter the code" error={error} note={problem?.message}
+        sub={`${p.step?.method === 'voice' ? 'Calling' : 'Sent by SMS to'} ${p.digits ? fullNumber(p.digits) : 'your phone'}.`}
+      />
+      <DeskField
+        label="6-digit code" icon={ICONS.key} testID="code-input" value={code} placeholder="000000" keyboardType="number-pad" maxLength={6}
+        autoFocus autoComplete="one-time-code" onSubmitEditing={() => void verify()}
+        onChangeText={v => {
+          const next = v.replace(/\D/g, '').slice(0, 6);
+          setCode(next);
+          if (next.length === 6 && code.length < 6) void verify(next);
+        }}
+        right={<DeskLink lk="L71" label={left > 0 ? `Resend in ${clock(left)}` : 'Resend code'} />}
+      />
+      {p.step?.demoCode ? <DeskSmall testID="demo-code">{`Demo: your code is ${p.step.demoCode}`}</DeskSmall> : null}
+      <DeskButton lk="L69" label={flow.busy ? 'Checking…' : 'Verify'} onPress={() => verify()} disabled={flow.busy} />
+      <DeskOr />
+      <DeskButton lk="L70" secondary icon={ICONS.back} label="Use a different number" />
+    </>
+  );
+
   return (
-    <Frame bg="#f4f5f9" nav={nav} style={s.v0}>
+    <DeskFrame app="store" bg="#f4f5f9" nav={nav} style={s.v0} desk={desk}>
       <View style={s.v31}>
         <View style={s.v6}>
           <Tap lk="L70" style={s.v2}>
@@ -100,7 +125,7 @@ export default function ScreenSm06VerifyCode() {
         </View>
         <Keypad wrap={s.v30} row={s.v28} keyStyle={s.v27} blank={s.v29} text={s.t26} back={{ xml: X2, size: 24, style: s.v1 }} onKey={onKey} />
       </View>
-    </Frame>
+    </DeskFrame>
   );
 }
 

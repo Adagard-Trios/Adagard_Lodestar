@@ -7,7 +7,8 @@ import { useStore } from '@/lib/store';
 import { groupLocal, phoneSignIn } from '@/auth/direct';
 import { useAccessProblem, useDeviceId, useDirectSignIn } from '@/lodestar/live';
 import { Keypad, typeKey } from '@/lodestar/keypad';
-import { Frame, Grad, Icon, openScreen, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { Grad, Icon, openScreen, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { DeskButton, DeskField, DeskFrame, DeskHead, DeskSmall, ICONS } from '@/lodestar/desk-auth';
 
 const nav: ScreenNav = {"links":{"L229":{"to":"dr-07-verify-code","kind":"go"}}};
 
@@ -31,8 +32,23 @@ export default function ScreenDr06SignIn() {
     return false;
   };
 
+  // Desktop/tablet browser: the DSP-06 desk sign-in card (desk-auth.tsx), the number typed in a field.
+  const desk = (
+    <>
+      <DeskHead app="run" title="Sign in with your phone" sub="Use the mobile number your depot has for you. We'll text you a 6-digit code." error={error} note={problem?.message} />
+      <DeskField
+        label="Mobile number" icon={ICONS.phone} prefix="+94" testID="phone-input" value={digits} placeholder="77 123 4567"
+        keyboardType="phone-pad" maxLength={10} autoFocus onChangeText={v => setDigits(v.replace(/\D/g, '').slice(0, 10))}
+        onSubmitEditing={() => void send().then(ok => ok && openScreen('dr-07-verify-code'))}
+      />
+      <DeskButton lk="L229" label={flow.busy ? 'Sending…' : 'Send code'} onPress={send} disabled={flow.busy} />
+      <DeskSmall>{'The code comes by SMS, so a weak signal is fine.'}</DeskSmall>
+      {device ? <DeskSmall testID="device-id">{`This phone: ${device}`}</DeskSmall> : null}
+    </>
+  );
+
   return (
-    <Frame bg="#070b16" nav={nav} style={s.v0}>
+    <DeskFrame app="run" bg="#070b16" nav={nav} style={s.v0} desk={desk}>
       <View style={s.v31}>
         <View style={s.v6}>
           <View style={s.v2}>
@@ -91,7 +107,7 @@ export default function ScreenDr06SignIn() {
           onKey={k => (k === 'enter' ? void send().then(ok => ok && openScreen('dr-07-verify-code')) : setDigits(d => typeKey(d, k, 10)))}
         />
       </View>
-    </Frame>
+    </DeskFrame>
   );
 }
 

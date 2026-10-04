@@ -8,7 +8,8 @@ import { useEffect, useState } from 'react';
 import { kv } from '@/lib/kv';
 import { useAccessProblem, useDirectSignIn } from '@/lodestar/live';
 import { Keypad, typeKey } from '@/lodestar/keypad';
-import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
+import { DeskButton, DeskField, DeskFrame, DeskHead, DeskLink, DeskOr, DeskSmall, ICONS } from '@/lodestar/desk-auth';
 
 const nav: ScreenNav = {"links":{"L44":{"to":"ld-24-can-t-sign-in","kind":"go"},"L187":{"to":"ld-07-start-shift","kind":"go"}}};
 
@@ -22,8 +23,21 @@ export function shiftLabel(d = new Date()): string {
   return `${h >= 18 || h < 6 ? 'Night' : 'Day'} shift · ${day}`;
 }
 
+/**
+ * The shift label once mounted: the web build is pre-rendered at build time, so a label computed during render
+ * would differ from the phone's clock and break hydration (React #418). Empty on the first (pre-rendered) pass.
+ */
+export function useShiftLabel(): string {
+  const [label, setLabel] = useState('');
+  // set after mount: the pre-rendered page and the phone must render the same first frame (no hydration mismatch)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setLabel(shiftLabel()), []);
+  return label;
+}
+
 export default function ScreenLd06SignIn() {
   const flow = useDirectSignIn('dock');
+  const shift = useShiftLabel();
   const problem = useAccessProblem();
   const [staffId, setStaffId] = useState('');
   const [pin, setPin] = useState('');
@@ -67,8 +81,33 @@ export default function ScreenLd06SignIn() {
     return false;
   };
 
+  // Desktop/tablet browser: the DSP-06 desk sign-in card (desk-auth.tsx), the PIN typed in a field.
+  const desk = (
+    <>
+      <DeskHead app="dock" title="Sign in to load the trucks" sub={`${shift ? `${shift}. ` : ''}Use your staff ID and 4-digit Dock PIN.`} error={error} note={problem?.message} />
+      <DeskField
+        label="Staff ID" icon={ICONS.user} testID="staff-id-input" value={staffId} onChangeText={v => setStaffId(v.toUpperCase())}
+        placeholder="KDY-0000" autoCapitalize="characters" autoCorrect={false} autoFocus={!staffId} onSubmitEditing={() => void signIn()}
+        right={staffId ? <DeskLink label="Not you?" onPress={notYou} to={null} testID="not-you" /> : null}
+      />
+      <DeskField
+        label="PIN · 4 digits" icon={ICONS.lock} testID="pin-input" value={pin} secureTextEntry keyboardType="number-pad" maxLength={PIN_LENGTH}
+        placeholder="••••" onSubmitEditing={() => void signIn()}
+        onChangeText={v => {
+          const next = v.replace(/\D/g, '').slice(0, PIN_LENGTH);
+          setPin(next);
+          if (next.length === PIN_LENGTH && pin.length < PIN_LENGTH) void signIn(next);
+        }}
+      />
+      <DeskButton lk="L187" label={flow.busy ? 'Signing in…' : 'Sign in'} onPress={() => signIn()} disabled={flow.busy} />
+      <DeskOr />
+      <DeskButton lk="L44" secondary icon={ICONS.key} label="Can't sign in? Get back in" />
+      <DeskSmall>{'Your staff ID and Dock PIN come from your shift lead.'}</DeskSmall>
+    </>
+  );
+
   return (
-    <Frame bg="#f2f4f8" nav={nav} style={s.v0}>
+    <DeskFrame app="dock" bg="#f2f4f8" nav={nav} style={s.v0} desk={desk}>
       <View style={s.v35}>
         <View style={s.v7}>
           <View style={s.v2}>
@@ -84,7 +123,7 @@ export default function ScreenLd06SignIn() {
         <Scroll style={s.v4} contentStyle={s.v30}>
           <View style={s.v11}>
             <View style={s.v9}>
-              <Text style={s.t8}>{shiftLabel()}</Text>
+              <Text style={s.t8}>{shift || ' '}</Text>
             </View>
             <View>
               <Text style={s.t10}>{"Sign in"}</Text>
@@ -152,7 +191,7 @@ export default function ScreenLd06SignIn() {
           </Tap>
         </View>
       </View>
-    </Frame>
+    </DeskFrame>
   );
 }
 
