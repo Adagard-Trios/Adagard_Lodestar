@@ -8,7 +8,7 @@ import { deviceId, ownDeviceId } from '@/auth/device';
 import { oidcClient } from '@/auth/oidc';
 import { deviceStore, tokenStore } from '@/auth/secure';
 import { Session } from '@/auth/session';
-import { network, reportReachable, startNetwork } from '@/offline/network';
+import { network, osConnected, reportReachable, startNetwork } from '@/offline/network';
 import { OfflineQueue } from '@/offline/queue';
 import { queueStorage } from '@/offline/storage';
 import { registerServiceWorker } from '@/offline/service-worker';
@@ -38,7 +38,9 @@ export const queue = new OfflineQueue(queueStorage, () => Crypto.randomUUID());
 
 export const sync = new SyncEngine(queue, client, {
   sub: () => (session.signedIn ? (session.claims?.sub ?? null) : null),
-  online: () => network.get().online,
+  // Also try while the OS still has a link: a timed-out call marks the app offline, and with no OS change
+  // nothing else would bring it back. A send that gets through marks it online again (reportReachable).
+  online: () => network.get().online || osConnected(),
   onSynced: () => bumpRevision(),
 });
 

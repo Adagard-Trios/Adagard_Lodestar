@@ -17,6 +17,14 @@ export function reportReachable(ok: boolean) {
   setOnline(ok);
 }
 
+/** What the OS last said (NetInfo isConnected); a failed API call does not change it. */
+let osLink = true;
+export const osConnected = () => osLink;
+function fromOs(connected: boolean) {
+  osLink = connected;
+  setOnline(connected);
+}
+
 let started = false;
 
 /** Starts listening to the OS / browser (idempotent). */
@@ -27,9 +35,9 @@ export function startNetwork(): () => void {
   // report what they see (reportReachable).
   NetInfo.configure({ reachabilityShouldRun: () => false });
   // With the probe off NetInfo reports isInternetReachable=false, so only isConnected counts.
-  const unsub = NetInfo.addEventListener(s => setOnline(s.isConnected !== false));
+  const unsub = NetInfo.addEventListener(s => fromOs(s.isConnected !== false));
   NetInfo.fetch()
-    .then(s => setOnline(s.isConnected !== false))
+    .then(s => fromOs(s.isConnected !== false))
     .catch(() => undefined);
   // Browsers: NetInfo follows navigator.connection "change" where it exists, which does not fire when
   // the browser goes offline; the window online/offline events do.

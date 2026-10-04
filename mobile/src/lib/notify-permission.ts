@@ -6,6 +6,12 @@ import * as Notifications from 'expo-notifications';
 
 export type NotifyPermission = 'granted' | 'denied' | 'undetermined' | 'unsupported';
 
+/** Android 13+ reports `denied` before the first ask; only a denial the OS will not ask again counts as blocked. */
+export function fromOs(r: { granted: boolean; status: string; canAskAgain?: boolean }): NotifyPermission {
+  if (r.granted) return 'granted';
+  return r.status === 'denied' && r.canAskAgain !== true ? 'denied' : 'undetermined';
+}
+
 export async function notificationPermission(): Promise<NotifyPermission> {
   try {
     if (Platform.OS === 'web') {
@@ -14,7 +20,7 @@ export async function notificationPermission(): Promise<NotifyPermission> {
       return p === 'default' ? 'undetermined' : p;
     }
     const r = await Notifications.getPermissionsAsync();
-    return r.granted ? 'granted' : r.status === 'denied' ? 'denied' : 'undetermined';
+    return fromOs(r);
   } catch {
     return 'unsupported';
   }
