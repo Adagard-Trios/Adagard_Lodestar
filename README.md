@@ -72,13 +72,13 @@ Open the start page in a desktop browser. For the driver and the loader, use a p
 
 8. Open the **Loader** card on a phone and sign in as `kasun`. The dock queue (LD-01) lists today's Kandy trips by bay.
 9. Open VEH057's load sheet (LD-02): lines in reverse stop order. Tick them off; on one line, **Flag** a shortfall and **Send flag** (LD-03).
-10. **Release** the vehicle (LD-04) with the seal number and reefer temperature. The trip and its orders go en route.
+10. **Release to driver** (LD-04) with the seal number and the reefer temperature (a temperature above the limit blocks the release). The trip and its orders go en route.
 
 **Driver: deliver with proof (phone)**
 
 11. Open the **Driver** card and sign in as `ruwan`. Today's run (DR-01) shows VEH057's stops. Press **Start trip**.
-12. At OUT106: **Arrived**, then **Start delivery** (DR-02), count the units, capture the receiver's name and photo, record any exception, then **Complete stop** (DR-03).
-13. Optional, offline (the app must have opened once online on that phone): switch the phone to airplane mode before the next stop, complete it, then reconnect. The outbox sends once and the records reconcile without duplicates.
+12. At OUT106: **Arrived**, then **Start delivery** (DR-02), count the units, capture the receiver's name, record any exception, then **Complete stop** (DR-03).
+13. Offline (the app must have opened once online on that phone): switch the phone to airplane mode before the next stop. Complete it with the proof of delivery and a photo (DR-20); everything waits in the phone's outbox. Reconnect: the outbox sends once, in order, and the records reconcile without duplicates. If the office changed the same stop meanwhile, the dispatcher sees the conflict on the reconcile screen (DSP-A2) and the field evidence wins.
 
 **Store manager: receipt (desktop or phone)**
 
@@ -87,6 +87,15 @@ Open the start page in a desktop browser. For the driver and the loader, use a p
 **Dispatcher: the result**
 
 15. As `nilanthi`, **Live operations** (DSP-04) shows the trip's progress and the delivered stops, and the **Deferral log** (DSP-17) lists every deferral with its reason and new date.
+
+**When the day breaks: a reefer cannot depart (optional)**
+
+16. As `kasun`, on a trip that has not left yet, report **Vehicle can't depart** (LD-B1); the vehicle goes to the workshop.
+17. As `nilanthi`, the re-plan opens as a difference against the live plan (DSP-B1): which orders move to which vehicle and which must wait. Approve it; the loader's sheet updates (LD-14).
+
+**Admin: audit and devices (desktop)**
+
+18. Pick **Admin** and sign in as `admin` (password from the team). The **Audit log** (ADM-16) records every action, including the dispatcher's override and its reason; **Verify chain** (ADM-20) checks that the hash-chained log has not been altered. Under devices, a lost phone is revoked in one step (ADM-07) and stops working at once.
 
 ## Repository
 
