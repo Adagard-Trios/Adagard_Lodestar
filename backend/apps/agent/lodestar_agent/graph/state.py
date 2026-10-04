@@ -5,7 +5,7 @@ from __future__ import annotations
 import operator
 from typing import Annotated, Any, Literal, TypedDict
 
-RunStatus = Literal["DRAFTING", "NEEDS_APPROVAL", "APPROVED", "REJECTED", "FAILED"]
+RunStatus = Literal["DRAFTING", "NEEDS_APPROVAL", "APPROVED", "REJECTED", "FAILED", "ANSWERED"]
 Decision = Literal["approve", "edit", "reject"]
 
 
@@ -54,6 +54,10 @@ class AgentState(TypedDict, total=False):
     runDate: str
     requestedBy: str
     status: RunStatus
+    # the dispatcher's optional request text and what the LLM made of it (enum values only)
+    request: str
+    intent: str
+    preferences: dict[str, Any]
     # load_context
     raw: dict[str, list[dict[str, Any]]]
     contextSummary: dict[str, Any]
@@ -68,12 +72,20 @@ class AgentState(TypedDict, total=False):
     deferrals: list[Deferral]
     needsReview: list[dict[str, Any]]
     actions: list[str]
+    # independent validator (rule codes) and the deterministic dry run
+    validation: dict[str, Any]
+    simulation: dict[str, Any]
     # explain
     explanation: Explanation
+    # LLM audit: provider, model, fallback reason, tokens per call (no prompts, no keys)
+    llmCalls: Annotated[list[dict[str, Any]], operator.add]
+    llmDegraded: bool
     # human in the loop
     editMode: bool
     pendingEdits: list[dict[str, Any]]
     lastEdits: list[str]
     decision: dict[str, Any]
+    approval: dict[str, Any] | None
+    committed: dict[str, Any]
     decisions: Annotated[list[dict[str, Any]], operator.add]
     history: Annotated[list[HistoryEntry], operator.add]

@@ -131,7 +131,11 @@ class MockChatModel(BaseChatModel):
             reason = next((code for word, code in REASON_WORDS.items() if word in q), "CAP_TIME")
             picks.append(("propose_edit", {"op": "defer", "order_id": orders[0], "reason": reason}))
         elif re.search(r"\b(move|put|swap)\b", q) and orders and vehicles:
-            picks.append(("propose_edit", {"op": "move", "order_id": orders[0], "vehicle_id": vehicles[0]}))
+            args: dict[str, Any] = {"op": "move", "order_id": orders[0], "vehicle_id": vehicles[0]}
+            trip = re.search(r"\btrip\s*([12])\b", q)
+            if trip:
+                args["trip_no"] = int(trip.group(1))
+            picks.append(("propose_edit", args))
         else:
             picks += [("explain_order", {"order_id": o}) for o in orders]
             picks += [("lookup_vehicle", {"vehicle_id": v}) for v in vehicles]

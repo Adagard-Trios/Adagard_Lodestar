@@ -103,6 +103,7 @@ def ask_msgs(question, **ctx):
         ("Why is O-1 there?", [("explain_order", {"order_id": "O-1"})]),
         ("defer O-2, fuel is tight", [("propose_edit", {"op": "defer", "order_id": "O-2", "reason": "FUEL"})]),
         ("please move O-1 onto V-1", [("propose_edit", {"op": "move", "order_id": "O-1", "vehicle_id": "V-1"})]),
+        ("move O-1 to V-1 trip 2", [("propose_edit", {"op": "move", "order_id": "O-1", "vehicle_id": "V-1", "trip_no": 2})]),
         ("how is the day looking?", [("plan_summary", {})]),
         ("tell me about O-9", [("plan_summary", {})]),  # unknown ids are not trusted
     ],

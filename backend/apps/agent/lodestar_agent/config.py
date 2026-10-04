@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -37,6 +37,24 @@ class Settings(BaseSettings):
     # one LLM call (phrasing an explanation or answer); on timeout the deterministic text is used
     azure_openai_timeout_s: float = Field(default=20.0, alias="AZURE_OPENAI_TIMEOUT_S")
 
+    # LLM router (AGENT_MODEL=gemini): Gemini -> Groq -> deterministic template. Keys only from the environment.
+    gemini_api_key: SecretStr | None = Field(default=None, alias="GEMINI_API_KEY")
+    gemini_model: str = Field(default="gemini-2.5-flash-lite", alias="GEMINI_MODEL")
+    gemini_timeout_s: float = Field(default=20.0, alias="GEMINI_TIMEOUT_SECONDS")
+    gemini_max_output_tokens: int = Field(default=512, alias="GEMINI_MAX_OUTPUT_TOKENS")
+    groq_api_key: SecretStr | None = Field(default=None, alias="GROQ_API_KEY")
+    groq_model: str = Field(default="llama-3.1-8b-instant", alias="GROQ_MODEL")
+    groq_timeout_s: float = Field(default=20.0, alias="GROQ_TIMEOUT_SECONDS")
+    groq_max_output_tokens: int = Field(default=512, alias="GROQ_MAX_OUTPUT_TOKENS")
+    llm_primary_provider: str = Field(default="gemini", alias="LLM_PRIMARY_PROVIDER")
+    llm_fallback_provider: str = Field(default="groq", alias="LLM_FALLBACK_PROVIDER")
+    llm_max_retries: int = Field(default=1, ge=0, le=3, alias="LLM_MAX_RETRIES")
+    llm_enable_fallback: bool = Field(default=True, alias="LLM_ENABLE_FALLBACK")
+    llm_temperature: float = Field(default=0.0, ge=0, le=1, alias="LLM_TEMPERATURE")
+    llm_enable_cache: bool = Field(default=True, alias="LLM_ENABLE_CACHE")
+    llm_log_prompts: bool = Field(default=False, alias="LLM_LOG_PROMPTS")
+    llm_log_responses: bool = Field(default=False, alias="LLM_LOG_RESPONSES")
+
     # Persistence
     database_url: SecretStr | None = Field(default=None, alias="DATABASE_URL")
     checkpoint_schema: str = Field(default="agent", alias="AGENT_DB_SCHEMA")
@@ -62,7 +80,8 @@ class Settings(BaseSettings):
     odata_max_pages: int = Field(default=50, alias="ODATA_MAX_PAGES")
 
     # Planning
-    max_redrafts: int = Field(default=3, alias="AGENT_MAX_REDRAFTS")
+    # bounded repair loop (validate -> redraft); AGENT_MAX_REDRAFTS is the older name
+    max_redrafts: int = Field(default=2, ge=0, le=5, validation_alias=AliasChoices("AGENT_MAX_REPAIR_ATTEMPTS", "AGENT_MAX_REDRAFTS"))
     first_departure: str = Field(default="03:30", alias="AGENT_FIRST_DEPARTURE")
 
     # ML service (Task 1 stop model): empty = disabled, the drafts keep the heuristic service time / ETA / late risk
@@ -71,7 +90,7 @@ class Settings(BaseSettings):
 
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
-    @field_validator("agent_model")
+    @field_validator("agent_model", "llm_primary_provider", "llm_fallback_provider")
     @classmethod
     def _lower(cls, v: str) -> str:
         return v.strip().lower()

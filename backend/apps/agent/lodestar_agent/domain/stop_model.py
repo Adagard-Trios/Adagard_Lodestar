@@ -11,7 +11,7 @@ The planned arrival (``arrive``) stays the heuristic plan, as the plan ETA does 
 Without the model (ML_URL unset, the service down, slow or refusing the input) the heuristic figures stay. A run
 asks once per distinct trip (cached on the context), and stops asking after its first failure.
 """
-
+ 
 from __future__ import annotations
 
 from typing import Any

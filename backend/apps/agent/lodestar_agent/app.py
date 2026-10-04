@@ -20,7 +20,7 @@ from .checkpoint import create_checkpointing
 from .config import Settings, get_settings
 from .domain.edits import EditError
 from .domain.planner import NonOperatingDay
-from .llm import chat_model_or_mock
+from .llm import chat_model_or_mock, router_for
 from .logging_setup import configure_logging
 from .odata import ODataClient, ODataError, ServiceAuthError, ServiceTokenProvider
 from .runtime import AgentRuntime, RunConflict, RunNotFound
@@ -42,7 +42,14 @@ def build_runtime(settings: Settings) -> tuple[AgentRuntime, list[Any]]:
     def odata_factory() -> ODataClient:
         return ODataClient(http, tokens, settings.lodestar_api_url, settings.service_urls, settings.odata_max_pages)
 
-    runtime = AgentRuntime(model, odata_factory, checkpointing, max_redrafts=settings.max_redrafts, first_departure=settings.first_departure)
+    runtime = AgentRuntime(
+        model,
+        odata_factory,
+        checkpointing,
+        max_redrafts=settings.max_redrafts,
+        first_departure=settings.first_departure,
+        router=router_for(settings, model),
+    )
     return runtime, [http.close, checkpointing.close]
 
 
@@ -144,7 +151,7 @@ def create_app(settings: Settings | None = None, runtime: AgentRuntime | None = 
     @app.post("/runs", status_code=status.HTTP_201_CREATED, response_model=StartRunResponse)
     def start_run(body: StartRunRequest, request: Request, principal: Principal = Depends(require_roles("dispatcher"))):
         require_depot(principal, body.depot)
-        run = rt(request).start_run(body.depot, body.runDate.isoformat(), principal.sub)
+        run = rt(request).start_run(body.depot, body.runDate.isoformat(), principal.sub, body.request)
         return StartRunResponse(id=run["id"], status=run["status"], version=run.get("version"))
 
     @app.get("/runs/{run_id}")
@@ -158,7 +165,7 @@ def create_app(settings: Settings | None = None, runtime: AgentRuntime | None = 
         runtime_ = rt(request)
         require_depot(principal, runtime_.depot_of(run_id))
         edits = [e.model_dump(exclude_none=True) for e in body.edits or []]
-        return runtime_.resume(run_id, body.decision, edits, principal.sub, sorted(principal.roles), body.comment)
+        return runtime_.resume(run_id, body.decision, edits, principal.sub, sorted(principal.roles), body.comment, body.planHash)
 
     @app.post("/ask")
     def ask(body: AskRequest, request: Request, principal: Principal = Depends(require_roles("dispatcher"))):

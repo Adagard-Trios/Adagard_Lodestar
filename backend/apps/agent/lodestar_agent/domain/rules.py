@@ -7,7 +7,7 @@ from typing import Any
 
 from . import heuristics as h
 from .context import PlanningContext
-
+ 
 RULES: list[tuple[str, str]] = [
     ("weight", "Weight within vehicle capacity (kg)"),
     ("volume", "Volume within vehicle capacity (m3)"),

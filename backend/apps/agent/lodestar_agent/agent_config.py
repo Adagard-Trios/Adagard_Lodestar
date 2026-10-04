@@ -13,7 +13,10 @@ from .config import Settings
 from .domain import heuristics as h
 from .domain.deferrals import REASON_CODES
 from .domain.rules import RULES
-from .llm import AZURE_VARS
+from .domain.validator import CODES as VALIDATOR_CODES
+from .domain.validator import RULE_CODE_MAP
+from .llm import AZURE_VARS, ROUTER_MODELS
+from .llm.metrics import METRICS
 from .tools import DATASETS
 
 ASK_TOOLS = (
@@ -57,6 +60,21 @@ def _model(settings: Settings) -> dict[str, Any]:
             "endpointHost": urlparse(settings.azure_openai_endpoint).hostname if settings.azure_openai_endpoint else None,
             "missing": missing,
         }
+    if choice in ROUTER_MODELS:
+        order = [settings.llm_primary_provider] + ([settings.llm_fallback_provider] if settings.llm_enable_fallback else [])
+        keys = {"gemini": (settings.gemini_api_key, settings.gemini_model), "groq": (settings.groq_api_key, settings.groq_model)}
+        chain = [{"provider": p, "model": keys[p][1], "configured": bool(keys[p][0] and keys[p][0].get_secret_value())} for p in order if p in keys]
+        missing = [f"{c['provider'].upper()}_API_KEY" for c in chain if not c["configured"]]
+        return {
+            "setting": choice,
+            "provider": "llm-router",
+            "label": " -> ".join(c["provider"].capitalize() for c in chain) + " -> deterministic template",
+            "configured": any(c["configured"] for c in chain),
+            "deployment": next((c["model"] for c in chain if c["configured"]), None),
+            "endpointHost": None,
+            "missing": missing,
+            "chain": chain,
+        }
     return {"setting": choice, "provider": "unknown", "label": choice, "configured": False, "deployment": None, "endpointHost": None, "missing": []}
 
 
@@ -83,4 +101,8 @@ def agent_config(settings: Settings) -> dict[str, Any]:
         "askTools": list(ASK_TOOLS),
         "decisions": ["approve", "edit", "reject"],
         "decidedBy": "dispatcher",
+        "validatorCodes": list(VALIDATOR_CODES),
+        "ruleCodeMap": RULE_CODE_MAP,
+        "llmTasks": {"intent": 128, "preferences": 256, "tools": 256, "summary": 512},
+        "llmMetrics": METRICS.snapshot(),
     }

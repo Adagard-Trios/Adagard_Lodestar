@@ -10,8 +10,24 @@ from langchain_core.language_models import BaseChatModel
 from ..config import Settings
 from .mock import MockChatModel
 from .phrasing import PhrasingChatModel
+from .routed import RoutedChatModel
+from .router import LLMRouter, build_router
 
-__all__ = ["MockChatModel", "ModelNotConfiguredError", "PhrasingChatModel", "chat_model_or_mock", "create_chat_model"]
+__all__ = [
+    "LLMRouter",
+    "MockChatModel",
+    "ModelNotConfiguredError",
+    "PhrasingChatModel",
+    "RoutedChatModel",
+    "build_router",
+    "chat_model_or_mock",
+    "create_chat_model",
+    "router_for",
+    "ROUTER_MODELS",
+]
+
+#: AGENT_MODEL values that use the Gemini -> Groq -> template router
+ROUTER_MODELS = ("gemini", "groq", "llm", "router")
 
 
 log = logging.getLogger(__name__)
@@ -25,7 +41,7 @@ AZURE_VARS = ("AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "AZURE_OPENAI_DEP
 
 
 def create_chat_model(settings: Settings, http_client: Any = None) -> BaseChatModel:
-    """``mock`` (default) or ``azure-openai``. The graph does not change between them.
+    """``mock`` (default), ``gemini`` (Gemini -> Groq -> template router) or ``azure-openai``. The graph does not change.
 
     ``azure-openai`` wraps Azure OpenAI in :class:`PhrasingChatModel`: the deterministic mock still makes every
     decision and the LLM only words explanations and answers, falling back to the mock's text on any error.
@@ -62,7 +78,19 @@ def create_chat_model(settings: Settings, http_client: Any = None) -> BaseChatMo
         )
         # planning stays deterministic (the mock decides); the LLM only phrases, and the mock's text is the fallback
         return PhrasingChatModel(primary=llm)
-    raise ModelNotConfiguredError(f"Unknown AGENT_MODEL '{choice}' (expected 'mock' or 'azure-openai')")
+    if choice in ROUTER_MODELS:
+        # Gemini first, Groq second, the deterministic template last; with no key it behaves exactly like the mock
+        return RoutedChatModel(router=build_router(settings, http_client=http_client))
+    raise ModelNotConfiguredError(f"Unknown AGENT_MODEL '{choice}' (expected 'mock', 'gemini' or 'azure-openai')")
+
+
+def router_for(settings: Settings, model: BaseChatModel | None = None) -> LLMRouter:
+    """The router the planner's intent / preference nodes use: the chat model's own router when it has one."""
+    if isinstance(model, RoutedChatModel):
+        return model.router
+    if settings.agent_model in ROUTER_MODELS:
+        return build_router(settings)
+    return LLMRouter([])  # mock / azure-openai: templates only, never degraded
 
 
 def chat_model_or_mock(settings: Settings) -> BaseChatModel:

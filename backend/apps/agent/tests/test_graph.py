@@ -24,7 +24,7 @@ def test_happy_path_stops_at_needs_approval(make_runtime):
 
     assert run["status"] == "NEEDS_APPROVAL"
     assert run["canPublish"] is False
-    assert nodes(run) == ["load_context", "draft_plan", "check_rules", "rank_deferrals", "explain"]
+    assert nodes(run) == ["load_context", "classify_intent", "extract_preferences", "draft_plan", "check_rules", "rank_deferrals", "simulate_plan", "explain"]
     assert all(c["passed"] for c in run["ruleChecks"]) and len(run["ruleChecks"]) == 8
     assert run["redrafts"] == 0
     planned = {o for t in run["plan"]["trips"] for o in t["orderIds"]}
@@ -76,7 +76,7 @@ def test_rule_violation_still_loops_back_to_draft_as_a_safety_net(make_runtime, 
     run = make_runtime().start_run(fx.DEPOT, fx.RUN_DATE, "user-1")
     assert run["redrafts"] == 1
     assert nodes(run).count("draft_plan") == 2 and nodes(run).count("check_rules") == 2
-    assert run["history"][2]["note"] == "violations: mall"
+    assert [h for h in run["history"] if h["node"] == "check_rules"][0]["note"] == "violations: mall"
     assert all(c["passed"] for c in run["ruleChecks"]) and run["plan"]["version"] == 2
     assert any("Redrafted 1 time(s) to fix mall" in d for d in run["explanation"]["did"])
 
@@ -141,7 +141,7 @@ def test_edit_applies_rechecks_and_waits_again(make_runtime):
 
     assert edited["status"] == "NEEDS_APPROVAL"
     assert edited["version"] == run["version"] + 1
-    assert nodes(edited)[-5:] == ["await_approval", "apply_edits", "check_rules", "rank_deferrals", "explain"]
+    assert nodes(edited)[-6:] == ["await_approval", "apply_edits", "check_rules", "rank_deferrals", "simulate_plan", "explain"]
     assert {"orderId": "O-6"}.items() <= edited["deferrals"][0].items()
     assert any("Applied your edits: Deferred O-6 (CAP_TIME)" in d for d in edited["explanation"]["did"])
     assert [d["decision"] for d in edited["decisions"]] == ["edit"]

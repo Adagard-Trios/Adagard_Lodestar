@@ -17,6 +17,8 @@ class StrictModel(BaseModel):
 class StartRunRequest(StrictModel):
     depot: str = Field(pattern=r"^[A-Za-z_]{2,32}$")
     runDate: date
+    # optional "Ask the agent" request for this run, e.g. "plan tomorrow, mall stores first"
+    request: str | None = Field(default=None, max_length=500)
 
     @field_validator("depot")
     @classmethod
@@ -44,6 +46,8 @@ class ResumeRequest(StrictModel):
     decision: Literal["approve", "edit", "reject"]
     edits: list[Edit] | None = Field(default=None, max_length=50)
     comment: str | None = Field(default=None, max_length=500)
+    # the plan hash the dispatcher reviewed (GET /runs/{id} hashes.planHash); a changed plan is refused with 409
+    planHash: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
 
 
 class AskRequest(StrictModel):
