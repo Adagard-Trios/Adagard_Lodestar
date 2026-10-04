@@ -113,7 +113,8 @@ export function DeskFrame({ app, bg, nav, style, desk, children }: {
 }) {
   const wide = useDeskAuth();
   const { width, height } = useWindowDimensions();
-  if (!wide) return <Frame bg={bg} nav={nav} style={style}>{children}</Frame>;
+  const inShell = useInDockShell();
+  if (!wide || (inShell && !desk)) return <Frame bg={bg} nav={nav} style={style}>{children}</Frame>;
   const b = BRANDS[app];
   const brandW = width >= 1024 ? Math.min(620, width - 520) : 0;
   const padX = brandW >= 560 ? 56 : 40;

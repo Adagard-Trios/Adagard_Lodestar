@@ -18,6 +18,20 @@ export type Target = { to?: string; kind?: 'go' | 'nav' | 'back'; app?: string; 
 type Toast = Target & { text?: string; tone?: 'info' | 'error' };
 export type ScreenNav = { links: Record<string, Target>; auto?: Target; whole?: Target; parent?: string };
 
+// Dock on the web at 768px and up (dock-desktop-shell.tsx): the screen sits in the desktop shell, so its Frame drops
+// the phone chrome (safe areas, status bar) and phone-only parts (the bottom tab bar) are hidden.
+export const DockShellContext = createContext(false);
+
+/** True when the screen is drawn inside the Dock desktop shell. */
+export function useInDockShell(): boolean {
+  return useContext(DockShellContext);
+}
+
+/** Phone chrome (e.g. a screen's bottom tab bar): hidden inside the Dock desktop shell, which has its own navigation. */
+export function PhoneOnly({ children }: { children: ReactNode }) {
+  return useInDockShell() ? null : <>{children}</>;
+}
+
 const NavContext = createContext<{ nav: ScreenNav; notify: (t: Toast) => void }>({ nav: { links: {} }, notify: () => {} });
 
 // Messages from anywhere (live screens' actions): the mounted Frame shows the latest one.
@@ -61,6 +75,7 @@ const isLight = (c: string) => {
 
 export function Frame({ bg, nav, children, style }: { bg: string; nav: ScreenNav; children: ReactNode; style?: StyleProp<ViewStyle> }) {
   const [toast, setToast] = useState<Toast | null>(null);
+  const inShell = useInDockShell();
   const ctx = useMemo(() => ({ nav, notify: setToast }), [nav]);
   useEffect(() => {
     if (!nav.auto) return;
@@ -79,10 +94,11 @@ export function Frame({ bg, nav, children, style }: { bg: string; nav: ScreenNav
   }, []);
 
   const body = <View style={style}>{children}</View>;
+  const Outer = inShell ? View : PhoneSafeArea;
   return (
     <NavContext.Provider value={ctx}>
-      <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: bg }}>
-        <StatusBar style={isLight(bg) ? 'dark' : 'light'} />
+      <Outer style={{ flex: 1, backgroundColor: bg }}>
+        {inShell ? null : <StatusBar style={isLight(bg) ? 'dark' : 'light'} />}
         {nav.whole ? (
           <Pressable style={{ flex: 1 }} onPress={() => go(nav.whole, setToast)}>{body}</Pressable>
         ) : body}
@@ -99,9 +115,13 @@ export function Frame({ bg, nav, children, style }: { bg: string; nav: ScreenNav
             </Pressable>
           </View>
         )}
-      </SafeAreaView>
+      </Outer>
     </NavContext.Provider>
   );
+}
+
+function PhoneSafeArea({ style, children }: { style: StyleProp<ViewStyle>; children: ReactNode }) {
+  return <SafeAreaView edges={['top', 'bottom']} style={style}>{children}</SafeAreaView>;
 }
 
 export type TapAction = () => unknown;
