@@ -67,7 +67,7 @@ class Settings(BaseSettings):
 
     # ML service (Task 1 stop model): empty = disabled, the drafts keep the heuristic service time / ETA / late risk
     ml_url: str = Field(default="", alias="ML_URL")
-    ml_timeout_s: float = Field(default=5.0, alias="ML_TIMEOUT_S")
+    ml_timeout_s: float = Field(default=8.0, alias="ML_TIMEOUT_S")
 
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 

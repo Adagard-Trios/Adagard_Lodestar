@@ -25,6 +25,7 @@ TASK2A_FILE = "task2a_model.pkl"
 @dataclass
 class Models:
     models_dir: str
+    dtcore_path: str | None = None
     dtcore: Any = None
     task1: Any = None
     task2a: Any = None
@@ -36,9 +37,9 @@ class Models:
         return self.task1 is not None and self.task2a is not None
 
 
-def load_models(models_dir: str, dtcore_path: str | None = None) -> Models:
+def load_models(models_dir: str, dtcore_path: str | None = None, only: tuple[str, ...] = ("task1", "task2a")) -> Models:
     started = time.monotonic()
-    out = Models(models_dir=models_dir)
+    out = Models(models_dir=models_dir, dtcore_path=dtcore_path)
     d = Path(models_dir)
     code = Path(dtcore_path) if dtcore_path else d / "dtcore.py"
     if not code.is_file():
@@ -65,6 +66,8 @@ def load_models(models_dir: str, dtcore_path: str | None = None) -> Models:
             setattr(main, name, getattr(out.dtcore, name))
 
     for attr, name in (("task1", TASK1_FILE), ("task2a", TASK2A_FILE)):
+        if attr not in only:
+            continue
         path = d / name
         if not path.is_file():
             out.errors[attr] = f"{name} not found in {models_dir}"

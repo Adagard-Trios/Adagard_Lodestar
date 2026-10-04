@@ -4,11 +4,17 @@ panel_, the LightGBM categories and the simulator lookup)."""
 
 from __future__ import annotations
 
+import os
 import sys
 import textwrap
 from pathlib import Path
 
 import pytest
+
+# the forecast refits run in-process in the tests (several monkeypatch the model); test_api enables the worker process
+os.environ.setdefault("ML_FORECAST_PROCESS", "0")
+# no keep-warm predictions in the background of the tests (test_api turns it on where it is tested)
+os.environ.setdefault("ML_KEEPWARM_S", "0")
 
 FAKE_DTCORE = textwrap.dedent(
     '''

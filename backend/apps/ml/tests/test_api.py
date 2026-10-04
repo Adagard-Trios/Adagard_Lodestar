@@ -116,6 +116,60 @@ def test_forecast_is_cached_for_the_same_input(client):
     assert client.app.state.demand.model.calls == 1
 
 
+def test_forecast_refits_run_in_a_worker_process_not_in_the_service(models_dir, monkeypatch):
+    # an in-process refit holds the GIL and the cores, and /predict/stops then misses the planner's timeout
+    monkeypatch.setenv("ML_FORECAST_PROCESS", "1")
+    monkeypatch.setenv("ML_FORECAST_WAIT_S", "120")
+    with TestClient(create_app(load_models(str(models_dir)))) as c:
+        demand = c.app.state.demand
+        assert demand.worker is not None
+        weeks = [{"depot": "KANDY", "brand": "FRESH", "isoYear": 2026, "isoWeek": 41}]
+        r = c.post("/forecast/weeks", json={"weeks": weeks, "calendar": calendar(date(2026, 10, 5), 7, festivalRamp=0.5)})
+        assert r.status_code == 200, r.text
+        assert r.json()["weeks"][0]["totalM3"] == 100 + 10 * 6 + 50 * 3.5
+        assert demand.model.calls == 0  # computed by the worker's own copy of the model
+        assert c.post("/predict/stops", json={"stops": [stop(0)]}).status_code == 200
+    assert demand.worker is None  # shut down with the app
+
+
+def test_an_idle_service_keeps_the_stop_model_warm(models_dir, monkeypatch):
+    # an idle model went cold (14 s for the first draft's stops, past the planner's 5 s): a tiny prediction
+    # every ML_KEEPWARM_S keeps it warm
+    import time
+
+    monkeypatch.setenv("ML_KEEPWARM_S", "0.05")
+    with TestClient(create_app(load_models(str(models_dir)))) as c:
+        model = c.app.state.stops.model
+        deadline = time.monotonic() + 5
+        while model.seen is None and time.monotonic() < deadline:
+            time.sleep(0.05)
+        assert model.seen is not None and list(model.seen.delivery_id) == ["warm"]
+        r = c.post("/predict/stops", json={"stops": [stop(0)]})
+        assert r.status_code == 200 and r.json()["predictions"][0]["stopId"] == "S0"
+
+
+def test_the_keep_warm_sample_is_a_stop_the_model_knows(client):
+    predictor = client.app.state.stops
+    [p] = predictor.predict(predictor.sample())
+    assert p["stopId"] == "warm" and p["serviceMin"] > 0
+
+
+def test_a_broken_forecast_worker_falls_back_to_an_in_process_refit(client):
+    class Broken:
+        def submit(self, *_a, **_k):
+            raise RuntimeError("worker died")
+
+        def shutdown(self, **_k):
+            pass
+
+    demand = client.app.state.demand
+    demand.worker = Broken()
+    weeks = [{"depot": "KANDY", "brand": "STYLE", "isoYear": 2026, "isoWeek": 25}]
+    r = client.post("/forecast/weeks", json={"weeks": weeks})
+    assert r.status_code == 200, r.text
+    assert demand.worker is None and demand.model.calls >= 1
+
+
 def test_forecast_beyond_horizon_or_unknown_series_is_422(client):
     far = [{"depot": "KANDY", "brand": "FRESH", "isoYear": 2027, "isoWeek": 40}]
     assert client.post("/forecast/weeks", json={"weeks": far}).status_code == 422

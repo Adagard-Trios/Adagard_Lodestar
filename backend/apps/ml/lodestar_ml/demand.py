@@ -8,14 +8,21 @@ all seven days in the request takes the same ISO week of the last year in the hi
 input (the forecast is deterministic and takes from seconds to minutes: every series' models are refitted). A
 request waits at most ML_FORECAST_WAIT_S for a forecast that is not cached; the computation carries on in the
 background (once per input), so the caller falls back this time and gets the model's figures on a later ask.
+
+The refit runs in a worker process of its own (spawned once, loading only the Task 2A model, at a lower CPU
+priority), not in a thread of the service: a refit in-process holds the GIL and both cores for a minute or more,
+and POST /predict/stops answered in 7-14 s meanwhile, past the planner's ML_TIMEOUT_S, so a draft made while
+DSP-05 was warming up lost the stop model. ML_FORECAST_PROCESS=0 keeps the refit in-process (tests, debugging).
 """
 
 from __future__ import annotations
 
 import logging
+import multiprocessing
+import os
 import threading
 from collections import OrderedDict
-from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import Future, ProcessPoolExecutor, ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
 from datetime import date, timedelta
 from typing import Any
@@ -37,9 +44,52 @@ class Computing(RuntimeError):
     """The forecast is still being computed (answered 503 with Retry-After; callers fall back meanwhile)."""
 
 
+# ------------------------------------------------------------------ the forecast worker process
+_CHILD_MODEL: Any = None
+
+
+def _child_init(models_dir: str, dtcore_path: str | None, nice: int) -> None:
+    """Runs once in the worker process: a lower priority than the service, and the Task 2A model only."""
+    global _CHILD_MODEL
+    if nice:
+        try:
+            os.nice(nice)
+        except (AttributeError, OSError):  # Windows has no nice; a refused renice only costs the priority
+            pass
+    from .loader import load_models
+
+    _CHILD_MODEL = load_models(models_dir, dtcore_path, only=("task2a",)).task2a
+    # one core for the refit (OpenMP/BLAS pools, now that the model's libraries are loaded): the other stays free
+    # for the stop predictions
+    threads = int(os.getenv("ML_FORECAST_THREADS", "1"))
+    if threads > 0:
+        try:
+            from threadpoolctl import threadpool_limits
+
+            threadpool_limits(threads)
+        except Exception:  # noqa: BLE001 - without threadpoolctl the refit just uses the default pools
+            pass
+
+
+def _child_predict(requests: pd.DataFrame, wcal: pd.DataFrame) -> pd.DataFrame:
+    if _CHILD_MODEL is None:
+        raise RuntimeError("the forecast worker could not load the Task 2A model")
+    return _CHILD_MODEL.predict(requests, wcal)
+
+
+def forecast_worker(models_dir: str, dtcore_path: str | None) -> ProcessPoolExecutor | None:
+    """The worker process pool for the refits (None when ML_FORECAST_PROCESS=0)."""
+    if os.getenv("ML_FORECAST_PROCESS", "1").strip().lower() in ("0", "false", "no", "off"):
+        return None
+    nice = int(os.getenv("ML_FORECAST_NICE", "10"))
+    return ProcessPoolExecutor(max_workers=1, mp_context=multiprocessing.get_context("spawn"),
+                               initializer=_child_init, initargs=(models_dir, dtcore_path, nice))
+
+
 class DemandPredictor:
-    def __init__(self, model: Any, dtcore: Any):
+    def __init__(self, model: Any, dtcore: Any, worker: ProcessPoolExecutor | None = None):
         self.model, self.dt = model, dtcore
+        self.worker = worker  # the refits run there when set, else in this process
         p = model.panel_
         self.depots = sorted(p.depot.astype(str).unique())
         self.brands = sorted(p.brand.astype(str).unique())
@@ -93,7 +143,7 @@ class DemandPredictor:
                  "iso_week": ws.isocalendar().week}
                 for d in self.depots for b in self.brands for ws in future
             ])
-            pred = self.model.predict(req, wcal).set_index("row_id")
+            pred = self._predict(req, wcal).set_index("row_id")
             with self._lock:
                 self._cache[key] = pred
                 while len(self._cache) > CACHE_SIZE:
@@ -102,6 +152,21 @@ class DemandPredictor:
         finally:
             with self._lock:
                 self._pending.pop(key, None)
+
+    def _predict(self, req: pd.DataFrame, wcal: pd.DataFrame) -> pd.DataFrame:
+        if self.worker is not None:
+            try:
+                return self.worker.submit(_child_predict, req, wcal).result()
+            except Exception as exc:  # noqa: BLE001 - a broken worker must not cost the forecast: refit in-process
+                log.warning("forecast worker failed (%s: %s); refitting in-process from now on", type(exc).__name__, exc)
+                worker, self.worker = self.worker, None
+                worker.shutdown(wait=False, cancel_futures=True)
+        return self.model.predict(req, wcal)
+
+    def close(self) -> None:
+        if self.worker is not None:
+            self.worker.shutdown(wait=False, cancel_futures=True)
+            self.worker = None
 
     def _result(self, key: tuple, future: list[date], wcal: pd.DataFrame, wait_s: float | None) -> pd.DataFrame:
         """The cached forecast, or the one being computed (started once per input, single-flight). Waits at most

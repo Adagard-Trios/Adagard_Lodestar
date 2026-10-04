@@ -156,6 +156,17 @@ class StopPredictor:
                 f[c] = f[c].astype(float).fillna(m)
         return f
 
+    def sample(self) -> list[StopIn]:
+        """A one-stop route the model knows every value of: the keep-warm request (see app.keep_warm)."""
+        first = lambda col, fallback: (self.known(col) or [fallback])[0]  # noqa: E731
+        return [StopIn(
+            stopId="warm", routeId="warm", seq=0, date="2026-01-05", outletId="WARM", brand=first("brand", "FRESH"),
+            district=first("district", "Colombo"), depot=first("depot", "PELIYAGODA"), dockType=first("dock_type", "REAR_DOCK"),
+            parking=first("parking_constraint", "NORMAL"), windowOpen="05:00", windowClose="08:00", units=10, kg=90, m3=0.5,
+            vehicleId="WARM", vehicleType=first("vehicle_type", "TRUCK"), vehicleTemp="CHILLED", capacityKg=5000, capacityM3=25,
+            plannedDepart="05:00", plannedArrive="05:20", plannedTravelMin=20, distanceKm=8, serviceAllowanceMin=15,
+        )]
+
     def predict(self, stops: list[StopIn]) -> list[dict[str, Any]]:
         f = self.features(stops)
         out, parts = self.model.predict(f, return_parts=True)

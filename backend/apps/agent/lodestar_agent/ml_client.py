@@ -7,6 +7,7 @@ caller keeps its heuristic. A failure is logged once per outage (again only afte
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 
 import httpx
@@ -36,6 +37,7 @@ def predict_stops(stops: list[dict[str, Any]]) -> dict[str, dict[str, Any]] | No
     url = settings.ml_url.strip().rstrip("/")
     if not url or not stops:
         return None
+    started = time.monotonic()
     try:
         r = httpx.post(f"{url}/predict/stops", json={"stops": stops}, timeout=settings.ml_timeout_s)
     except httpx.HTTPError as exc:
@@ -52,4 +54,5 @@ def predict_stops(stops: list[dict[str, Any]]) -> dict[str, dict[str, Any]] | No
     if _failing:
         log.info("ML service answering again")
     _failing = False
+    log.info("/predict/stops: the model scored %d of %d stops in %d ms", len(preds), len(stops), int((time.monotonic() - started) * 1000))
     return preds

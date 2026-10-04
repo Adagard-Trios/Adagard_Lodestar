@@ -93,7 +93,7 @@ export class MlClient {
   private readonly logger = new Logger(MlClient.name);
   /** the ML service's address comes from configuration (ML_URL), never from code; empty = disabled */
   baseUrl = (process.env.ML_URL ?? '').replace(/\/$/, '');
-  timeoutMs = Number(process.env.ML_TIMEOUT_MS ?? 5_000);
+  timeoutMs = Number(process.env.ML_TIMEOUT_MS ?? 8_000);
   private failing = false;
 
   get enabled(): boolean {

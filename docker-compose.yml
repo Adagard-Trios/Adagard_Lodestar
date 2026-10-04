@@ -314,6 +314,7 @@ services:
   # /health says "degraded", the endpoints answer 503 and agent / trips / planning keep their heuristics.
   ml:
     <<: *hardened
+    init: true # the demand refits run in a worker process: an init reaps it
     build: { context: ./backend/apps/ml, dockerfile: Dockerfile }
     environment:
       ML_MODELS_DIR: /models

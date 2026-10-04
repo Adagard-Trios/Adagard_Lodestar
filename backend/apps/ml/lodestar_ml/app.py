@@ -27,6 +27,40 @@ log = logging.getLogger("lodestar_ml")
 DEFAULT_MODELS_DIR = "/models"
 
 
+def keep_warm_s() -> float:
+    """How often an idle service runs a one-stop prediction to keep the Task 1 model warm (0 = never).
+
+    Left idle for a few minutes, the first POST /predict/stops took 14 s (then 1.5 s) on the demo VM: the model's
+    memory had gone cold. The planner waits ML_TIMEOUT_S (5 s) and then keeps the booklet allowance, so the first
+    draft of a quiet morning always lost the model. A tiny prediction every minute takes that hit instead.
+    """
+    return float(os.getenv("ML_KEEPWARM_S", "60"))
+
+
+async def keep_warm(app: FastAPI, every: float) -> None:
+    """Every `every` s without a stop prediction, one tiny prediction (skipped while the slots are busy)."""
+    while True:
+        await asyncio.sleep(every)
+        st = app.state
+        predictor: StopPredictor | None = getattr(st, "stops", None)
+        slots: asyncio.Semaphore | None = getattr(st, "slots", None)
+        if predictor is None or slots is None or slots.locked():
+            continue
+        if time.monotonic() - getattr(st, "last_stops_at", 0.0) < every:
+            continue
+        async with slots:
+            started = time.monotonic()
+            try:
+                await run_in_threadpool(predictor.predict, predictor.sample())
+            except Exception as exc:  # noqa: BLE001 - keeping warm is best effort; a real request reports errors
+                log.warning("keep-warm prediction failed: %s: %s", type(exc).__name__, exc)
+                continue
+            st.last_stops_at = time.monotonic()
+            ms = int((st.last_stops_at - started) * 1000)
+            if ms > 2000:
+                log.info("keep-warm prediction took %d ms (the model had gone cold)", ms)
+
+
 def forecast_wait_s() -> float:
     """How long a forecast request waits for a forecast that is not cached yet (it keeps computing after)."""
     return float(os.getenv("ML_FORECAST_WAIT_S", "1.5"))
@@ -44,9 +78,11 @@ def _build(app: FastAPI, models: Models) -> None:
             log.warning(models.errors["task1"])
     if models.task2a is not None:
         try:
-            from .demand import DemandPredictor
+            from .demand import DemandPredictor, forecast_worker
 
-            app.state.demand = DemandPredictor(models.task2a, models.dtcore)
+            # the refits run in a worker process (loaded from the same files) when the model came from disk
+            worker = forecast_worker(models.models_dir, models.dtcore_path) if models.models_dir else None
+            app.state.demand = DemandPredictor(models.task2a, models.dtcore, worker)
         except Exception as exc:  # noqa: BLE001
             models.errors["task2a"] = f"task2a model unusable: {type(exc).__name__}: {exc}"
             log.warning(models.errors["task2a"])
@@ -62,7 +98,14 @@ def create_app(models: Models | None = None) -> FastAPI:
             _build(app, loaded)
             log.info("models loaded: task1=%s task2a=%s in %d ms", app.state.stops is not None, app.state.demand is not None, loaded.load_ms)
         app.state.slots = asyncio.Semaphore(int(os.getenv("ML_CONCURRENCY", "2")))
+        every = keep_warm_s()
+        warm = asyncio.create_task(keep_warm(app, every)) if every > 0 else None
         yield
+        if warm is not None:
+            warm.cancel()
+        demand = getattr(app.state, "demand", None)
+        if demand is not None:
+            demand.close()
 
     app = FastAPI(title="Lodestar ML", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     if models is not None:
@@ -103,7 +146,10 @@ def create_app(models: Models | None = None) -> FastAPI:
             raise HTTPException(503, detail="task1 model not loaded")
         started = time.monotonic()
         preds = await _run(request, predictor.predict, body.stops)
-        return {"model": "task1", "predictions": preds, "ms": int((time.monotonic() - started) * 1000)}
+        request.app.state.last_stops_at = time.monotonic()
+        ms = int((request.app.state.last_stops_at - started) * 1000)
+        log.info("predict/stops: %d stops on %d routes in %d ms", len(body.stops), len({s.routeId for s in body.stops}), ms)
+        return {"model": "task1", "predictions": preds, "ms": ms}
 
     @app.post("/forecast/weeks", response_model=ForecastWeeksResponse)
     async def forecast_weeks(body: ForecastWeeksRequest, request: Request):

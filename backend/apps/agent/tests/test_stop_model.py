@@ -110,7 +110,7 @@ def test_schedule_calls_the_service_when_configured(ml_url, monkeypatch):
 
     monkeypatch.setattr(ml_client.httpx, "post", post)
     plan = planner.draft_plan(ctx(), [], 1)
-    assert seen and seen[0]["url"] == "http://ml:8000/predict/stops" and seen[0]["timeout"] == 5.0
+    assert seen and seen[0]["url"] == "http://ml:8000/predict/stops" and seen[0]["timeout"] == 8.0
     assert len(seen) == 1  # one batch for the draft
     assert {s["serviceMin"] for t in plan["trips"] for s in t["stops"]} == {18}
 
