@@ -1,12 +1,15 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // DR-22 Record detail · POD · phone (P4, phone)
 // One proof of delivery (route param `pod`, else the newest): the server's record, or the one still on this
-// phone. The store's own count is not readable by the driver and no signature image is stored: both left out.
+// phone, with the receiver's signature (the server's SVG, or the one still in the outbox). The store's own count is
+// not readable by the driver: left out.
 import { Image, Text, View, StyleSheet } from 'react-native';
 import { hm } from '@/lib/time';
 import { plural, titleCase } from '@/lodestar/live';
 import * as api from '@/model/api';
-import { useClaims, useParam, usePods, useRun } from '@/model/hooks';
+import { useClaims, useOutbox, useParam, usePods, useRun } from '@/model/hooks';
+import { base64ToBytes } from '@/offline/sync';
+import { SignatureView } from '@/lodestar/signature';
 import { useQuery } from '@/model/query';
 import type { POD } from '@/model/types';
 import { Frame, Icon, Scroll, Tap, type ScreenNav } from '@/lodestar/runtime';
@@ -34,6 +37,13 @@ export default function ScreenDr22RecordDetailPod() {
   const explained = ex.reduce((n, e) => n + (e.qty ?? 0), 0);
   const notes = [gap > explained && ex.length ? `${gap - explained} short` : '', ...ex.map(e => e.description ?? e.item ?? '').filter(Boolean)].filter(Boolean).join(' · ');
   const synced = pod?.syncedAt ?? (pod && !pod.savedOffline && !stopOfLocal ? pod.savedAt : null);
+  // the signature: the one still on this phone (outbox), else the server's stored SVG
+  const { items } = useOutbox();
+  const localSig = [...items].reverse().find(i => i.kind === 'POD_PHOTO' && i.payload.kind === 'SIGNATURE' && i.ref === (pod?.tripStopId ?? stop?.id) && typeof i.payload.dataBase64 === 'string');
+  const sigPath = pod?.signatureUrl && /^\/media\/pod-photos\/[\w-]+$/.test(pod.signatureUrl) ? pod.signatureUrl : null;
+  const sigQ = useQuery<string>(!localSig && sigPath ? `sig.${sigPath}` : null, c => c.request<string>('GET', sigPath!, { headers: { Accept: 'image/svg+xml' } }).then(r => String(r.data)), { persist: true });
+  const sigSvg = localSig ? String.fromCharCode(...base64ToBytes(localSig.payload.dataBase64)) : sigQ.data && /^<svg[\s>]/.test(sigQ.data) ? sigQ.data : null;
+  const signedAt = localSig?.payload.takenAt ?? pod?.signedAt ?? null;
   const empty = !claims ? 'Sign in to see your records' : q.loading || pods.loading ? 'Loading…' : 'No record selected';
   return (
     <Frame bg="#070b16" nav={nav} style={s.v0}>
@@ -93,11 +103,11 @@ export default function ScreenDr22RecordDetailPod() {
               </View>
             </View>
           ) : null}
-          {pod?.receiverName ? (
+          {pod?.receiverName || sigSvg || signedAt ? (
             <View style={s.v25}>
               <View style={s.v21}>
                 <View style={s.v12}>
-                  <Text style={s.t19}>{`Signed by ${pod.receiverName}`}</Text>
+                  <Text style={s.t19} testID="signed-by">{pod?.receiverName ? `Signed by ${pod.receiverName}` : 'Signed'}</Text>
                 </View>
                 <View style={s.v12}>
                   <Text style={s.t20}>{"receiving"}</Text>
@@ -105,11 +115,7 @@ export default function ScreenDr22RecordDetailPod() {
               </View>
               <View style={s.v24}>
                 <View style={s.v30}>
-                  <View style={s.v29}>
-                    <View style={s.v28}>
-                      <Text style={s.t9}>{`Signed ${hm(pod.savedAt)}`}</Text>
-                    </View>
-                  </View>
+                  <SignatureView svg={sigSvg} caption={signedAt || sigSvg ? `Signed ${hm(signedAt ?? pod?.savedAt)}` : `Received ${hm(pod?.savedAt)} · no signature`} />
                 </View>
               </View>
             </View>
@@ -124,7 +130,7 @@ export default function ScreenDr22RecordDetailPod() {
               <View style={s.v24}>
                 {[
                   ts?.arrivalActual ? ['Arrived', hm(ts.arrivalActual)] : null,
-                  ['Signed', hm(pod.savedAt)],
+                  ['Signed', hm(signedAt ?? pod.savedAt)],
                   ['Synced', synced ? hm(synced) : 'not yet'],
                 ]
                   .filter((r): r is string[] => !!r)

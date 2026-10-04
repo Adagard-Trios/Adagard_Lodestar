@@ -9,6 +9,63 @@ export const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
 export const PHOTO_MIMES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 export type PhotoMime = (typeof PHOTO_MIMES)[number];
 
+/** What an upload is: the photo of the drop, or the receiver's signature (an SVG drawn on the phone, DR-03 / DR-20). */
+export const POD_MEDIA_KINDS = ['PHOTO', 'SIGNATURE'] as const;
+export type PodMediaKind = (typeof POD_MEDIA_KINDS)[number];
+export const SIGNATURE_MIME = 'image/svg+xml';
+/** Largest signature SVG accepted (a few strokes of path data are a few KB). */
+export const MAX_SIGNATURE_BYTES = 64 * 1024;
+const MAX_SIGNATURE_PATHS = 64;
+
+/** The kind named by the client (absent = PHOTO); anything else is a 400. */
+export function podMediaKind(raw?: string | null): PodMediaKind {
+  if (raw === undefined || raw === null || raw === '') return 'PHOTO';
+  const k = String(raw).toUpperCase();
+  if (!(POD_MEDIA_KINDS as readonly string[]).includes(k)) throw ODataError.badRequest(`kind must be one of ${POD_MEDIA_KINDS.join(', ')}`, 'kind');
+  return k as PodMediaKind;
+}
+
+const NUM = String.raw`-?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?`;
+/** Path data with only move / line / curve / close commands and numbers: nothing that can reference or script. */
+const PATH_DATA = /^[MLHVCSQTZmlhvcsqtz0-9eE.,\s+-]{1,20000}$/;
+const VIEWBOX = new RegExp(String.raw`^\s*(${NUM})[\s,]+(${NUM})[\s,]+(${NUM})[\s,]+(${NUM})\s*$`, 'i');
+
+/**
+ * Checks a signature SVG and rebuilds it from scratch: only the viewBox numbers and the `d` of each <path> are
+ * kept (each matched against a strict pattern); every other element, attribute, entity, script, style, link or
+ * foreign content is dropped. What is stored is the server's own markup, never the client's.
+ */
+export function sanitizeSignatureSvg(bytes: unknown, declared?: string | null): { bytes: Buffer; mime: typeof SIGNATURE_MIME; sha256: string } {
+  if (!Buffer.isBuffer(bytes) || bytes.length === 0) {
+    throw new ODataError(415, 'UnsupportedMediaType', `Send the signature as the request body with Content-Type ${SIGNATURE_MIME}`);
+  }
+  const said = declared?.split(';')[0].trim().toLowerCase();
+  if (said && said !== SIGNATURE_MIME) throw new ODataError(415, 'UnsupportedMediaType', `A signature is ${SIGNATURE_MIME}, not ${said}`);
+  if (bytes.length > MAX_SIGNATURE_BYTES) throw new ODataError(413, 'PayloadTooLarge', `A signature may be at most ${MAX_SIGNATURE_BYTES / 1024} KB`);
+  const text = bytes.toString('utf8');
+  const root = /^\s*(?:<\?xml[^>]*\?>\s*)?<svg(\s[^>]*)?>/i.exec(text);
+  if (!root || !/<\/svg>\s*$/i.test(text)) throw new ODataError(415, 'UnsupportedMediaType', 'The signature is not an SVG');
+  const vb = /\sviewBox\s*=\s*"([^"]*)"/i.exec(root[1] ?? '');
+  const box = vb ? VIEWBOX.exec(vb[1]) : null;
+  const [x, y, w, h] = box ? box.slice(1, 5).map(Number) : [0, 0, 280, 84];
+  if (![x, y, w, h].every(Number.isFinite) || w <= 0 || h <= 0 || w > 4096 || h > 4096) throw ODataError.badRequest('The signature viewBox is not valid', 'body');
+  const paths: string[] = [];
+  for (const m of text.matchAll(/<path\s(?:[^>]*?\s)?d\s*=\s*"([^"]*)"[^>]*>/gi)) {
+    const d = m[1].trim();
+    if (!PATH_DATA.test(d)) throw ODataError.badRequest('The signature holds something other than strokes', 'body');
+    paths.push(d.replace(/\s+/g, ' '));
+  }
+  if (!paths.length) throw ODataError.badRequest('The signature is empty', 'body');
+  if (paths.length > MAX_SIGNATURE_PATHS) throw ODataError.badRequest(`A signature may have at most ${MAX_SIGNATURE_PATHS} strokes`, 'body');
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x} ${y} ${w} ${h}" width="${w}" height="${h}">` +
+    `<g fill="none" stroke="#111522" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">` +
+    paths.map(d => `<path d="${d}"/>`).join('') +
+    `</g></svg>`;
+  const out = Buffer.from(svg, 'utf8');
+  return { bytes: out, mime: SIGNATURE_MIME, sha256: createHash('sha256').update(out).digest('hex') };
+}
+
 /** Public path of a stored photo behind the gateway (GET, bearer token). */
 export const photoUrl = podPhotoUrl;
 
@@ -69,9 +126,11 @@ export interface PhotoMeta {
   sha256: string;
   takenAt: Date | null;
   createdAt: Date;
+  /** PHOTO | SIGNATURE */
+  kind: string;
 }
 
-const META_SELECT = { id: true, tripStopId: true, mime: true, size: true, sha256: true, takenAt: true, createdAt: true } as const;
+const META_SELECT = { id: true, kind: true, tripStopId: true, mime: true, size: true, sha256: true, takenAt: true, createdAt: true } as const;
 const meta = (r: Omit<PhotoMeta, 'url'>): PhotoMeta => ({ ...r, url: photoUrl(r.id) });
 
 export interface StorePhotoInput {
@@ -82,6 +141,8 @@ export interface StorePhotoInput {
   /** Client outbox id: the same upload sent twice is stored once. */
   eventId?: string | null;
   uploadedBy: string;
+  /** PHOTO (default) or SIGNATURE: a signature must be an SVG, sanitised before it is stored. */
+  kind?: PodMediaKind;
 }
 
 /**
@@ -108,7 +169,8 @@ export class PodPhotoService {
 
   /** Stores a photo (validated) unless this stop already has it; returns its metadata and whether it was a replay. */
   async store(input: StorePhotoInput): Promise<{ photo: PhotoMeta; duplicate: boolean }> {
-    const { bytes, mime, sha256 } = validatePhoto(input.bytes, input.declaredMime);
+    const kind = input.kind ?? 'PHOTO';
+    const { bytes, mime, sha256 } = kind === 'SIGNATURE' ? sanitizeSignatureSvg(input.bytes, input.declaredMime) : validatePhoto(input.bytes, input.declaredMime);
     const eventId = input.eventId && /^[\w-]{8,64}$/.test(input.eventId) ? input.eventId : null;
     const existing = await this.existing(input.stop.id, sha256, eventId);
     if (existing) return { photo: meta(existing), duplicate: true };
@@ -118,6 +180,7 @@ export class PodPhotoService {
       row = await this.prisma.podPhoto.create({
         data: {
           tripStopId: input.stop.id,
+          kind,
           mime,
           bytes,
           size: bytes.length,

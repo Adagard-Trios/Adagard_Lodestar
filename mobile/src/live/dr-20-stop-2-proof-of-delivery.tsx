@@ -2,12 +2,13 @@
 // DR-20 Stop 2 proof of delivery · phone (P4, phone)
 // Live: the POD of the stop after the current one (or route param `stop`), same behaviour as DR-03.
 import { Text, TextInput, View, StyleSheet } from 'react-native';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { hm } from '@/lib/time';
 import { CameraBox, useCamera } from '@/lodestar/camera';
 import { plural } from '@/lodestar/live';
 import { showToast } from '@/lodestar/runtime';
-import { completeStop, queuePodPhoto } from '@/model/actions';
+import { completeStop, queuePodPhoto, queuePodSignature } from '@/model/actions';
+import { SignaturePad } from '@/lodestar/signature';
 import { afterPod } from '@/model/run';
 import { useOnline, useOutbox, useStop } from '@/model/hooks';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
@@ -28,10 +29,13 @@ export default function ScreenDr20Stop2ProofOfDelivery() {
   const ordered = order?.units ?? 0;
   const [units, setUnits] = useState<number | null>(null);
   const [receiver, setReceiver] = useState('');
+  // the receiver signs on the pad (or the store code on DR-16 stands in): Complete stop needs one of them
+  const [signature, setSignature] = useState<{ svg: string; at: string } | null>(null);
+  const sign = useCallback((svg: string | null) => setSignature(svg ? { svg, at: new Date().toISOString() } : null), []);
   // the photo of the drop: compressed, saved in the outbox and uploaded with signal (POD_PHOTO); the server links it to the POD
   const cam = useCamera();
   const { items } = useOutbox();
-  const photos = items.filter(i => i.kind === 'POD_PHOTO' && i.ref === stop?.id && i.status !== 'rejected');
+  const photos = items.filter(i => i.kind === 'POD_PHOTO' && i.payload.kind !== 'SIGNATURE' && i.ref === stop?.id && i.status !== 'rejected');
   const lastPhoto = photos[photos.length - 1];
   const photoAt = lastPhoto?.payload.takenAt ?? lastPhoto?.savedAt ?? null;
   const photo = async () => {
@@ -145,9 +149,15 @@ export default function ScreenDr20Stop2ProofOfDelivery() {
                   placeholderTextColor="#7f89a3"
                   style={[s.t20, { paddingTop: 12, paddingBottom: 4 }]}
                   testID="receiver-name"
+                  autoCorrect={false}
+                  autoCapitalize="words"
+                  autoComplete="name"
                 />
-                <View style={{ paddingBottom: 8 }}>
-                  <Text style={s.t9}>{pod ? `Saved ${hm(pod.savedAt)}${pod.savedOffline ? ' · saved on phone' : ''}` : online ? 'Sent as soon as you complete' : 'Saved on this phone · sends with signal'}</Text>
+                <View style={{ paddingBottom: 12 }}>
+                  <SignaturePad
+                    onChange={sign}
+                    caption={signature ? `Signed ${hm(signature.at)} · ${online ? 'sent when you complete' : 'saved on phone'}` : pod ? `Saved ${hm(pod.savedAt)}${pod.savedOffline ? ' · saved on phone' : ''}` : 'Receiver signs above the line'}
+                  />
                 </View>
               </View>
             </View>
@@ -156,11 +166,16 @@ export default function ScreenDr20Stop2ProofOfDelivery() {
         <View style={s.v50}>
           <Tap
             lk="L20"
-            style={s.v47}
+            style={[s.v47, !signature && !delivered ? { opacity: 0.55 } : null]}
             to={stop ? afterPod(view, stop) : undefined}
             onPress={async () => {
               if (!stop || !order) return true; // prototype mode: just navigate
               if (delivered) return true;
+              if (!signature) {
+                showToast("Ask the receiver to sign · or use the store code if they can't", 'error');
+                return false;
+              }
+              await queuePodSignature(stop, { svg: signature.svg, signedAt: signature.at, signedBy: receiver.trim() || undefined });
               await completeStop(stop, { unitsDelivered: count, unitsOrdered: ordered, receiverName: receiver.trim() || undefined });
               showToast(online ? 'Stop completed · sending' : 'Saved on this phone · sends when there is signal');
               return true;

@@ -2,9 +2,12 @@
 // The proof-of-delivery photo of a stop (DSP-A2, SM-02): a thumbnail of the newest photo the driver sent, opening the
 // full-size image. Photos are served at /media/pod-photos/<id> to a bearer token only, so the image is fetched by the
 // API client and shown from a blob: URL (revoked when the thumbnail goes away). States: no photo, loading, unavailable.
+// PodSignature: the receiver's signature next to it (DR-03/DR-20 pad, a server-sanitised SVG shown as an <img>, so
+// nothing in it can run), with "Signed by … · h:mm".
 import { useEffect, useState } from 'react';
 import { useODataClient } from '@/lib/odata/hooks';
 import type { POD } from '@/lib/odata/types';
+import { fmtTime } from '@/lib/format';
 import { Ic } from './icons';
 
 const MEDIA = /^\/media\/pod-photos\/[\w-]+$/;
@@ -106,5 +109,49 @@ export default function PodPhoto({ pod, label = 'the drop', width = 84, height =
         </div>
       )}
     </>
+  );
+}
+
+/** The signature path of a POD, or null when it was not signed on the phone. */
+export function podSignaturePath(pod: Pick<POD, 'signatureUrl'> | null | undefined): string | null {
+  const url = pod?.signatureUrl ?? '';
+  return MEDIA.test(url) ? url : null;
+}
+
+export function PodSignature({ pod, width = 84, height = 34 }: { pod: Pick<POD, 'signatureUrl' | 'signedAt' | 'receiverName'> | null | undefined; width?: number; height?: number }) {
+  const client = useODataClient();
+  const path = podSignaturePath(pod);
+  const [loaded, setLoaded] = useState<{ path: string; src: string | null } | null>(null);
+  const src = loaded && loaded.path === path ? loaded.src : null;
+  useEffect(() => {
+    if (!path) return;
+    let url: string | null = null;
+    let live = true;
+    client
+      .blob(path)
+      .then(b => {
+        if (!live) return;
+        url = URL.createObjectURL(b.type === 'image/svg+xml' ? b : new Blob([b], { type: 'image/svg+xml' }));
+        setLoaded({ path, src: url });
+      })
+      .catch(() => live && setLoaded({ path, src: null }));
+    return () => {
+      live = false;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [client, path]);
+  if (!path) return null;
+  const who = pod?.receiverName ? `Signed by ${pod.receiverName}` : 'Signed';
+  const at = pod?.signedAt ? fmtTime(pod.signedAt) : '';
+  const title = `${who}${at ? ` · Signed ${at}` : ''}`;
+  return (
+    <span data-testid="pod-signature" data-state={src ? 'ready' : 'loading'} title={title} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px', flex: 'none' }}>
+      <span style={{ width: `${width}px`, height: `${height}px`, background: '#fff', border: '1px solid var(--line, #e3e6ef)', borderRadius: '6px', overflow: 'hidden', display: 'block' }}>
+        {/* a blob: URL of an authenticated fetch; an <img> never runs anything inside an SVG */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {src && <img src={src} alt={`Signature: ${title}`} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />}
+      </span>
+      <span className="t-3" style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>{title}</span>
+    </span>
   );
 }

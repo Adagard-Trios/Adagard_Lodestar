@@ -1,11 +1,12 @@
 // Live screen (src/live): started from the generated screen of the same key, with real data and actions in the same Frame/Tap runtime.
 // DR-03 Proof of delivery (P4, phone)
 import { Text, TextInput, View, StyleSheet } from 'react-native';
-import { Fragment, useState } from 'react';
+import { Fragment, useCallback, useState } from 'react';
 import { hm } from '@/lib/time';
 import { plural } from '@/lodestar/live';
 import { showToast } from '@/lodestar/runtime';
-import { completeStop } from '@/model/actions';
+import { completeStop, queuePodSignature } from '@/model/actions';
+import { SignaturePad } from '@/lodestar/signature';
 import { afterPod } from '@/model/run';
 import { useOnline, useStop, useParam } from '@/model/hooks';
 import { Frame, Grad, Icon, Scroll, Tap, type ScreenNav, type GradSpec } from '@/lodestar/runtime';
@@ -22,6 +23,9 @@ export default function ScreenDr03ProofOfDelivery() {
   const ordered = order?.units ?? 0;
   const [units, setUnits] = useState<number | null>(null);
   const [receiver, setReceiver] = useState('');
+  // the receiver signs on the pad (or the store code on DR-16 stands in): Complete stop needs one of them
+  const [signature, setSignature] = useState<{ svg: string; at: string } | null>(null);
+  const sign = useCallback((svg: string | null) => setSignature(svg ? { svg, at: new Date().toISOString() } : null), []);
   // damaged goods reported on DR-18 come back here and are recorded with the proof of delivery
   const damaged = Number(useParam('damaged') ?? '') || 0;
   const damagedItem = useParam('item');
@@ -163,10 +167,14 @@ export default function ScreenDr03ProofOfDelivery() {
                   placeholderTextColor="#7f89a3"
                   style={[s.t37, { paddingVertical: 12 }]}
                   testID="receiver-name"
+                  autoCorrect={false}
+                  autoCapitalize="words"
+                  autoComplete="name"
                 />
-                <View style={s.v71}>
-                  <Text style={s.t9}>{online ? 'Sent as soon as you complete' : 'Saved on this phone · sends when there is signal'}</Text>
-                </View>
+                <SignaturePad
+                  onChange={sign}
+                  caption={signature ? `Signed ${hm(signature.at)} · ${online ? 'sent when you complete' : 'saved on phone'}` : delivered ? 'Signed already · sign again to replace' : 'Receiver signs above the line'}
+                />
               </View>
             </View>
           </View>
@@ -174,10 +182,15 @@ export default function ScreenDr03ProofOfDelivery() {
         <View style={s.v81}>
           <Tap
             lk="L15"
-            style={s.v78}
+            style={[s.v78, !signature && !delivered ? { opacity: 0.55 } : null]}
             to={stop ? afterPod(view, stop) : undefined}
             onPress={async () => {
               if (!stop || !order) return true; // prototype mode: just navigate
+              if (!signature && !delivered) {
+                showToast("Ask the receiver to sign · or use the store code if they can't", 'error');
+                return false;
+              }
+              if (signature) await queuePodSignature(stop, { svg: signature.svg, signedAt: signature.at, signedBy: (receiver || stop.pod?.receiverName || '').trim() || undefined });
               // a delivered stop can be corrected: the POD is saved again (the server upserts it)
               await completeStop(stop, { unitsDelivered: count, unitsOrdered: ordered, receiverName: (receiver || '').trim() || undefined, ...(damage.length ? { exceptions: damage } : {}) });
               showToast(online ? (delivered ? 'Delivery updated · sending' : 'Stop completed · sending') : 'Saved on this phone · sends when there is signal');

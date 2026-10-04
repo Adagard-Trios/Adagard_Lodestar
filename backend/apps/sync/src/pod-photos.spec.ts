@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import { ODataError } from '@lodestar/odata';
 import { NotifyClient, Principal } from '@lodestar/security';
-import { canReadPhoto, canUploadPhoto, MAX_PHOTO_BYTES, PhotoStop, PodPhotoService, sniffMime, validatePhoto } from './pod-photos';
+import { canReadPhoto, canUploadPhoto, MAX_PHOTO_BYTES, PhotoStop, podMediaKind, PodPhotoService, sanitizeSignatureSvg, sniffMime, validatePhoto } from './pod-photos';
 import { PodPhotosController } from './pod-photos.controller';
 import { SyncService } from './sync.service';
 
@@ -158,6 +158,62 @@ describe('POD photos', () => {
       const { prisma } = fakePrisma();
       const ctl = new PodPhotosController(new PodPhotoService(prisma));
       await expect(ctl.upload(driver, req(Buffer.from('%PDF-1.7')), res(), { stopId: 'S1' }, 'image/jpeg')).rejects.toMatchObject({ status: 415 });
+    });
+  });
+
+  describe('receiver signatures (kind SIGNATURE)', () => {
+    const SIG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 84"><path d="M10 60 L40 20 C 50 10, 60 70, 90 40" stroke="#fff"/><path d="M100 50 L200 52"/></svg>';
+    const req = (body: unknown) => ({ body }) as any;
+    const res = () => ({ status: jest.fn(), setHeader: jest.fn() }) as any;
+
+    it('validates the kind: absent is PHOTO, anything but PHOTO / SIGNATURE is a 400', () => {
+      expect(podMediaKind(undefined)).toBe('PHOTO');
+      expect(podMediaKind('signature')).toBe('SIGNATURE');
+      expect(() => podMediaKind('VIDEO')).toThrow(ODataError);
+    });
+
+    it('rebuilds the SVG from path data only: scripts, handlers, links, styles and foreign content are dropped', () => {
+      const evil = Buffer.from(
+        '<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 84" onload="alert(1)">' +
+          '<script>alert(1)</script><style>*{background:url(http://x)}</style><a href="javascript:alert(1)"><path d="M1 2 L3 4" onclick="x()"/></a>' +
+          '<foreignObject><iframe src="http://x"/></foreignObject><image href="http://x/y.png"/></svg>',
+      );
+      const out = sanitizeSignatureSvg(evil, 'image/svg+xml');
+      const svg = out.bytes.toString('utf8');
+      expect(out.mime).toBe('image/svg+xml');
+      expect(svg).toContain('<path d="M1 2 L3 4"/>');
+      expect(svg).toContain('viewBox="0 0 280 84"');
+      expect(svg).not.toMatch(/script|onload|onclick|style>|href|foreignObject|iframe|image|alert/i);
+      expect(out.sha256).toBe(sha(out.bytes));
+    });
+
+    it('refuses path data that is not strokes, an empty or non-SVG body, a wrong type and anything over 64 KB', () => {
+      const svg = (inner: string) => Buffer.from(`<svg viewBox="0 0 280 84">${inner}</svg>`);
+      expect(() => sanitizeSignatureSvg(svg('<path d="M0 0 url(#x)"/>'), 'image/svg+xml')).toThrow(ODataError);
+      expect(() => sanitizeSignatureSvg(svg('<rect width="5" height="5"/>'), 'image/svg+xml')).toThrow(/empty/);
+      expect(() => sanitizeSignatureSvg(JPEG, 'image/svg+xml')).toThrow(/not an SVG/);
+      expect(() => sanitizeSignatureSvg(Buffer.from(SIG), 'image/png')).toThrow(/not image\/png/);
+      expect(() => sanitizeSignatureSvg(svg(`<path d="M0 0 ${'L1 1 '.repeat(14000)}"/>`), 'image/svg+xml')).toThrow(/64 KB/);
+      expect(() => sanitizeSignatureSvg(Buffer.alloc(0))).toThrow(ODataError);
+    });
+
+    it('a SIGNATURE upload must be an SVG, a PHOTO upload never is; the POD gets signatureUrl and signedAt, not a photo', async () => {
+      const { prisma, photos, pods } = fakePrisma();
+      pods.push({ id: 'POD1', tripStopId: 'S1', photoCount: 0, photoUrl: null });
+      const ctl = new PodPhotosController(new PodPhotoService(prisma));
+      await expect(ctl.upload(driver, req(JPEG), res(), { stopId: 'S1', kind: 'SIGNATURE' }, 'image/jpeg')).rejects.toMatchObject({ status: 415 });
+      await expect(ctl.upload(driver, req(Buffer.from(SIG)), res(), { stopId: 'S1' }, 'image/svg+xml')).rejects.toMatchObject({ status: 415 });
+      await expect(ctl.upload(driver, req(Buffer.from(SIG)), res(), { stopId: 'S1', kind: 'DOODLE' }, 'image/svg+xml')).rejects.toMatchObject({ status: 400 });
+      expect(photos).toHaveLength(0);
+
+      const sig = await ctl.upload(driver, req(Buffer.from(SIG)), res(), { stopId: 'S1', kind: 'SIGNATURE', takenAt: '2026-04-07T01:28:00Z' }, 'image/svg+xml', 'evt-sign-1');
+      expect(sig).toMatchObject({ kind: 'SIGNATURE', mime: 'image/svg+xml', duplicate: false });
+      expect(photos[0].bytes.toString('utf8')).not.toContain('#fff');
+      expect(pods[0]).toMatchObject({ photoCount: 0, photoUrl: null, signatureUrl: sig.url, signedAt: new Date('2026-04-07T01:28:00Z') });
+
+      const photo = await ctl.upload(driver, req(JPEG), res(), { stopId: 'S1' }, 'image/jpeg', 'evt-photo-9');
+      expect(photo.kind).toBe('PHOTO');
+      expect(pods[0]).toMatchObject({ photoCount: 1, photoUrl: photo.url, signatureUrl: sig.url });
     });
   });
 
