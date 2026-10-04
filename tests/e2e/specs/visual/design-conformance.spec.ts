@@ -21,11 +21,12 @@
 // Report: tests/visual/report/index.html + report.json (+ img/ with live captures and diffs).
 // The tokens test compares the style guide's tokens (tests/visual/baselines/tokens.json) with the desk app's shipped
 // CSS (computed in the live app) and the field app's colours and fonts (mobile/src) — exact equality.
-import type { Browser, BrowserContext, Page } from '@playwright/test';
+import type { Browser, Page } from '@playwright/test';
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DEMO_DATE, MOBILE_URL, PERSONAS, WEB_URL, type PersonaKey } from '../../lib/env';
 import { expect, requireStack, test } from '../../lib/fixtures';
+import { renewDeskOnNextLoad, signedInContext } from '../../lib/session';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { collect, tokenStyle } = require('../../../visual/collector.cjs') as {
@@ -81,17 +82,8 @@ const PERSONA_OF: Record<string, PersonaKey> = { SM: 'storeManager', DSP: 'dispa
 const personaOf = (id: string) => PERSONA_OF[id.split('-')[0]];
 
 // sign-in screens and their buttons (desk: data-testid="sign-in"; field: the design link code of "Sign in")
-const DESK_SIGN_IN: Partial<Record<PersonaKey, { path: string; home: RegExp }>> = {
-  storeManager: { path: '/store/sm-26-sign-in', home: /\/store\// },
-  dispatcher: { path: '/plan/dsp-06-sign-in', home: /\/plan\// },
-  admin: { path: '/admin/adm-01-sign-in', home: /\/admin\// },
-};
-const FIELD_SIGN_IN: Partial<Record<PersonaKey, { key: string; button: string; phone: string }>> = {
-  storeManager: { key: 'sm-05-sign-in', button: 'lk-L68', phone: 'DEV-FR-01' },
-  dispatcher: { key: 'dsp-26-sign-in', button: 'lk-L179', phone: 'DEV-NP-01' },
-  loader: { key: 'ld-06-sign-in', button: 'lk-L187', phone: 'DEV-KJ-01' },
-  driver: { key: 'dr-06-sign-in', button: 'lk-L229', phone: 'DEV-RB-01' },
-};
+/** Each persona's shared demo phone (backend/prisma/scenario.ts): the field app starts as that install. */
+const FIELD_PHONE: Partial<Record<PersonaKey, string>> = { storeManager: 'DEV-FR-01', dispatcher: 'DEV-NP-01', loader: 'DEV-KJ-01', driver: 'DEV-RB-01' };
 
 const screens = index.filter(i => i.baseline).map(i => load(i.baseline!)).map(b => ({ b, file: index.find(i => i.name === b.name)!.baseline!, impl: implementation(b) }));
 
@@ -244,80 +236,7 @@ function compare(design: El[], live: El[]) {
 
 type Session = { desk?: Page; field?: Page };
 
-/** Sign-in can stall when Keycloak is busy (the login form or the redirect back never comes). Such attempts are
- * retried; a rejected password is not (Keycloak's brute-force protection counts it). */
-async function attempt<T>(what: string, run: (n: number) => Promise<T>, rejected: () => Promise<boolean>): Promise<T> {
-  let last: unknown;
-  for (let n = 1; n <= 3; n++) {
-    try {
-      return await run(n);
-    } catch (e) {
-      last = e;
-      if (await rejected().catch(() => false)) throw e;
-      trace(`${what}: sign-in attempt ${n} stalled: ${String(e).split('\n')[0].slice(0, 120)}`);
-    }
-  }
-  throw last;
-}
-
-/** Keycloak said no (wrong password, disabled account): never retry that. */
-const rejectedOn = async (p: Page | undefined) => Boolean(p && !p.isClosed()
-  && (await p.getByText(/invalid username or password|account is (temporarily )?disabled/i).first().isVisible().catch(() => false)));
-
-/** The hosted login form. Waits for the form itself, not the page's load event (a slow asset must not stall it).
- * On a retry Keycloak may already have a session and send the browser straight back: that is fine too. */
-async function keycloakLogin(page: Page, who: PersonaKey) {
-  const p = PERSONAS[who];
-  await page.waitForURL(/\/realms\/.+\/protocol\/openid-connect\/auth|\/login-actions\//, { timeout: 30_000, waitUntil: 'commit' });
-  const outcome = await Promise.race([
-    page.locator('#username').waitFor({ timeout: 30_000 }).then(() => 'form', () => 'timeout'),
-    page.waitForURL(u => !/\/realms\//.test(u.toString()), { timeout: 30_000, waitUntil: 'commit' }).then(() => 'sso', () => 'timeout'),
-    page.waitForEvent('close', { timeout: 30_000 }).then(() => 'sso', () => 'timeout'),
-  ]);
-  if (outcome === 'timeout') throw new Error('Keycloak login form did not appear');
-  if (outcome === 'sso') return;
-  await page.locator('#username').fill(p.username);
-  await page.locator('#password').fill(p.password);
-  await page.locator('#kc-login').click();
-}
-
-async function openDesk(context: BrowserContext, who: PersonaKey): Promise<Page> {
-  const page = await context.newPage();
-  const s = DESK_SIGN_IN[who]!;
-  await attempt(`${who} desk`, async () => {
-    await page.goto(`${WEB_URL}${s.path}?design=0`);
-    const cta = page.getByTestId('sign-in');
-    await expect(cta).toBeEnabled({ timeout: 30_000 });
-    await cta.click();
-    await keycloakLogin(page, who);
-    await expect(page).toHaveURL(s.home, { timeout: 30_000 });
-  }, () => rejectedOn(page));
-  return page;
-}
-
-async function openField(context: BrowserContext, who: PersonaKey): Promise<Page> {
-  const s = FIELD_SIGN_IN[who]!;
-  const origin = new URL(MOBILE_URL).origin;
-  await context.addInitScript(({ origin, id }) => { if (window.location.origin === origin) window.localStorage.setItem('lodestar.device-id', id); }, { origin, id: s.phone });
-  const page = await context.newPage();
-  let popup: Page | undefined;
-  await attempt(`${who} field`, async () => {
-    await page.goto(`${MOBILE_URL}s/${s.key}`);
-    const cta = page.getByTestId(s.button);
-    await expect(cta).toBeEnabled({ timeout: 30_000 });
-    [popup] = await Promise.all([context.waitForEvent('page'), cta.click()]);
-    await keycloakLogin(popup, who);
-    await popup.waitForEvent('close', { timeout: 30_000 }).catch(() => undefined);
-    await expect(page).not.toHaveURL(new RegExp(`/s/${s.key}$`), { timeout: 60_000 }); // the token exchange can be slow under load
-  }, async () => {
-    const rejected = await rejectedOn(popup);
-    if (popup && !popup.isClosed()) await popup.close();
-    return rejected;
-  });
-  return page;
-}
-
-/** In-app navigation for the field app: its tokens live in memory, so a reload would sign it out. */
+/** In-app navigation for the field app (no reload: the app keeps its restored session and screen state). */
 async function fieldGo(page: Page, key: string) {
   const path = `${new URL(MOBILE_URL).pathname}s/${key}`;
   await page.evaluate(p => { window.history.pushState(null, '', p); window.dispatchEvent(new PopStateEvent('popstate', { state: null })); }, path);
@@ -332,6 +251,7 @@ async function checkScreen(session: Session, diffPage: Page, b: Baseline, file: 
   if (b.live.app === 'desk') {
     url = `${WEB_URL}${b.live.path}?design=0`;
     const g0 = Date.now();
+    await renewDeskOnNextLoad(page); // the frozen clock hides token expiry from the app
     await page.goto(url);
     trace(`goto ${b.live.path} ${Date.now() - g0} ms`);
   } else {
@@ -555,15 +475,17 @@ test.describe('Design conformance', { tag: '@stack' }, () => {
 async function openSessions(browser: Browser, who: PersonaKey, list: Baseline[]): Promise<Session> {
   const session: Session = {};
   const opts = { ignoreHTTPSErrors: true, deviceScaleFactor: 1 };
-  // one login per app, one after another (Keycloak locks accounts on near-simultaneous logins)
+  // one sign-in per app (on the designed sign-in screens), reused from the saved persona session when there is one
   if (list.some(b => b.live.app === 'desk')) {
-    const ctx = await browser.newContext(opts);
-    session.desk = await openDesk(ctx, who);
+    session.desk = (await signedInContext(browser, who, 'desk', opts)).page;
     await session.desk.clock.setFixedTime(FROZEN_AT);
   }
   if (list.some(b => b.live.app === 'field')) {
-    const ctx = await browser.newContext(opts);
-    session.field = await openField(ctx, who);
+    const phone = FIELD_PHONE[who];
+    const origin = new URL(MOBILE_URL).origin;
+    session.field = (await signedInContext(browser, who, 'field', opts, async ctx => {
+      if (phone) await ctx.addInitScript(({ origin, id }) => { if (window.location.origin === origin) window.localStorage.setItem('lodestar.device-id', id); }, { origin, id: phone });
+    })).page;
     await session.field.clock.setFixedTime(FROZEN_AT);
   }
   return session;

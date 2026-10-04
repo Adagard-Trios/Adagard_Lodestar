@@ -125,18 +125,6 @@ export async function signInFrom(page: Page, _button: string, who: PersonaKey) {
   await fieldSignIn(page, who);
 }
 
-/** Completes Keycloak's form in the app's sign-in popup (a returning user is only asked for the password). */
-export async function signInPopup(popup: Page, who: PersonaKey) {
-  const p = PERSONAS[who];
-  await popup.waitForURL(/\/realms\/.+\/protocol\/openid-connect\/auth|\/login-actions\//, { timeout: 30_000 });
-  await expect(popup.locator('#password')).toBeVisible({ timeout: 30_000 });
-  const user = popup.locator('#username');
-  if ((await user.count()) && (await user.isEditable({ timeout: 2_000 }).catch(() => false))) await user.fill(p.username);
-  await popup.locator('#password').fill(p.password);
-  await popup.locator('#kc-login').click();
-  await popup.waitForEvent('close', { timeout: 30_000 }).catch(() => undefined);
-}
-
 /** Opens a field screen in place (client-side navigation keeps the in-memory session; a reload would sign out). */
 export async function openField(page: Page, key: string, params: Record<string, string> = {}) {
   const q = new URLSearchParams(params).toString();

@@ -169,11 +169,11 @@ export async function fieldSignIn(page: Page, who: PersonaKey | Persona) {
   const p = typeof who === 'string' ? PERSONAS[who] : who;
   await page.waitForURL(/\/field\/s\/(sm-05|dr-06|ld-06)/, { timeout: 30_000 });
   if (/ld-06/.test(page.url())) {
-    await page.getByTestId('staff-id-input').fill(p.username === 'kasun' ? STAFF_ID : p.username);
+    await page.locator('[data-testid="staff-id-input"]:visible').first().fill(p.username === 'kasun' ? STAFF_ID : p.username);
     for (const d of DOCK_PIN) await key(page, d);
   } else {
     for (const d of phoneOf(p.username)) await key(page, d);
-    await page.getByTestId(/sm-05/.test(page.url()) ? 'lk-L68' : 'lk-L229').click();
+    await page.locator(`[data-testid="${/sm-05/.test(page.url()) ? 'lk-L68' : 'lk-L229'}"]:visible`).first().click();
     const demo = page.locator('[data-testid="demo-code"]:visible').first();
     await expect(demo).toContainText(/\d{6}/, { timeout: 30_000 });
     const code = /(\d{6})/.exec((await demo.textContent()) ?? '')![1];
