@@ -251,3 +251,6 @@
   :is(.b-P2, .b-P6) .hstack:has(> .dx-field + .dx-field) { flex-wrap: wrap; }
   :is(.b-P2, .b-P6) .hstack:has(> .dx-field + .dx-field) > .dx-field { flex: 1 1 140px !important; min-width: 0; }
 }
+
+/* DSP-03: the decision bar stays at the bottom of the pane while the list scrolls */
+.b-P2 .x-foot { position: sticky; bottom: 0; z-index: 3; }

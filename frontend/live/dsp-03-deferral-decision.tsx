@@ -75,7 +75,17 @@ export default function LiveDsp03DeferralDecision() {
   }, { onSuccess: () => { void list.refresh(); nav.go('L4'); } });
   const dismiss = useAction<string, unknown>((c, id) => c.action('Deferrals', id, 'Dismiss'), { onSuccess: () => void list.refresh() });
 
-  const m3 = chosen.reduce((s, r) => s + (r.order?.m3 ?? 0), 0);
+  // before the draft is approved nothing is recorded yet: the agent's candidates are what the dispatcher decides on
+  const draftMode = rows.length === 0 && draftCandidates.length > 0;
+  const [draftChecked, setDraftChecked] = useState<Record<string, boolean>>({});
+  const isDraftChecked = (orderId: string) => draftChecked[orderId] ?? true;
+  const draftChosen = draftCandidates.filter(d => isDraftChecked(d.orderId));
+  const draftKept = draftCandidates.length - draftChosen.length;
+  const toggleDraft = (orderId: string) => setDraftChecked(c => ({ ...c, [orderId]: !isDraftChecked(orderId) }));
+  const nChosen = draftMode ? draftChosen.length : chosen.length;
+  const nTotal = draftMode ? draftCandidates.length : rows.length;
+  const nCoded = draftMode ? draftChosen.filter(d => d.reason).length : chosen.length;
+  const m3 = draftMode ? draftChosen.reduce((s, d) => s + (d.m3 ?? 0), 0) : chosen.reduce((s, r) => s + (r.order?.m3 ?? 0), 0);
   const depotLine = active.map(d => depotName(d)).join(' + ');
 
   return (
@@ -100,11 +110,11 @@ export default function LiveDsp03DeferralDecision() {
                 <span className="fw8" style={{ fontSize: '14px' }}>{fmtNum(m3, 1)} m³</span>
               </div>
               <div className="x-limit__bar">
-                <div style={{ flex: String(Math.max(rows.length - chosen.length, 0) || 0.001), background: 'var(--chilled-fg)' }} />
-                <div style={{ flex: String(chosen.length || 0.001), background: 'var(--st-exception-fg)' }} />
+                <div style={{ flex: String(Math.max(nTotal - nChosen, 0) || 0.001), background: 'var(--chilled-fg)' }} />
+                <div style={{ flex: String(nChosen || 0.001), background: 'var(--st-exception-fg)' }} />
               </div>
               <div className="x-limit__cap">
-                <span><b className="t-2">{chosen.length}</b> of <b className="t-2">{rows.length}</b> selected</span>
+                <span><b className="t-2">{nChosen}</b> of <b className="t-2">{nTotal}</b> selected</span>
               </div>
             </div>
           </div>
@@ -169,7 +179,10 @@ export default function LiveDsp03DeferralDecision() {
                     <div key={d.orderId} className={`x-cand lv-click${pick?.orderId === d.orderId ? ' is-on' : ''}`} role="button" tabIndex={0} data-testid="draft-candidate"
                       onClick={() => setPick({ kind: 'cand', orderId: d.orderId })} onKeyDown={e => { if (e.key === 'Enter') setPick({ kind: 'cand', orderId: d.orderId }); }}>
                       <div className="x-cand__top">
-                        <span className="x-chk"><Ic n="sparkle-plus" /></span>
+                        <span className="x-chk" role="checkbox" aria-checked={isDraftChecked(d.orderId)} aria-label={`Defer ${d.orderId}`} tabIndex={0} data-testid="draft-check"
+                          style={isDraftChecked(d.orderId) ? undefined : { background: 'transparent', color: 'transparent' }}
+                          onClick={e => { e.stopPropagation(); toggleDraft(d.orderId); }}
+                          onKeyDown={e => { if (e.key === ' ') { e.preventDefault(); e.stopPropagation(); toggleDraft(d.orderId); } }}><Ic n="check" /></span>
                         <div className="x-cand__name"><b>{d.outletId}</b><span><span className="id">{d.orderId}</span> · rank {d.rank}</span></div>
                         <div className="x-score"><b>{d.score}</b><span>{"score"}</span></div>
                       </div>
@@ -280,11 +293,21 @@ export default function LiveDsp03DeferralDecision() {
             <Ic n="lock" className="ic ic--sm" />
             <span>Logged as <b>suggestion + your decision</b>. Stores told when the plan goes live.</span>
             <span className="spacer" />
-            <span className="m-tag m-tag--ok"><Ic n="check" />{chosen.length} of {rows.length} have reason codes</span>
+            <span className="m-tag m-tag--ok"><Ic n="check" />{nCoded} of {nChosen} have reason codes</span>
             <span className="d-btn" data-lk="N2">{"Back to plan"}</span>
-            <Btn className="d-btn d-btn--primary" testId="confirm-all" busy={confirm.pending} disabled={!chosen.length} onClick={() => void confirm.run(chosen)}>
-              <Ic n="check" />Approve {chosen.length} deferral{chosen.length === 1 ? '' : 's'}
-            </Btn>
+            {draftMode && draftKept > 0 && (
+              <Btn className="d-btn" testId="keep-ask" onClick={() => router.push('/plan/dsp-39-ask-the-planning-agent')}><Ic n="sparkle" />Ask the agent to keep {draftKept}</Btn>
+            )}
+            {draftMode ? (
+              // the deferrals are recorded with the plan: approving the draft (DSP-12) records exactly the agent's candidates
+              <Btn className="d-btn d-btn--primary" testId="confirm-all" disabled={!nChosen || draftKept > 0} onClick={() => openOverlay('/plan/dsp-12-approve-and-go-live')}>
+                <Ic n="check" />Approve {nChosen} deferral{nChosen === 1 ? '' : 's'}
+              </Btn>
+            ) : (
+              <Btn className="d-btn d-btn--primary" testId="confirm-all" busy={confirm.pending} disabled={!chosen.length} onClick={() => void confirm.run(chosen)}>
+                <Ic n="check" />Approve {chosen.length} deferral{chosen.length === 1 ? '' : 's'}
+              </Btn>
+            )}
           </div>
         </div>
       </div>
